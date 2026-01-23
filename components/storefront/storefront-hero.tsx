@@ -40,7 +40,7 @@ export function StorefrontHero({
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
 
   return (
-    <section className="relative min-h-[50vh] sm:min-h-[60vh] lg:min-h-[70vh] overflow-hidden bg-black">
+    <section className="relative overflow-hidden bg-black">
       {/* Atmospheric Background */}
       <div className="absolute inset-0">
         {/* Gradient mesh */}
@@ -90,140 +90,132 @@ export function StorefrontHero({
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-24">
-        <div className="grid lg:grid-cols-[1fr,auto] gap-8 sm:gap-12 lg:gap-20 items-center">
-          {/* Left: Main content */}
-          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Avatar + Name cluster - stacked on mobile, horizontal on larger */}
-            <motion.div
-              className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {/* Avatar with glow */}
-              <div className="relative flex-shrink-0">
-                <div className="absolute -inset-2 bg-gradient-to-br from-cyan-500/50 to-fuchsia-500/50 rounded-full blur-xl opacity-60" />
-                <div className="relative h-20 w-20 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full overflow-hidden ring-2 ring-white/10">
-                  {avatarUrl ? (
-                    <Image
-                      src={avatarUrl}
-                      alt={displayName}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-cyan-600 to-fuchsia-600 flex items-center justify-center text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
-                      {initials}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Store label */}
-              <motion.span
-                className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-cyan-400 font-medium sm:pb-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-              >
-                {storeName}
-              </motion.span>
-            </motion.div>
-
-            {/* Display name - responsive typography */}
-            <motion.h1
-              className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-white tracking-tight leading-[0.95] sm:leading-[0.9]"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {displayName}
-            </motion.h1>
-
-            {/* Bio */}
-            {bio && (
-              <motion.p
-                className="text-base sm:text-lg lg:text-xl text-white/60 max-w-xl leading-relaxed"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-              >
-                {bio}
-              </motion.p>
-            )}
-
-            {/* Social links - pill style, horizontal scroll on mobile */}
-            {hasSocials && (
-              <motion.div
-                className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-              >
-                {socialLinks?.instagram && (
-                  <SocialPill href={socialLinks.instagram} platform="instagram" />
-                )}
-                {socialLinks?.twitter && (
-                  <SocialPill href={socialLinks.twitter} platform="twitter" />
-                )}
-                {socialLinks?.youtube && (
-                  <SocialPill href={socialLinks.youtube} platform="youtube" />
-                )}
-                {socialLinks?.tiktok && (
-                  <SocialPill href={socialLinks.tiktok} platform="tiktok" />
-                )}
-                {socialLinks?.spotify && (
-                  <SocialPill href={socialLinks.spotify} platform="spotify" />
-                )}
-              </motion.div>
-            )}
-
-            {/* Send Message Button */}
-            {userId && (
-              <motion.div
-                className="pt-2 sm:pt-4"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.5 }}
-              >
-                <SendMessageButton
-                  recipientUserId={userId}
-                  recipientName={displayName}
-                  variant="outline"
-                  className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 text-sm sm:text-base"
-                />
-              </motion.div>
-            )}
-          </div>
-
-          {/* Right: Stats cards - horizontal on mobile, stacked on desktop */}
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-16">
+        <div className="space-y-5 sm:space-y-6">
+          {/* Avatar + Name cluster - stacked on mobile, horizontal on larger */}
           <motion.div
-            className="flex flex-row lg:flex-col gap-3 sm:gap-4 lg:gap-6 justify-center lg:justify-start overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <StatCard
-              value={stats.products}
-              label="Products"
-              gradient="from-cyan-500 to-cyan-600"
-              delay={0}
-            />
-            <StatCard
-              value={stats.students}
-              label="Students"
-              gradient="from-fuchsia-500 to-fuchsia-600"
-              delay={0.1}
-              offset
-            />
-            <StatCard
-              value={stats.sales}
-              label="Sales"
-              gradient="from-amber-500 to-orange-600"
-              delay={0.2}
-            />
+            {/* Avatar with glow */}
+            <div className="relative flex-shrink-0">
+              <div className="absolute -inset-2 bg-gradient-to-br from-cyan-500/50 to-fuchsia-500/50 rounded-full blur-xl opacity-60" />
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28 rounded-full overflow-hidden ring-2 ring-white/10">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-cyan-600 to-fuchsia-600 flex items-center justify-center text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+                    {initials}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Store label */}
+            <motion.span
+              className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-cyan-400 font-medium sm:pb-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+            >
+              {storeName}
+            </motion.span>
           </motion.div>
+
+          {/* Display name - responsive typography */}
+          <motion.h1
+            className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[0.95] sm:leading-[0.9]"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {displayName}
+          </motion.h1>
+
+          {/* Bio */}
+          {bio && (
+            <motion.p
+              className="text-base sm:text-lg lg:text-xl text-white/60 max-w-2xl leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+            >
+              {bio}
+            </motion.p>
+          )}
+
+          {/* Stats + Actions row */}
+          <motion.div
+            className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 pt-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.8 }}
+          >
+            {/* Stats inline */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <StatCard
+                value={stats.products}
+                label="Products"
+                gradient="from-cyan-500 to-cyan-600"
+                delay={0}
+              />
+              <StatCard
+                value={stats.students}
+                label="Students"
+                gradient="from-fuchsia-500 to-fuchsia-600"
+                delay={0.1}
+              />
+              <StatCard
+                value={stats.sales}
+                label="Sales"
+                gradient="from-amber-500 to-orange-600"
+                delay={0.2}
+              />
+            </div>
+
+            {/* Message button */}
+            {userId && (
+              <SendMessageButton
+                recipientUserId={userId}
+                recipientName={displayName}
+                variant="outline"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 text-sm sm:text-base w-fit"
+              />
+            )}
+          </motion.div>
+
+          {/* Social links - pill style */}
+          {hasSocials && (
+            <motion.div
+              className="flex flex-wrap gap-2 sm:gap-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+            >
+              {socialLinks?.instagram && (
+                <SocialPill href={socialLinks.instagram} platform="instagram" />
+              )}
+              {socialLinks?.twitter && (
+                <SocialPill href={socialLinks.twitter} platform="twitter" />
+              )}
+              {socialLinks?.youtube && (
+                <SocialPill href={socialLinks.youtube} platform="youtube" />
+              )}
+              {socialLinks?.tiktok && (
+                <SocialPill href={socialLinks.tiktok} platform="tiktok" />
+              )}
+              {socialLinks?.spotify && (
+                <SocialPill href={socialLinks.spotify} platform="spotify" />
+              )}
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -238,33 +230,28 @@ function StatCard({
   label,
   gradient,
   delay = 0,
-  offset = false
 }: {
   value: number;
   label: string;
   gradient: string;
   delay?: number;
-  offset?: boolean;
 }) {
   return (
     <motion.div
-      className={cn(
-        "relative group flex-shrink-0",
-        offset && "lg:translate-x-8"
-      )}
+      className="relative group flex-shrink-0"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.5 + delay, duration: 0.5 }}
     >
       <div className={cn(
-        "absolute -inset-0.5 rounded-xl sm:rounded-2xl bg-gradient-to-r opacity-50 blur-sm transition-opacity group-hover:opacity-100",
+        "absolute -inset-0.5 rounded-xl bg-gradient-to-r opacity-40 blur-sm transition-opacity group-hover:opacity-80",
         gradient
       )} />
-      <div className="relative bg-black/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-6 border border-white/10 min-w-[90px] sm:min-w-[110px]">
-        <div className="text-2xl sm:text-3xl lg:text-5xl font-black text-white tabular-nums text-center lg:text-left">
+      <div className="relative bg-black/80 backdrop-blur-sm rounded-xl px-4 sm:px-5 py-2.5 sm:py-3 border border-white/10 min-w-[80px] sm:min-w-[95px]">
+        <div className="text-xl sm:text-2xl font-black text-white tabular-nums text-center">
           {value.toLocaleString()}
         </div>
-        <div className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-wider sm:tracking-widest text-white/50 mt-0.5 sm:mt-1 text-center lg:text-left">
+        <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 text-center">
           {label}
         </div>
       </div>
