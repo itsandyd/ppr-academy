@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ConversationList } from "@/components/messages/ConversationList";
 import { EmptyInbox } from "@/components/messages/EmptyInbox";
+import { NewConversationDialog } from "@/components/messages/NewConversationDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCircle } from "lucide-react";
 
@@ -35,9 +36,12 @@ export default function MessagesPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <p className="text-muted-foreground">Your direct message conversations</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Messages</h1>
+          <p className="text-muted-foreground">Your direct message conversations</p>
+        </div>
+        <NewConversationDialog />
       </div>
 
       <div className="max-w-3xl">

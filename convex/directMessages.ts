@@ -147,6 +147,48 @@ export const getTotalUnreadCount = query({
   },
 });
 
+// Search users for starting a new conversation
+export const searchUsersForDM = query({
+  args: {
+    searchQuery: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const currentUserId = identity.subject;
+
+    const limit = args.limit || 10;
+    const query = args.searchQuery.toLowerCase().trim();
+
+    if (query.length < 2) return [];
+
+    // Get all users and filter by name/email
+    const allUsers = await ctx.db.query("users").collect();
+
+    const matchingUsers = allUsers
+      .filter((user) => {
+        // Exclude current user
+        if (user.clerkId === currentUserId) return false;
+
+        // Search by name or email
+        const name = (user.name || user.firstName || "").toLowerCase();
+        const email = (user.email || "").toLowerCase();
+
+        return name.includes(query) || email.includes(query);
+      })
+      .slice(0, limit)
+      .map((user) => ({
+        id: user.clerkId,
+        name: user.name || user.firstName || "Unknown User",
+        email: user.email,
+        imageUrl: user.imageUrl,
+      }));
+
+    return matchingUsers;
+  },
+});
+
 // Get conversation details with other user info
 export const getConversationDetails = query({
   args: {

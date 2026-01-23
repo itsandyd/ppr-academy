@@ -8619,6 +8619,12 @@ export declare const api: {
       { conversationId: Id<"dmConversations"> },
       any
     >;
+    searchUsersForDM: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; searchQuery: string },
+      any
+    >;
     sendMessage: FunctionReference<
       "mutation",
       "public",

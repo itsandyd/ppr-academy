@@ -1,6 +1,8 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { NewConversationDialog } from "./NewConversationDialog";
 
 export function EmptyInbox() {
   return (
@@ -10,9 +12,16 @@ export function EmptyInbox() {
       </div>
       <h3 className="mt-4 text-lg font-semibold">No messages yet</h3>
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-        When you start a conversation with someone, it will appear here.
-        Visit a creator&apos;s profile to send them a message.
+        Start a conversation with someone to begin messaging.
       </p>
+      <NewConversationDialog
+        trigger={
+          <Button className="mt-4 gap-2">
+            <Plus className="h-4 w-4" />
+            Start a Conversation
+          </Button>
+        }
+      />
     </div>
   );
 }
