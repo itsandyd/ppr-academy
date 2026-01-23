@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,18 +15,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Puzzle, 
-  Search, 
-  Filter,
+import {
+  Puzzle,
+  Search,
+  X,
   ExternalLink,
   Download,
   DollarSign,
+  SlidersHorizontal,
+  Grid3x3,
+  LayoutList,
+  ChevronLeft,
   ChevronRight,
   Sparkles,
+  Music,
+  Mic,
+  Wand2,
 } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import { cn } from "@/lib/utils";
 
 type Plugin = {
   _id: Id<"plugins">;
@@ -79,34 +89,44 @@ type SpecificCategory = {
   type: string;
 };
 
+const PRICING_OPTIONS = [
+  { value: "all", label: "All Pricing" },
+  { value: "FREE", label: "Free" },
+  { value: "PAID", label: "Paid" },
+  { value: "FREEMIUM", label: "Freemium" },
+];
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  Effect: <Wand2 className="h-4 w-4" />,
+  Instrument: <Music className="h-4 w-4" />,
+  "Studio Tool": <Mic className="h-4 w-4" />,
+};
+
 export default function PluginsMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
-  const [pricingFilter, setPricingFilter] = useState<string | undefined>(undefined);
-  const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
-  const [categorySearchQuery, setCategorySearchQuery] = useState(""); // Search query for filtering categories
-  
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [pricingFilter, setPricingFilter] = useState<string>("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showFilters, setShowFilters] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 24;
 
   // Fetch data with explicit types
-  // @ts-ignore - Convex types causing deep instantiation error  
+  // @ts-ignore - Convex types causing deep instantiation error
   const pluginsData = useQuery(api.plugins.getAllPublishedPlugins);
   // @ts-ignore - Convex types causing deep instantiation error
   const pluginTypesData = useQuery(api.plugins.getPluginTypes);
   // @ts-ignore - Convex types causing deep instantiation error
-  const pluginCategoriesData = useQuery(api.plugins.getPluginCategories);
-  // @ts-ignore - Convex types causing deep instantiation error
   const specificCategoriesData = useQuery(api.plugins.getAllSpecificCategories);
-  
+
   // Type-safe defaults
   const plugins: Plugin[] = pluginsData ?? [];
   const pluginTypes: PluginType[] = pluginTypesData ?? [];
-  const pluginCategories: PluginCategory[] = pluginCategoriesData ?? [];
-  const specificCategories: SpecificCategory[] = specificCategoriesData ?? []; // Effect/Instrument/Studio Tool categories
-  
+  const specificCategories: SpecificCategory[] = specificCategoriesData ?? [];
+
   // Filter plugins
   const filteredPlugins = useMemo(() => {
     let filtered = plugins;
@@ -118,37 +138,33 @@ export default function PluginsMarketplacePage() {
         (plugin) =>
           plugin.name.toLowerCase().includes(search) ||
           plugin.author?.toLowerCase().includes(search) ||
-          plugin.description?.toLowerCase().includes(search)
+          plugin.description?.toLowerCase().includes(search) ||
+          plugin.categoryName?.toLowerCase().includes(search) ||
+          plugin.typeName?.toLowerCase().includes(search)
       );
     }
 
     // Type filter
-    if (selectedType) {
+    if (selectedType !== "all") {
       filtered = filtered.filter((plugin) => plugin.pluginTypeId === selectedType);
     }
 
-    // Category filter (same as Type filter since both use pluginTypeId)
-    if (selectedCategory) {
-      filtered = filtered.filter((plugin) => plugin.pluginTypeId === selectedCategory);
-    }
-
     // Pricing filter
-    if (pricingFilter) {
+    if (pricingFilter !== "all") {
       filtered = filtered.filter((plugin) => plugin.pricingType === pricingFilter);
     }
 
-    // Specific categories filter (Effect/Instrument/Studio Tool categories)
-    if (selectedSpecificCategories.length > 0) {
+    // Specific categories filter
+    if (selectedCategories.length > 0) {
       filtered = filtered.filter((plugin) => {
-        // Check if plugin has any matching specific category by name
         const categoryName = plugin.categoryName;
-        return categoryName && selectedSpecificCategories.includes(categoryName);
+        return categoryName && selectedCategories.includes(categoryName);
       });
     }
 
     return filtered;
-  }, [plugins, searchQuery, selectedType, selectedCategory, pricingFilter, selectedSpecificCategories]);
-  
+  }, [plugins, searchQuery, selectedType, pricingFilter, selectedCategories]);
+
   // Pagination
   const totalResults = filteredPlugins.length;
   const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
@@ -156,11 +172,11 @@ export default function PluginsMarketplacePage() {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredPlugins.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredPlugins, currentPage]);
-  
+
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedType, selectedCategory, pricingFilter, selectedSpecificCategories]);
+  }, [searchQuery, selectedType, pricingFilter, selectedCategories]);
 
   // Stats
   const stats = {
@@ -170,478 +186,362 @@ export default function PluginsMarketplacePage() {
     freemium: plugins.filter((p) => p.pricingType === "FREEMIUM").length,
   };
 
-  const clearFilters = () => {
+  // Active filters count
+  const activeFiltersCount = [
+    selectedType !== "all",
+    pricingFilter !== "all",
+    selectedCategories.length > 0,
+    searchQuery,
+  ].filter(Boolean).length;
+
+  const clearFilters = useCallback(() => {
     setSearchQuery("");
-    setSelectedType(undefined);
-    setSelectedCategory(undefined);
-    setPricingFilter(undefined);
-    setSelectedSpecificCategories([]);
+    setSelectedType("all");
+    setPricingFilter("all");
+    setSelectedCategories([]);
     setCurrentPage(1);
-  };
+  }, []);
+
+  const toggleCategory = useCallback((categoryName: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryName)
+        ? prev.filter((c) => c !== categoryName)
+        : [...prev, categoryName]
+    );
+  }, []);
+
+  // Group categories by type for better organization
+  const categoriesByType = useMemo(() => {
+    const grouped: Record<string, SpecificCategory[]> = {};
+    specificCategories.forEach((cat) => {
+      if (!grouped[cat.type]) {
+        grouped[cat.type] = [];
+      }
+      grouped[cat.type].push(cat);
+    });
+    return grouped;
+  }, [specificCategories]);
 
   return (
     <div className="min-h-screen bg-background">
+      <MarketplaceNavbar />
+
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 text-white py-20">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="relative max-w-7xl mx-auto px-6">
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 pt-16">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-lg rounded-2xl mb-6">
-              <Puzzle className="w-10 h-10" />
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-sm">
+              <Puzzle className="h-5 w-5 text-white" />
+              <span className="text-sm font-medium text-white">Plugin Directory</span>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              Plugin Directory
+            <h1 className="mb-4 text-4xl font-bold text-white md:text-5xl lg:text-6xl">
+              Discover Amazing Plugins
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto">
-              Discover the best plugins for music production, mixing, and mastering
+            <p className="mx-auto mb-8 max-w-2xl text-lg text-white/80 md:text-xl">
+              Explore {stats.total}+ plugins for music production, mixing, and mastering
             </p>
+
+            {/* Search Bar - Prominent */}
+            <div className="mx-auto max-w-2xl">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search plugins by name, author, or category..."
+                  className="h-14 rounded-full border-0 bg-white pl-12 pr-4 text-base shadow-xl dark:bg-gray-900"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Quick Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-12 flex flex-wrap items-center justify-center gap-6 text-white/90"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-green-400" />
+              <span className="font-semibold">{stats.free}</span>
+              <span className="text-white/70">Free Plugins</span>
+            </div>
+            <div className="h-4 w-px bg-white/30" />
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-blue-400" />
+              <span className="font-semibold">{stats.paid}</span>
+              <span className="text-white/70">Premium Plugins</span>
+            </div>
+            <div className="h-4 w-px bg-white/30" />
+            <div className="flex items-center gap-2">
+              <Puzzle className="h-5 w-5 text-purple-300" />
+              <span className="font-semibold">{stats.freemium}</span>
+              <span className="text-white/70">Freemium</span>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-foreground">{stats.total}</div>
-              <div className="text-sm text-muted-foreground">Total Plugins</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-green-500">{stats.free}</div>
-              <div className="text-sm text-muted-foreground">Free</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-blue-500">{stats.paid}</div>
-              <div className="text-sm text-muted-foreground">Paid</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-purple-500">{stats.freemium}</div>
-              <div className="text-sm text-muted-foreground">Freemium</div>
-            </CardContent>
-          </Card>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Filter Bar */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Type Filter */}
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="w-[160px] bg-white dark:bg-gray-900">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-gray-900">
+                <SelectItem value="all">All Types</SelectItem>
+                {pluginTypes.map((type) => (
+                  <SelectItem key={type._id} value={type._id}>
+                    <div className="flex items-center gap-2">
+                      {TYPE_ICONS[type.name] || <Puzzle className="h-4 w-4" />}
+                      {type.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Pricing Filter */}
+            <Select value={pricingFilter} onValueChange={setPricingFilter}>
+              <SelectTrigger className="w-[140px] bg-white dark:bg-gray-900">
+                <SelectValue placeholder="All Pricing" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-gray-900">
+                {PRICING_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* More Filters Toggle */}
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Categories
+              {selectedCategories.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
+                  {selectedCategories.length}
+                </Badge>
+              )}
+            </Button>
+
+            {/* Clear Filters */}
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                <X className="h-4 w-4" />
+                Clear ({activeFiltersCount})
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Results count */}
+            <span className="text-sm text-muted-foreground">
+              {totalResults} {totalResults === 1 ? "plugin" : "plugins"}
+            </span>
+
+            {/* View Mode Toggle */}
+            <div className="flex rounded-lg border border-border bg-white dark:bg-gray-900">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="rounded-r-none"
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none"
+              >
+                <LayoutList className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search plugins by name, author, or description..."
-                  className="pl-10 bg-background"
-                />
-              </div>
-
-              {/* Filter Row */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Select 
-                  value={selectedType || "all"} 
-                  onValueChange={(v) => setSelectedType(v === "all" ? undefined : v)}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-black">
-                    <SelectItem value="all">All Types</SelectItem>
-                    {pluginTypes.map((type) => (
-                      <SelectItem key={type._id} value={type._id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select 
-                  value={selectedCategory || "all"} 
-                  onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-black">
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {pluginCategories.map((category) => (
-                      <SelectItem key={category._id} value={category._id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select 
-                  value={pricingFilter || "all"} 
-                  onValueChange={(v) => setPricingFilter(v === "all" ? undefined : v)}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="All Pricing" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-black">
-                    <SelectItem value="all">All Pricing</SelectItem>
-                    <SelectItem value="FREE">Free</SelectItem>
-                    <SelectItem value="PAID">Paid</SelectItem>
-                    <SelectItem value="FREEMIUM">Freemium</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                  className="w-full"
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
-
-              {/* Specific Categories Filter (Effects, Instruments, Studio Tools) */}
-              {specificCategories.length > 0 && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">
-                    Filter by Category Type
-                    {selectedSpecificCategories.length > 0 && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        ({selectedSpecificCategories.length} selected)
-                      </span>
+        {/* Category Filters (Expandable) */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-6 overflow-hidden"
+            >
+              <Card className="bg-white dark:bg-gray-900">
+                <CardContent className="p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Filter by Category</h3>
+                    {selectedCategories.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedCategories([])}
+                        className="h-auto p-0 text-xs text-muted-foreground"
+                      >
+                        Clear selection
+                      </Button>
                     )}
-                  </label>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    Select specific categories like Reverb, Delay, Synth, Drums, etc.
                   </div>
-                  
-                  {/* Search input for categories */}
-                  <Input
-                    type="text"
-                    placeholder="Search categories..."
-                    value={categorySearchQuery}
-                    onChange={(e) => setCategorySearchQuery(e.target.value)}
-                    className="mb-2 bg-background"
-                  />
-                  
-                  <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-3 space-y-2 bg-background">
-                    {specificCategories
-                      .filter((category) => 
-                        category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
-                      )
-                      .map((category) => {
-                      const isSelected = selectedSpecificCategories.includes(category.name);
-                      return (
-                        <button
-                          key={category._id}
-                          onClick={() => {
-                            if (isSelected) {
-                              setSelectedSpecificCategories(prev => prev.filter(c => c !== category.name));
-                            } else {
-                              setSelectedSpecificCategories(prev => [...prev, category.name]);
-                            }
-                          }}
-                          className={`
-                            w-full text-left px-3 py-2 rounded-md text-sm transition-colors
-                            ${isSelected 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'hover:bg-accent hover:text-accent-foreground'
-                            }
-                          `}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span>{category.name}</span>
-                            {isSelected && (
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                    {specificCategories.filter((category) => 
-                      category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
-                    ).length === 0 && (
-                      <div className="text-center text-sm text-muted-foreground py-4">
-                        No categories found
+                  <div className="space-y-4">
+                    {Object.entries(categoriesByType).map(([type, categories]) => (
+                      <div key={type}>
+                        <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          {TYPE_ICONS[type] || <Puzzle className="h-3 w-3" />}
+                          {type}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {categories.map((category) => (
+                            <button
+                              key={category._id}
+                              onClick={() => toggleCategory(category.name)}
+                              className={cn(
+                                "rounded-full px-3 py-1.5 text-sm transition-all",
+                                selectedCategories.includes(category.name)
+                                  ? "bg-purple-600 text-white"
+                                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                              )}
+                            >
+                              {category.name}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    ))}
                   </div>
-                  {selectedSpecificCategories.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedSpecificCategories([])}
-                      className="w-full text-xs"
-                    >
-                      Clear Selected Categories
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Selected Category Pills */}
+        {selectedCategories.length > 0 && !showFilters && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {selectedCategories.map((cat) => (
+              <Badge
+                key={cat}
+                variant="secondary"
+                className="cursor-pointer gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300"
+                onClick={() => toggleCategory(cat)}
+              >
+                {cat}
+                <X className="h-3 w-3" />
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Results */}
         {paginatedPlugins.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Puzzle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No plugins found</h3>
-              <p className="text-muted-foreground">
+          <Card className="bg-white dark:bg-gray-900">
+            <CardContent className="py-16 text-center">
+              <Puzzle className="mx-auto mb-4 h-16 w-16 text-muted-foreground/30" />
+              <h3 className="mb-2 text-xl font-semibold">No plugins found</h3>
+              <p className="mb-6 text-muted-foreground">
                 Try adjusting your filters or search query
               </p>
+              <Button onClick={clearFilters}>Clear All Filters</Button>
             </CardContent>
           </Card>
         ) : (
           <>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalResults)} of {totalResults} plugin{totalResults !== 1 ? "s" : ""}
+            {/* Grid View */}
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {paginatedPlugins.map((plugin, index) => (
+                  <PluginCard key={plugin._id} plugin={plugin} index={index} />
+                ))}
               </div>
-              <div className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
+            ) : (
+              /* List View */
+              <div className="space-y-3">
+                {paginatedPlugins.map((plugin, index) => (
+                  <PluginListItem key={plugin._id} plugin={plugin} index={index} />
+                ))}
               </div>
-            </div>
+            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-              {paginatedPlugins.map((plugin, index) => (
-                <motion.div
-                  key={plugin._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <Link href={`/marketplace/plugins/${plugin.slug || plugin._id}`}>
-                    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden h-full cursor-pointer">
-                      {/* Image */}
-                      <div className="relative h-48 bg-gradient-to-br from-purple-500/10 to-pink-500/10 overflow-hidden">
-                        {plugin.image ? (
-                          <img
-                            src={plugin.image}
-                            alt={plugin.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Puzzle className="w-16 h-16 text-muted-foreground/30" />
-                          </div>
-                        )}
-
-                        {/* Pricing Badge */}
-                        <div className="absolute top-3 right-3">
-                          <Badge
-                            variant={
-                              plugin.pricingType === "FREE"
-                                ? "default"
-                                : plugin.pricingType === "PAID"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                            className="font-semibold"
-                          >
-                            {plugin.pricingType}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <CardContent className="p-6 flex flex-col flex-1">
-                        {/* Header */}
-                        <div className="mb-3">
-                          <h3 className="text-xl font-bold mb-1 group-hover:text-purple-500 transition-colors">
-                            {plugin.name}
-                          </h3>
-                          {plugin.author && (
-                            <p className="text-sm text-muted-foreground">{plugin.author}</p>
-                          )}
-                        </div>
-
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {plugin.typeName && (
-                            <Badge variant="outline" className="text-xs">
-                              {plugin.typeName}
-                            </Badge>
-                          )}
-                          {plugin.categoryName && (
-                            <Badge variant="secondary" className="text-xs">
-                              {plugin.categoryName}
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Description */}
-                        {plugin.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
-                            {plugin.description}
-                          </p>
-                        )}
-
-                        {/* Price */}
-                        {typeof plugin.price === 'number' && plugin.price > 0 && (
-                          <div className="flex items-center gap-2 mb-4">
-                            <DollarSign className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-lg font-bold">${plugin.price}</span>
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
-                          {plugin.purchaseUrl && (
-                            <Button
-                              asChild
-                              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                            >
-                              <a
-                                href={plugin.purchaseUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {plugin.pricingType === "FREE" ? "Get Free" : "Buy Now"}
-                                <ExternalLink className="w-4 h-4 ml-2" />
-                              </a>
-                            </Button>
-                          )}
-                          {plugin.optInFormUrl && !plugin.purchaseUrl && (
-                            <Button
-                              asChild
-                              variant="outline"
-                              className="flex-1"
-                            >
-                              <a
-                                href={plugin.optInFormUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Download
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Media Links */}
-                        {(plugin.videoUrl || plugin.audioUrl) && (
-                          <div className="flex gap-2 mt-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
-                            {plugin.videoUrl && (
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="flex-1 text-xs"
-                              >
-                                <a
-                                  href={plugin.videoUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Watch Demo
-                                </a>
-                              </Button>
-                            )}
-                            {plugin.audioUrl && (
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="flex-1 text-xs"
-                              >
-                                <a
-                                  href={plugin.audioUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Audio Demo
-                                </a>
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-            
-            {/* Pagination Controls */}
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-8 flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
+                  <ChevronLeft className="h-4 w-4" />
                   Previous
                 </Button>
-                
+
                 <div className="flex items-center gap-1">
-                  {/* First page */}
-                  {currentPage > 3 && (
-                    <>
-                      <Button
-                        variant={currentPage === 1 ? "default" : "ghost"}
-                        onClick={() => setCurrentPage(1)}
-                        size="sm"
-                      >
-                        1
-                      </Button>
-                      {currentPage > 4 && <span className="px-2">...</span>}
-                    </>
-                  )}
-                  
-                  {/* Page numbers around current */}
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => 
-                      page === currentPage ||
-                      page === currentPage - 1 ||
-                      page === currentPage + 1 ||
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
+                    .filter(
+                      (page) =>
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
                     )
-                    .map(page => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "ghost"}
-                        onClick={() => setCurrentPage(page)}
-                        size="sm"
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  
-                  {/* Last page */}
-                  {currentPage < totalPages - 2 && (
-                    <>
-                      {currentPage < totalPages - 3 && <span className="px-2">...</span>}
-                      <Button
-                        variant={currentPage === totalPages ? "default" : "ghost"}
-                        onClick={() => setCurrentPage(totalPages)}
-                        size="sm"
-                      >
-                        {totalPages}
-                      </Button>
-                    </>
-                  )}
+                    .map((page, idx, arr) => {
+                      // Add ellipsis
+                      const prevPage = arr[idx - 1];
+                      const showEllipsis = prevPage && page - prevPage > 1;
+                      return (
+                        <div key={page} className="flex items-center">
+                          {showEllipsis && (
+                            <span className="px-2 text-muted-foreground">...</span>
+                          )}
+                          <Button
+                            variant={currentPage === page ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="h-8 w-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        </div>
+                      );
+                    })}
                 </div>
-                
+
                 <Button
                   variant="outline"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
                   Next
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             )}
@@ -652,3 +552,186 @@ export default function PluginsMarketplacePage() {
   );
 }
 
+function PluginCard({ plugin, index }: { plugin: Plugin; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.03 }}
+    >
+      <Link href={`/marketplace/plugins/${plugin.slug || plugin._id}`}>
+        <Card className="group h-full overflow-hidden bg-white transition-all hover:shadow-lg dark:bg-gray-900">
+          {/* Image */}
+          <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+            {plugin.image ? (
+              <Image
+                src={plugin.image}
+                alt={plugin.name}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Puzzle className="h-12 w-12 text-muted-foreground/30" />
+              </div>
+            )}
+
+            {/* Pricing Badge */}
+            <Badge
+              className={cn(
+                "absolute right-2 top-2 font-semibold",
+                plugin.pricingType === "FREE"
+                  ? "bg-green-500 hover:bg-green-600"
+                  : plugin.pricingType === "FREEMIUM"
+                    ? "bg-blue-500 hover:bg-blue-600"
+                    : "bg-purple-500 hover:bg-purple-600"
+              )}
+            >
+              {plugin.pricingType === "FREE"
+                ? "Free"
+                : plugin.pricingType === "FREEMIUM"
+                  ? "Freemium"
+                  : plugin.price
+                    ? `$${plugin.price}`
+                    : "Paid"}
+            </Badge>
+          </div>
+
+          <CardContent className="p-4">
+            {/* Title & Author */}
+            <h3 className="mb-1 line-clamp-1 font-semibold transition-colors group-hover:text-purple-600">
+              {plugin.name}
+            </h3>
+            {plugin.author && (
+              <p className="mb-2 text-sm text-muted-foreground">{plugin.author}</p>
+            )}
+
+            {/* Categories */}
+            <div className="mb-3 flex flex-wrap gap-1">
+              {plugin.typeName && (
+                <Badge variant="outline" className="text-xs">
+                  {plugin.typeName}
+                </Badge>
+              )}
+              {plugin.categoryName && (
+                <Badge variant="secondary" className="text-xs">
+                  {plugin.categoryName}
+                </Badge>
+              )}
+            </div>
+
+            {/* Description */}
+            {plugin.description && (
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {plugin.description}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
+    </motion.div>
+  );
+}
+
+function PluginListItem({ plugin, index }: { plugin: Plugin; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, delay: index * 0.02 }}
+    >
+      <Link href={`/marketplace/plugins/${plugin.slug || plugin._id}`}>
+        <Card className="group overflow-hidden bg-white transition-all hover:shadow-md dark:bg-gray-900">
+          <div className="flex items-center gap-4 p-4">
+            {/* Thumbnail */}
+            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+              {plugin.image ? (
+                <Image
+                  src={plugin.image}
+                  alt={plugin.name}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Puzzle className="h-6 w-6 text-muted-foreground/30" />
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-semibold transition-colors group-hover:text-purple-600">
+                    {plugin.name}
+                  </h3>
+                  {plugin.author && (
+                    <p className="text-sm text-muted-foreground">{plugin.author}</p>
+                  )}
+                </div>
+                <Badge
+                  className={cn(
+                    "flex-shrink-0",
+                    plugin.pricingType === "FREE"
+                      ? "bg-green-500 hover:bg-green-600"
+                      : plugin.pricingType === "FREEMIUM"
+                        ? "bg-blue-500 hover:bg-blue-600"
+                        : "bg-purple-500 hover:bg-purple-600"
+                  )}
+                >
+                  {plugin.pricingType === "FREE"
+                    ? "Free"
+                    : plugin.pricingType === "FREEMIUM"
+                      ? "Freemium"
+                      : plugin.price
+                        ? `$${plugin.price}`
+                        : "Paid"}
+                </Badge>
+              </div>
+
+              {/* Categories */}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {plugin.typeName && (
+                  <Badge variant="outline" className="text-xs">
+                    {plugin.typeName}
+                  </Badge>
+                )}
+                {plugin.categoryName && (
+                  <Badge variant="secondary" className="text-xs">
+                    {plugin.categoryName}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="hidden flex-shrink-0 sm:block" onClick={(e) => e.stopPropagation()}>
+              {plugin.purchaseUrl ? (
+                <Button asChild size="sm" className="bg-purple-600 hover:bg-purple-700">
+                  <a href={plugin.purchaseUrl} target="_blank" rel="noopener noreferrer">
+                    {plugin.pricingType === "FREE" ? "Get Free" : "Get Plugin"}
+                    <ExternalLink className="ml-1 h-3 w-3" />
+                  </a>
+                </Button>
+              ) : plugin.optInFormUrl ? (
+                <Button asChild size="sm" variant="outline">
+                  <a href={plugin.optInFormUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="mr-1 h-3 w-3" />
+                    Download
+                  </a>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline">
+                  View Details
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      </Link>
+    </motion.div>
+  );
+}
