@@ -10,7 +10,10 @@ import { NotionEditor } from "@/components/notes/notion-editor";
 import { SourceLibrary } from "@/components/notes/source-library";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -18,6 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   Save,
@@ -30,24 +44,34 @@ import {
   Star,
   Archive,
   Trash2,
+  Settings,
+  Edit3,
+  Tag,
+  X,
+  Plus,
+  Sparkles,
+  BookOpen,
+  FolderOpen,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft", icon: FileText },
-  { value: "in_progress", label: "In Progress", icon: Clock },
-  { value: "completed", label: "Completed", icon: Star },
-  { value: "archived", label: "Archived", icon: Archive },
+  { value: "draft", label: "Draft", icon: FileText, color: "text-gray-600" },
+  { value: "in_progress", label: "In Progress", icon: Clock, color: "text-yellow-600" },
+  { value: "completed", label: "Completed", icon: Star, color: "text-green-600" },
+  { value: "archived", label: "Archived", icon: Archive, color: "text-purple-600" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "urgent", label: "Urgent" },
+  { value: "low", label: "Low", color: "bg-gray-100 text-gray-700" },
+  { value: "medium", label: "Medium", color: "bg-blue-100 text-blue-700" },
+  { value: "high", label: "High", color: "bg-orange-100 text-orange-700" },
+  { value: "urgent", label: "Urgent", color: "bg-red-100 text-red-700" },
 ];
 
 export default function NoteEditPage() {
@@ -60,6 +84,8 @@ export default function NoteEditPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showSourceLibrary, setShowSourceLibrary] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const [activeTab, setActiveTab] = useState("editor");
 
   // Current note state
   const [currentNote, setCurrentNote] = useState({
@@ -80,6 +106,17 @@ export default function NoteEditPage() {
     api.notes.getNote,
     noteId ? { noteId: noteId as Id<"notes"> } : "skip"
   );
+
+  // Get folders for folder selection
+  const folders = useQuery(
+    api.notes.getFoldersByUser,
+    user?.id && storeId
+      ? {
+          userId: user.id,
+          storeId,
+        }
+      : "skip"
+  ) ?? [];
 
   // Mutations
   const updateNote = useMutation(api.notes.updateNote);
@@ -172,9 +209,6 @@ export default function NoteEditPage() {
   );
 
   const handleDeleteNote = async () => {
-    if (!confirm("Are you sure you want to delete this note? This cannot be undone.")) {
-      return;
-    }
     try {
       await deleteNote({ noteId: noteId as Id<"notes"> });
       toast({
@@ -190,6 +224,32 @@ export default function NoteEditPage() {
       });
     }
   };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !currentNote.tags.includes(newTag.trim())) {
+      setCurrentNote((prev) => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()],
+      }));
+      setNewTag("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setCurrentNote((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+    }));
+  };
+
+  // Check if there are unsaved changes
+  const hasChanges = note && (
+    currentNote.title !== note.title ||
+    currentNote.content !== note.content ||
+    JSON.stringify(currentNote.tags) !== JSON.stringify(note.tags) ||
+    currentNote.priority !== note.priority ||
+    currentNote.status !== note.status
+  );
 
   // Loading state
   if (!isLoaded || !user || stores === undefined || note === undefined) {
@@ -220,148 +280,358 @@ export default function NoteEditPage() {
     );
   }
 
+  const statusConfig = STATUS_OPTIONS.find((s) => s.value === currentNote.status) || STATUS_OPTIONS[0];
+  const priorityConfig = PRIORITY_OPTIONS.find((p) => p.value === currentNote.priority) || PRIORITY_OPTIONS[1];
+
   return (
-    <div className="-m-4 h-[calc(100vh-9rem)] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800/50 md:-m-8">
-      <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-[#1a1a1a]">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white dark:border-gray-800/50 dark:bg-[#1e1e1e]">
-          <div className="flex h-16 items-center justify-between px-6">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/dashboard/notes?mode=create">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Link>
-              </Button>
-              <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
-              <h1 className="truncate text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {currentNote.title || "Untitled"}
-              </h1>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/dashboard/notes?mode=create">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Edit Note</h1>
+              <p className="text-muted-foreground">{currentNote.title || "Untitled"}</p>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Save Status */}
+            {isSaving ? (
+              <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </span>
+            ) : lastSaved ? (
+              <span className="text-sm text-green-600 dark:text-green-400">
+                Saved {formatDistanceToNow(lastSaved)} ago
+              </span>
+            ) : hasChanges ? (
+              <span className="text-sm text-orange-600">Unsaved changes</span>
+            ) : null}
 
-            <div className="flex items-center gap-3">
-              {/* Status Selector */}
-              <Select
-                value={currentNote.status}
-                onValueChange={(value: any) =>
-                  setCurrentNote((prev) => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-black">
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center gap-2">
-                        <option.icon className="h-4 w-4" />
-                        {option.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Priority Selector */}
-              <Select
-                value={currentNote.priority}
-                onValueChange={(value: any) =>
-                  setCurrentNote((prev) => ({ ...prev, priority: value }))
-                }
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-black">
-                  {PRIORITY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Word count and save status */}
-              {note.wordCount && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {note.wordCount} words
-                </span>
+            {/* Toggle Source Library */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSourceLibrary(!showSourceLibrary)}
+              className="gap-2"
+            >
+              {showSourceLibrary ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
               )}
+              Sources
+            </Button>
 
+            {/* Save Button */}
+            <Button onClick={() => handleSaveNote(true)} disabled={!hasChanges || isSaving}>
               {isSaving ? (
-                <span className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
-                </span>
-              ) : lastSaved ? (
-                <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                  Saved {formatDistanceToNow(lastSaved)} ago
-                </span>
-              ) : null}
-
-              {/* Toggle Source Library */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSourceLibrary(!showSourceLibrary)}
-                className="gap-2"
-              >
-                {showSourceLibrary ? (
-                  <PanelRightClose className="h-4 w-4" />
-                ) : (
-                  <PanelRightOpen className="h-4 w-4" />
-                )}
-                Sources
-              </Button>
-
-              {/* Delete Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeleteNote}
-                className="gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/20"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-
-              {/* Save Button */}
-              <Button onClick={() => handleSaveNote(true)} className="gap-2">
-                <Save className="h-4 w-4" />
-                Save
-              </Button>
-            </div>
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Editor */}
-          <div className="flex-1 overflow-auto">
-            <div className="h-full w-full">
-              <NotionEditor
-                content={currentNote.content}
-                onChange={(content) => setCurrentNote((prev) => ({ ...prev, content }))}
-                title={currentNote.title}
-                onTitleChange={(title) => setCurrentNote((prev) => ({ ...prev, title }))}
-                icon={currentNote.icon}
-                onIconChange={(icon) => setCurrentNote((prev) => ({ ...prev, icon }))}
-                placeholder="Start writing your ideas..."
-                className="h-full rounded-none border-none shadow-none"
-              />
-            </div>
+        {/* Main Content */}
+        <div className="flex gap-6">
+          {/* Left Side - Main Content */}
+          <div className="flex-1">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList>
+                <TabsTrigger value="editor" className="gap-2">
+                  <Edit3 className="h-4 w-4" />
+                  Editor
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="editor" className="space-y-6">
+                {/* Editor Card */}
+                <Card>
+                  <CardContent className="p-0">
+                    <div className="min-h-[600px]">
+                      <NotionEditor
+                        content={currentNote.content}
+                        onChange={(content) => setCurrentNote((prev) => ({ ...prev, content }))}
+                        title={currentNote.title}
+                        onTitleChange={(title) => setCurrentNote((prev) => ({ ...prev, title }))}
+                        icon={currentNote.icon}
+                        onIconChange={(icon) => setCurrentNote((prev) => ({ ...prev, icon }))}
+                        placeholder="Start writing your ideas..."
+                        className="h-full rounded-lg border-none shadow-none"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="settings" className="space-y-6">
+                {/* Status & Priority */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Note Status
+                    </CardTitle>
+                    <CardDescription>
+                      Manage the status and priority of your note
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label>Status</Label>
+                        <Select
+                          value={currentNote.status}
+                          onValueChange={(value: any) =>
+                            setCurrentNote((prev) => ({ ...prev, status: value }))
+                          }
+                        >
+                          <SelectTrigger className="mt-1.5 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {STATUS_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                <div className="flex items-center gap-2">
+                                  <option.icon className={`h-4 w-4 ${option.color}`} />
+                                  {option.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Priority</Label>
+                        <Select
+                          value={currentNote.priority}
+                          onValueChange={(value: any) =>
+                            setCurrentNote((prev) => ({ ...prev, priority: value }))
+                          }
+                        >
+                          <SelectTrigger className="mt-1.5 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {PRIORITY_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                <Badge className={option.color}>{option.label}</Badge>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tags */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      Tags
+                    </CardTitle>
+                    <CardDescription>
+                      Add tags to organize and find your notes easily
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a tag..."
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddTag();
+                          }
+                        }}
+                        className="bg-background"
+                      />
+                      <Button onClick={handleAddTag} variant="outline">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {currentNote.tags.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No tags yet</p>
+                      ) : (
+                        currentNote.tags.map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="secondary"
+                            className="gap-1 pr-1"
+                          >
+                            {tag}
+                            <button
+                              onClick={() => handleRemoveTag(tag)}
+                              className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Note Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5" />
+                      Note Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="flex items-center gap-3 rounded-lg border p-3">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Created</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(note._creationTime), "MMM d, yyyy 'at' h:mm a")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 rounded-lg border p-3">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Last Edited</p>
+                          <p className="text-sm text-muted-foreground">
+                            {note.lastEditedAt
+                              ? format(new Date(note.lastEditedAt), "MMM d, yyyy 'at' h:mm a")
+                              : "Never"}
+                          </p>
+                        </div>
+                      </div>
+                      {note.wordCount && (
+                        <div className="flex items-center gap-3 rounded-lg border p-3">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">Word Count</p>
+                            <p className="text-sm text-muted-foreground">
+                              {note.wordCount} words
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {note.folderId && (
+                        <div className="flex items-center gap-3 rounded-lg border p-3">
+                          <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">Folder</p>
+                            <p className="text-sm text-muted-foreground">
+                              {folders.find((f: any) => f._id === note.folderId)?.name || "Unknown"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* AI Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5" />
+                      AI Actions
+                    </CardTitle>
+                    <CardDescription>
+                      Use AI to enhance or transform your note
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button variant="outline" className="w-full justify-start gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Generate Course from This Note
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Summarize Content
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Danger Zone */}
+                <Card className="border-red-200 dark:border-red-900">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-red-600">
+                      <AlertTriangle className="h-5 w-5" />
+                      Danger Zone
+                    </CardTitle>
+                    <CardDescription>
+                      Irreversible actions that affect your note
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="gap-2">
+                          <Trash2 className="h-4 w-4" />
+                          Delete Note
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white dark:bg-black">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete &quot;{currentNote.title}&quot;? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteNote}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* Source Library Panel */}
+          {/* Right Side - Source Library Panel */}
           {showSourceLibrary && storeId && (
-            <div className="w-80 flex-shrink-0 border-l border-gray-200 dark:border-gray-800/50">
-              <SourceLibrary
-                userId={user.id}
-                storeId={storeId}
-                folderId={note.folderId ?? undefined}
-                onGenerateNotes={(sourceId) => {
-                  // Could refresh or navigate to the generated note
-                }}
-              />
+            <div className="w-80 flex-shrink-0">
+              <Card className="sticky top-8">
+                <SourceLibrary
+                  userId={user.id}
+                  storeId={storeId}
+                  folderId={note.folderId ?? undefined}
+                  onGenerateNotes={(sourceId) => {
+                    // Could refresh or navigate to the generated note
+                  }}
+                />
+              </Card>
             </div>
           )}
         </div>

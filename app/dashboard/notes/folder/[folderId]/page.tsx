@@ -501,7 +501,7 @@ function NoteCard({
                   </div>
                 )}
                 <span className="text-xs">
-                  Updated {formatDistanceToNow(note.updatedAt || note._creationTime)} ago
+                  Updated {formatDistanceToNow(note.lastEditedAt || note._creationTime)} ago
                 </span>
               </div>
             </div>
