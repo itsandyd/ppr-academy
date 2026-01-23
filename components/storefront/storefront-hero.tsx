@@ -90,8 +90,8 @@ export function StorefrontHero({
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12 lg:py-16">
-        <div className="space-y-5 sm:space-y-6">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
+        <div className="space-y-4 sm:space-y-5">
           {/* Avatar + Name cluster - stacked on mobile, horizontal on larger */}
           <motion.div
             className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6"
@@ -101,8 +101,8 @@ export function StorefrontHero({
           >
             {/* Avatar with glow */}
             <div className="relative flex-shrink-0">
-              <div className="absolute -inset-2 bg-gradient-to-br from-cyan-500/50 to-fuchsia-500/50 rounded-full blur-xl opacity-60" />
-              <div className="relative h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28 rounded-full overflow-hidden ring-2 ring-white/10">
+              <div className="absolute -inset-1.5 bg-gradient-to-br from-cyan-500/50 to-fuchsia-500/50 rounded-full blur-lg opacity-60" />
+              <div className="relative h-14 w-14 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-full overflow-hidden ring-2 ring-white/10">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -111,7 +111,7 @@ export function StorefrontHero({
                     className="object-cover"
                   />
                 ) : (
-                  <div className="h-full w-full bg-gradient-to-br from-cyan-600 to-fuchsia-600 flex items-center justify-center text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+                  <div className="h-full w-full bg-gradient-to-br from-cyan-600 to-fuchsia-600 flex items-center justify-center text-lg sm:text-2xl lg:text-3xl font-bold text-white">
                     {initials}
                   </div>
                 )}
@@ -131,7 +131,7 @@ export function StorefrontHero({
 
           {/* Display name - responsive typography */}
           <motion.h1
-            className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[0.95] sm:leading-[0.9]"
+            className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1] sm:leading-[0.95]"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -151,45 +151,48 @@ export function StorefrontHero({
             </motion.p>
           )}
 
-          {/* Stats + Actions row */}
+          {/* Stats row */}
           <motion.div
-            className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 pt-2"
+            className="flex items-center gap-2 sm:gap-3"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.8 }}
           >
-            {/* Stats inline */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <StatCard
-                value={stats.products}
-                label="Products"
-                gradient="from-cyan-500 to-cyan-600"
-                delay={0}
-              />
-              <StatCard
-                value={stats.students}
-                label="Students"
-                gradient="from-fuchsia-500 to-fuchsia-600"
-                delay={0.1}
-              />
-              <StatCard
-                value={stats.sales}
-                label="Sales"
-                gradient="from-amber-500 to-orange-600"
-                delay={0.2}
-              />
-            </div>
+            <StatCard
+              value={stats.products}
+              label="Products"
+              gradient="from-cyan-500 to-cyan-600"
+              delay={0}
+            />
+            <StatCard
+              value={stats.students}
+              label="Students"
+              gradient="from-fuchsia-500 to-fuchsia-600"
+              delay={0.1}
+            />
+            <StatCard
+              value={stats.sales}
+              label="Sales"
+              gradient="from-amber-500 to-orange-600"
+              delay={0.2}
+            />
+          </motion.div>
 
-            {/* Message button */}
-            {userId && (
+          {/* Message button - separate row */}
+          {userId && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
               <SendMessageButton
                 recipientUserId={userId}
                 recipientName={displayName}
                 variant="outline"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 text-sm sm:text-base w-fit"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 text-sm"
               />
-            )}
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* Social links - pill style */}
           {hasSocials && (
@@ -238,20 +241,20 @@ function StatCard({
 }) {
   return (
     <motion.div
-      className="relative group flex-shrink-0"
+      className="relative group"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.5 + delay, duration: 0.5 }}
     >
       <div className={cn(
-        "absolute -inset-0.5 rounded-xl bg-gradient-to-r opacity-40 blur-sm transition-opacity group-hover:opacity-80",
+        "absolute -inset-0.5 rounded-lg sm:rounded-xl bg-gradient-to-r opacity-40 blur-sm transition-opacity group-hover:opacity-80",
         gradient
       )} />
-      <div className="relative bg-black/80 backdrop-blur-sm rounded-xl px-4 sm:px-5 py-2.5 sm:py-3 border border-white/10 min-w-[80px] sm:min-w-[95px]">
-        <div className="text-xl sm:text-2xl font-black text-white tabular-nums text-center">
+      <div className="relative bg-black/80 backdrop-blur-sm rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 border border-white/10">
+        <div className="text-lg sm:text-xl font-bold text-white tabular-nums text-center">
           {value.toLocaleString()}
         </div>
-        <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-white/50 text-center">
+        <div className="text-[8px] sm:text-[9px] uppercase tracking-wide text-white/50 text-center">
           {label}
         </div>
       </div>
