@@ -30,6 +30,7 @@ import {
   Video,
   Handshake,
   MessageCircle,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -185,6 +186,12 @@ const createLinks: SidebarLink[] = [
     label: "Affiliates",
     icon: Handshake,
     color: "text-rose-500",
+  },
+  {
+    href: "/dashboard/profile?mode=create",
+    label: "Profile",
+    icon: User,
+    color: "text-indigo-500",
   },
 ];
 
