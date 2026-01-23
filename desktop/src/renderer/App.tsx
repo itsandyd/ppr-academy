@@ -11,6 +11,7 @@ import { DownloadsPage } from './pages/DownloadsPage'
 import { FavoritesPage } from './pages/FavoritesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LoginPage } from './pages/LoginPage'
+import { UploadPage } from './pages/UploadPage'
 
 // Initialize Convex client
 const convexUrl = import.meta.env.VITE_CONVEX_URL
@@ -62,6 +63,7 @@ function SignedInContent() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/upload" element={<UploadPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Layout>

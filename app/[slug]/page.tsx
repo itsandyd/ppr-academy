@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { use } from "react";
 import { notFound } from "next/navigation";
@@ -13,8 +13,6 @@ import {
   Play,
   Users,
   Star,
-  Download,
-  ShoppingCart,
   ArrowRight,
   ExternalLink,
 } from "lucide-react";
@@ -47,14 +45,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
@@ -74,14 +64,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-
-  // Product modal state
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [productModalOpen, setProductModalOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmittedEmail, setHasSubmittedEmail] = useState(false);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug: slug });
@@ -128,11 +110,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   //   store ? { storeId: store._id } : "skip"
   // );
 
-  // Mutation for creating lead contacts
-  const createContact = useMutation(api.emailContacts.createContact);
-
-  // Mutation for lead magnet submissions (handles emails, workflows, customer creation)
-  const submitLead = useMutation(api.leadSubmissions.submitLead);
 
   // Combine all product types into unified list with BaseProduct shape
   const allProducts: BaseProduct[] = useMemo(
@@ -286,78 +263,41 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       }
     : null;
 
-  // Click handlers
+  // Click handlers - Navigate to dedicated landing pages
   const handleProductClick = (product: any) => {
-    if (product.productType === "course") {
-      router.push(`/courses/${product.slug}`);
-    } else {
-      // Reset form state
-      setEmail("");
-      setName("");
-      setHasSubmittedEmail(false);
-      // Open modal for digital products
-      setSelectedProduct(product);
-      setProductModalOpen(true);
+    const productSlug = product.slug || product._id;
+    const productType = product.productType || product.productCategory || "digitalProduct";
+
+    // Route to appropriate landing page based on product type
+    switch (productType) {
+      case "course":
+        router.push(`/${slug}/courses/${productSlug}`);
+        break;
+      case "beat-lease":
+        router.push(`/${slug}/beats/${productSlug}`);
+        break;
+      case "membership":
+        router.push(`/${slug}/memberships/${productSlug}`);
+        break;
+      case "tip-jar":
+        router.push(`/${slug}/tips/${productSlug}`);
+        break;
+      case "coaching":
+        router.push(`/${slug}/coaching/${productSlug}`);
+        break;
+      case "urlMedia":
+        // URL/Media products open external link directly
+        if (product.url) {
+          window.open(product.url, "_blank", "noopener,noreferrer");
+        }
+        break;
+      default:
+        // All other digital products go to the products landing page
+        router.push(`/${slug}/products/${productSlug}`);
+        break;
     }
   };
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !selectedProduct || !store) return;
-
-    setIsSubmitting(true);
-    try {
-      // Parse name into first/last
-      const nameParts = name.trim().split(" ");
-      const firstName = nameParts[0] || undefined;
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
-
-      // Save lead to Convex emailContacts
-      await createContact({
-        storeId: store._id,
-        email: email.toLowerCase(),
-        firstName,
-        lastName,
-        source: "lead_magnet",
-        sourceProductId: selectedProduct._id,
-      });
-
-      // Also submit to leadSubmissions for lead magnets (handles confirmation emails, workflows, customer creation)
-      if (selectedProduct.isLeadMagnet || selectedProduct.price === 0) {
-        await submitLead({
-          name: name.trim() || email.split("@")[0],
-          email: email.toLowerCase(),
-          productId: selectedProduct._id,
-          storeId: store._id,
-          adminUserId: store.userId,
-          source: "storefront",
-        });
-      }
-
-      setHasSubmittedEmail(true);
-    } catch (error: any) {
-      // Handle duplicate contact gracefully
-      if (error?.message?.includes("already exists")) {
-        setHasSubmittedEmail(true); // Still show success - they're already subscribed
-      } else {
-        toast.error("Something went wrong. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDownload = (product: any) => {
-    if (product.downloadUrl) {
-      window.open(product.downloadUrl, "_blank");
-    } else if (product.url) {
-      window.open(product.url, "_blank");
-    }
-    // Don't close modal immediately
-    setTimeout(() => {
-      setProductModalOpen(false);
-    }, 1000);
-  };
 
   const handleStartStorefront = () => {
     router.push("/sign-up?intent=creator");
@@ -933,201 +873,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       <div className="container mx-auto px-6 pb-8">
         <TrustSignals variant="compact" className="justify-center" />
       </div>
-
-      {/* Product Details Modal */}
-      <Dialog open={productModalOpen} onOpenChange={setProductModalOpen}>
-        <DialogContent className="flex max-h-[85vh] max-w-lg flex-col overflow-hidden bg-white dark:bg-black">
-          {selectedProduct && (
-            <>
-              <DialogHeader className="flex-shrink-0">
-                <DialogTitle className="line-clamp-2 text-xl">{selectedProduct.title}</DialogTitle>
-                <DialogDescription>{selectedProduct.category}</DialogDescription>
-              </DialogHeader>
-
-              <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-                {/* Product Image */}
-                {selectedProduct.imageUrl && (
-                  <div className="relative h-48 flex-shrink-0 overflow-hidden rounded-lg">
-                    <Image
-                      src={selectedProduct.imageUrl}
-                      alt={selectedProduct.title}
-                      width={640}
-                      height={192}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                )}
-
-                {/* Price Badge */}
-                <div className="flex flex-shrink-0 items-center gap-3">
-                  <Badge className="px-3 py-1 text-base">
-                    {selectedProduct.price === 0 ? "FREE" : `$${selectedProduct.price}`}
-                  </Badge>
-                  {selectedProduct.productType && (
-                    <Badge variant="outline" className="text-xs">
-                      {selectedProduct.productType === "digitalProduct"
-                        ? "Digital Product"
-                        : selectedProduct.productType}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Description - Scrollable */}
-                {selectedProduct.description && (
-                  <div className="flex-shrink-0">
-                    <h3 className="mb-2 text-sm font-semibold">About this product</h3>
-                    <div className="max-h-32 overflow-y-auto pr-2">
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        {selectedProduct.description}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Opt-in Form or Action Buttons */}
-                {selectedProduct.price === 0 && !hasSubmittedEmail ? (
-                  /* Show opt-in form for free products */
-                  <div className="flex-shrink-0 space-y-3">
-                    <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 p-3">
-                      <h3 className="mb-1 text-sm font-semibold">🎁 Get Free Access</h3>
-                      <p className="mb-3 text-xs text-muted-foreground">
-                        Enter your email to download this free resource instantly
-                      </p>
-                      <form onSubmit={handleEmailSubmit} className="space-y-2">
-                        <div>
-                          <label
-                            htmlFor="storefront-name"
-                            className="mb-1 block text-xs font-medium"
-                          >
-                            Name (optional)
-                          </label>
-                          <Input
-                            id="storefront-name"
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Your name"
-                            className="h-9 bg-white text-sm dark:bg-black"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="storefront-email"
-                            className="mb-1 block text-xs font-medium"
-                          >
-                            Email <span className="text-red-500">*</span>
-                          </label>
-                          <Input
-                            id="storefront-email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                            required
-                            className="h-9 bg-white text-sm dark:bg-black"
-                          />
-                        </div>
-                        <Button
-                          type="submit"
-                          className="h-9 w-full text-sm"
-                          disabled={isSubmitting || !email}
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="mr-2 h-4 w-4" />
-                              Get Free Access
-                            </>
-                          )}
-                        </Button>
-                      </form>
-                      <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                        🔒 We respect your privacy. Unsubscribe anytime.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  /* Show action buttons after email submission or for paid products */
-                  <div className="flex-shrink-0 space-y-3">
-                    {hasSubmittedEmail && (
-                      <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
-                        <p className="text-xs font-medium text-primary">
-                          ✓ Email confirmed! Click below to access your download.
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      {selectedProduct.downloadUrl || selectedProduct.url ? (
-                        <>
-                          <Button
-                            className="h-9 flex-1 text-sm"
-                            onClick={() => {
-                              handleDownload(selectedProduct);
-                            }}
-                          >
-                            {selectedProduct.downloadUrl ? (
-                              <>
-                                <Download className="mr-2 h-4 w-4" />
-                                {selectedProduct.buttonLabel || "Download Now"}
-                              </>
-                            ) : selectedProduct.url ? (
-                              <>
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                {selectedProduct.buttonLabel || "Visit Link"}
-                              </>
-                            ) : (
-                              <>
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                Access Product
-                              </>
-                            )}
-                          </Button>
-                          {selectedProduct.price > 0 && (
-                            <Button
-                              variant="outline"
-                              className="h-9 text-sm"
-                              onClick={() => {
-                                alert(
-                                  `To purchase "${selectedProduct.title}", please contact ${displayName} directly.`
-                                );
-                              }}
-                            >
-                              <ShoppingCart className="mr-2 h-4 w-4" />
-                              Purchase
-                            </Button>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            className="h-9 flex-1 text-sm"
-                            onClick={() => {
-                              const message =
-                                selectedProduct.price === 0
-                                  ? `I'm interested in the free resource "${selectedProduct.title}".`
-                                  : `I'm interested in purchasing "${selectedProduct.title}" for $${selectedProduct.price}.`;
-                              alert(
-                                `${message}\n\nPlease contact ${displayName} for more information.`
-                              );
-                              setProductModalOpen(false);
-                            }}
-                          >
-                            Contact {displayName}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </StorefrontLayout>
   );
 }

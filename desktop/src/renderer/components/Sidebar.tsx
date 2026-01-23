@@ -8,7 +8,8 @@ import {
   Download,
   Heart,
   Settings,
-  Coins
+  Coins,
+  Upload
 } from 'lucide-react'
 
 const navItems = [
@@ -16,6 +17,7 @@ const navItems = [
   { path: '/library', label: 'My Library', icon: Library },
   { path: '/downloads', label: 'Downloads', icon: Download },
   { path: '/favorites', label: 'Favorites', icon: Heart },
+  { path: '/upload', label: 'Upload', icon: Upload },
 ]
 
 export function Sidebar() {

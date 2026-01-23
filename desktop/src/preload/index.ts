@@ -21,6 +21,16 @@ export interface ElectronAPI {
   startDrag: (filePath: string) => void
   startDragMultiple: (filePaths: string[]) => void
 
+  // Upload
+  selectAudioFile: () => Promise<{
+    path: string
+    name: string
+    size: number
+    format: string
+    buffer: string // Base64 encoded
+  } | null>
+  readAudioFile: (filePath: string) => Promise<Buffer | null>
+
   // Store (preferences)
   storeGet: (key: string) => Promise<unknown>
   storeSet: (key: string, value: unknown) => Promise<boolean>
@@ -65,6 +75,10 @@ const electronAPI: ElectronAPI = {
   prepareDrag: (filePath: string) => ipcRenderer.send('prepare-drag', filePath),
   startDrag: (filePath: string) => ipcRenderer.send('start-drag', filePath),
   startDragMultiple: (filePaths: string[]) => ipcRenderer.send('start-drag-multiple', filePaths),
+
+  // Upload
+  selectAudioFile: () => ipcRenderer.invoke('select-audio-file'),
+  readAudioFile: (filePath: string) => ipcRenderer.invoke('read-audio-file', filePath),
 
   // Store (preferences)
   storeGet: (key: string) => ipcRenderer.invoke('store-get', key),

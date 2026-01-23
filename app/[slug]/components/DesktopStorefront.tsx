@@ -4,16 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-  DialogPortal,
-  DialogOverlay,
-} from "@/components/ui/dialog";
-import {
   ArrowRight,
   Store,
   Gift,
@@ -28,47 +18,10 @@ import {
   Twitter,
   Facebook,
 } from "lucide-react";
-import { LeadMagnetPreview } from "./LeadMagnetPreview";
-import { FollowGateModal, FollowGateProduct } from "@/components/follow-gates/FollowGateModal";
 import Link from "next/link";
 import Image from "next/image";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { Id } from "@/convex/_generated/dataModel";
-
-// Custom DialogContent with solid overlay
-const CustomDialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogPrimitive.Overlay
-      className="fixed inset-0 z-[99998] bg-background"
-      style={{
-        backgroundColor: "hsl(var(--background)) !important",
-        opacity: "1 !important",
-        pointerEvents: "auto",
-      }}
-    />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-[99999] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-white p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] dark:bg-black sm:rounded-lg",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <span className="text-xl font-bold text-muted-foreground hover:text-foreground">×</span>
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
-CustomDialogContent.displayName = "CustomDialogContent";
 
 interface Product {
   _id: string;
@@ -131,6 +84,29 @@ interface DesktopStorefrontProps {
   }>;
 }
 
+// Helper function to get product landing page URL
+function getProductUrl(storeSlug: string, product: Product): string {
+  const productSlug = product.slug || product._id;
+  const productType = product.productType || "digitalProduct";
+
+  switch (productType) {
+    case "course":
+      return `/${storeSlug}/courses/${productSlug}`;
+    case "beat-lease":
+      return `/${storeSlug}/beats/${productSlug}`;
+    case "membership":
+      return `/${storeSlug}/memberships/${productSlug}`;
+    case "tip-jar":
+      return `/${storeSlug}/tips/${productSlug}`;
+    case "coaching":
+      return `/${storeSlug}/coaching/${productSlug}`;
+    case "urlMedia":
+      return product.url || "#";
+    default:
+      return `/${storeSlug}/products/${productSlug}`;
+  }
+}
+
 export function DesktopStorefront({
   store,
   user,
@@ -140,9 +116,14 @@ export function DesktopStorefront({
   avatarUrl,
   socialAccounts = [],
 }: DesktopStorefrontProps) {
-  const { toast } = useToast();
-  const [showFollowGate, setShowFollowGate] = React.useState(false);
-  const [selectedProduct, setSelectedProduct] = React.useState<FollowGateProduct | null>(null);
+  // Filter published products
+  const publishedProducts = products?.filter((p) => p.isPublished) || [];
+
+  // Group products by type
+  const freeProducts = publishedProducts.filter((p) => p.price === 0);
+  const paidProducts = publishedProducts.filter((p) => p.price > 0);
+  const courses = publishedProducts.filter((p) => p.productType === "course");
+  const urlMediaProducts = publishedProducts.filter((p) => p.productType === "urlMedia");
 
   return (
     <div>
@@ -172,13 +153,13 @@ export function DesktopStorefront({
           <div className="mt-8 grid grid-cols-1 gap-6 text-center md:grid-cols-3">
             <div className="rounded-lg bg-primary-foreground/10 p-4 backdrop-blur">
               <div className="text-2xl font-bold text-background">
-                {products?.filter((p) => p.isPublished).length || 0}
+                {publishedProducts.length || 0}
               </div>
               <div className="text-sm text-background/80">Products & Courses</div>
             </div>
             <div className="rounded-lg bg-primary-foreground/10 p-4 backdrop-blur">
               <div className="text-2xl font-bold text-background">
-                {products?.filter((p) => p.price === 0 && p.isPublished).length || 0}
+                {freeProducts.length || 0}
               </div>
               <div className="text-sm text-background/80">Free Resources</div>
             </div>
@@ -198,347 +179,23 @@ export function DesktopStorefront({
             Available Products & Resources
           </h2>
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {/* Lead Magnet Cards (Free Digital Products Only - NOT URL/Media) */}
-            {products
-              ?.filter(
-                (p) =>
-                  p.productType === "digitalProduct" &&
-                  p.price === 0 &&
-                  (p.style === "card" || p.style === "callout") &&
-                  p.isPublished &&
-                  !p.url
-              )
-              .map((leadMagnet) => {
-                // If follow gate is enabled, use FollowGateModal instead
-                if (leadMagnet.followGateEnabled) {
-                  return (
-                    <Card
-                      key={leadMagnet._id}
-                      className="group cursor-pointer border border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-                      onClick={() => {
-                        setSelectedProduct({
-                          _id: leadMagnet._id,
-                          title: leadMagnet.title,
-                          followGateEnabled: leadMagnet.followGateEnabled,
-                          followGateRequirements: leadMagnet.followGateRequirements,
-                          followGateSocialLinks: leadMagnet.followGateSocialLinks,
-                          followGateMessage: leadMagnet.followGateMessage,
-                          downloadUrl: leadMagnet.downloadUrl,
-                        });
-                        setShowFollowGate(true);
-                      }}
-                    >
-                      {/* Image */}
-                      <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                        {leadMagnet.imageUrl ? (
-                          <Image
-                            src={leadMagnet.imageUrl}
-                            alt={leadMagnet.title}
-                            width={640}
-                            height={192}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                        ) : (
-                          <div className="text-center">
-                            <Gift className="mx-auto mb-2 h-16 w-16 text-primary" />
-                            <span className="text-sm font-medium text-primary">Free Resource</span>
-                          </div>
-                        )}
-                      </div>
-                      {/* Content */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className="border-primary/20 bg-primary/10 text-xs font-semibold text-primary">
-                            FREE
-                          </Badge>
-                        </div>
-                        <h3 className="line-clamp-2 text-lg font-bold text-primary">
-                          {leadMagnet.title}
-                        </h3>
-                        <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
-                          {leadMagnet.description ||
-                            "Get instant access to this valuable free resource"}
-                        </p>
-                        <div className="flex items-center justify-between pt-2">
-                          <span className="text-xs font-medium text-primary">
-                            Click to get access
-                          </span>
-                          <ArrowRight className="h-4 w-4 text-primary transition-transform duration-200 group-hover:translate-x-1" />
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                }
+            {/* All Products - Navigate to Landing Pages */}
+            {publishedProducts.map((product) => {
+              const productUrl = getProductUrl(store.slug, product);
+              const isExternal = product.productType === "urlMedia";
 
-                // Default behavior - use LeadMagnetPreview Dialog
-                return (
-                  <Dialog key={leadMagnet._id}>
-                    <DialogTrigger asChild>
-                      <Card className="group cursor-pointer border border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-                        {/* Image */}
-                        <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                          {leadMagnet.imageUrl ? (
-                            <Image
-                              src={leadMagnet.imageUrl}
-                              alt={leadMagnet.title}
-                              width={640}
-                              height={192}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            />
-                          ) : (
-                            <div className="text-center">
-                              <Gift className="mx-auto mb-2 h-16 w-16 text-primary" />
-                              <span className="text-sm font-medium text-primary">Free Resource</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Badge className="border-primary/20 bg-primary/10 text-xs font-semibold text-primary">
-                              FREE
-                            </Badge>
-                          </div>
-                          <h3 className="line-clamp-2 text-lg font-bold text-primary">
-                            {leadMagnet.title}
-                          </h3>
-                          <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
-                            {leadMagnet.description ||
-                              "Get instant access to this valuable free resource"}
-                          </p>
-                          <div className="flex items-center justify-between pt-2">
-                            <span className="text-xs font-medium text-primary">
-                              Click to get access
-                            </span>
-                            <ArrowRight className="h-4 w-4 text-primary transition-transform duration-200 group-hover:translate-x-1" />
-                          </div>
-                        </div>
-                      </Card>
-                    </DialogTrigger>
-                    <CustomDialogContent className="mx-auto max-h-[90vh] w-[95vw] max-w-md overflow-y-auto">
-                      <DialogHeader className="pb-4">
-                        <DialogTitle className="text-xl font-bold text-primary">
-                          {leadMagnet.title}
-                        </DialogTitle>
-                        <DialogDescription className="text-sm text-primary/80">
-                          Enter your details below to get instant access to your free resource
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="relative z-0 rounded-lg bg-background">
-                        <LeadMagnetPreview
-                          leadMagnet={{
-                            title: leadMagnet.title,
-                            subtitle: leadMagnet.description || "",
-                            imageUrl: leadMagnet.imageUrl,
-                            ctaText: leadMagnet.buttonLabel || "Get Free Resource",
-                            downloadUrl: leadMagnet.downloadUrl,
-                            productId: leadMagnet._id,
-                          }}
-                          storeData={{ store, user }}
-                          isFullScreen={false}
-                        />
-                      </div>
-                    </CustomDialogContent>
-                  </Dialog>
-                );
-              })}
-
-            {/* Free Courses */}
-            {products
-              ?.filter((p) => p.productType === "course" && p.price === 0 && p.isPublished)
-              .map((course) => (
-                <Card
-                  key={course._id}
-                  className="group cursor-pointer border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-                  onClick={() => {
-                    window.location.href = `/courses/${course.slug}`;
-                  }}
-                >
-                  {/* Image */}
-                  <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                    {course.imageUrl ? (
-                      <Image
-                        src={course.imageUrl}
-                        alt={course.title}
-                        width={640}
-                        height={192}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                    ) : (
-                      <div className="text-center">
-                        <GraduationCap className="mx-auto mb-2 h-16 w-16 text-primary" />
-                        <span className="text-sm font-medium text-primary">Free Course</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Badge className="border-primary/20 bg-primary/10 text-xs font-semibold text-primary">
-                        FREE COURSE
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {course.category || "Course"}
-                      </Badge>
-                    </div>
-                    <h3 className="line-clamp-2 text-lg font-bold text-primary">{course.title}</h3>
-                    <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
-                      {course.description || "Comprehensive course content"}
-                    </p>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs font-medium text-primary">Click to enroll</span>
-                      <GraduationCap className="h-5 w-5 text-primary transition-transform duration-200 group-hover:scale-110" />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-
-            {/* Paid Courses */}
-            {products
-              ?.filter((p) => p.productType === "course" && p.price > 0 && p.isPublished)
-              .map((course) => (
-                <Card
-                  key={course._id}
-                  className="group cursor-pointer border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/10 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-                  onClick={() => {
-                    window.location.href = `/courses/${course.slug}`;
-                  }}
-                >
-                  {/* Image */}
-                  <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                    {course.imageUrl ? (
-                      <Image
-                        src={course.imageUrl}
-                        alt={course.title}
-                        width={640}
-                        height={192}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                    ) : (
-                      <div className="text-center">
-                        <GraduationCap className="mx-auto mb-2 h-16 w-16 text-primary" />
-                        <span className="text-sm font-medium text-primary">Course</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge className="border-primary/20 bg-primary/10 font-semibold text-primary">
-                        ${course.price}
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {course.category || "Course"}
-                      </Badge>
-                    </div>
-                    <h3 className="line-clamp-2 text-lg font-bold text-primary">{course.title}</h3>
-                    <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
-                      {course.description || "Comprehensive course content"}
-                    </p>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs font-medium text-primary">Click to enroll</span>
-                      <GraduationCap className="h-5 w-5 text-primary transition-transform duration-200 group-hover:scale-110" />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-
-            {/* URL/Media Products */}
-            {products
-              ?.filter((p) => p.productType === "urlMedia" && p.isPublished)
-              .map((urlMedia) => {
-                const getMediaIcon = (mediaType?: string) => {
-                  switch (mediaType) {
-                    case "youtube":
-                      return <Youtube className="h-16 w-16 text-secondary" />;
-                    case "spotify":
-                      return <Music className="h-16 w-16 text-primary" />;
-                    default:
-                      return <LinkIcon className="h-16 w-16 text-accent" />;
-                  }
-                };
-
-                const getMediaBadge = (mediaType?: string) => {
-                  switch (mediaType) {
-                    case "youtube":
-                      return <Badge className="bg-secondary/10 text-secondary">YouTube</Badge>;
-                    case "spotify":
-                      return <Badge className="bg-primary/10 text-primary">Spotify</Badge>;
-                    default:
-                      return <Badge className="bg-accent/10 text-accent">Link</Badge>;
-                  }
-                };
-
-                return (
-                  <Card
-                    key={urlMedia._id}
-                    className="group cursor-pointer border border-accent/20 bg-gradient-to-r from-accent/5 to-accent/10 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-                    onClick={() => {
-                      // Open URL in new tab
-                      window.open(urlMedia.url, "_blank", "noopener,noreferrer");
-                    }}
-                  >
-                    {/* Media Display */}
-                    <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-accent/10">
-                      <div className="text-center">
-                        {getMediaIcon(urlMedia.mediaType)}
-                        <span className="mt-2 block text-sm font-medium text-accent">
-                          {urlMedia.mediaType === "youtube"
-                            ? "Video Content"
-                            : urlMedia.mediaType === "spotify"
-                              ? "Music Content"
-                              : "External Link"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        {getMediaBadge(urlMedia.mediaType)}
-                        <Badge variant="secondary" className="text-xs">
-                          FREE
-                        </Badge>
-                      </div>
-                      <h3 className="line-clamp-2 text-lg font-bold text-accent">
-                        {urlMedia.title}
-                      </h3>
-                      <p className="line-clamp-3 text-sm leading-relaxed text-accent/80">
-                        {urlMedia.description || "Click to visit this link"}
-                      </p>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-xs font-medium text-accent">Click to open</span>
-                        <ExternalLink className="h-5 w-5 text-accent transition-transform duration-200 group-hover:scale-110" />
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-
-            {/* Paid Digital Products */}
-            {products
-              ?.filter((p) => p.productType === "digitalProduct" && p.price > 0 && p.isPublished)
-              .map((product) => (
+              const ProductCard = (
                 <Card
                   key={product._id}
-                  className="border-premium group cursor-pointer bg-card p-6 transition-all duration-300 hover:scale-[1.02]"
-                  onClick={() => {
-                    toast({
-                      title: "Coming Soon! 🚀",
-                      description: `Digital product checkout for "${product.title}" is currently in development and will be available soon.`,
-                      className: "bg-white dark:bg-black",
-                    });
-                  }}
+                  className={cn(
+                    "group cursor-pointer p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+                    product.price === 0
+                      ? "border border-primary/20 bg-primary/5"
+                      : "border-premium bg-card"
+                  )}
                 >
                   {/* Image */}
-                  <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-accent/5 to-accent/10">
+                  <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-muted/50">
                     {product.imageUrl ? (
                       <Image
                         src={product.imageUrl}
@@ -550,268 +207,99 @@ export function DesktopStorefront({
                       />
                     ) : (
                       <div className="text-center">
-                        <Store className="mx-auto mb-2 h-16 w-16 text-accent" />
-                        <span className="text-sm font-medium text-accent">Digital Product</span>
+                        {product.productType === "course" ? (
+                          <GraduationCap className="mx-auto mb-2 h-16 w-16 text-primary" />
+                        ) : product.price === 0 ? (
+                          <Gift className="mx-auto mb-2 h-16 w-16 text-primary" />
+                        ) : (
+                          <Store className="mx-auto mb-2 h-16 w-16 text-muted-foreground" />
+                        )}
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {product.productType === "course"
+                            ? "Course"
+                            : product.price === 0
+                            ? "Free Resource"
+                            : "Digital Product"}
+                        </span>
                       </div>
                     )}
                   </div>
+
+                  {/* Follow Gate Badge */}
+                  {product.followGateEnabled && (
+                    <div className="absolute right-2 top-2">
+                      <Badge className="bg-primary text-primary-foreground">
+                        <Lock className="mr-1 h-3 w-3" />
+                        Follow to Unlock
+                      </Badge>
+                    </div>
+                  )}
 
                   {/* Content */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Badge
-                        variant="secondary"
-                        className="border-primary/20 bg-primary/10 font-semibold text-primary"
+                        className={cn(
+                          "text-xs font-semibold",
+                          product.price === 0
+                            ? "border-primary/20 bg-primary/10 text-primary"
+                            : "bg-primary text-primary-foreground"
+                        )}
                       >
-                        ${product.price}
+                        {product.price === 0 ? "FREE" : `$${product.price}`}
                       </Badge>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors duration-200 group-hover:text-primary" />
+                      {product.productType && (
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {product.productType === "digitalProduct"
+                            ? "Digital"
+                            : product.productType.replace("-", " ")}
+                        </Badge>
+                      )}
                     </div>
-                    <h3 className="line-clamp-2 text-lg font-bold text-card-foreground">
+                    <h3 className="line-clamp-2 text-lg font-bold text-foreground">
                       {product.title}
                     </h3>
                     <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                      {product.description || "High-quality digital product"}
+                      {product.description || "Get instant access to this resource"}
                     </p>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs font-medium text-muted-foreground">
-                        Click to purchase
+                        {product.price === 0 ? "Get free access" : "View details"}
                       </span>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary" />
+                      {isExternal ? (
+                        <ExternalLink className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:scale-110" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1" />
+                      )}
                     </div>
                   </div>
                 </Card>
-              ))}
+              );
 
-            {/* Free Digital Products (Non-Card Style) */}
-            {products
-              ?.filter(
-                (p) =>
-                  p.productType === "digitalProduct" &&
-                  p.price === 0 &&
-                  p.style !== "card" &&
-                  p.style !== "callout" &&
-                  p.isPublished
-              )
-              .map((product) => {
-                const isLeadMagnet = product.price === 0;
-
-                if (isLeadMagnet) {
-                  // Check if follow gate is enabled
-                  if (product.followGateEnabled) {
-                    return (
-                      <Card
-                        key={product._id}
-                        className="group cursor-pointer border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-                        onClick={() => {
-                          setSelectedProduct({
-                            _id: product._id,
-                            title: product.title,
-                            followGateEnabled: product.followGateEnabled,
-                            followGateRequirements: product.followGateRequirements,
-                            followGateSocialLinks: product.followGateSocialLinks,
-                            followGateMessage: product.followGateMessage,
-                            downloadUrl: product.downloadUrl,
-                          });
-                          setShowFollowGate(true);
-                        }}
-                      >
-                        {/* Image */}
-                        <div className="relative mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                          {product.imageUrl ? (
-                            <>
-                              <Image
-                                src={product.imageUrl}
-                                alt={product.title}
-                                width={640}
-                                height={192}
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              />
-                              {/* Follow Gate Overlay Badge */}
-                              <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-chart-1 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                                <Lock className="h-3 w-3" />
-                                Follow to Unlock
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-center">
-                              <Gift className="mx-auto mb-2 h-16 w-16 text-primary" />
-                              <span className="text-sm font-medium text-primary">
-                                Free Resource
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Badge className="border-0 bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-                              FREE
-                            </Badge>
-                            <div className="flex items-center gap-1">
-                              <Lock className="h-4 w-4 text-chart-1" />
-                              <span className="text-xs font-semibold text-chart-1">
-                                Follow Gate
-                              </span>
-                            </div>
-                          </div>
-                          <h3 className="line-clamp-2 text-xl font-bold text-primary">
-                            {product.title}
-                          </h3>
-                          <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
-                            {product.description || "Get this amazing free resource"}
-                          </p>
-                          <div className="flex items-center justify-between pt-2">
-                            <span className="text-xs font-medium text-primary">
-                              Follow to get free access
-                            </span>
-                            <ArrowRight className="h-4 w-4 text-primary transition-all duration-200 group-hover:translate-x-1" />
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  }
-
-                  // Standard lead magnet (no follow gate)
-                  return (
-                    <Dialog key={product._id}>
-                      <DialogTrigger asChild>
-                        <Card className="group cursor-pointer border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
-                          {/* Image */}
-                          <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                            {product.imageUrl ? (
-                              <Image
-                                src={product.imageUrl}
-                                alt={product.title}
-                                width={640}
-                                height={192}
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              />
-                            ) : (
-                              <div className="text-center">
-                                <Gift className="mx-auto mb-2 h-16 w-16 text-primary" />
-                                <span className="text-sm font-medium text-primary">
-                                  Free Resource
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <Badge className="border-0 bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-                                FREE
-                              </Badge>
-                              <Gift className="h-5 w-5 text-primary" />
-                            </div>
-                            <h3 className="line-clamp-2 text-xl font-bold text-primary">
-                              {product.title}
-                            </h3>
-                            <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
-                              {product.description || "Get this amazing free resource"}
-                            </p>
-                            <div className="flex items-center justify-between pt-2">
-                              <span className="text-xs font-medium text-primary">
-                                Click to get free resource
-                              </span>
-                              <ArrowRight className="h-4 w-4 text-primary transition-all duration-200 group-hover:translate-x-1" />
-                            </div>
-                          </div>
-                        </Card>
-                      </DialogTrigger>
-                      <CustomDialogContent className="mx-auto max-h-[90vh] w-[95vw] max-w-md overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle className="text-center text-xl font-bold text-primary">
-                            Get Your Free Resource
-                          </DialogTitle>
-                          <DialogDescription className="text-center text-primary/80">
-                            Enter your details below to access "{product.title}"
-                          </DialogDescription>
-                        </DialogHeader>
-                        <LeadMagnetPreview
-                          leadMagnet={{
-                            ...product,
-                            productId: product._id,
-                            title: product.title,
-                            subtitle: product.description || "",
-                            imageUrl: product.imageUrl,
-                            ctaText: product.buttonLabel || "Get Free Resource",
-                            downloadUrl: product.downloadUrl,
-                          }}
-                          isFullScreen={true}
-                          storeData={{ store, user }}
-                        />
-                      </CustomDialogContent>
-                    </Dialog>
-                  );
-                }
-
-                // Paid products show checkout functionality
+              // External links open in new tab
+              if (isExternal && product.url) {
                 return (
-                  <Card
+                  <a
                     key={product._id}
-                    className="border-premium group cursor-pointer bg-card p-6 transition-all duration-300 hover:scale-[1.02]"
-                    onClick={() => {
-                      toast({
-                        title: "Coming Soon! 🚀",
-                        description: `Digital product checkout for "${product.title}" is currently in development and will be available soon.`,
-                        className: "bg-white dark:bg-black",
-                      });
-                    }}
+                    href={product.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    {/* Image */}
-                    <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-accent/5 to-accent/10">
-                      {product.imageUrl ? (
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.title}
-                          width={640}
-                          height={192}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                      ) : (
-                        <div className="text-center">
-                          <Store className="mx-auto mb-2 h-16 w-16 text-accent" />
-                          <span className="text-sm font-medium text-accent">Digital Product</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge
-                          variant="secondary"
-                          className="border-primary/20 bg-primary/10 font-semibold text-primary"
-                        >
-                          ${product.price}
-                        </Badge>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors duration-200 group-hover:text-primary" />
-                      </div>
-                      <h3 className="line-clamp-2 text-lg font-bold text-card-foreground">
-                        {product.title}
-                      </h3>
-                      <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                        {product.description || "High-quality digital product"}
-                      </p>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Click to purchase
-                        </span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary" />
-                      </div>
-                    </div>
-                  </Card>
+                    {ProductCard}
+                  </a>
                 );
-              })}
+              }
+
+              // Internal products use Next.js Link
+              return (
+                <Link key={product._id} href={productUrl}>
+                  {ProductCard}
+                </Link>
+              );
+            })}
 
             {/* Empty State */}
-            {(!products || products.filter((p) => p.isPublished).length === 0) && (
+            {publishedProducts.length === 0 && (
               <div className="col-span-full py-16 text-center">
                 <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-muted">
                   <Store className="h-10 w-10 text-muted-foreground" />
@@ -972,25 +460,6 @@ export function DesktopStorefront({
           </div>
         </div>
       </div>
-
-      {/* Follow Gate Modal */}
-      {selectedProduct && (
-        <FollowGateModal
-          open={showFollowGate}
-          onOpenChange={setShowFollowGate}
-          product={selectedProduct}
-          onSuccess={(submissionId) => {
-            console.log(`Follow gate completed for ${selectedProduct.title}`, submissionId);
-            toast({
-              title: "Success!",
-              description: selectedProduct.downloadUrl
-                ? "Your download is ready!"
-                : "Check your email for the download link!",
-              className: "bg-white dark:bg-black",
-            });
-          }}
-        />
-      )}
     </div>
   );
 }

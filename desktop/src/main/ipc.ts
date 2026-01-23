@@ -391,6 +391,57 @@ export function setupIpcHandlers(): void {
     }
   })
 
+  // Select audio file for upload
+  ipcMain.handle('select-audio-file', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Audio Sample',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Audio Files', extensions: ['wav', 'mp3', 'aiff', 'flac', 'ogg'] }
+      ]
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+
+    const filePath = result.filePaths[0]
+    const fs = require('fs')
+    const path = require('path')
+
+    try {
+      const stats = fs.statSync(filePath)
+      const fileName = path.basename(filePath)
+      const extension = path.extname(filePath).toLowerCase().slice(1)
+
+      // Read file as buffer for upload
+      const fileBuffer = fs.readFileSync(filePath)
+
+      return {
+        path: filePath,
+        name: fileName,
+        size: stats.size,
+        format: extension,
+        buffer: fileBuffer.toString('base64') // Base64 encode for IPC transfer
+      }
+    } catch (error) {
+      console.error('[Upload] Error reading file:', error)
+      return null
+    }
+  })
+
+  // Read audio file as ArrayBuffer for upload
+  ipcMain.handle('read-audio-file', async (_, filePath: string) => {
+    const fs = require('fs')
+    try {
+      const buffer = fs.readFileSync(filePath)
+      return buffer
+    } catch (error) {
+      console.error('[Upload] Error reading file:', error)
+      return null
+    }
+  })
+
   // Window controls
   ipcMain.on('window-minimize', (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
