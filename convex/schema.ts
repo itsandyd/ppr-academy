@@ -347,6 +347,13 @@ export default defineSchema({
         youtube: v.optional(v.string()),
         tiktok: v.optional(v.string()),
         spotify: v.optional(v.string()),
+        soundcloud: v.optional(v.string()),
+        appleMusic: v.optional(v.string()),
+        bandcamp: v.optional(v.string()),
+        threads: v.optional(v.string()),
+        discord: v.optional(v.string()),
+        twitch: v.optional(v.string()),
+        beatport: v.optional(v.string()),
       })
     ),
     // Creator Plan & Visibility Settings

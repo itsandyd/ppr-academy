@@ -9696,10 +9696,17 @@ export type DataModel = {
       planStartedAt?: number;
       slug: string;
       socialLinks?: {
+        appleMusic?: string;
+        bandcamp?: string;
+        beatport?: string;
+        discord?: string;
         instagram?: string;
         linkedin?: string;
+        soundcloud?: string;
         spotify?: string;
+        threads?: string;
         tiktok?: string;
+        twitch?: string;
         twitter?: string;
         website?: string;
         youtube?: string;
@@ -9763,10 +9770,17 @@ export type DataModel = {
       | "planStartedAt"
       | "slug"
       | "socialLinks"
+      | "socialLinks.appleMusic"
+      | "socialLinks.bandcamp"
+      | "socialLinks.beatport"
+      | "socialLinks.discord"
       | "socialLinks.instagram"
       | "socialLinks.linkedin"
+      | "socialLinks.soundcloud"
       | "socialLinks.spotify"
+      | "socialLinks.threads"
       | "socialLinks.tiktok"
+      | "socialLinks.twitch"
       | "socialLinks.twitter"
       | "socialLinks.website"
       | "socialLinks.youtube"
