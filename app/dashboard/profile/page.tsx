@@ -13,10 +13,12 @@ import {
   EyeOff,
   Camera,
   Globe,
-  Instagram,
-  Youtube,
+  Plus,
+  Trash2,
+  Pencil,
+  Link as LinkIcon,
   Music,
-  MessageCircle,
+  Check,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -25,26 +27,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
-// Social platform configuration with icons and colors
+// Social platform configuration
 const socialPlatforms = [
-  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/username", icon: "instagram" },
-  { key: "twitter", label: "X / Twitter", placeholder: "https://x.com/username", icon: "twitter" },
-  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@channel", icon: "youtube" },
-  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@username", icon: "tiktok" },
-  { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/...", icon: "spotify" },
-  { key: "soundcloud", label: "SoundCloud", placeholder: "https://soundcloud.com/username", icon: "soundcloud" },
-  { key: "appleMusic", label: "Apple Music", placeholder: "https://music.apple.com/artist/...", icon: "appleMusic" },
-  { key: "bandcamp", label: "Bandcamp", placeholder: "https://username.bandcamp.com", icon: "bandcamp" },
-  { key: "threads", label: "Threads", placeholder: "https://threads.net/@username", icon: "threads" },
-  { key: "discord", label: "Discord", placeholder: "https://discord.gg/invite", icon: "discord" },
-  { key: "twitch", label: "Twitch", placeholder: "https://twitch.tv/username", icon: "twitch" },
-  { key: "beatport", label: "Beatport", placeholder: "https://beatport.com/artist/...", icon: "beatport" },
-  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/username", icon: "linkedin" },
-  { key: "website", label: "Website", placeholder: "https://yoursite.com", icon: "website" },
+  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/username", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
+  { key: "twitter", label: "X / Twitter", placeholder: "https://x.com/username", color: "bg-black" },
+  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@channel", color: "bg-red-600" },
+  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@username", color: "bg-black" },
+  { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/...", color: "bg-[#1DB954]" },
+  { key: "soundcloud", label: "SoundCloud", placeholder: "https://soundcloud.com/username", color: "bg-[#FF5500]" },
+  { key: "appleMusic", label: "Apple Music", placeholder: "https://music.apple.com/artist/...", color: "bg-gradient-to-r from-[#FC3C44] to-[#AF2896]" },
+  { key: "bandcamp", label: "Bandcamp", placeholder: "https://username.bandcamp.com", color: "bg-[#1DA0C3]" },
+  { key: "threads", label: "Threads", placeholder: "https://threads.net/@username", color: "bg-black" },
+  { key: "discord", label: "Discord", placeholder: "https://discord.gg/invite", color: "bg-[#5865F2]" },
+  { key: "twitch", label: "Twitch", placeholder: "https://twitch.tv/username", color: "bg-[#9146FF]" },
+  { key: "beatport", label: "Beatport", placeholder: "https://beatport.com/artist/...", color: "bg-[#94D500]" },
+  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/username", color: "bg-[#0A66C2]" },
+  { key: "website", label: "Website", placeholder: "https://yoursite.com", color: "bg-zinc-700" },
 ];
 
 // Social icons component
@@ -125,6 +143,11 @@ function SocialIcon({ platform, className = "h-4 w-4" }: { platform: string; cla
   return icons[platform] || <Globe className={className} />;
 }
 
+interface SocialLink {
+  platform: string;
+  url: string;
+}
+
 export default function ProfilePage() {
   const { user } = useUser();
   const store = useQuery(
@@ -139,8 +162,14 @@ export default function ProfilePage() {
     bio: "",
     avatar: "",
     isPublic: true,
-    socialLinks: {} as Record<string, string>,
   });
+
+  // Social links state - array of { platform, url }
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [dialogPlatform, setDialogPlatform] = useState("");
+  const [dialogUrl, setDialogUrl] = useState("");
 
   useEffect(() => {
     if (store) {
@@ -149,23 +178,18 @@ export default function ProfilePage() {
         bio: store.bio || "",
         avatar: store.avatar || "",
         isPublic: store.isPublic ?? true,
-        socialLinks: {
-          website: store.socialLinks?.website || "",
-          twitter: store.socialLinks?.twitter || "",
-          instagram: store.socialLinks?.instagram || "",
-          linkedin: store.socialLinks?.linkedin || "",
-          youtube: store.socialLinks?.youtube || "",
-          tiktok: store.socialLinks?.tiktok || "",
-          spotify: store.socialLinks?.spotify || "",
-          soundcloud: store.socialLinks?.soundcloud || "",
-          appleMusic: store.socialLinks?.appleMusic || "",
-          bandcamp: store.socialLinks?.bandcamp || "",
-          threads: store.socialLinks?.threads || "",
-          discord: store.socialLinks?.discord || "",
-          twitch: store.socialLinks?.twitch || "",
-          beatport: store.socialLinks?.beatport || "",
-        },
       });
+
+      // Convert store.socialLinks object to array
+      if (store.socialLinks) {
+        const links: SocialLink[] = [];
+        Object.entries(store.socialLinks).forEach(([platform, url]) => {
+          if (url && typeof url === "string" && url.trim()) {
+            links.push({ platform, url });
+          }
+        });
+        setSocialLinks(links);
+      }
     }
   }, [store]);
 
@@ -173,11 +197,45 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSocialLinkChange = (platform: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      socialLinks: { ...prev.socialLinks, [platform]: value },
-    }));
+  const openAddDialog = () => {
+    setEditingIndex(null);
+    setDialogPlatform("");
+    setDialogUrl("");
+    setIsAddDialogOpen(true);
+  };
+
+  const openEditDialog = (index: number) => {
+    const link = socialLinks[index];
+    setEditingIndex(index);
+    setDialogPlatform(link.platform);
+    setDialogUrl(link.url);
+    setIsAddDialogOpen(true);
+  };
+
+  const handleSaveLink = () => {
+    if (!dialogPlatform || !dialogUrl.trim()) {
+      toast.error("Please select a platform and enter a URL");
+      return;
+    }
+
+    if (editingIndex !== null) {
+      // Edit existing
+      const updated = [...socialLinks];
+      updated[editingIndex] = { platform: dialogPlatform, url: dialogUrl.trim() };
+      setSocialLinks(updated);
+    } else {
+      // Add new
+      setSocialLinks([...socialLinks, { platform: dialogPlatform, url: dialogUrl.trim() }]);
+    }
+
+    setIsAddDialogOpen(false);
+    setDialogPlatform("");
+    setDialogUrl("");
+    setEditingIndex(null);
+  };
+
+  const handleDeleteLink = (index: number) => {
+    setSocialLinks(socialLinks.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
@@ -185,10 +243,11 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      // Clean up empty social links
-      const cleanedSocialLinks = Object.fromEntries(
-        Object.entries(formData.socialLinks).filter(([_, v]) => v && v.trim())
-      );
+      // Convert socialLinks array back to object
+      const socialLinksObject: Record<string, string> = {};
+      socialLinks.forEach((link) => {
+        socialLinksObject[link.platform] = link.url;
+      });
 
       await updateStoreProfile({
         storeId: store._id,
@@ -197,7 +256,7 @@ export default function ProfilePage() {
         bio: formData.bio || undefined,
         avatar: formData.avatar || undefined,
         isPublic: formData.isPublic,
-        socialLinks: Object.keys(cleanedSocialLinks).length > 0 ? cleanedSocialLinks as any : undefined,
+        socialLinks: Object.keys(socialLinksObject).length > 0 ? socialLinksObject as any : undefined,
       });
       toast.success("Profile updated successfully!");
     } catch (error) {
@@ -218,7 +277,7 @@ export default function ProfilePage() {
     );
   }
 
-  const filledSocialCount = Object.values(formData.socialLinks).filter(v => v && v.trim()).length;
+  const getPlatformInfo = (key: string) => socialPlatforms.find((p) => p.key === key);
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4 md:p-6">
@@ -247,11 +306,11 @@ export default function ProfilePage() {
             <span>Basic Info</span>
           </TabsTrigger>
           <TabsTrigger value="social" className="gap-2">
-            <Music className="h-4 w-4" />
+            <LinkIcon className="h-4 w-4" />
             <span>Social Links</span>
-            {filledSocialCount > 0 && (
+            {socialLinks.length > 0 && (
               <span className="ml-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                {filledSocialCount}
+                {socialLinks.length}
               </span>
             )}
           </TabsTrigger>
@@ -294,7 +353,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Name & Bio */}
+              {/* Name & Avatar URL */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Display Name</Label>
@@ -304,9 +363,6 @@ export default function ProfilePage() {
                     onChange={(e) => handleInputChange("name", e.target.value)}
                     placeholder="Your display name"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    This is how you&apos;ll appear to visitors
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="avatar">Avatar URL</Label>
@@ -316,9 +372,6 @@ export default function ProfilePage() {
                     onChange={(e) => handleInputChange("avatar", e.target.value)}
                     placeholder="https://example.com/avatar.jpg"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Direct link to your profile image
-                  </p>
                 </div>
               </div>
 
@@ -331,9 +384,6 @@ export default function ProfilePage() {
                   placeholder="Tell visitors about yourself..."
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">
-                  A short description that appears below your name
-                </p>
               </div>
 
               {/* Visibility */}
@@ -376,43 +426,157 @@ export default function ProfilePage() {
         <TabsContent value="social">
           <Card>
             <CardHeader>
-              <CardTitle>Social Links</CardTitle>
-              <CardDescription>
-                Connect your social profiles to display them on your storefront with icons
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                {socialPlatforms.map((platform) => (
-                  <div key={platform.key} className="space-y-2">
-                    <Label htmlFor={platform.key} className="flex items-center gap-2">
-                      <SocialIcon platform={platform.icon} className="h-4 w-4" />
-                      {platform.label}
-                    </Label>
-                    <Input
-                      id={platform.key}
-                      value={formData.socialLinks[platform.key] || ""}
-                      onChange={(e) => handleSocialLinkChange(platform.key, e.target.value)}
-                      placeholder={platform.placeholder}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Save Changes
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Social Links</CardTitle>
+                  <CardDescription>
+                    Add your social profiles to display them on your storefront
+                  </CardDescription>
+                </div>
+                <Button onClick={openAddDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Link
                 </Button>
               </div>
+            </CardHeader>
+            <CardContent>
+              {socialLinks.length === 0 ? (
+                <div className="text-center py-12">
+                  <LinkIcon className="mx-auto h-12 w-12 text-muted-foreground/30" />
+                  <h3 className="mt-4 text-lg font-medium">No social links yet</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Add your social profiles so visitors can find you
+                  </p>
+                  <Button onClick={openAddDialog} className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Link
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {socialLinks.map((link, index) => {
+                    const platformInfo = getPlatformInfo(link.platform);
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 rounded-lg border p-3 group"
+                      >
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-lg text-white",
+                            platformInfo?.color || "bg-zinc-700"
+                          )}
+                        >
+                          <SocialIcon platform={link.platform} className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{platformInfo?.label || link.platform}</p>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-muted-foreground hover:text-primary truncate block"
+                          >
+                            {link.url}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(index)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteLink(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={handleSave} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add/Edit Social Link Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent sidebarOffset>
+          <DialogHeader>
+            <DialogTitle>
+              {editingIndex !== null ? "Edit Social Link" : "Add Social Link"}
+            </DialogTitle>
+            <DialogDescription>
+              Select a platform and enter your profile URL
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Platform</Label>
+              <Select value={dialogPlatform} onValueChange={setDialogPlatform}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  {socialPlatforms.map((platform) => (
+                    <SelectItem key={platform.key} value={platform.key}>
+                      <div className="flex items-center gap-2">
+                        <SocialIcon platform={platform.key} className="h-4 w-4" />
+                        {platform.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="url">URL</Label>
+              <Input
+                id="url"
+                value={dialogUrl}
+                onChange={(e) => setDialogUrl(e.target.value)}
+                placeholder={
+                  dialogPlatform
+                    ? getPlatformInfo(dialogPlatform)?.placeholder
+                    : "https://..."
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveLink}>
+              <Check className="mr-2 h-4 w-4" />
+              {editingIndex !== null ? "Update" : "Add"} Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
