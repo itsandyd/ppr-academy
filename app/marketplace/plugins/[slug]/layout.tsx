@@ -32,7 +32,7 @@ export async function generateMetadata({
 
     if (!plugin) {
       return {
-        title: "Plugin Not Found - PPR Academy",
+        title: "Plugin Not Found",
         description: "The plugin you're looking for could not be found.",
       };
     }
@@ -44,54 +44,99 @@ export async function generateMetadata({
     };
 
     const pageUrl = `${baseUrl}/marketplace/plugins/${slug}`;
-    const metaDescription = plugin.description
-      ? stripHtml(plugin.description).substring(0, 155) + "..."
-      : `${plugin.name} ${plugin.typeName ? `- ${plugin.typeName}` : ""} plugin for music production. ${plugin.pricingType === "FREE" ? "Free download" : `Available for ${formatPrice(plugin.price, plugin.pricingType)}`}.`;
 
-    const metaTitle = `${plugin.name} ${plugin.author ? `by ${plugin.author}` : ""} - Music Production Plugin | PPR Academy`;
+    // Build description from multiple sources
+    let metaDescription = "";
+    if (plugin.description) {
+      metaDescription = stripHtml(plugin.description);
+    } else if (plugin.videoScript) {
+      metaDescription = stripHtml(plugin.videoScript);
+    }
 
-    const keywords = [
-      plugin.name,
-      plugin.author || "music production",
-      plugin.typeName || "audio plugin",
-      plugin.categoryName || "music software",
-      "VST",
-      "AU",
-      "AAX",
+    // If description is too short, enrich it
+    if (metaDescription.length < 100) {
+      const parts = [metaDescription];
+      if (plugin.typeName) parts.push(`${plugin.typeName} plugin`);
+      if (plugin.categoryName) parts.push(`for ${plugin.categoryName}`);
+      if (plugin.author) parts.push(`by ${plugin.author}`);
+      parts.push(
+        plugin.pricingType === "FREE"
+          ? "Free download available."
+          : `Available for ${formatPrice(plugin.price, plugin.pricingType)}.`
+      );
+      metaDescription = parts.filter(Boolean).join(" ");
+    }
+
+    // Truncate to 155 chars for meta description
+    if (metaDescription.length > 155) {
+      metaDescription = metaDescription.substring(0, 152) + "...";
+    }
+
+    // Build title
+    const titleParts = [plugin.name];
+    if (plugin.author) titleParts.push(`by ${plugin.author}`);
+    if (plugin.typeName) titleParts.push(`- ${plugin.typeName}`);
+    const metaTitle = titleParts.join(" ");
+
+    // Build keywords from multiple sources
+    const keywords = new Set<string>();
+
+    // Add plugin name and author
+    keywords.add(plugin.name);
+    if (plugin.author) keywords.add(plugin.author);
+
+    // Add type and category
+    if (plugin.typeName) keywords.add(plugin.typeName);
+    if (plugin.categoryName) keywords.add(plugin.categoryName);
+
+    // Add all tags
+    if (plugin.tags && plugin.tags.length > 0) {
+      plugin.tags.forEach((tag: string) => keywords.add(tag));
+    }
+
+    // Add standard keywords
+    const standardKeywords = [
+      "VST plugin",
+      "AU plugin",
+      "AAX plugin",
       "music production",
-      "audio effects",
-      "audio processing",
-      "music software",
+      "audio plugin",
+      "DAW plugin",
       plugin.pricingType === "FREE" ? "free plugin" : "premium plugin",
-      "music production tools",
-      "audio plugin marketplace",
-    ];
+      plugin.pricingType === "FREEMIUM" ? "freemium plugin" : null,
+    ].filter(Boolean) as string[];
+
+    standardKeywords.forEach((kw) => keywords.add(kw));
 
     return {
       title: metaTitle,
       description: metaDescription,
-      keywords: keywords.join(", "),
+      keywords: Array.from(keywords).join(", "),
       authors: plugin.author ? [{ name: plugin.author }] : undefined,
       openGraph: {
-        title: metaTitle,
+        title: `${plugin.name}${plugin.author ? ` by ${plugin.author}` : ""} - Music Production Plugin`,
         description: metaDescription,
         url: pageUrl,
         siteName: "PPR Academy",
-        type: "website",
+        type: "article",
         images: plugin.image
           ? [
               {
                 url: plugin.image,
                 width: 1200,
                 height: 630,
-                alt: `${plugin.name} - Music Production Plugin`,
+                alt: `${plugin.name} - ${plugin.typeName || "Music Production"} Plugin`,
               },
             ]
           : undefined,
+        modifiedTime: plugin.updatedAt ? new Date(plugin.updatedAt).toISOString() : undefined,
+        publishedTime: plugin.createdAt ? new Date(plugin.createdAt).toISOString() : undefined,
+        authors: plugin.author ? [plugin.author] : undefined,
+        tags: plugin.tags && plugin.tags.length > 0 ? plugin.tags : undefined,
       },
       twitter: {
         card: "summary_large_image",
-        title: metaTitle,
+        title: `${plugin.name}${plugin.author ? ` by ${plugin.author}` : ""}`,
         description: metaDescription,
         images: plugin.image ? [plugin.image] : undefined,
       },
@@ -102,6 +147,11 @@ export async function generateMetadata({
         "product:price:amount": String(plugin.price || 0),
         "product:price:currency": "USD",
         "product:availability": "in stock",
+        "product:brand": plugin.author || "PPR Academy",
+        "product:category": plugin.typeName || "Audio Plugin",
+        ...(plugin.tags && plugin.tags.length > 0 && {
+          "article:tag": plugin.tags.join(", "),
+        }),
       },
       robots: {
         index: true,
@@ -118,7 +168,7 @@ export async function generateMetadata({
   } catch (error) {
     console.error("Error generating plugin metadata:", error);
     return {
-      title: "Music Production Plugin - PPR Academy",
+      title: "Music Production Plugin",
       description: "Discover professional music production plugins at PPR Academy",
     };
   }
@@ -133,43 +183,131 @@ export default async function PluginLayout({ children, params }: PluginLayoutPro
   const { slug } = await params;
 
   // Fetch plugin data for JSON-LD structured data
-  let structuredData = null;
+  const structuredDataScripts: object[] = [];
+
   try {
     const plugin = await fetchQuery(api.plugins.getPluginBySlug, { slug });
 
     if (plugin) {
       const pageUrl = `${baseUrl}/marketplace/plugins/${slug}`;
-      const description = plugin.description ? stripHtml(plugin.description).substring(0, 200) : "";
+      const description = plugin.description
+        ? stripHtml(plugin.description).substring(0, 200)
+        : plugin.videoScript
+          ? stripHtml(plugin.videoScript).substring(0, 200)
+          : "";
 
-      // SoftwareApplication schema for plugins
-      structuredData = {
+      // Main SoftwareApplication schema
+      const softwareSchema: Record<string, unknown> = {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         name: plugin.name,
         applicationCategory: "MultimediaApplication",
-        applicationSubCategory: "Music Production Plugin",
+        applicationSubCategory: plugin.typeName || "Music Production Plugin",
         operatingSystem: "Windows, macOS",
+        url: pageUrl,
+        datePublished: plugin.createdAt ? new Date(plugin.createdAt).toISOString() : undefined,
+        dateModified: plugin.updatedAt ? new Date(plugin.updatedAt).toISOString() : undefined,
         offers: {
           "@type": "Offer",
           price: plugin.price || 0,
           priceCurrency: "USD",
-          availability:
-            plugin.pricingType === "FREE"
-              ? "https://schema.org/InStock"
-              : "https://schema.org/InStock",
-          url: pageUrl,
+          availability: "https://schema.org/InStock",
+          url: plugin.purchaseUrl || pageUrl,
+          priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
         },
-        ...(plugin.author && {
-          author: {
+      };
+
+      // Add optional fields
+      if (plugin.author) {
+        softwareSchema.author = {
+          "@type": "Organization",
+          name: plugin.author,
+        };
+        softwareSchema.publisher = {
+          "@type": "Organization",
+          name: plugin.author,
+        };
+      }
+      if (description) softwareSchema.description = description;
+      if (plugin.image) {
+        softwareSchema.image = plugin.image;
+        softwareSchema.screenshot = plugin.image;
+      }
+      if (plugin.categoryName) softwareSchema.genre = plugin.categoryName;
+      if (plugin.tags && plugin.tags.length > 0) {
+        softwareSchema.keywords = plugin.tags.join(", ");
+      }
+
+      structuredDataScripts.push(softwareSchema);
+
+      // Add VideoObject schema if video exists
+      if (plugin.videoUrl) {
+        const videoSchema: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "VideoObject",
+          name: `${plugin.name} - Demo Video`,
+          description: `Video demonstration of ${plugin.name}${plugin.typeName ? ` ${plugin.typeName}` : ""} plugin${plugin.author ? ` by ${plugin.author}` : ""}`,
+          contentUrl: plugin.videoUrl,
+          embedUrl: plugin.videoUrl.includes("youtube.com") || plugin.videoUrl.includes("youtu.be")
+            ? plugin.videoUrl.replace("watch?v=", "embed/")
+            : plugin.videoUrl,
+          uploadDate: plugin.createdAt ? new Date(plugin.createdAt).toISOString() : undefined,
+        };
+        if (plugin.image) videoSchema.thumbnailUrl = plugin.image;
+        structuredDataScripts.push(videoSchema);
+      }
+
+      // Add AudioObject schema if audio exists
+      if (plugin.audioUrl) {
+        const audioSchema: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "AudioObject",
+          name: `${plugin.name} - Audio Demo`,
+          description: `Audio demonstration of ${plugin.name}${plugin.typeName ? ` ${plugin.typeName}` : ""} plugin`,
+          contentUrl: plugin.audioUrl,
+          uploadDate: plugin.createdAt ? new Date(plugin.createdAt).toISOString() : undefined,
+        };
+        if (plugin.author) {
+          audioSchema.creator = {
             "@type": "Organization",
             name: plugin.author,
+          };
+        }
+        structuredDataScripts.push(audioSchema);
+      }
+
+      // Add BreadcrumbList schema
+      const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: baseUrl,
           },
-        }),
-        ...(description && { description }),
-        ...(plugin.image && { image: plugin.image }),
-        ...(plugin.categoryName && { genre: plugin.categoryName }),
-        url: pageUrl,
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Marketplace",
+            item: `${baseUrl}/marketplace`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "Plugins",
+            item: `${baseUrl}/marketplace/plugins`,
+          },
+          {
+            "@type": "ListItem",
+            position: 4,
+            name: plugin.name,
+            item: pageUrl,
+          },
+        ],
       };
+      structuredDataScripts.push(breadcrumbSchema);
     }
   } catch (error) {
     console.error("Error generating plugin structured data:", error);
@@ -177,16 +315,17 @@ export default async function PluginLayout({ children, params }: PluginLayoutPro
 
   return (
     <>
-      {structuredData && (
+      {structuredDataScripts.map((schema, index) => (
         <Script
-          id="plugin-structured-data"
+          key={`structured-data-${index}`}
+          id={`plugin-structured-data-${index}`}
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData),
+            __html: JSON.stringify(schema),
           }}
           strategy="afterInteractive"
         />
-      )}
+      ))}
       {children}
     </>
   );
