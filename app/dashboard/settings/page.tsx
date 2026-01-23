@@ -110,7 +110,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <Button asChild>
-                    <Link href="/store/profile">
+                    <Link href="/dashboard/profile">
                       Edit Profile
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </Link>

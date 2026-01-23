@@ -203,9 +203,9 @@ export function AppSidebarEnhanced() {
           label: "My Products",
           gradient: "from-rose-500 to-pink-500"
         },
-        { 
-          icon: User, 
-          href: `/store/profile`, 
+        {
+          icon: User,
+          href: `/dashboard/profile`,
           label: "Profile",
           gradient: "from-blue-500 to-indigo-500"
         },
