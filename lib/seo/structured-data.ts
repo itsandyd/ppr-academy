@@ -220,6 +220,114 @@ export function generateOrganizationStructuredData(props: OrganizationStructured
   };
 }
 
+interface ServiceStructuredDataProps {
+  name: string;
+  description: string;
+  provider: {
+    name: string;
+    url?: string;
+    image?: string;
+  };
+  price?: number;
+  currency?: string;
+  duration?: number; // in minutes
+  imageUrl?: string;
+  url: string;
+  category?: string;
+  areaServed?: string;
+}
+
+export function generateServiceStructuredData(props: ServiceStructuredDataProps) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": props.name,
+    "description": props.description,
+    "url": props.url,
+    ...(props.imageUrl && { "image": props.imageUrl }),
+    ...(props.category && { "category": props.category }),
+    ...(props.areaServed && { "areaServed": props.areaServed }),
+    "provider": {
+      "@type": "Person",
+      "name": props.provider.name,
+      ...(props.provider.url && { "url": props.provider.url }),
+      ...(props.provider.image && { "image": props.provider.image })
+    },
+    ...(props.price !== undefined && {
+      "offers": {
+        "@type": "Offer",
+        "price": props.price,
+        "priceCurrency": props.currency || "USD",
+        "availability": "https://schema.org/InStock",
+        "url": props.url
+      }
+    }),
+    ...(props.duration && {
+      "termsOfService": `${props.duration} minute session`
+    })
+  };
+
+  return {
+    __html: sanitizeJson(structuredData)
+  };
+}
+
+interface MusicRecordingStructuredDataProps {
+  name: string;
+  description?: string;
+  byArtist: {
+    name: string;
+    url?: string;
+  };
+  duration?: string; // ISO 8601 duration format (e.g., "PT3M30S")
+  genre?: string;
+  bpm?: number;
+  musicalKey?: string;
+  imageUrl?: string;
+  audioUrl?: string;
+  url: string;
+  price?: number;
+  currency?: string;
+}
+
+export function generateMusicRecordingStructuredData(props: MusicRecordingStructuredDataProps) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "MusicRecording",
+    "name": props.name,
+    ...(props.description && { "description": props.description }),
+    "url": props.url,
+    ...(props.imageUrl && { "image": props.imageUrl }),
+    ...(props.audioUrl && {
+      "audio": {
+        "@type": "AudioObject",
+        "contentUrl": props.audioUrl,
+        "encodingFormat": "audio/mpeg"
+      }
+    }),
+    ...(props.duration && { "duration": props.duration }),
+    ...(props.genre && { "genre": props.genre }),
+    "byArtist": {
+      "@type": "Person",
+      "name": props.byArtist.name,
+      ...(props.byArtist.url && { "url": props.byArtist.url })
+    },
+    ...(props.price !== undefined && {
+      "offers": {
+        "@type": "Offer",
+        "price": props.price,
+        "priceCurrency": props.currency || "USD",
+        "availability": "https://schema.org/InStock",
+        "url": props.url
+      }
+    })
+  };
+
+  return {
+    __html: sanitizeJson(structuredData)
+  };
+}
+
 interface BreadcrumbStructuredDataProps {
   items: Array<{
     name: string;
@@ -268,6 +376,134 @@ export function generateWebsiteStructuredData(props: WebsiteStructuredDataProps)
         "query-input": "required name=search_term_string"
       }
     })
+  };
+
+  return {
+    __html: sanitizeJson(structuredData)
+  };
+}
+
+interface ArticleStructuredDataProps {
+  headline: string;
+  description?: string;
+  author: {
+    name: string;
+    url?: string;
+    image?: string;
+  };
+  datePublished?: string;
+  dateModified?: string;
+  imageUrl?: string;
+  url: string;
+  publisher?: {
+    name: string;
+    logo?: string;
+  };
+  category?: string;
+  keywords?: string[];
+  wordCount?: number;
+  readTimeMinutes?: number;
+}
+
+export function generateArticleStructuredData(props: ArticleStructuredDataProps) {
+  const baseUrl = getBaseUrl();
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": props.headline,
+    ...(props.description && { "description": props.description }),
+    "url": props.url,
+    ...(props.imageUrl && { "image": props.imageUrl }),
+    ...(props.datePublished && { "datePublished": props.datePublished }),
+    ...(props.dateModified && { "dateModified": props.dateModified }),
+    ...(props.category && { "articleSection": props.category }),
+    ...(props.keywords && props.keywords.length > 0 && { "keywords": props.keywords.join(", ") }),
+    ...(props.wordCount && { "wordCount": props.wordCount }),
+    "author": {
+      "@type": "Person",
+      "name": props.author.name,
+      ...(props.author.url && { "url": props.author.url }),
+      ...(props.author.image && { "image": props.author.image })
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": props.publisher?.name || "PPR Academy",
+      "url": baseUrl,
+      ...(props.publisher?.logo && {
+        "logo": {
+          "@type": "ImageObject",
+          "url": props.publisher.logo
+        }
+      })
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": props.url
+    }
+  };
+
+  return {
+    __html: sanitizeJson(structuredData)
+  };
+}
+
+interface BlogPostingStructuredDataProps {
+  headline: string;
+  description?: string;
+  author: {
+    name: string;
+    url?: string;
+    image?: string;
+  };
+  datePublished?: string;
+  dateModified?: string;
+  imageUrl?: string;
+  url: string;
+  category?: string;
+  tags?: string[];
+  readTimeMinutes?: number;
+}
+
+export function generateBlogPostingStructuredData(props: BlogPostingStructuredDataProps) {
+  const baseUrl = getBaseUrl();
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": props.headline,
+    ...(props.description && { "description": props.description }),
+    "url": props.url,
+    ...(props.imageUrl && {
+      "image": {
+        "@type": "ImageObject",
+        "url": props.imageUrl
+      }
+    }),
+    ...(props.datePublished && { "datePublished": props.datePublished }),
+    ...(props.dateModified && { "dateModified": props.dateModified }),
+    ...(props.category && { "articleSection": props.category }),
+    ...(props.tags && props.tags.length > 0 && { "keywords": props.tags.join(", ") }),
+    ...(props.readTimeMinutes && { "timeRequired": `PT${props.readTimeMinutes}M` }),
+    "author": {
+      "@type": "Person",
+      "name": props.author.name,
+      ...(props.author.url && { "url": props.author.url }),
+      ...(props.author.image && { "image": props.author.image })
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "PPR Academy",
+      "url": baseUrl,
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${baseUrl}/logo.png`
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": props.url
+    }
   };
 
   return {

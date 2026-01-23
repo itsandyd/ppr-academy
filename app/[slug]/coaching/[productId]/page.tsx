@@ -26,6 +26,8 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { generateServiceStructuredData } from "@/lib/seo/structured-data";
+import { StructuredData } from "@/lib/seo/structured-data-client";
 import { toast } from "sonner";
 import {
   format,
@@ -197,8 +199,31 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
     );
   }
 
+  // Generate structured data for SEO
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+  const coachingUrl = `${baseUrl}/${storeSlug}/coaching/${productSlugOrId}`;
+  const structuredData = generateServiceStructuredData({
+    name: product.title,
+    description: product.description || `Book a ${product.duration || 60}-minute coaching session`,
+    provider: {
+      name: store.name,
+      url: `${baseUrl}/${storeSlug}`,
+      image: store.logoUrl,
+    },
+    price: product.price,
+    currency: "USD",
+    duration: product.duration || 60,
+    imageUrl: product.imageUrl || undefined,
+    url: coachingUrl,
+    category: "Coaching",
+    areaServed: "Worldwide",
+  });
+
   return (
     <div className="min-h-screen bg-background">
+      {/* JSON-LD Structured Data */}
+      <StructuredData data={structuredData} />
+
       <div className="mx-auto max-w-6xl px-4 py-8">
         <Link
           href={`/${storeSlug}`}

@@ -4,6 +4,12 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { notFound } from "next/navigation";
 import { BeatDetailClient } from "./BeatDetailClient";
+import {
+  generateMusicRecordingStructuredData,
+  generateBreadcrumbStructuredData,
+} from "@/lib/seo/structured-data";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 interface BeatDetailPageProps {
   params: Promise<{
@@ -53,6 +59,7 @@ export async function generateMetadata({ params }: BeatDetailPageProps): Promise
     const priceText = product.price === 0 ? "Free" : `$${(product.price / 100).toFixed(2)}`;
     const bpmText = product.bpm ? `${product.bpm} BPM` : "";
     const genreText = product.genre || "";
+    const beatUrl = `${baseUrl}/marketplace/beats/${slug}`;
 
     return {
       title: `${product.title} | Beat Lease | PausePlayRepeat`,
@@ -65,7 +72,8 @@ export async function generateMetadata({ params }: BeatDetailPageProps): Promise
           product.description ||
           `${bpmText} ${genreText} beat available for ${priceText}. License now and start creating.`,
         images: product.imageUrl ? [{ url: product.imageUrl }] : [],
-        type: "website",
+        type: "music.song",
+        url: beatUrl,
       },
       twitter: {
         card: "summary_large_image",
@@ -73,6 +81,9 @@ export async function generateMetadata({ params }: BeatDetailPageProps): Promise
         description:
           product.description || `${bpmText} ${genreText} beat for ${priceText}. License now.`,
         images: product.imageUrl ? [product.imageUrl] : [],
+      },
+      alternates: {
+        canonical: beatUrl,
       },
     };
   } catch {
@@ -101,12 +112,48 @@ export default async function BeatDetailPage({ params }: BeatDetailPageProps) {
     }
   } catch {}
 
+  // Generate structured data for SEO
+  const beatUrl = `${baseUrl}/marketplace/beats/${slug}`;
+  const artistName = store?.name || "Unknown Artist";
+
+  const musicRecordingData = generateMusicRecordingStructuredData({
+    name: product.title,
+    description: product.description || undefined,
+    byArtist: {
+      name: artistName,
+      url: store ? `${baseUrl}/${store.slug}` : undefined,
+    },
+    duration: product.duration ? `PT${Math.floor(product.duration / 60)}M${product.duration % 60}S` : undefined,
+    genre: product.genre || undefined,
+    bpm: product.bpm || undefined,
+    musicalKey: (product as any).musicalKey || undefined,
+    imageUrl: product.imageUrl || undefined,
+    audioUrl: (product as any).wavUrl || undefined,
+    url: beatUrl,
+    price: product.price ? product.price / 100 : undefined,
+    currency: "USD",
+  });
+
+  const breadcrumbData = generateBreadcrumbStructuredData({
+    items: [
+      { name: "Home", url: baseUrl },
+      { name: "Marketplace", url: `${baseUrl}/marketplace` },
+      { name: "Beats", url: `${baseUrl}/marketplace/beats` },
+      { name: product.title, url: beatUrl },
+    ],
+  });
+
   return (
-    <BeatDetailClient
-      productId={product._id}
-      slug={product.slug || slug}
-      initialProduct={product}
-      initialStore={store}
-    />
+    <>
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={musicRecordingData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbData} />
+      <BeatDetailClient
+        productId={product._id}
+        slug={product.slug || slug}
+        initialProduct={product}
+        initialStore={store}
+      />
+    </>
   );
 }

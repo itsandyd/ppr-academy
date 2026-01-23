@@ -29,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { generateProductStructuredData } from "@/lib/seo/structured-data";
+import { generateMusicRecordingStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
@@ -115,17 +115,23 @@ export default function BeatLandingPage({ params }: BeatPageProps) {
   const licenseTiers = (beat as any).beatLeaseConfig?.tiers || [];
   const selectedLicense = licenseTiers.find((t: any) => t.name === selectedTier);
 
-  // Generate structured data for SEO
+  // Generate structured data for SEO (MusicRecording schema for better beat discovery)
   const beatUrl = `${baseUrl}/${slug}/beats/${beatSlug}`;
-  const structuredData = generateProductStructuredData({
+  const structuredData = generateMusicRecordingStructuredData({
     name: beat.title,
     description: beat.description || `${beat.title} - Beat by ${displayName}`,
+    byArtist: {
+      name: displayName,
+      url: `${baseUrl}/${slug}`,
+    },
+    genre: beat.genre || undefined,
+    bpm: beat.bpm || undefined,
+    musicalKey: beat.musicalKey || undefined,
+    imageUrl: beat.imageUrl || undefined,
+    audioUrl: beat.demoAudioUrl || undefined,
+    url: beatUrl,
     price: beat.price || 0,
     currency: "USD",
-    imageUrl: beat.imageUrl || undefined,
-    url: beatUrl,
-    brand: store.name,
-    category: beat.genre || "Beat",
   });
 
   // Audio controls

@@ -107,16 +107,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           let productPath = "products"; // Default path
 
           // Map product type/category to specialized path
-          const productType = product.productType;
-          const productCategory = product.productCategory?.toLowerCase() || "";
+          // Note: productType can have runtime values not in the schema union type
+          const productType = (product as any).productType as string | undefined;
+          const productCategory = (product as any).productCategory?.toLowerCase() || "";
 
           if (productType === "coaching") {
             productPath = "coaching";
-          } else if (productCategory.includes("beat") || productCategory.includes("instrumental")) {
+          } else if (productType === "beat-lease" || productCategory.includes("beat") || productCategory.includes("instrumental")) {
             productPath = "beats";
-          } else if (productCategory.includes("membership") || productCategory.includes("subscription")) {
+          } else if (productType === "membership" || productCategory.includes("membership") || productCategory.includes("subscription")) {
             productPath = "memberships";
-          } else if (productCategory.includes("tip") || productCategory.includes("donation")) {
+          } else if (productType === "tip-jar" || productCategory.includes("tip") || productCategory.includes("donation")) {
             productPath = "tips";
           }
 

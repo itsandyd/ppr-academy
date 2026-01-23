@@ -2,14 +2,23 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { notFound } from "next/navigation";
+import {
+  generateCourseStructuredData,
+  generateBreadcrumbStructuredData,
+} from "@/lib/seo/structured-data";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+
+interface CourseLayoutProps {
+  children: React.ReactNode;
+  params: Promise<{ slug: string }>;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
     // Await params in Next.js 15
     const { slug } = await params;
-    
+
     // Fetch course by slug
     const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
 
@@ -86,7 +95,57 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default function CourseLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export default async function CourseLayout({ children, params }: CourseLayoutProps) {
+  const { slug } = await params;
+
+  let courseStructuredData: { __html: string } | null = null;
+  let breadcrumbData: { __html: string } | null = null;
+
+  try {
+    const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
+
+    if (course) {
+      const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: course.userId });
+      const courseUrl = `${baseUrl}/courses/${slug}`;
+
+      courseStructuredData = generateCourseStructuredData({
+        courseName: course.title,
+        description: course.description || `Learn ${course.title} on PPR Academy`,
+        instructor: {
+          name: creator?.name || "PPR Academy Instructor",
+          url: creator ? `${baseUrl}/creators/${course.userId}` : undefined,
+        },
+        price: course.price || 0,
+        currency: "USD",
+        imageUrl: course.imageUrl || undefined,
+        category: course.category || undefined,
+        url: courseUrl,
+        datePublished: course._creationTime ? new Date(course._creationTime).toISOString() : undefined,
+      });
+
+      breadcrumbData = generateBreadcrumbStructuredData({
+        items: [
+          { name: "Home", url: baseUrl },
+          { name: "Courses", url: `${baseUrl}/courses` },
+          { name: course.title, url: courseUrl },
+        ],
+      });
+    }
+  } catch (error) {
+    console.error("Error generating course structured data:", error);
+  }
+
+  return (
+    <>
+      {/* JSON-LD Structured Data */}
+      {courseStructuredData && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={courseStructuredData} />
+      )}
+      {breadcrumbData && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbData} />
+      )}
+      {children}
+    </>
+  );
 }
 
