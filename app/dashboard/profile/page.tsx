@@ -631,39 +631,28 @@ export default function ProfilePage() {
                   {/* Account Status */}
                   <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        stripeAccountStatus?.isComplete
-                          ? "bg-green-500/10 dark:bg-green-500/20"
-                          : "bg-yellow-500/10 dark:bg-yellow-500/20"
-                      )}>
-                        {stripeAccountStatus?.isComplete ? (
-                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        ) : (
-                          <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                        )}
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center bg-green-500/10 dark:bg-green-500/20">
+                        <CreditCard className="h-5 w-5 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <h4 className="font-medium">
-                          {stripeAccountStatus?.isComplete ? "Account Active" : "Setup Required"}
-                        </h4>
+                        <h4 className="font-medium">Stripe Account Connected</h4>
                         <p className="text-sm text-muted-foreground">
-                          {stripeAccountStatus?.isComplete
-                            ? "Your Stripe account is ready to receive payments"
-                            : "Complete your Stripe setup to start receiving payments"}
+                          Account ID: {convexUser.stripeConnectAccountId}
                         </p>
                       </div>
                     </div>
-                    <Badge className={cn(
-                      stripeAccountStatus?.isComplete
-                        ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
-                        : "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20"
-                    )}>
-                      {stripeAccountStatus?.isComplete ? "Active" : "Pending"}
-                    </Badge>
+                    {stripeAccountStatus && (
+                      <Badge className={cn(
+                        stripeAccountStatus.isComplete
+                          ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
+                          : "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20"
+                      )}>
+                        {stripeAccountStatus.isComplete ? "Active" : "Pending Verification"}
+                      </Badge>
+                    )}
                   </div>
 
-                  {/* Verification Status */}
+                  {/* Verification Status - only show if we have status details */}
                   {stripeAccountStatus && (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="flex items-center gap-2 p-3 rounded-lg border bg-background">
@@ -694,6 +683,13 @@ export default function ProfilePage() {
                         <span className="text-sm">Payouts</span>
                       </div>
                     </div>
+                  )}
+
+                  {/* Show message if we couldn't load status */}
+                  {!stripeAccountStatus && !isLoadingStripeStatus && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Visit the Payouts page for detailed account status
+                    </p>
                   )}
 
                   {/* Quick Actions */}
