@@ -339,10 +339,8 @@ export default function ProfilePage() {
 
   if (!store) {
     return (
-      <div className="container mx-auto max-w-4xl p-4 md:p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -350,10 +348,10 @@ export default function ProfilePage() {
   const getPlatformInfo = (key: string) => socialPlatforms.find((p) => p.key === key);
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Profile</h1>
+          <h1 className="text-3xl font-bold">Profile</h1>
           <p className="mt-1 text-muted-foreground">
             Manage how you appear on your public storefront
           </p>
