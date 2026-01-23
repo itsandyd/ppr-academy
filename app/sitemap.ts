@@ -47,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/marketplace/plugins`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/library`,
       lastModified: new Date(),
       changeFrequency: "weekly",
@@ -159,6 +165,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
+    // Fetch all published plugins
+    const plugins = await fetchQuery(api.plugins.getAllPublishedPlugins, {});
+    const pluginSitemapEntries: MetadataRoute.Sitemap = (plugins || []).map((plugin: any) => ({
+      url: `${baseUrl}/marketplace/plugins/${plugin.slug || plugin._id}`,
+      lastModified: new Date(plugin.updatedAt || plugin._creationTime),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+
     // Combine all sitemap entries
     return [
       ...staticPages,
@@ -167,6 +182,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...storefrontProductEntries,
       ...productSitemapEntries,
       ...blogSitemapEntries,
+      ...pluginSitemapEntries,
     ];
   } catch (error) {
     console.error("Error generating sitemap:", error);
