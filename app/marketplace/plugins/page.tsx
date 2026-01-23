@@ -423,152 +423,154 @@ export default function PluginsMarketplacePage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                 >
-                  <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden h-full">
-                    {/* Image */}
-                    <div className="relative h-48 bg-gradient-to-br from-purple-500/10 to-pink-500/10 overflow-hidden">
-                      {plugin.image ? (
-                        <img
-                          src={plugin.image}
-                          alt={plugin.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Puzzle className="w-16 h-16 text-muted-foreground/30" />
-                        </div>
-                      )}
-                      
-                      {/* Pricing Badge */}
-                      <div className="absolute top-3 right-3">
-                        <Badge
-                          variant={
-                            plugin.pricingType === "FREE"
-                              ? "default"
-                              : plugin.pricingType === "PAID"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                          className="font-semibold"
-                        >
-                          {plugin.pricingType}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <CardContent className="p-6 flex flex-col flex-1">
-                      {/* Header */}
-                      <div className="mb-3">
-                        <h3 className="text-xl font-bold mb-1 group-hover:text-purple-500 transition-colors">
-                          {plugin.name}
-                        </h3>
-                        {plugin.author && (
-                          <p className="text-sm text-muted-foreground">{plugin.author}</p>
+                  <Link href={`/marketplace/plugins/${plugin.slug || plugin._id}`}>
+                    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden h-full cursor-pointer">
+                      {/* Image */}
+                      <div className="relative h-48 bg-gradient-to-br from-purple-500/10 to-pink-500/10 overflow-hidden">
+                        {plugin.image ? (
+                          <img
+                            src={plugin.image}
+                            alt={plugin.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Puzzle className="w-16 h-16 text-muted-foreground/30" />
+                          </div>
                         )}
-                      </div>
 
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {plugin.typeName && (
-                          <Badge variant="outline" className="text-xs">
-                            {plugin.typeName}
-                          </Badge>
-                        )}
-                        {plugin.categoryName && (
-                          <Badge variant="secondary" className="text-xs">
-                            {plugin.categoryName}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      {plugin.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
-                          {plugin.description}
-                        </p>
-                      )}
-
-                      {/* Price */}
-                      {typeof plugin.price === 'number' && plugin.price > 0 && (
-                        <div className="flex items-center gap-2 mb-4">
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-lg font-bold">${plugin.price}</span>
-                        </div>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex gap-2 mt-auto">
-                        {plugin.purchaseUrl && (
-                          <Button
-                            asChild
-                            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        {/* Pricing Badge */}
+                        <div className="absolute top-3 right-3">
+                          <Badge
+                            variant={
+                              plugin.pricingType === "FREE"
+                                ? "default"
+                                : plugin.pricingType === "PAID"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="font-semibold"
                           >
-                            <a
-                              href={plugin.purchaseUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {plugin.pricingType === "FREE" ? "Get Free" : "Buy Now"}
-                              <ExternalLink className="w-4 h-4 ml-2" />
-                            </a>
-                          </Button>
-                        )}
-                        {plugin.optInFormUrl && !plugin.purchaseUrl && (
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            <a
-                              href={plugin.optInFormUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              Download
-                            </a>
-                          </Button>
-                        )}
+                            {plugin.pricingType}
+                          </Badge>
+                        </div>
                       </div>
 
-                      {/* Media Links */}
-                      {(plugin.videoUrl || plugin.audioUrl) && (
-                        <div className="flex gap-2 mt-3 pt-3 border-t">
-                          {plugin.videoUrl && (
+                      <CardContent className="p-6 flex flex-col flex-1">
+                        {/* Header */}
+                        <div className="mb-3">
+                          <h3 className="text-xl font-bold mb-1 group-hover:text-purple-500 transition-colors">
+                            {plugin.name}
+                          </h3>
+                          {plugin.author && (
+                            <p className="text-sm text-muted-foreground">{plugin.author}</p>
+                          )}
+                        </div>
+
+                        {/* Tags */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {plugin.typeName && (
+                            <Badge variant="outline" className="text-xs">
+                              {plugin.typeName}
+                            </Badge>
+                          )}
+                          {plugin.categoryName && (
+                            <Badge variant="secondary" className="text-xs">
+                              {plugin.categoryName}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        {plugin.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
+                            {plugin.description}
+                          </p>
+                        )}
+
+                        {/* Price */}
+                        {typeof plugin.price === 'number' && plugin.price > 0 && (
+                          <div className="flex items-center gap-2 mb-4">
+                            <DollarSign className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-lg font-bold">${plugin.price}</span>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
+                          {plugin.purchaseUrl && (
                             <Button
                               asChild
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1 text-xs"
+                              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                             >
                               <a
-                                href={plugin.videoUrl}
+                                href={plugin.purchaseUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                Watch Demo
+                                {plugin.pricingType === "FREE" ? "Get Free" : "Buy Now"}
+                                <ExternalLink className="w-4 h-4 ml-2" />
                               </a>
                             </Button>
                           )}
-                          {plugin.audioUrl && (
+                          {plugin.optInFormUrl && !plugin.purchaseUrl && (
                             <Button
                               asChild
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1 text-xs"
+                              variant="outline"
+                              className="flex-1"
                             >
                               <a
-                                href={plugin.audioUrl}
+                                href={plugin.optInFormUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                Audio Demo
+                                <Download className="w-4 h-4 mr-2" />
+                                Download
                               </a>
                             </Button>
                           )}
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
+
+                        {/* Media Links */}
+                        {(plugin.videoUrl || plugin.audioUrl) && (
+                          <div className="flex gap-2 mt-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+                            {plugin.videoUrl && (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="flex-1 text-xs"
+                              >
+                                <a
+                                  href={plugin.videoUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Watch Demo
+                                </a>
+                              </Button>
+                            )}
+                            {plugin.audioUrl && (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="flex-1 text-xs"
+                              >
+                                <a
+                                  href={plugin.audioUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Audio Demo
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
                 </motion.div>
               ))}
             </div>
