@@ -6888,7 +6888,6 @@ export declare const api: {
           | "business"
           | "early_access";
         usage: {
-          courses: { current: number; limit: number };
           emailsSentThisMonth: { current: number; limit: number };
           links: { current: number; limit: number };
           products: { current: number; limit: number };

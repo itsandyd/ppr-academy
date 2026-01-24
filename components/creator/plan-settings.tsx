@@ -15,7 +15,6 @@ import {
   Crown,
   Sparkles,
   Link as LinkIcon,
-  BookOpen,
   Package,
   Mail,
   Zap,
@@ -267,18 +266,10 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
             limit={usageStats.usage.links.limit}
           />
 
-          {/* Courses */}
-          <UsageBar
-            icon={<BookOpen className="h-4 w-4" />}
-            label="Courses"
-            current={usageStats.usage.courses.current}
-            limit={usageStats.usage.courses.limit}
-          />
-
-          {/* Products */}
+          {/* Products (courses + digital products combined) */}
           <UsageBar
             icon={<Package className="h-4 w-4" />}
-            label="Digital Products"
+            label="Products"
             current={usageStats.usage.products.current}
             limit={usageStats.usage.products.limit}
           />

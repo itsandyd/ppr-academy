@@ -266,13 +266,14 @@ export const createUniversalProduct = mutation({
     }
 
     // Import plan limits inline (to avoid circular dependency)
-    const PLAN_LIMITS: Record<string, { maxProducts: number; maxCourses: number; canChargeMoney: boolean }> = {
-      free: { maxProducts: 0, maxCourses: 0, canChargeMoney: false }, // Link-in-bio only - no products or courses
-      starter: { maxProducts: 10, maxCourses: 5, canChargeMoney: true },
-      creator: { maxProducts: 30, maxCourses: 15, canChargeMoney: true },
-      creator_pro: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
-      business: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
-      early_access: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
+    // Unified product limit: courses and digital products count together
+    const PLAN_LIMITS: Record<string, { maxProducts: number; canChargeMoney: boolean }> = {
+      free: { maxProducts: 1, canChargeMoney: false }, // 1 total product to try platform
+      starter: { maxProducts: 15, canChargeMoney: true },
+      creator: { maxProducts: 50, canChargeMoney: true },
+      creator_pro: { maxProducts: -1, canChargeMoney: true }, // unlimited
+      business: { maxProducts: -1, canChargeMoney: true },
+      early_access: { maxProducts: -1, canChargeMoney: true },
     };
 
     const plan = store.plan || "free";
@@ -286,47 +287,26 @@ export const createUniversalProduct = mutation({
       );
     }
 
-    // Check course limits if creating a course
-    if (args.productCategory === "course") {
-      // 0 = not allowed, -1 = unlimited, >0 = limited
-      if (limits.maxCourses === 0) {
-        throw new Error(
-          "Courses are not available on the Free plan. Upgrade to Starter ($12/mo) to create courses."
-        );
-      }
-      if (limits.maxCourses > 0) {
-        const courseCount = await ctx.db
+    // Check unified product limit (courses + digital products count together)
+    if (limits.maxProducts > 0) {
+      const [courseCount, digitalProductCount] = await Promise.all([
+        ctx.db
           .query("courses")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
           .collect()
-          .then((courses) => courses.length);
-
-        if (courseCount >= limits.maxCourses) {
-          throw new Error(
-            `Course limit reached (${limits.maxCourses}). Upgrade your plan to create more courses.`
-          );
-        }
-      }
-    } else {
-      // Check product limits for non-course products
-      // 0 = not allowed, -1 = unlimited, >0 = limited
-      if (limits.maxProducts === 0) {
-        throw new Error(
-          "Products are not available on the Free plan. Upgrade to Starter ($12/mo) to create products."
-        );
-      }
-      if (limits.maxProducts > 0) {
-        const productCount = await ctx.db
+          .then((courses) => courses.length),
+        ctx.db
           .query("digitalProducts")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
           .collect()
-          .then((products) => products.length);
+          .then((products) => products.length),
+      ]);
 
-        if (productCount >= limits.maxProducts) {
-          throw new Error(
-            `Product limit reached (${limits.maxProducts}). Upgrade your plan to create more products.`
-          );
-        }
+      const totalCount = courseCount + digitalProductCount;
+      if (totalCount >= limits.maxProducts) {
+        throw new Error(
+          `Product limit reached (${limits.maxProducts}). Upgrade your plan to create more products.`
+        );
       }
     }
 

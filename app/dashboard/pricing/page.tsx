@@ -8,7 +8,6 @@ import {
   Crown,
   Zap,
   Star,
-  BookOpen,
   Package,
   Users,
   BarChart3,
@@ -27,8 +26,6 @@ import {
   Rocket,
   Building2,
   Loader2,
-  CheckCircle2,
-  XCircle,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,20 +116,19 @@ export default function PricingPage() {
       name: "Free",
       monthlyPrice: 0,
       annualPrice: 0,
-      description: "Simple link-in-bio page",
+      description: "Try the platform for free",
       icon: Zap,
       color: "bg-muted",
       iconColor: "text-muted-foreground",
       features: [
         { text: "Up to 5 links", included: true },
-        { text: "Custom profile page", included: true },
-        { text: "Basic link analytics", included: true },
+        { text: "1 product (free only)", included: true },
+        { text: "Basic analytics", included: true },
         { text: "Community support", included: true },
         { text: "Platform branding shown", included: true, highlight: "note" },
-        { text: "Products & courses", included: false },
+        { text: "Sell paid products", included: false },
         { text: "Email campaigns", included: false },
         { text: "Social scheduling", included: false },
-        { text: "Follow gates", included: false },
       ],
     },
     starter: {
@@ -145,8 +141,7 @@ export default function PricingPage() {
       iconColor: "text-green-600",
       features: [
         { text: "Up to 15 links", included: true },
-        { text: "Up to 10 paid products", included: true },
-        { text: "Up to 5 paid courses", included: true },
+        { text: "Up to 15 products", included: true },
         { text: "Sell paid products", included: true, highlight: "new" },
         { text: "Email campaigns (500/mo)", included: true },
         { text: "Basic analytics", included: true },
@@ -167,8 +162,7 @@ export default function PricingPage() {
       popular: true,
       features: [
         { text: "Up to 50 links", included: true },
-        { text: "Up to 30 products", included: true },
-        { text: "Up to 15 courses", included: true },
+        { text: "Up to 50 products", included: true },
         { text: "Email campaigns (2,500/mo)", included: true },
         { text: "Advanced analytics", included: true },
         { text: "Social media scheduling", included: true },
@@ -190,7 +184,6 @@ export default function PricingPage() {
       features: [
         { text: "Unlimited links", included: true },
         { text: "Unlimited products", included: true },
-        { text: "Unlimited courses", included: true },
         { text: "Email campaigns (10,000/mo)", included: true },
         { text: "Advanced analytics", included: true },
         { text: "Social media scheduling", included: true },
@@ -620,18 +613,9 @@ export default function PricingPage() {
                 <ComparisonRow
                   icon={Package}
                   feature="Products"
-                  free={false}
-                  starter="10"
-                  creator="30"
-                  pro="Unlimited"
-                  business="Unlimited"
-                />
-                <ComparisonRow
-                  icon={BookOpen}
-                  feature="Courses"
-                  free={false}
-                  starter="5"
-                  creator="15"
+                  free="1"
+                  starter="15"
+                  creator="50"
                   pro="Unlimited"
                   business="Unlimited"
                 />

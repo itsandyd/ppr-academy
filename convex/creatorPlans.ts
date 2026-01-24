@@ -17,25 +17,23 @@ import { Id } from "./_generated/dataModel";
 export const PLAN_LIMITS = {
   free: {
     maxLinks: 5,
-    maxCourses: 0, // Link-in-bio only - no courses
-    maxProducts: 0, // Link-in-bio only - no products
-    maxCoachingSessions: 0, // Link-in-bio only - no coaching
-    canUseEmailCampaigns: false, // No email campaigns on free
+    maxProducts: 1, // 1 total product (course or digital product) to try the platform
+    maxCoachingSessions: 0,
+    canUseEmailCampaigns: false,
     canUseAutomations: false,
     canUseCustomDomain: false,
     canUseAdvancedAnalytics: false,
     canUseSocialScheduling: false,
     canUseFollowGates: false,
-    canChargeMoney: false,
-    maxEmailSends: 0, // No emails on free
+    canChargeMoney: false, // Products must be free (price = $0)
+    maxEmailSends: 0,
     showPlatformBranding: true,
     canUseTeams: false,
     maxTeamMembers: 0,
   },
   starter: {
     maxLinks: 15,
-    maxCourses: 5,
-    maxProducts: 10,
+    maxProducts: 15, // 15 total products (courses + digital products)
     maxCoachingSessions: 20,
     canUseEmailCampaigns: true,
     canUseAutomations: false,
@@ -45,14 +43,13 @@ export const PLAN_LIMITS = {
     canUseFollowGates: false,
     canChargeMoney: true,
     maxEmailSends: 500,
-    showPlatformBranding: true, // Can be removed for $5/mo add-on
+    showPlatformBranding: true,
     canUseTeams: false,
     maxTeamMembers: 0,
   },
   creator: {
     maxLinks: 50,
-    maxCourses: 15,
-    maxProducts: 30, // Capped to create upsell path
+    maxProducts: 50, // 50 total products
     maxCoachingSessions: -1, // unlimited
     canUseEmailCampaigns: true,
     canUseAutomations: false,
@@ -68,8 +65,7 @@ export const PLAN_LIMITS = {
   },
   creator_pro: {
     maxLinks: -1, // unlimited
-    maxCourses: -1,
-    maxProducts: -1,
+    maxProducts: -1, // unlimited
     maxCoachingSessions: -1,
     canUseEmailCampaigns: true,
     canUseAutomations: true,
@@ -85,8 +81,7 @@ export const PLAN_LIMITS = {
   },
   business: {
     maxLinks: -1,
-    maxCourses: -1,
-    maxProducts: -1,
+    maxProducts: -1, // unlimited
     maxCoachingSessions: -1,
     canUseEmailCampaigns: true,
     canUseAutomations: true,
@@ -102,7 +97,6 @@ export const PLAN_LIMITS = {
   },
   early_access: {
     maxLinks: -1, // unlimited
-    maxCourses: -1, // unlimited
     maxProducts: -1, // unlimited
     maxCoachingSessions: -1, // unlimited
     canUseEmailCampaigns: true,
@@ -128,10 +122,7 @@ export const PLAN_PRICING = {
     features: [
       "Custom link-in-bio page",
       "Up to 5 links",
-      "Up to 2 courses",
-      "Up to 3 digital products",
-      "Up to 5 coaching sessions",
-      "Basic email campaigns (100/month)",
+      "1 product (free only)",
       "Basic analytics",
       "Public creator profile",
     ],
@@ -140,12 +131,11 @@ export const PLAN_PRICING = {
     name: "Starter",
     monthlyPrice: 1200, // $12/month
     yearlyPrice: 10800, // $108/year ($9/month - save 25%)
-    description: "Low barrier to grow",
+    description: "Start selling your products",
     features: [
       "Everything in Free",
       "Up to 15 links",
-      "Up to 5 courses",
-      "Up to 10 digital products",
+      "Up to 15 products",
       "Up to 20 coaching sessions",
       "Email campaigns (500/month)",
       "Email support",
@@ -159,8 +149,7 @@ export const PLAN_PRICING = {
     features: [
       "Everything in Starter",
       "Up to 50 links",
-      "Up to 15 courses",
-      "Up to 30 digital products",
+      "Up to 50 products",
       "Unlimited coaching sessions",
       "Email campaigns (2,500/month)",
       "Social media scheduling",
@@ -178,7 +167,6 @@ export const PLAN_PRICING = {
     features: [
       "Everything in Creator",
       "Unlimited links",
-      "Unlimited courses",
       "Unlimited products",
       "Email campaigns (10,000/month)",
       "Email automation workflows",
@@ -210,8 +198,7 @@ export const PLAN_PRICING = {
     features: [
       "Unlimited everything (forever free!)",
       "Unlimited links",
-      "Unlimited courses",
-      "Unlimited digital products",
+      "Unlimited products",
       "Unlimited coaching sessions",
       "Unlimited email sends",
       "Email automation workflows",
@@ -365,37 +352,30 @@ export const checkFeatureAccess = query({
         };
       }
 
-      case "courses": {
-        const courseCount = await ctx.db
-          .query("courses")
-          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect()
-          .then((courses) => courses.length);
-
-        // -1 = unlimited, 0 = none allowed, >0 = limited
-        const hasAccess = limits.maxCourses === -1 || (limits.maxCourses > 0 && courseCount < limits.maxCourses);
-
-        return {
-          hasAccess,
-          currentUsage: courseCount,
-          limit: limits.maxCourses,
-          requiresPlan: (!hasAccess ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
-        };
-      }
-
+      case "courses":
       case "products": {
-        const productCount = await ctx.db
-          .query("digitalProducts")
-          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect()
-          .then((products) => products.length);
+        // Count both courses and digital products together (unified product limit)
+        const [courseCount, digitalProductCount] = await Promise.all([
+          ctx.db
+            .query("courses")
+            .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+            .collect()
+            .then((courses) => courses.length),
+          ctx.db
+            .query("digitalProducts")
+            .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+            .collect()
+            .then((products) => products.length),
+        ]);
+
+        const totalCount = courseCount + digitalProductCount;
 
         // -1 = unlimited, 0 = none allowed, >0 = limited
-        const hasAccess = limits.maxProducts === -1 || (limits.maxProducts > 0 && productCount < limits.maxProducts);
+        const hasAccess = limits.maxProducts === -1 || (limits.maxProducts > 0 && totalCount < limits.maxProducts);
 
         return {
           hasAccess,
-          currentUsage: productCount,
+          currentUsage: totalCount,
           limit: limits.maxProducts,
           requiresPlan: (!hasAccess ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
@@ -629,8 +609,7 @@ export const getPlanUsageStats = query({
     plan: v.union(v.literal("free"), v.literal("starter"), v.literal("creator"), v.literal("creator_pro"), v.literal("business"), v.literal("early_access")),
     usage: v.object({
       links: v.object({ current: v.number(), limit: v.number() }),
-      courses: v.object({ current: v.number(), limit: v.number() }),
-      products: v.object({ current: v.number(), limit: v.number() }),
+      products: v.object({ current: v.number(), limit: v.number() }), // Combined courses + digital products
       emailsSentThisMonth: v.object({ current: v.number(), limit: v.number() }),
     }),
   }),
@@ -643,8 +622,8 @@ export const getPlanUsageStats = query({
     const plan = store.plan || "free"; // Default to free plan
     const limits = PLAN_LIMITS[plan];
 
-    // Get current usage
-    const [linkCount, courseCount, productCount] = await Promise.all([
+    // Get current usage (courses + digital products counted together)
+    const [linkCount, courseCount, digitalProductCount] = await Promise.all([
       ctx.db
         .query("linkInBioLinks")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -662,6 +641,7 @@ export const getPlanUsageStats = query({
         .then((products) => products.length),
     ]);
 
+    const totalProducts = courseCount + digitalProductCount;
     const emailsSentThisMonth = store.emailConfig?.emailsSentThisMonth || 0;
 
     return {
@@ -671,12 +651,8 @@ export const getPlanUsageStats = query({
           current: linkCount,
           limit: limits.maxLinks,
         },
-        courses: {
-          current: courseCount,
-          limit: limits.maxCourses,
-        },
         products: {
-          current: productCount,
+          current: totalProducts,
           limit: limits.maxProducts,
         },
         emailsSentThisMonth: {
