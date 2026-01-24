@@ -6836,6 +6836,41 @@ export declare const api: {
     >;
   };
   creatorPlans: {
+    adminGetStoreByUserId: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string; targetUserId: string },
+      {
+        courseCount: number;
+        plan:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
+        productCount: number;
+        storeId: Id<"stores">;
+        storeName: string;
+        storeSlug: string;
+      } | null
+    >;
+    adminSetStorePlan: FunctionReference<
+      "mutation",
+      "public",
+      {
+        clerkId: string;
+        plan:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
+        storeId: Id<"stores">;
+      },
+      { message: string; success: boolean }
+    >;
     checkFeatureAccess: FunctionReference<
       "query",
       "public",

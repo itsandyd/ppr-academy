@@ -265,6 +265,13 @@ export const createUniversalProduct = mutation({
       throw new Error("Store not found");
     }
 
+    // Check if user is an admin - admins bypass ALL plan limits
+    const storeUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", store.userId))
+      .first();
+    const isAdmin = storeUser?.admin === true;
+
     // Import plan limits inline (to avoid circular dependency)
     // Unified product limit: courses and digital products count together
     const PLAN_LIMITS: Record<string, { maxProducts: number; canChargeMoney: boolean }> = {
@@ -279,16 +286,16 @@ export const createUniversalProduct = mutation({
     const plan = store.plan || "free";
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
 
-    // Check if free tier user is trying to create a paid product
+    // Check if free tier user is trying to create a paid product (admins bypass)
     const price = args.price || 0;
-    if (price > 0 && !limits.canChargeMoney) {
+    if (!isAdmin && price > 0 && !limits.canChargeMoney) {
       throw new Error(
         "Free plan users can only create free products. Upgrade to Starter ($12/mo) to sell paid products."
       );
     }
 
-    // Check unified product limit (courses + digital products count together)
-    if (limits.maxProducts > 0) {
+    // Check unified product limit (admins bypass)
+    if (!isAdmin && limits.maxProducts > 0) {
       const [courseCount, digitalProductCount] = await Promise.all([
         ctx.db
           .query("courses")

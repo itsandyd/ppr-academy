@@ -858,6 +858,130 @@ export const sunsetAllEarlyAccess = mutation({
 });
 
 /**
+ * Admin: Directly set a store's plan (bypasses Stripe)
+ * Use for testing, special access, or fixing issues
+ */
+export const adminSetStorePlan = mutation({
+  args: {
+    clerkId: v.string(),
+    storeId: v.id("stores"),
+    plan: v.union(
+      v.literal("free"),
+      v.literal("starter"),
+      v.literal("creator"),
+      v.literal("creator_pro"),
+      v.literal("business"),
+      v.literal("early_access")
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Check admin
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user?.admin) {
+      return { success: false, message: "Admin access required" };
+    }
+
+    const store = await ctx.db.get(args.storeId);
+    if (!store) {
+      return { success: false, message: "Store not found" };
+    }
+
+    const previousPlan = store.plan || "free";
+
+    await ctx.db.patch(args.storeId, {
+      plan: args.plan,
+      planStartedAt: Date.now(),
+      subscriptionStatus: "active", // Mark as active for admin overrides
+    });
+
+    return {
+      success: true,
+      message: `Plan changed from ${previousPlan} to ${args.plan}`,
+    };
+  },
+});
+
+/**
+ * Admin: Get store by user ID (for admin panel)
+ */
+export const adminGetStoreByUserId = query({
+  args: {
+    clerkId: v.string(),
+    targetUserId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      storeId: v.id("stores"),
+      storeName: v.string(),
+      storeSlug: v.string(),
+      plan: v.union(
+        v.literal("free"),
+        v.literal("starter"),
+        v.literal("creator"),
+        v.literal("creator_pro"),
+        v.literal("business"),
+        v.literal("early_access")
+      ),
+      productCount: v.number(),
+      courseCount: v.number(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    // Check admin
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user?.admin) {
+      return null;
+    }
+
+    // Find store for target user
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("userId"), args.targetUserId))
+      .first();
+
+    if (!store) {
+      return null;
+    }
+
+    // Get product counts
+    const [courseCount, productCount] = await Promise.all([
+      ctx.db
+        .query("courses")
+        .withIndex("by_userId", (q) => q.eq("userId", args.targetUserId))
+        .collect()
+        .then((c) => c.length),
+      ctx.db
+        .query("digitalProducts")
+        .withIndex("by_userId", (q) => q.eq("userId", args.targetUserId))
+        .collect()
+        .then((p) => p.length),
+    ]);
+
+    return {
+      storeId: store._id,
+      storeName: store.name,
+      storeSlug: store.slug,
+      plan: store.plan || "free",
+      productCount,
+      courseCount,
+    };
+  },
+});
+
+/**
  * Extend early access for a specific store (admin only)
  * For special cases where we want to reward loyal users
  */

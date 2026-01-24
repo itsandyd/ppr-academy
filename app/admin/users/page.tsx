@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
@@ -689,6 +689,83 @@ export default function UsersManagementPage() {
                   ) : (
                     <span className="text-sm text-muted-foreground">Not connected</span>
                   ),
+              },
+              {
+                key: "plan",
+                label: "Plan",
+                render: (user: any) => {
+                  const StorePlanDropdown = ({ clerkId, userName }: { clerkId: string; userName: string }) => {
+                    const currentUser = useUser();
+                    const store = useQuery(api.creatorPlans.adminGetStoreByUserId,
+                      currentUser.user?.id ? { clerkId: currentUser.user.id, targetUserId: clerkId } : "skip"
+                    );
+                    const setStorePlan = useMutation(api.creatorPlans.adminSetStorePlan);
+                    const { toast } = useToast();
+                    const [isUpdating, setIsUpdating] = useState(false);
+
+                    if (!store) return <span className="text-xs text-muted-foreground">No store</span>;
+
+                    const planColors: Record<string, string> = {
+                      free: "border-gray-500/30 bg-gray-500/10 text-gray-600",
+                      starter: "border-blue-500/30 bg-blue-500/10 text-blue-600",
+                      creator: "border-violet-500/30 bg-violet-500/10 text-violet-600",
+                      creator_pro: "border-amber-500/30 bg-amber-500/10 text-amber-600",
+                      business: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
+                      early_access: "border-pink-500/30 bg-pink-500/10 text-pink-600",
+                    };
+
+                    const handlePlanChange = async (newPlan: string) => {
+                      if (!currentUser.user?.id) return;
+                      setIsUpdating(true);
+                      try {
+                        const result = await setStorePlan({
+                          clerkId: currentUser.user.id,
+                          storeId: store.storeId,
+                          plan: newPlan as "free" | "starter" | "creator" | "creator_pro" | "business" | "early_access",
+                        });
+                        if (result.success) {
+                          toast({ title: "Plan Updated", description: result.message });
+                        } else {
+                          toast({ title: "Error", description: result.message, variant: "destructive" });
+                        }
+                      } catch (error) {
+                        toast({ title: "Error", description: "Failed to update plan", variant: "destructive" });
+                      }
+                      setIsUpdating(false);
+                    };
+
+                    return (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={isUpdating}>
+                          <button className="flex items-center gap-1">
+                            <Badge variant="outline" className={cn("cursor-pointer transition-opacity hover:opacity-80", planColors[store.plan] || planColors.free)}>
+                              {isUpdating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                              {store.plan.replace("_", " ")}
+                            </Badge>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="bg-white dark:bg-black">
+                          <DropdownMenuLabel>Change Plan for {userName}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {["free", "starter", "creator", "creator_pro", "business", "early_access"].map((plan) => (
+                            <DropdownMenuItem
+                              key={plan}
+                              onClick={() => handlePlanChange(plan)}
+                              className={cn(store.plan === plan && "bg-muted")}
+                            >
+                              <Badge variant="outline" className={cn("mr-2", planColors[plan])}>
+                                {plan.replace("_", " ")}
+                              </Badge>
+                              {store.plan === plan && <CheckCircle className="ml-auto h-4 w-4 text-emerald-500" />}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    );
+                  };
+
+                  return <StorePlanDropdown clerkId={user.clerkId} userName={user.name || "User"} />;
+                },
               },
               {
                 key: "joined",
