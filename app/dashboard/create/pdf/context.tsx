@@ -105,6 +105,16 @@ const pdfConfig: ProductConfig<PDFData, PDFSteps> = {
     imageUrl: data.thumbnail,
     downloadUrl: data.downloadUrl,
     tags: data.tags,
+    followGateConfig: data.pricingModel === "free_with_gate" && data.followGateRequirements ? {
+      requireEmail: data.followGateRequirements.requireEmail ?? true,
+      requireInstagram: data.followGateRequirements.requireInstagram ?? false,
+      requireTiktok: data.followGateRequirements.requireTiktok ?? false,
+      requireYoutube: data.followGateRequirements.requireYoutube ?? false,
+      requireSpotify: data.followGateRequirements.requireSpotify ?? false,
+      minFollowsRequired: data.followGateRequirements.minFollowsRequired ?? 0,
+      socialLinks: data.followGateSocialLinks || {},
+      customMessage: data.followGateMessage,
+    } : undefined,
   }),
 
   mapToUpdateParams: (data, productId) => ({

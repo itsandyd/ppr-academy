@@ -73,10 +73,22 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
     if (state.isSaving || !user?.id || !storeId) return;
     setState(prev => ({ ...prev, isSaving: true }));
     try {
-      const params = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.price ? parseFloat(state.data.price) : undefined, pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined };
+      // Build followGateConfig if pricing model is free_with_gate
+      const followGateConfig = state.data.pricingModel === "free_with_gate" ? {
+        requireEmail: state.data.followGateRequirements?.requireEmail ?? true,
+        requireInstagram: state.data.followGateRequirements?.requireInstagram ?? false,
+        requireTiktok: state.data.followGateRequirements?.requireTiktok ?? false,
+        requireYoutube: state.data.followGateRequirements?.requireYoutube ?? false,
+        requireSpotify: state.data.followGateRequirements?.requireSpotify ?? false,
+        minFollowsRequired: state.data.followGateRequirements?.minFollowsRequired ?? 0,
+        socialLinks: state.data.followGateSocialLinks || {},
+        customMessage: state.data.followGateMessage,
+      } : undefined;
+
+      const params = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined, followGateConfig };
       if (state.chainId) { await updateMutation({ id: state.chainId as Id<"digitalProducts">, ...params }); }
       else {
-        const result = await createMutation({ ...params, title: state.data.title || "Untitled Chain", storeId, userId: user.id, productType: "digital", productCategory: "effect-chain", price: state.data.price ? parseFloat(state.data.price) : 0 });
+        const result = await createMutation({ ...params, title: state.data.title || "Untitled Chain", storeId, userId: user.id, productType: "digital", productCategory: "effect-chain", price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : 0), followGateConfig });
         if (result) { setState(prev => ({ ...prev, chainId: result as string })); router.replace(`/dashboard/create/chain?chainId=${result}&step=${searchParams.get("step") || "basics"}`); }
       }
       setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() })); toast({ title: "Chain Saved" });
