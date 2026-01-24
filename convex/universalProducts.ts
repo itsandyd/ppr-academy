@@ -267,7 +267,7 @@ export const createUniversalProduct = mutation({
 
     // Import plan limits inline (to avoid circular dependency)
     const PLAN_LIMITS: Record<string, { maxProducts: number; maxCourses: number; canChargeMoney: boolean }> = {
-      free: { maxProducts: -1, maxCourses: -1, canChargeMoney: false }, // Unlimited free products, no paid products
+      free: { maxProducts: 0, maxCourses: 0, canChargeMoney: false }, // Link-in-bio only - no products or courses
       starter: { maxProducts: 10, maxCourses: 5, canChargeMoney: true },
       creator: { maxProducts: 30, maxCourses: 15, canChargeMoney: true },
       creator_pro: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
@@ -288,6 +288,12 @@ export const createUniversalProduct = mutation({
 
     // Check course limits if creating a course
     if (args.productCategory === "course") {
+      // 0 = not allowed, -1 = unlimited, >0 = limited
+      if (limits.maxCourses === 0) {
+        throw new Error(
+          "Courses are not available on the Free plan. Upgrade to Starter ($12/mo) to create courses."
+        );
+      }
       if (limits.maxCourses > 0) {
         const courseCount = await ctx.db
           .query("courses")
@@ -303,6 +309,12 @@ export const createUniversalProduct = mutation({
       }
     } else {
       // Check product limits for non-course products
+      // 0 = not allowed, -1 = unlimited, >0 = limited
+      if (limits.maxProducts === 0) {
+        throw new Error(
+          "Products are not available on the Free plan. Upgrade to Starter ($12/mo) to create products."
+        );
+      }
       if (limits.maxProducts > 0) {
         const productCount = await ctx.db
           .query("digitalProducts")

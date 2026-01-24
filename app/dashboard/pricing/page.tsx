@@ -119,19 +119,18 @@ export default function PricingPage() {
       name: "Free",
       monthlyPrice: 0,
       annualPrice: 0,
-      description: "Build your audience for free",
+      description: "Simple link-in-bio page",
       icon: Zap,
       color: "bg-muted",
       iconColor: "text-muted-foreground",
       features: [
         { text: "Up to 5 links", included: true },
-        { text: "Unlimited free products", included: true },
-        { text: "Unlimited free courses", included: true },
-        { text: "Basic email campaigns (100/mo)", included: true },
-        { text: "Basic analytics", included: true },
+        { text: "Custom profile page", included: true },
+        { text: "Basic link analytics", included: true },
         { text: "Community support", included: true },
         { text: "Platform branding shown", included: true, highlight: "note" },
-        { text: "Sell paid products", included: false },
+        { text: "Products & courses", included: false },
+        { text: "Email campaigns", included: false },
         { text: "Social scheduling", included: false },
         { text: "Follow gates", included: false },
       ],
@@ -621,7 +620,7 @@ export default function PricingPage() {
                 <ComparisonRow
                   icon={Package}
                   feature="Products"
-                  free="3"
+                  free={false}
                   starter="10"
                   creator="30"
                   pro="Unlimited"
@@ -630,7 +629,7 @@ export default function PricingPage() {
                 <ComparisonRow
                   icon={BookOpen}
                   feature="Courses"
-                  free="2"
+                  free={false}
                   starter="5"
                   creator="15"
                   pro="Unlimited"
@@ -639,7 +638,7 @@ export default function PricingPage() {
                 <ComparisonRow
                   icon={Mail}
                   feature="Emails/mo"
-                  free="100"
+                  free={false}
                   starter="500"
                   creator="2,500"
                   pro="10,000"

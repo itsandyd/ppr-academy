@@ -17,17 +17,17 @@ import { Id } from "./_generated/dataModel";
 export const PLAN_LIMITS = {
   free: {
     maxLinks: 5,
-    maxCourses: -1, // Unlimited free courses allowed
-    maxProducts: -1, // Unlimited free products allowed
-    maxCoachingSessions: 5,
-    canUseEmailCampaigns: true,
+    maxCourses: 0, // Link-in-bio only - no courses
+    maxProducts: 0, // Link-in-bio only - no products
+    maxCoachingSessions: 0, // Link-in-bio only - no coaching
+    canUseEmailCampaigns: false, // No email campaigns on free
     canUseAutomations: false,
     canUseCustomDomain: false,
     canUseAdvancedAnalytics: false,
     canUseSocialScheduling: false,
     canUseFollowGates: false,
-    canChargeMoney: false, // Free tier can only create free products (price = $0)
-    maxEmailSends: 100,
+    canChargeMoney: false,
+    maxEmailSends: 0, // No emails on free
     showPlatformBranding: true,
     canUseTeams: false,
     maxTeamMembers: 0,
@@ -372,13 +372,14 @@ export const checkFeatureAccess = query({
           .collect()
           .then((courses) => courses.length);
 
-        const requiresUpgrade = limits.maxCourses > 0 && courseCount >= limits.maxCourses;
+        // -1 = unlimited, 0 = none allowed, >0 = limited
+        const hasAccess = limits.maxCourses === -1 || (limits.maxCourses > 0 && courseCount < limits.maxCourses);
 
         return {
-          hasAccess: limits.maxCourses === -1 || courseCount < limits.maxCourses,
+          hasAccess,
           currentUsage: courseCount,
           limit: limits.maxCourses,
-          requiresPlan: (requiresUpgrade ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
+          requiresPlan: (!hasAccess ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
       }
 
@@ -389,13 +390,14 @@ export const checkFeatureAccess = query({
           .collect()
           .then((products) => products.length);
 
-        const requiresUpgrade = limits.maxProducts > 0 && productCount >= limits.maxProducts;
+        // -1 = unlimited, 0 = none allowed, >0 = limited
+        const hasAccess = limits.maxProducts === -1 || (limits.maxProducts > 0 && productCount < limits.maxProducts);
 
         return {
-          hasAccess: limits.maxProducts === -1 || productCount < limits.maxProducts,
+          hasAccess,
           currentUsage: productCount,
           limit: limits.maxProducts,
-          requiresPlan: (requiresUpgrade ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
+          requiresPlan: (!hasAccess ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
       }
 
