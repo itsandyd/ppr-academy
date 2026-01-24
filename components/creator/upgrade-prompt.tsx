@@ -35,7 +35,7 @@ interface UpgradePromptProps {
   isOpen: boolean;
   onClose: () => void;
   feature: string;
-  requiredPlan: "creator" | "creator_pro";
+  requiredPlan: "starter" | "creator" | "creator_pro";
   storeId?: string;
 }
 
@@ -92,27 +92,47 @@ const FEATURE_INFO: Record<
     description: "Get detailed insights into your audience, sales, and engagement",
     icon: <BarChart3 className="h-12 w-12" />,
   },
+  paid_products: {
+    title: "Sell Paid Products",
+    description: "Start charging for your products and courses. Free users can only create free products.",
+    icon: <Package className="h-12 w-12" />,
+  },
 };
 
 const PLAN_COMPARISON = {
+  starter: {
+    name: "Starter",
+    price: 12,
+    icon: <Zap className="h-5 w-5" />,
+    color: "from-green-500 to-emerald-500",
+    features: [
+      "Up to 15 links",
+      "Up to 10 products",
+      "Up to 5 courses",
+      "Sell paid products",
+      "Email campaigns (500/mo)",
+      "Email support",
+    ],
+  },
   creator: {
     name: "Creator",
     price: 29,
     icon: <Sparkles className="h-5 w-5" />,
     color: "from-blue-500 to-cyan-500",
     features: [
-      "Up to 20 links",
-      "Unlimited courses",
-      "Unlimited products",
+      "Up to 50 links",
+      "Up to 30 products",
+      "Up to 15 courses",
       "Coaching sessions",
-      "Email campaigns (1K/mo)",
+      "Email campaigns (2.5K/mo)",
       "Social scheduling",
+      "Follow gates",
       "Advanced analytics",
     ],
   },
   creator_pro: {
-    name: "Creator Pro",
-    price: 99,
+    name: "Pro",
+    price: 79,
     icon: <Crown className="h-5 w-5" />,
     color: "from-yellow-500 to-orange-500",
     features: [
@@ -120,7 +140,7 @@ const PLAN_COMPARISON = {
       "Unlimited courses",
       "Unlimited products",
       "Unlimited coaching",
-      "Unlimited emails",
+      "Email campaigns (10K/mo)",
       "Email automations",
       "Custom domain",
       "Priority support",
@@ -144,10 +164,14 @@ export function UpgradePrompt({
   };
 
   const planInfo = PLAN_COMPARISON[requiredPlan];
-  const otherPlan =
-    requiredPlan === "creator" ? PLAN_COMPARISON.creator_pro : PLAN_COMPARISON.creator;
+  // Show the next tier up as an alternative option
+  const otherPlan = requiredPlan === "starter"
+    ? PLAN_COMPARISON.creator
+    : requiredPlan === "creator"
+      ? PLAN_COMPARISON.creator_pro
+      : PLAN_COMPARISON.creator;
 
-  const handleUpgrade = async (plan: "creator" | "creator_pro", billingPeriod: "monthly" | "yearly") => {
+  const handleUpgrade = async (plan: "starter" | "creator" | "creator_pro", billingPeriod: "monthly" | "yearly") => {
     if (!storeId) {
       toast.error("Store ID is missing");
       return;
@@ -231,10 +255,10 @@ export function UpgradePrompt({
                     </li>
                   ))}
                 </ul>
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   size="lg"
-                  onClick={() => handleUpgrade(planInfo.name.toLowerCase().replace(" ", "_") as "creator" | "creator_pro", "monthly")}
+                  onClick={() => handleUpgrade(planInfo.name.toLowerCase().replace(" ", "_") as "starter" | "creator" | "creator_pro", "monthly")}
                   disabled={!!isUpgrading}
                 >
                   {isUpgrading === planInfo.name.toLowerCase().replace(" ", "_") ? (
@@ -275,11 +299,11 @@ export function UpgradePrompt({
                     </li>
                   ))}
                 </ul>
-                <Button 
-                  className="w-full" 
-                  variant="outline" 
+                <Button
+                  className="w-full"
+                  variant="outline"
                   size="lg"
-                  onClick={() => handleUpgrade(otherPlan.name.toLowerCase().replace(" ", "_") as "creator" | "creator_pro", "monthly")}
+                  onClick={() => handleUpgrade(otherPlan.name.toLowerCase().replace(" ", "_") as "starter" | "creator" | "creator_pro", "monthly")}
                   disabled={!!isUpgrading}
                 >
                   {isUpgrading === otherPlan.name.toLowerCase().replace(" ", "_") ? (
@@ -315,7 +339,7 @@ export function UpgradeBanner({
   storeId,
 }: {
   feature: string;
-  requiredPlan: "creator" | "creator_pro";
+  requiredPlan: "starter" | "creator" | "creator_pro";
   storeId?: string;
 }) {
   const featureInfo = FEATURE_INFO[feature] || {

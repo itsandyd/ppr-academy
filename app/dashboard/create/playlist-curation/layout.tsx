@@ -8,6 +8,7 @@ import { List, Settings, DollarSign, Share2 } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
+import { ProductLimitGate } from "@/app/dashboard/create/shared/ProductLimitGate";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -249,8 +250,10 @@ function LayoutContent({ children }: PlaylistCurationLayoutProps) {
 
 export default function PlaylistCurationLayout({ children }: PlaylistCurationLayoutProps) {
   return (
-    <PlaylistCurationProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </PlaylistCurationProvider>
+    <ProductLimitGate featureType="products">
+      <PlaylistCurationProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </PlaylistCurationProvider>
+    </ProductLimitGate>
   );
 }

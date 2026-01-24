@@ -43,8 +43,10 @@ const storeValidator = v.object({
   // Creator Plan & Visibility Settings
   plan: v.optional(v.union(
     v.literal("free"),
+    v.literal("starter"),
     v.literal("creator"),
     v.literal("creator_pro"),
+    v.literal("business"),
     v.literal("early_access")
   )),
   planStartedAt: v.optional(v.number()),

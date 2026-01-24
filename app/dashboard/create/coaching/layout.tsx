@@ -10,6 +10,7 @@ import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
+import { ProductLimitGate } from "@/app/dashboard/create/shared/ProductLimitGate";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -231,8 +232,10 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
 
 export default function CoachingCreateLayout({ children }: CoachingCreateLayoutProps) {
   return (
-    <CoachingCreationProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </CoachingCreationProvider>
+    <ProductLimitGate featureType="products">
+      <CoachingCreationProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </CoachingCreationProvider>
+    </ProductLimitGate>
   );
 }

@@ -12,7 +12,7 @@ interface UseFeatureAccessResult {
   isLoading: boolean;
   currentUsage?: number;
   limit?: number;
-  requiresPlan?: "creator" | "creator_pro";
+  requiresPlan?: "starter" | "creator" | "creator_pro";
   isAdmin?: boolean;
   showUpgradePrompt: () => void;
   UpgradePromptComponent: React.ComponentType;

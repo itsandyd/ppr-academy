@@ -13,25 +13,46 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Plan feature limits configuration
+// Updated January 2025 with progressive tiers for better revenue optimization
 export const PLAN_LIMITS = {
   free: {
     maxLinks: 5,
-    maxCourses: 3, // Allow 3 courses to try the platform
-    maxProducts: 3, // Allow 3 products to try the platform
-    maxCoachingSessions: 10, // Allow limited coaching sessions
-    canUseEmailCampaigns: true, // Allow basic email campaigns
+    maxCourses: -1, // Unlimited free courses allowed
+    maxProducts: -1, // Unlimited free products allowed
+    maxCoachingSessions: 5,
+    canUseEmailCampaigns: true,
     canUseAutomations: false,
     canUseCustomDomain: false,
     canUseAdvancedAnalytics: false,
     canUseSocialScheduling: false,
     canUseFollowGates: false,
-    maxEmailSends: 100, // 100 emails per month
+    canChargeMoney: false, // Free tier can only create free products (price = $0)
+    maxEmailSends: 100,
     showPlatformBranding: true,
+    canUseTeams: false,
+    maxTeamMembers: 0,
+  },
+  starter: {
+    maxLinks: 15,
+    maxCourses: 5,
+    maxProducts: 10,
+    maxCoachingSessions: 20,
+    canUseEmailCampaigns: true,
+    canUseAutomations: false,
+    canUseCustomDomain: false,
+    canUseAdvancedAnalytics: false,
+    canUseSocialScheduling: false,
+    canUseFollowGates: false,
+    canChargeMoney: true,
+    maxEmailSends: 500,
+    showPlatformBranding: true, // Can be removed for $5/mo add-on
+    canUseTeams: false,
+    maxTeamMembers: 0,
   },
   creator: {
-    maxLinks: 20,
-    maxCourses: -1, // unlimited
-    maxProducts: -1, // unlimited
+    maxLinks: 50,
+    maxCourses: 15,
+    maxProducts: 30, // Capped to create upsell path
     maxCoachingSessions: -1, // unlimited
     canUseEmailCampaigns: true,
     canUseAutomations: false,
@@ -39,8 +60,11 @@ export const PLAN_LIMITS = {
     canUseAdvancedAnalytics: true,
     canUseSocialScheduling: true,
     canUseFollowGates: true,
-    maxEmailSends: 1000, // 1,000 emails per month
+    canChargeMoney: true,
+    maxEmailSends: 2500,
     showPlatformBranding: false,
+    canUseTeams: false,
+    maxTeamMembers: 0,
   },
   creator_pro: {
     maxLinks: -1, // unlimited
@@ -53,8 +77,28 @@ export const PLAN_LIMITS = {
     canUseAdvancedAnalytics: true,
     canUseSocialScheduling: true,
     canUseFollowGates: true,
+    canChargeMoney: true,
+    maxEmailSends: 10000,
+    showPlatformBranding: false,
+    canUseTeams: false,
+    maxTeamMembers: 1,
+  },
+  business: {
+    maxLinks: -1,
+    maxCourses: -1,
+    maxProducts: -1,
+    maxCoachingSessions: -1,
+    canUseEmailCampaigns: true,
+    canUseAutomations: true,
+    canUseCustomDomain: true,
+    canUseAdvancedAnalytics: true,
+    canUseSocialScheduling: true,
+    canUseFollowGates: true,
+    canChargeMoney: true,
     maxEmailSends: -1, // unlimited
     showPlatformBranding: false,
+    canUseTeams: true,
+    maxTeamMembers: 10,
   },
   early_access: {
     maxLinks: -1, // unlimited
@@ -67,8 +111,11 @@ export const PLAN_LIMITS = {
     canUseAdvancedAnalytics: true,
     canUseSocialScheduling: true,
     canUseFollowGates: true,
+    canChargeMoney: true,
     maxEmailSends: -1, // unlimited
     showPlatformBranding: false,
+    canUseTeams: true,
+    maxTeamMembers: -1, // unlimited
   },
 } as const;
 
@@ -81,45 +128,78 @@ export const PLAN_PRICING = {
     features: [
       "Custom link-in-bio page",
       "Up to 5 links",
-      "Up to 3 courses",
+      "Up to 2 courses",
       "Up to 3 digital products",
-      "Up to 10 coaching sessions",
+      "Up to 5 coaching sessions",
       "Basic email campaigns (100/month)",
       "Basic analytics",
       "Public creator profile",
     ],
   },
+  starter: {
+    name: "Starter",
+    monthlyPrice: 1200, // $12/month
+    yearlyPrice: 10800, // $108/year ($9/month - save 25%)
+    description: "Low barrier to grow",
+    features: [
+      "Everything in Free",
+      "Up to 15 links",
+      "Up to 5 courses",
+      "Up to 10 digital products",
+      "Up to 20 coaching sessions",
+      "Email campaigns (500/month)",
+      "Email support",
+    ],
+  },
   creator: {
     name: "Creator",
     monthlyPrice: 2900, // $29/month
-    yearlyPrice: 29000, // $290/year (save ~17%)
-    description: "For creators ready to monetize",
+    yearlyPrice: 28800, // $288/year ($24/month - save 17%)
+    description: "For serious creators",
     features: [
-      "Everything in Free",
-      "Up to 20 links",
-      "Unlimited courses",
-      "Unlimited digital products",
+      "Everything in Starter",
+      "Up to 50 links",
+      "Up to 15 courses",
+      "Up to 30 digital products",
       "Unlimited coaching sessions",
-      "Email campaigns (1,000/month)",
+      "Email campaigns (2,500/month)",
       "Social media scheduling",
       "Follow gates",
       "Advanced analytics",
       "No platform branding",
+      "Priority email support",
     ],
   },
   creator_pro: {
-    name: "Creator Pro",
-    monthlyPrice: 9900, // $99/month
-    yearlyPrice: 95000, // $950/year (save ~20%)
+    name: "Pro",
+    monthlyPrice: 7900, // $79/month
+    yearlyPrice: 70800, // $708/year ($59/month - save 25%)
     description: "Full power for professionals",
     features: [
       "Everything in Creator",
       "Unlimited links",
-      "Unlimited email sends",
+      "Unlimited courses",
+      "Unlimited products",
+      "Email campaigns (10,000/month)",
       "Email automation workflows",
       "Custom domain",
+      "API access",
       "Priority support",
+    ],
+  },
+  business: {
+    name: "Business",
+    monthlyPrice: 14900, // $149/month
+    yearlyPrice: 142800, // $1,428/year ($119/month - save 20%)
+    description: "For teams and agencies",
+    features: [
+      "Everything in Pro",
+      "Unlimited email sends",
+      "Team collaboration (up to 10 members)",
+      "White-label options",
       "Advanced integrations",
+      "SLA guarantee",
+      "Dedicated success manager",
     ],
   },
   early_access: {
@@ -128,7 +208,7 @@ export const PLAN_PRICING = {
     yearlyPrice: 0,
     description: "Grandfathered unlimited access for early supporters",
     features: [
-      "🎉 Unlimited everything (forever free!)",
+      "Unlimited everything (forever free!)",
       "Unlimited links",
       "Unlimited courses",
       "Unlimited digital products",
@@ -140,6 +220,7 @@ export const PLAN_PRICING = {
       "Follow gates",
       "Advanced analytics",
       "No platform branding",
+      "Team collaboration",
       "Priority support",
     ],
   },
@@ -154,8 +235,8 @@ export const getStorePlan = query({
   },
   returns: v.union(
     v.object({
-      plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
-      effectivePlan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
+      plan: v.union(v.literal("free"), v.literal("starter"), v.literal("creator"), v.literal("creator_pro"), v.literal("business"), v.literal("early_access")),
+      effectivePlan: v.union(v.literal("free"), v.literal("starter"), v.literal("creator"), v.literal("creator_pro"), v.literal("business"), v.literal("early_access")),
       limits: v.any(),
       pricing: v.any(),
       isActive: v.boolean(),
@@ -225,7 +306,7 @@ export const checkFeatureAccess = query({
     hasAccess: v.boolean(),
     currentUsage: v.optional(v.number()),
     limit: v.optional(v.number()),
-    requiresPlan: v.optional(v.union(v.literal("creator"), v.literal("creator_pro"))),
+    requiresPlan: v.optional(v.union(v.literal("starter"), v.literal("creator"), v.literal("creator_pro"))),
     isAdmin: v.optional(v.boolean()), // Add admin flag to response
     earlyAccessExpired: v.optional(v.boolean()),
   }),
@@ -280,7 +361,7 @@ export const checkFeatureAccess = query({
           hasAccess: limits.maxLinks === -1 || linkCount < limits.maxLinks,
           currentUsage: linkCount,
           limit: limits.maxLinks,
-          requiresPlan: (requiresUpgrade ? "creator" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (requiresUpgrade ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
       }
 
@@ -297,7 +378,7 @@ export const checkFeatureAccess = query({
           hasAccess: limits.maxCourses === -1 || courseCount < limits.maxCourses,
           currentUsage: courseCount,
           limit: limits.maxCourses,
-          requiresPlan: (requiresUpgrade ? "creator" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (requiresUpgrade ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
       }
 
@@ -314,38 +395,44 @@ export const checkFeatureAccess = query({
           hasAccess: limits.maxProducts === -1 || productCount < limits.maxProducts,
           currentUsage: productCount,
           limit: limits.maxProducts,
-          requiresPlan: (requiresUpgrade ? "creator" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (requiresUpgrade ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
       }
 
       case "email_campaigns":
         return {
           hasAccess: limits.canUseEmailCampaigns,
-          requiresPlan: (!limits.canUseEmailCampaigns ? "creator" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (!limits.canUseEmailCampaigns ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
 
       case "automations":
         return {
           hasAccess: limits.canUseAutomations,
-          requiresPlan: (!limits.canUseAutomations ? "creator_pro" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (!limits.canUseAutomations ? "creator_pro" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
 
       case "custom_domain":
         return {
           hasAccess: limits.canUseCustomDomain,
-          requiresPlan: (!limits.canUseCustomDomain ? "creator_pro" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (!limits.canUseCustomDomain ? "creator_pro" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
 
       case "social_scheduling":
         return {
           hasAccess: limits.canUseSocialScheduling,
-          requiresPlan: (!limits.canUseSocialScheduling ? "creator" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (!limits.canUseSocialScheduling ? "creator" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
 
       case "follow_gates":
         return {
           hasAccess: limits.canUseFollowGates,
-          requiresPlan: (!limits.canUseFollowGates ? "creator" : undefined) as "creator" | "creator_pro" | undefined,
+          requiresPlan: (!limits.canUseFollowGates ? "creator" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
+        };
+
+      case "paid_products":
+        return {
+          hasAccess: limits.canChargeMoney,
+          requiresPlan: (!limits.canChargeMoney ? "starter" : undefined) as "starter" | "creator" | "creator_pro" | undefined,
         };
 
       default:
@@ -452,7 +539,7 @@ export const initializeStorePlan = mutation({
 export const upgradePlan = mutation({
   args: {
     storeId: v.id("stores"),
-    plan: v.union(v.literal("creator"), v.literal("creator_pro")),
+    plan: v.union(v.literal("starter"), v.literal("creator"), v.literal("creator_pro"), v.literal("business")),
     stripeCustomerId: v.string(),
     stripeSubscriptionId: v.string(),
     subscriptionStatus: v.union(
@@ -503,7 +590,7 @@ export const updateSubscriptionStatus = mutation({
       v.literal("canceled"),
       v.literal("incomplete")
     ),
-    downgradeToPlan: v.optional(v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"))),
+    downgradeToPlan: v.optional(v.union(v.literal("free"), v.literal("starter"), v.literal("creator"), v.literal("creator_pro"), v.literal("business"))),
   },
   returns: v.object({
     success: v.boolean(),
@@ -537,7 +624,7 @@ export const getPlanUsageStats = query({
     storeId: v.id("stores"),
   },
   returns: v.object({
-    plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
+    plan: v.union(v.literal("free"), v.literal("starter"), v.literal("creator"), v.literal("creator_pro"), v.literal("business"), v.literal("early_access")),
     usage: v.object({
       links: v.object({ current: v.number(), limit: v.number() }),
       courses: v.object({ current: v.number(), limit: v.number() }),

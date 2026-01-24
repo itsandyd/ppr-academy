@@ -360,8 +360,10 @@ export default defineSchema({
     plan: v.optional(
       v.union(
         v.literal("free"), // Free - Basic link-in-bio only
-        v.literal("creator"), // Creator - Courses + coaching
-        v.literal("creator_pro"), // Creator Pro - Full features (paid)
+        v.literal("starter"), // Starter - Entry tier ($12/mo)
+        v.literal("creator"), // Creator - Most users ($29/mo)
+        v.literal("creator_pro"), // Pro - Power users ($79/mo)
+        v.literal("business"), // Business - Teams ($149/mo)
         v.literal("early_access") // Early Access - Grandfathered unlimited (free)
       )
     ),

@@ -31,6 +31,7 @@ import {
   Handshake,
   MessageCircle,
   User,
+  CreditCard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -192,6 +193,12 @@ const createLinks: SidebarLink[] = [
     label: "Profile",
     icon: User,
     color: "text-indigo-500",
+  },
+  {
+    href: "/dashboard/pricing?mode=create",
+    label: "Pricing & Plans",
+    icon: CreditCard,
+    color: "text-amber-500",
   },
 ];
 

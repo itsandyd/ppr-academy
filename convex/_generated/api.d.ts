@@ -6846,7 +6846,7 @@ export declare const api: {
         hasAccess: boolean;
         isAdmin?: boolean;
         limit?: number;
-        requiresPlan?: "creator" | "creator_pro";
+        requiresPlan?: "starter" | "creator" | "creator_pro";
       }
     >;
     extendEarlyAccess: FunctionReference<
@@ -6880,7 +6880,13 @@ export declare const api: {
       "public",
       { storeId: Id<"stores"> },
       {
-        plan: "free" | "creator" | "creator_pro" | "early_access";
+        plan:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         usage: {
           courses: { current: number; limit: number };
           emailsSentThisMonth: { current: number; limit: number };
@@ -6897,10 +6903,22 @@ export declare const api: {
         daysUntilExpiration?: number;
         earlyAccessExpired: boolean;
         earlyAccessExpiresAt?: number;
-        effectivePlan: "free" | "creator" | "creator_pro" | "early_access";
+        effectivePlan:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         isActive: boolean;
         limits: any;
-        plan: "free" | "creator" | "creator_pro" | "early_access";
+        plan:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         pricing: any;
         subscriptionStatus?:
           | "active"
@@ -6944,7 +6962,12 @@ export declare const api: {
       "mutation",
       "public",
       {
-        downgradeToPlan?: "free" | "creator" | "creator_pro";
+        downgradeToPlan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business";
         storeId: Id<"stores">;
         subscriptionStatus:
           | "active"
@@ -6959,7 +6982,7 @@ export declare const api: {
       "mutation",
       "public",
       {
-        plan: "creator" | "creator_pro";
+        plan: "starter" | "creator" | "creator_pro" | "business";
         storeId: Id<"stores">;
         stripeCustomerId: string;
         stripeSubscriptionId: string;
@@ -17623,7 +17646,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -17693,7 +17722,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -17750,7 +17785,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -17820,7 +17861,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -17877,7 +17924,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -17934,7 +17987,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -18036,7 +18095,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
@@ -18120,7 +18185,13 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
-        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        plan?:
+          | "free"
+          | "starter"
+          | "creator"
+          | "creator_pro"
+          | "business"
+          | "early_access";
         planStartedAt?: number;
         slug: string;
         socialLinks?: {

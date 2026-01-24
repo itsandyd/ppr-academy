@@ -3,6 +3,7 @@
 import React from "react";
 import { MembershipCreationProvider, useMembershipCreation } from "./context";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
+import { ProductLimitGate } from "@/app/dashboard/create/shared/ProductLimitGate";
 
 function LayoutContentInner({ children }: { children: React.ReactNode }) {
   const { state } = useMembershipCreation();
@@ -40,8 +41,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function MembershipCreateLayout({ children }: { children: React.ReactNode }) {
   return (
-    <MembershipCreationProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </MembershipCreationProvider>
+    <ProductLimitGate featureType="products">
+      <MembershipCreationProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </MembershipCreationProvider>
+    </ProductLimitGate>
   );
 }

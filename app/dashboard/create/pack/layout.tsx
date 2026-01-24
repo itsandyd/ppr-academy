@@ -9,6 +9,7 @@ import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
+import { ProductLimitGate } from "@/app/dashboard/create/shared/ProductLimitGate";
 import { Badge } from "@/components/ui/badge";
 import { useStoresByUser } from "@/lib/convex-typed-hooks";
 
@@ -234,8 +235,10 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
 
 export default function PackCreateLayout({ children }: PackCreateLayoutProps) {
   return (
-    <PackCreationProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </PackCreationProvider>
+    <ProductLimitGate featureType="products">
+      <PackCreationProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </PackCreationProvider>
+    </ProductLimitGate>
   );
 }

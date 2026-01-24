@@ -92,12 +92,12 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     storeId && !isUserIdInsteadOfStoreId ? { storeId: storeId as any } : "skip"
   );
 
-  // Feature access for courses - keeping free for now to attract creators
-  // Monetization is via % of sales, not subscriptions
-  const hasAccess = true;
-  const isCheckingAccess = false;
-  const showUpgradePrompt = () => {};
-  const UpgradePromptComponent = () => null;
+  // Feature access for courses
+  const {
+    hasAccess,
+    isLoading: isCheckingAccess,
+    requiresPlan
+  } = useFeatureAccess(storeId as Id<"stores"> | undefined, "courses");
 
   const navigateToStep = (step: string) => {
     router.push(`/dashboard/create/course?step=${step}`);
@@ -156,13 +156,12 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <UpgradeBanner 
+          <UpgradeBanner
             feature="courses"
-            requiredPlan="creator"
+            requiredPlan={requiresPlan || "creator"}
             storeId={storeId}
           />
         </div>
-        <UpgradePromptComponent />
       </div>
     );
   }

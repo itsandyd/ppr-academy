@@ -9692,7 +9692,13 @@ export type DataModel = {
       lastStrikeAt?: number;
       logoUrl?: string;
       name: string;
-      plan?: "free" | "creator" | "creator_pro" | "early_access";
+      plan?:
+        | "free"
+        | "starter"
+        | "creator"
+        | "creator_pro"
+        | "business"
+        | "early_access";
       planStartedAt?: number;
       slug: string;
       socialLinks?: {

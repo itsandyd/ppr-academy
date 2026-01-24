@@ -4,6 +4,42 @@ import { auth } from "@clerk/nextjs/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+// Price IDs from Stripe Dashboard - set these in your .env file
+// Create recurring prices in Stripe Dashboard for each plan/billing combo
+const PRICE_IDS: Record<string, { monthly: string; yearly: string }> = {
+  starter: {
+    monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID || "",
+    yearly: process.env.STRIPE_STARTER_YEARLY_PRICE_ID || "",
+  },
+  creator: {
+    monthly: process.env.STRIPE_CREATOR_MONTHLY_PRICE_ID || "",
+    yearly: process.env.STRIPE_CREATOR_YEARLY_PRICE_ID || "",
+  },
+  creator_pro: {
+    monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || "",
+    yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || "",
+  },
+  business: {
+    monthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID || "",
+    yearly: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID || "",
+  },
+};
+
+// Fallback pricing for dynamic price creation (in cents)
+const PRICING: Record<string, { monthly: number; yearly: number }> = {
+  starter: { monthly: 1200, yearly: 10800 },    // $12/mo, $108/yr ($9/mo)
+  creator: { monthly: 2900, yearly: 28800 },    // $29/mo, $288/yr ($24/mo)
+  creator_pro: { monthly: 7900, yearly: 70800 }, // $79/mo, $708/yr ($59/mo)
+  business: { monthly: 14900, yearly: 142800 }, // $149/mo, $1428/yr ($119/mo)
+};
+
+const PLAN_NAMES: Record<string, string> = {
+  starter: "Starter Plan",
+  creator: "Creator Plan",
+  creator_pro: "Pro Plan",
+  business: "Business Plan",
+};
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
@@ -23,18 +59,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!["creator", "creator_pro"].includes(plan)) {
-      return NextResponse.json(
-        { error: "Invalid plan" },
-        { status: 400 }
-      );
+    if (!["starter", "creator", "creator_pro", "business"].includes(plan)) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
     if (!["monthly", "yearly"].includes(billingPeriod)) {
-      return NextResponse.json(
-        { error: "Invalid billing period" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid billing period" }, { status: 400 });
     }
 
     // Get user's email from Clerk
@@ -44,10 +74,7 @@ export async function POST(req: NextRequest) {
     const userEmail = user.emailAddresses[0]?.emailAddress;
 
     if (!userEmail) {
-      return NextResponse.json(
-        { error: "User email not found" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "User email not found" }, { status: 400 });
     }
 
     // Get or create Stripe customer
@@ -69,46 +96,33 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Define pricing (in cents)
-    const pricing = {
-      creator: {
-        monthly: 2900, // $29/month
-        yearly: 29000, // $290/year
-      },
-      creator_pro: {
-        monthly: 9900, // $99/month
-        yearly: 95000, // $950/year
-      },
-    };
+    // Get price ID - use pre-configured or create dynamically as fallback
+    let priceId = PRICE_IDS[plan]?.[billingPeriod as "monthly" | "yearly"];
 
-    const planNames = {
-      creator: "Creator Plan",
-      creator_pro: "Creator Pro Plan",
-    };
-
-    const amount = pricing[plan as "creator" | "creator_pro"][billingPeriod as "monthly" | "yearly"];
-    const planName = planNames[plan as "creator" | "creator_pro"];
-
-    // Create a Stripe Price dynamically
-    const stripePrice = await stripe.prices.create({
-      unit_amount: amount,
-      currency: "usd",
-      recurring: {
-        interval: billingPeriod === "monthly" ? "month" : "year",
-      },
-      product_data: {
-        name: `${planName} - ${billingPeriod === "monthly" ? "Monthly" : "Yearly"}`,
-      },
-    });
+    if (!priceId || !priceId.startsWith("price_")) {
+      // Fallback: Create price dynamically (not ideal, but works)
+      console.warn(`No price ID configured for ${plan} ${billingPeriod}, creating dynamically`);
+      const amount = PRICING[plan][billingPeriod as "monthly" | "yearly"];
+      const stripePrice = await stripe.prices.create({
+        unit_amount: amount,
+        currency: "usd",
+        recurring: {
+          interval: billingPeriod === "monthly" ? "month" : "year",
+        },
+        product_data: {
+          name: `PPR Academy ${PLAN_NAMES[plan]} - ${billingPeriod === "monthly" ? "Monthly" : "Annual"}`,
+        },
+      });
+      priceId = stripePrice.id;
+    }
 
     // Create Stripe Checkout Session
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       mode: "subscription",
-      payment_method_types: ["card"],
       line_items: [
         {
-          price: stripePrice.id,
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -125,17 +139,16 @@ export async function POST(req: NextRequest) {
           storeId: storeId,
           plan: plan,
         },
-        trial_period_days: 14, // 14-day free trial
+        trial_period_days: 14,
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/plan?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/plan?canceled=true`,
-    };
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/pricing?canceled=true`,
+      allow_promotion_codes: true,
+    });
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       sessionId: session.id,
-      url: session.url 
+      url: session.url,
     });
   } catch (error: any) {
     console.error("Error creating creator plan checkout:", error);

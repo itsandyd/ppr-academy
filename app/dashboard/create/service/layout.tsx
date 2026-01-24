@@ -10,6 +10,7 @@ import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
+import { ProductLimitGate } from "@/app/dashboard/create/shared/ProductLimitGate";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_TYPES } from "./types";
 
@@ -204,8 +205,10 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
 
 export default function ServiceCreateLayout({ children }: ServiceCreateLayoutProps) {
   return (
-    <ServiceCreationProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </ServiceCreationProvider>
+    <ProductLimitGate featureType="products">
+      <ServiceCreationProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </ServiceCreationProvider>
+    </ProductLimitGate>
   );
 }

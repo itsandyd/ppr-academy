@@ -252,6 +252,73 @@ export const createUniversalProduct = mutation({
     }
 
     // ========================================================================
+    // PLAN LIMIT ENFORCEMENT
+    // ========================================================================
+
+    // Get the store to check plan limits
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("_id"), args.storeId as any))
+      .first();
+
+    if (!store) {
+      throw new Error("Store not found");
+    }
+
+    // Import plan limits inline (to avoid circular dependency)
+    const PLAN_LIMITS: Record<string, { maxProducts: number; maxCourses: number; canChargeMoney: boolean }> = {
+      free: { maxProducts: -1, maxCourses: -1, canChargeMoney: false }, // Unlimited free products, no paid products
+      starter: { maxProducts: 10, maxCourses: 5, canChargeMoney: true },
+      creator: { maxProducts: 30, maxCourses: 15, canChargeMoney: true },
+      creator_pro: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
+      business: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
+      early_access: { maxProducts: -1, maxCourses: -1, canChargeMoney: true },
+    };
+
+    const plan = store.plan || "free";
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+
+    // Check if free tier user is trying to create a paid product
+    const price = args.price || 0;
+    if (price > 0 && !limits.canChargeMoney) {
+      throw new Error(
+        "Free plan users can only create free products. Upgrade to Starter ($12/mo) to sell paid products."
+      );
+    }
+
+    // Check course limits if creating a course
+    if (args.productCategory === "course") {
+      if (limits.maxCourses > 0) {
+        const courseCount = await ctx.db
+          .query("courses")
+          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+          .collect()
+          .then((courses) => courses.length);
+
+        if (courseCount >= limits.maxCourses) {
+          throw new Error(
+            `Course limit reached (${limits.maxCourses}). Upgrade your plan to create more courses.`
+          );
+        }
+      }
+    } else {
+      // Check product limits for non-course products
+      if (limits.maxProducts > 0) {
+        const productCount = await ctx.db
+          .query("digitalProducts")
+          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+          .collect()
+          .then((products) => products.length);
+
+        if (productCount >= limits.maxProducts) {
+          throw new Error(
+            `Product limit reached (${limits.maxProducts}). Upgrade your plan to create more products.`
+          );
+        }
+      }
+    }
+
+    // ========================================================================
     // CREATE PRODUCT
     // ========================================================================
 
