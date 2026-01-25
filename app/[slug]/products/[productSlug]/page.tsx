@@ -486,6 +486,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                             const link = rawLink && typeof rawLink === "string" && rawLink.trim().length > 0
                               ? rawLink.trim()
                               : null;
+
+                            // Log warning for missing social links
+                            if (!link && typeof window !== "undefined") {
+                              console.warn(`[FollowGate] Platform "${platform}" is required but no social link is configured. Raw value:`, rawLink);
+                            }
+
                             const isFollowed = followedPlatforms[platform];
 
                             // Get platform-specific styling
