@@ -481,7 +481,11 @@ export default function ProductPage({ params }: ProductPageProps) {
                         </div>
                         <div className="space-y-2">
                           {requiredPlatforms.map((platform) => {
-                            const link = getSocialLink(platform);
+                            const rawLink = getSocialLink(platform);
+                            // Validate link - must be non-empty string
+                            const link = rawLink && typeof rawLink === "string" && rawLink.trim().length > 0
+                              ? rawLink.trim()
+                              : null;
                             const isFollowed = followedPlatforms[platform];
 
                             // Get platform-specific styling
@@ -517,12 +521,29 @@ export default function ProductPage({ params }: ProductPageProps) {
 
                             const style = getPlatformStyle();
 
+                            // If link is not configured, show a disabled state
+                            if (!link) {
+                              return (
+                                <div
+                                  key={platform}
+                                  className="flex items-center gap-3 p-3 rounded-lg w-full bg-muted/30 border-2 border-dashed border-muted-foreground/20 opacity-60"
+                                >
+                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted flex-shrink-0">
+                                    <span className="text-muted-foreground">{getPlatformIcon(platform)}</span>
+                                  </div>
+                                  <span className="flex-1 font-medium capitalize text-muted-foreground">
+                                    {platform} (not configured)
+                                  </span>
+                                </div>
+                              );
+                            }
+
                             return (
                               <button
                                 key={platform}
                                 type="button"
                                 onClick={() => !isFollowed && link && openPlatformDialog(platform as SocialPlatform)}
-                                disabled={isFollowed || !link}
+                                disabled={isFollowed}
                                 className={cn(
                                   "flex items-center gap-3 p-3 rounded-lg w-full transition-all text-left",
                                   isFollowed
@@ -546,7 +567,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                                     : `Follow on ${platform}`
                                   }
                                 </span>
-                                {!isFollowed && link && (
+                                {!isFollowed && (
                                   <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                 )}
                               </button>

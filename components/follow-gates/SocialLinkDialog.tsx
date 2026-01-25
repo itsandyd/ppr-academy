@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   Loader2,
   Clock,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,10 +43,99 @@ interface SocialLinkDialogProps {
   url: string;
   onConfirmed: () => void;
   creatorName?: string;
+  /** Optional product ID for OAuth verification callback */
+  productId?: string;
+  /** Whether OAuth verification is available for this platform */
+  oauthEnabled?: boolean;
 }
 
 // Minimum time user must have the dialog open before confirming (in seconds)
 const MIN_VIEW_TIME = 3;
+
+// Platforms that support OAuth verification
+const OAUTH_SUPPORTED_PLATFORMS: SocialPlatform[] = ["spotify", "youtube"];
+
+/**
+ * Extract platform-specific ID from a URL or input
+ */
+function extractPlatformId(platform: SocialPlatform, input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  switch (platform) {
+    case "spotify": {
+      // Extract artist ID from Spotify URL or raw ID
+      const artistMatch = trimmed.match(/artist\/([a-zA-Z0-9]+)/);
+      if (artistMatch) return artistMatch[1];
+      // Check if it's a raw ID (22 alphanumeric chars)
+      if (/^[a-zA-Z0-9]{22}$/.test(trimmed)) return trimmed;
+      return null;
+    }
+    case "youtube": {
+      // Extract channel ID from YouTube URL
+      const channelMatch = trimmed.match(/channel\/([a-zA-Z0-9_-]+)/);
+      if (channelMatch) return channelMatch[1];
+      // Extract from /c/ or /@ URLs - these need to be resolved to channel IDs
+      // For now, return null for these (require manual setup)
+      const handleMatch = trimmed.match(/(?:c\/|@)([a-zA-Z0-9_-]+)/);
+      if (handleMatch) return null; // Can't verify handle-based URLs without API lookup
+      // Check if it's a raw channel ID (starts with UC)
+      if (trimmed.startsWith("UC") && trimmed.length === 24) return trimmed;
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Normalize a social media link to a full URL
+ * Handles: @username, username, or full URLs
+ * Returns empty string if input is invalid/empty
+ */
+function normalizeSocialUrl(platform: SocialPlatform, input: string): string {
+  // Guard against null, undefined, or non-string inputs
+  if (!input || typeof input !== "string") return "";
+
+  const trimmed = input.trim();
+
+  // Guard against empty or whitespace-only input
+  if (!trimmed || trimmed.length === 0) return "";
+
+  // If it's already a full URL, return it
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  // Remove @ if present
+  const username = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+
+  // Guard against empty username after removing @
+  if (!username || username.length === 0) return "";
+
+  // Build full URL based on platform
+  switch (platform) {
+    case "instagram":
+      return `https://instagram.com/${username}`;
+    case "tiktok":
+      return `https://tiktok.com/@${username}`;
+    case "youtube":
+      // YouTube can be channel name or ID
+      if (username.startsWith("UC") && username.length === 24) {
+        return `https://youtube.com/channel/${username}`;
+      }
+      return `https://youtube.com/@${username}`;
+    case "spotify":
+      // Spotify artist IDs are 22 characters
+      if (username.length === 22 && /^[a-zA-Z0-9]+$/.test(username)) {
+        return `https://open.spotify.com/artist/${username}`;
+      }
+      // Try as user
+      return `https://open.spotify.com/user/${username}`;
+    default:
+      return trimmed;
+  }
+}
 
 export function SocialLinkDialog({
   open,
@@ -53,10 +144,18 @@ export function SocialLinkDialog({
   url,
   onConfirmed,
   creatorName = "the creator",
+  productId,
+  oauthEnabled = false,
 }: SocialLinkDialogProps) {
   const [hasOpenedLink, setHasOpenedLink] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(MIN_VIEW_TIME);
   const [canConfirm, setCanConfirm] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Check if OAuth verification is available for this platform
+  const supportsOAuth = oauthEnabled && OAUTH_SUPPORTED_PLATFORMS.includes(platform);
+  const platformId = supportsOAuth ? extractPlatformId(platform, url) : null;
+  const canUseOAuth = supportsOAuth && platformId !== null;
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -85,15 +184,53 @@ export function SocialLinkDialog({
     return () => clearInterval(timer);
   }, [hasOpenedLink, canConfirm]);
 
+  // Get the normalized URL for this platform
+  const normalizedUrl = normalizeSocialUrl(platform, url);
+
+  // Debug: Log URL issues in development
+  if (process.env.NODE_ENV === "development" && open) {
+    console.log(`[SocialLinkDialog] Platform: ${platform}, Raw URL: "${url}", Normalized: "${normalizedUrl}"`);
+  }
+
   const handleOpenLink = useCallback(() => {
-    window.open(url, "_blank", "noopener,noreferrer");
+    // Guard against empty URLs - don't open if URL is empty or invalid
+    if (!normalizedUrl || normalizedUrl === "" || !normalizedUrl.startsWith("http")) {
+      console.error(`[SocialLinkDialog] Invalid URL for ${platform}: "${url}" -> "${normalizedUrl}"`);
+      // Show error state instead of opening invalid URL
+      return;
+    }
+    window.open(normalizedUrl, "_blank", "noopener,noreferrer");
     setHasOpenedLink(true);
-  }, [url]);
+  }, [normalizedUrl, platform, url]);
 
   const handleConfirm = useCallback(() => {
     onConfirmed();
     onOpenChange(false);
   }, [onConfirmed, onOpenChange]);
+
+  // Handle OAuth verification
+  const handleOAuthVerify = useCallback(() => {
+    if (!canUseOAuth || !platformId) return;
+
+    setIsVerifying(true);
+    const returnUrl = window.location.href;
+
+    let oauthUrl: string;
+    switch (platform) {
+      case "spotify":
+        oauthUrl = `/api/follow-gate/spotify?artistId=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
+        break;
+      case "youtube":
+        oauthUrl = `/api/follow-gate/youtube?channelId=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
+        break;
+      default:
+        setIsVerifying(false);
+        return;
+    }
+
+    // Redirect to OAuth flow
+    window.location.href = oauthUrl;
+  }, [canUseOAuth, platformId, platform, productId]);
 
   const getPlatformInfo = () => {
     switch (platform) {
@@ -150,20 +287,74 @@ export function SocialLinkDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {!hasOpenedLink ? (
-            <>
-              <p className="text-center text-sm text-muted-foreground">
-                Click the button below to open {info.name} and {info.action.toLowerCase()}.
-                After following, come back here to confirm.
+          {/* Error state: URL not configured properly */}
+          {!normalizedUrl || !normalizedUrl.startsWith("http") ? (
+            <div className="text-center space-y-3 py-4">
+              <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
+              <p className="font-medium">Social link not configured</p>
+              <p className="text-sm text-muted-foreground">
+                The creator hasn't set up their {info.name} link yet.
+                Please contact them or try again later.
               </p>
               <Button
-                onClick={handleOpenLink}
-                className={cn("w-full text-white font-semibold", info.buttonClass)}
-                size="lg"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="mt-2"
               >
-                Open {info.name}
-                <ExternalLink className="ml-2 h-4 w-4" />
+                Close
               </Button>
+            </div>
+          ) : isVerifying ? (
+            <div className="text-center space-y-3 py-4">
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-muted-foreground" />
+              <p className="font-medium">Verifying your {info.action.toLowerCase()}...</p>
+              <p className="text-sm text-muted-foreground">
+                Please complete the authorization in the new window
+              </p>
+            </div>
+          ) : !hasOpenedLink ? (
+            <>
+              <p className="text-center text-sm text-muted-foreground">
+                {canUseOAuth
+                  ? `We can automatically verify your ${info.action.toLowerCase()} using ${info.name}. Click below to connect securely.`
+                  : `Click the button below to open ${info.name} and ${info.action.toLowerCase()}. After following, come back here to confirm.`
+                }
+              </p>
+              {canUseOAuth ? (
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleOAuthVerify}
+                    className={cn("w-full text-white font-semibold", info.buttonClass)}
+                    size="lg"
+                  >
+                    Verify with {info.name}
+                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <Button
+                    onClick={handleOpenLink}
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                  >
+                    Open {info.name} Manually
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={handleOpenLink}
+                  className={cn("w-full text-white font-semibold", info.buttonClass)}
+                  size="lg"
+                >
+                  Open {info.name}
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              )}
             </>
           ) : !canConfirm ? (
             <>
@@ -221,10 +412,18 @@ export function SocialLinkDialog({
           )}
         </div>
 
-        {!hasOpenedLink && (
-          <p className="text-center text-xs text-muted-foreground">
-            By following, you're supporting {creatorName}'s work and unlocking free content.
-          </p>
+        {!hasOpenedLink && !isVerifying && (
+          <div className="text-center">
+            {canUseOAuth && (
+              <p className="flex items-center justify-center gap-1 text-xs text-green-600 dark:text-green-400 mb-1">
+                <ShieldCheck className="h-3 w-3" />
+                Secure verification - we never post on your behalf
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              By following, you're supporting {creatorName}'s work and unlocking free content.
+            </p>
+          </div>
         )}
       </DialogContent>
     </Dialog>

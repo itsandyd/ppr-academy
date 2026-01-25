@@ -57,7 +57,22 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
 
   useEffect(() => {
     if (existingChain && chainId) {
-      const newData: EffectChainData = { title: existingChain.title, description: existingChain.description, dawType: existingChain.dawType as DAWType, dawVersion: existingChain.dawVersion as string | undefined, thumbnail: existingChain.imageUrl, price: existingChain.price?.toString(), pricingModel: (existingChain.pricingModel || "paid") as "free_with_gate" | "paid", tags: existingChain.tags, genre: (existingChain as any).genre as string[] | undefined };
+      const newData: EffectChainData = {
+        title: existingChain.title,
+        description: existingChain.description,
+        dawType: existingChain.dawType as DAWType,
+        dawVersion: existingChain.dawVersion as string | undefined,
+        thumbnail: existingChain.imageUrl,
+        price: existingChain.price?.toString(),
+        pricingModel: (existingChain.pricingModel || "paid") as "free_with_gate" | "paid",
+        tags: existingChain.tags,
+        genre: (existingChain as any).genre as string[] | undefined,
+        // Load follow gate data
+        followGateEnabled: existingChain.followGateEnabled,
+        followGateMessage: existingChain.followGateMessage,
+        followGateRequirements: existingChain.followGateRequirements,
+        followGateSocialLinks: existingChain.followGateSocialLinks,
+      };
       setState(prev => ({ ...prev, chainId, data: newData, stepCompletion: { basics: validateStep("basics", newData), files: validateStep("files", newData), pricing: validateStep("pricing", newData) } }));
     }
   }, [existingChain, chainId]);
