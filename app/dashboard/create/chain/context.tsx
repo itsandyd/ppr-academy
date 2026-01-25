@@ -85,10 +85,22 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
         customMessage: state.data.followGateMessage,
       } : undefined;
 
-      const params = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined, followGateConfig };
-      if (state.chainId) { await updateMutation({ id: state.chainId as Id<"digitalProducts">, ...params }); }
-      else {
-        const result = await createMutation({ ...params, title: state.data.title || "Untitled Chain", storeId, userId: user.id, productType: "digital", productCategory: "effect-chain", price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : 0), followGateConfig });
+      // Base params for both create and update
+      const baseParams = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined };
+
+      if (state.chainId) {
+        // Update uses individual followGate fields (not followGateConfig)
+        await updateMutation({
+          id: state.chainId as Id<"digitalProducts">,
+          ...baseParams,
+          followGateEnabled: state.data.pricingModel === "free_with_gate",
+          followGateRequirements: state.data.pricingModel === "free_with_gate" ? state.data.followGateRequirements : undefined,
+          followGateSocialLinks: state.data.pricingModel === "free_with_gate" ? state.data.followGateSocialLinks : undefined,
+          followGateMessage: state.data.pricingModel === "free_with_gate" ? state.data.followGateMessage : undefined,
+        });
+      } else {
+        // Create uses followGateConfig
+        const result = await createMutation({ ...baseParams, title: state.data.title || "Untitled Chain", storeId, userId: user.id, productType: "digital", productCategory: "effect-chain", price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : 0), followGateConfig });
         if (result) { setState(prev => ({ ...prev, chainId: result as string })); router.replace(`/dashboard/create/chain?chainId=${result}&step=${searchParams.get("step") || "basics"}`); }
       }
       setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() })); toast({ title: "Chain Saved" });

@@ -89,10 +89,19 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
         customMessage: state.data.followGateMessage,
       } : undefined;
 
-      const params = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined, followGateConfig };
-      if (state.projectId) { await updateMutation({ id: state.projectId as Id<"digitalProducts">, ...params }); }
-      else {
-        const result = await createMutation({ ...params, title: state.data.title || "Untitled Project", storeId, userId: user.id, productType: "digital", productCategory: "project-file", price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : 0), followGateConfig });
+      const baseParams = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined };
+
+      if (state.projectId) {
+        await updateMutation({
+          id: state.projectId as Id<"digitalProducts">,
+          ...baseParams,
+          followGateEnabled: state.data.pricingModel === "free_with_gate",
+          followGateRequirements: state.data.pricingModel === "free_with_gate" ? state.data.followGateRequirements : undefined,
+          followGateSocialLinks: state.data.pricingModel === "free_with_gate" ? state.data.followGateSocialLinks : undefined,
+          followGateMessage: state.data.pricingModel === "free_with_gate" ? state.data.followGateMessage : undefined,
+        });
+      } else {
+        const result = await createMutation({ ...baseParams, title: state.data.title || "Untitled Project", storeId, userId: user.id, productType: "digital", productCategory: "project-file", price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : 0), followGateConfig });
         if (result) { setState(prev => ({ ...prev, projectId: result as string })); router.replace(`/dashboard/create/project-files?projectId=${result}&step=${searchParams.get("step") || "basics"}`); }
       }
       setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() })); toast({ title: "Project Saved" });
