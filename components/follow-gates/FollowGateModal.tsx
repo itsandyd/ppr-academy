@@ -5,12 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Instagram, Youtube, Music2, Video, ArrowRight, CheckCircle2, Download, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { Instagram, Youtube, Music2, Video, ArrowRight, CheckCircle2, Download, ExternalLink, Loader2, AlertCircle, Lock } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDebounce } from "@/hooks/use-debounce";
+import { SocialLinkDialog, SocialPlatform } from "./SocialLinkDialog";
+import { cn } from "@/lib/utils";
 
 // Flexible product type to support digitalProducts, courses, presetPacks, etc.
 export interface FollowGateProduct {
@@ -69,6 +70,9 @@ export function FollowGateModal({
     youtube: false,
     spotify: false,
   });
+
+  // Track which platform dialog is open
+  const [activePlatformDialog, setActivePlatformDialog] = useState<SocialPlatform | null>(null);
 
   // Debounce email for query optimization (500ms delay)
   const debouncedEmail = useDebounce(email, 500);
@@ -218,11 +222,15 @@ export function FollowGateModal({
     }
   }, [checkSubmission]);
 
-  const openSocialLink = useCallback((platform: keyof FollowedPlatforms, url?: string) => {
-    if (url) {
-      window.open(url, "_blank");
-      setFollowedPlatforms(prev => ({ ...prev, [platform]: true }));
-    }
+  // Open the social link dialog for a platform
+  const openPlatformDialog = useCallback((platform: SocialPlatform) => {
+    setActivePlatformDialog(platform);
+  }, []);
+
+  // Handle confirmation from the social link dialog
+  const handlePlatformConfirmed = useCallback((platform: SocialPlatform) => {
+    setFollowedPlatforms(prev => ({ ...prev, [platform]: true }));
+    setActivePlatformDialog(null);
   }, []);
 
   // Determine what to show on success screen
@@ -294,118 +302,130 @@ export function FollowGateModal({
 
                   {/* Instagram */}
                   {requirements.requireInstagram && socialLinks.instagram && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Checkbox
-                        id="instagram"
-                        checked={followedPlatforms.instagram}
-                        onCheckedChange={(checked) =>
-                          setFollowedPlatforms(prev => ({ ...prev, instagram: checked as boolean }))
-                        }
-                        disabled={submitStatus === "loading"}
-                      />
-                      <Instagram className="w-5 h-5 text-pink-600" />
-                      <Label htmlFor="instagram" className="flex-1 font-medium cursor-pointer">
-                        Follow on Instagram
-                      </Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openSocialLink("instagram", socialLinks.instagram)}
-                        className="gap-1"
-                        disabled={submitStatus === "loading"}
-                      >
-                        Follow
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !followedPlatforms.instagram && openPlatformDialog("instagram")}
+                      disabled={submitStatus === "loading" || followedPlatforms.instagram}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg w-full transition-all",
+                        followedPlatforms.instagram
+                          ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-500"
+                          : "bg-muted/50 hover:bg-muted border-2 border-transparent hover:border-pink-500/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full",
+                        followedPlatforms.instagram ? "bg-green-500" : "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400"
+                      )}>
+                        {followedPlatforms.instagram ? (
+                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        ) : (
+                          <Instagram className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <span className="flex-1 font-medium text-left">
+                        {followedPlatforms.instagram ? "Following on Instagram" : "Follow on Instagram"}
+                      </span>
+                      {!followedPlatforms.instagram && (
+                        <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
                   )}
 
                   {/* TikTok */}
                   {requirements.requireTiktok && socialLinks.tiktok && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Checkbox
-                        id="tiktok"
-                        checked={followedPlatforms.tiktok}
-                        onCheckedChange={(checked) =>
-                          setFollowedPlatforms(prev => ({ ...prev, tiktok: checked as boolean }))
-                        }
-                        disabled={submitStatus === "loading"}
-                      />
-                      <Video className="w-5 h-5" />
-                      <Label htmlFor="tiktok" className="flex-1 font-medium cursor-pointer">
-                        Follow on TikTok
-                      </Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openSocialLink("tiktok", socialLinks.tiktok)}
-                        className="gap-1"
-                        disabled={submitStatus === "loading"}
-                      >
-                        Follow
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !followedPlatforms.tiktok && openPlatformDialog("tiktok")}
+                      disabled={submitStatus === "loading" || followedPlatforms.tiktok}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg w-full transition-all",
+                        followedPlatforms.tiktok
+                          ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-500"
+                          : "bg-muted/50 hover:bg-muted border-2 border-transparent hover:border-gray-500/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full",
+                        followedPlatforms.tiktok ? "bg-green-500" : "bg-black"
+                      )}>
+                        {followedPlatforms.tiktok ? (
+                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        ) : (
+                          <Video className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <span className="flex-1 font-medium text-left">
+                        {followedPlatforms.tiktok ? "Following on TikTok" : "Follow on TikTok"}
+                      </span>
+                      {!followedPlatforms.tiktok && (
+                        <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
                   )}
 
                   {/* YouTube */}
                   {requirements.requireYoutube && socialLinks.youtube && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Checkbox
-                        id="youtube"
-                        checked={followedPlatforms.youtube}
-                        onCheckedChange={(checked) =>
-                          setFollowedPlatforms(prev => ({ ...prev, youtube: checked as boolean }))
-                        }
-                        disabled={submitStatus === "loading"}
-                      />
-                      <Youtube className="w-5 h-5 text-red-600" />
-                      <Label htmlFor="youtube" className="flex-1 font-medium cursor-pointer">
-                        Subscribe on YouTube
-                      </Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openSocialLink("youtube", socialLinks.youtube)}
-                        className="gap-1"
-                        disabled={submitStatus === "loading"}
-                      >
-                        Subscribe
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !followedPlatforms.youtube && openPlatformDialog("youtube")}
+                      disabled={submitStatus === "loading" || followedPlatforms.youtube}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg w-full transition-all",
+                        followedPlatforms.youtube
+                          ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-500"
+                          : "bg-muted/50 hover:bg-muted border-2 border-transparent hover:border-red-500/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full",
+                        followedPlatforms.youtube ? "bg-green-500" : "bg-red-600"
+                      )}>
+                        {followedPlatforms.youtube ? (
+                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        ) : (
+                          <Youtube className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <span className="flex-1 font-medium text-left">
+                        {followedPlatforms.youtube ? "Subscribed on YouTube" : "Subscribe on YouTube"}
+                      </span>
+                      {!followedPlatforms.youtube && (
+                        <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
                   )}
 
                   {/* Spotify */}
                   {requirements.requireSpotify && socialLinks.spotify && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Checkbox
-                        id="spotify"
-                        checked={followedPlatforms.spotify}
-                        onCheckedChange={(checked) =>
-                          setFollowedPlatforms(prev => ({ ...prev, spotify: checked as boolean }))
-                        }
-                        disabled={submitStatus === "loading"}
-                      />
-                      <Music2 className="w-5 h-5 text-green-600" />
-                      <Label htmlFor="spotify" className="flex-1 font-medium cursor-pointer">
-                        Follow on Spotify
-                      </Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openSocialLink("spotify", socialLinks.spotify)}
-                        className="gap-1"
-                        disabled={submitStatus === "loading"}
-                      >
-                        Follow
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !followedPlatforms.spotify && openPlatformDialog("spotify")}
+                      disabled={submitStatus === "loading" || followedPlatforms.spotify}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg w-full transition-all",
+                        followedPlatforms.spotify
+                          ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-500"
+                          : "bg-muted/50 hover:bg-muted border-2 border-transparent hover:border-green-500/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full",
+                        followedPlatforms.spotify ? "bg-green-500" : "bg-green-600"
+                      )}>
+                        {followedPlatforms.spotify ? (
+                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        ) : (
+                          <Music2 className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <span className="flex-1 font-medium text-left">
+                        {followedPlatforms.spotify ? "Following on Spotify" : "Follow on Spotify"}
+                      </span>
+                      {!followedPlatforms.spotify && (
+                        <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
                   )}
 
                   {/* Progress Indicator */}
@@ -488,6 +508,44 @@ export function FollowGateModal({
           </>
         )}
       </DialogContent>
+
+      {/* Social Platform Dialogs */}
+      {socialLinks.instagram && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "instagram"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="instagram"
+          url={socialLinks.instagram}
+          onConfirmed={() => handlePlatformConfirmed("instagram")}
+        />
+      )}
+      {socialLinks.tiktok && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "tiktok"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="tiktok"
+          url={socialLinks.tiktok}
+          onConfirmed={() => handlePlatformConfirmed("tiktok")}
+        />
+      )}
+      {socialLinks.youtube && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "youtube"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="youtube"
+          url={socialLinks.youtube}
+          onConfirmed={() => handlePlatformConfirmed("youtube")}
+        />
+      )}
+      {socialLinks.spotify && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "spotify"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="spotify"
+          url={socialLinks.spotify}
+          onConfirmed={() => handlePlatformConfirmed("spotify")}
+        />
+      )}
     </Dialog>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import {
   Share2,
   Heart,
   Check,
+  CheckCircle2,
   Star,
   Clock,
   Package,
@@ -33,12 +34,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { generateProductStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
+import { SocialLinkDialog, SocialPlatform } from "@/components/follow-gates/SocialLinkDialog";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
@@ -75,6 +75,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   // Follow gate state
   const [followedPlatforms, setFollowedPlatforms] = useState<Record<string, boolean>>({});
+  const [activePlatformDialog, setActivePlatformDialog] = useState<SocialPlatform | null>(null);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug });
@@ -114,6 +115,19 @@ export default function ProductPage({ params }: ProductPageProps) {
   }, [digitalProduct, slug, router]);
 
   const product = digitalProduct;
+
+  // Define callbacks before any early returns (React hooks rule)
+  const openPlatformDialog = useCallback((platform: SocialPlatform) => {
+    setActivePlatformDialog(platform);
+  }, []);
+
+  const handlePlatformConfirmed = useCallback((platform: SocialPlatform) => {
+    setFollowedPlatforms((prev) => ({
+      ...prev,
+      [platform]: true,
+    }));
+    setActivePlatformDialog(null);
+  }, []);
 
   // Loading state
   if (store === undefined || (store && (user === undefined || digitalProduct === undefined))) {
@@ -206,14 +220,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Toggle follow status
-  const toggleFollow = (platform: string) => {
-    setFollowedPlatforms((prev) => ({
-      ...prev,
-      [platform]: !prev[platform],
-    }));
   };
 
   // Get social link for platform
@@ -478,39 +484,72 @@ export default function ProductPage({ params }: ProductPageProps) {
                             const link = getSocialLink(platform);
                             const isFollowed = followedPlatforms[platform];
 
+                            // Get platform-specific styling
+                            const getPlatformStyle = () => {
+                              switch (platform) {
+                                case "instagram":
+                                  return {
+                                    bg: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400",
+                                    hoverBorder: "hover:border-pink-500/50",
+                                  };
+                                case "tiktok":
+                                  return {
+                                    bg: "bg-black",
+                                    hoverBorder: "hover:border-gray-500/50",
+                                  };
+                                case "youtube":
+                                  return {
+                                    bg: "bg-red-600",
+                                    hoverBorder: "hover:border-red-500/50",
+                                  };
+                                case "spotify":
+                                  return {
+                                    bg: "bg-green-600",
+                                    hoverBorder: "hover:border-green-500/50",
+                                  };
+                                default:
+                                  return {
+                                    bg: "bg-primary",
+                                    hoverBorder: "hover:border-primary/50",
+                                  };
+                              }
+                            };
+
+                            const style = getPlatformStyle();
+
                             return (
-                              <div
+                              <button
                                 key={platform}
-                                className="flex items-center justify-between rounded-md border bg-background p-3"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Checkbox
-                                    id={`follow-${platform}`}
-                                    checked={isFollowed}
-                                    onCheckedChange={() => toggleFollow(platform)}
-                                  />
-                                  <Label
-                                    htmlFor={`follow-${platform}`}
-                                    className="flex items-center gap-2 cursor-pointer capitalize"
-                                  >
-                                    {getPlatformIcon(platform)}
-                                    {platform}
-                                  </Label>
-                                </div>
-                                {link && (
-                                  <a
-                                    href={link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-primary hover:underline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                    }}
-                                  >
-                                    Visit
-                                  </a>
+                                type="button"
+                                onClick={() => !isFollowed && link && openPlatformDialog(platform as SocialPlatform)}
+                                disabled={isFollowed || !link}
+                                className={cn(
+                                  "flex items-center gap-3 p-3 rounded-lg w-full transition-all text-left",
+                                  isFollowed
+                                    ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-500"
+                                    : `bg-background border-2 border-transparent ${style.hoverBorder} hover:bg-muted/50`
                                 )}
-                              </div>
+                              >
+                                <div className={cn(
+                                  "flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0",
+                                  isFollowed ? "bg-green-500" : style.bg
+                                )}>
+                                  {isFollowed ? (
+                                    <CheckCircle2 className="w-4 h-4 text-white" />
+                                  ) : (
+                                    <span className="text-white">{getPlatformIcon(platform)}</span>
+                                  )}
+                                </div>
+                                <span className="flex-1 font-medium capitalize">
+                                  {isFollowed
+                                    ? `Following on ${platform}`
+                                    : `Follow on ${platform}`
+                                  }
+                                </span>
+                                {!isFollowed && link && (
+                                  <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                              </button>
                             );
                           })}
                         </div>
@@ -607,6 +646,48 @@ export default function ProductPage({ params }: ProductPageProps) {
 
         {/* Related products section would go here */}
       </main>
+
+      {/* Social Platform Dialogs for Follow Gate */}
+      {followGateSocialLinks.instagram && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "instagram"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="instagram"
+          url={followGateSocialLinks.instagram}
+          onConfirmed={() => handlePlatformConfirmed("instagram")}
+          creatorName={displayName}
+        />
+      )}
+      {followGateSocialLinks.tiktok && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "tiktok"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="tiktok"
+          url={followGateSocialLinks.tiktok}
+          onConfirmed={() => handlePlatformConfirmed("tiktok")}
+          creatorName={displayName}
+        />
+      )}
+      {followGateSocialLinks.youtube && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "youtube"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="youtube"
+          url={followGateSocialLinks.youtube}
+          onConfirmed={() => handlePlatformConfirmed("youtube")}
+          creatorName={displayName}
+        />
+      )}
+      {followGateSocialLinks.spotify && (
+        <SocialLinkDialog
+          open={activePlatformDialog === "spotify"}
+          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
+          platform="spotify"
+          url={followGateSocialLinks.spotify}
+          onConfirmed={() => handlePlatformConfirmed("spotify")}
+          creatorName={displayName}
+        />
+      )}
     </div>
   );
 }
