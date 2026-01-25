@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { notFound, useRouter, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -65,6 +66,7 @@ interface ProductPageProps {
 export default function ProductPage({ params }: ProductPageProps) {
   const { slug, productSlug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // State
   const [email, setEmail] = useState("");
@@ -76,6 +78,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   // Follow gate state
   const [followedPlatforms, setFollowedPlatforms] = useState<Record<string, boolean>>({});
   const [activePlatformDialog, setActivePlatformDialog] = useState<SocialPlatform | null>(null);
+  const [oauthProcessed, setOauthProcessed] = useState(false);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug });
@@ -128,6 +131,60 @@ export default function ProductPage({ params }: ProductPageProps) {
     }));
     setActivePlatformDialog(null);
   }, []);
+
+  // Handle OAuth callback parameters from Spotify/YouTube verification
+  useEffect(() => {
+    if (oauthProcessed) return;
+
+    const platform = searchParams.get("platform");
+    const spotifyVerified = searchParams.get("spotifyVerified");
+    const spotifyError = searchParams.get("spotifyError");
+    const youtubeVerified = searchParams.get("youtubeVerified");
+    const youtubeError = searchParams.get("youtubeError");
+
+    let hasOAuthResult = false;
+
+    // Handle Spotify OAuth callback
+    if (platform === "spotify" || spotifyVerified || spotifyError) {
+      hasOAuthResult = true;
+      if (spotifyVerified === "true") {
+        setFollowedPlatforms((prev) => ({ ...prev, spotify: true }));
+        toast.success("Successfully followed on Spotify!");
+      } else if (spotifyError) {
+        toast.error(`Spotify: ${spotifyError}`);
+      } else if (spotifyVerified === "false") {
+        toast.error("Could not verify Spotify follow. Please try again.");
+      }
+    }
+
+    // Handle YouTube OAuth callback
+    if (platform === "youtube" || youtubeVerified || youtubeError) {
+      hasOAuthResult = true;
+      if (youtubeVerified === "true") {
+        setFollowedPlatforms((prev) => ({ ...prev, youtube: true }));
+        toast.success("Successfully subscribed on YouTube!");
+      } else if (youtubeError) {
+        toast.error(`YouTube: ${youtubeError}`);
+      } else if (youtubeVerified === "false") {
+        toast.error("Could not verify YouTube subscription. Please try again.");
+      }
+    }
+
+    // Clean up URL parameters after processing
+    if (hasOAuthResult) {
+      setOauthProcessed(true);
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("platform");
+      newUrl.searchParams.delete("spotifyVerified");
+      newUrl.searchParams.delete("spotifyFollowed");
+      newUrl.searchParams.delete("spotifyError");
+      newUrl.searchParams.delete("youtubeVerified");
+      newUrl.searchParams.delete("youtubeSubscribed");
+      newUrl.searchParams.delete("youtubeError");
+      newUrl.searchParams.delete("productId");
+      window.history.replaceState({}, "", newUrl.toString());
+    }
+  }, [searchParams, oauthProcessed]);
 
   // Loading state
   if (store === undefined || (store && (user === undefined || digitalProduct === undefined))) {
@@ -703,6 +760,8 @@ export default function ProductPage({ params }: ProductPageProps) {
           url={followGateSocialLinks.youtube}
           onConfirmed={() => handlePlatformConfirmed("youtube")}
           creatorName={displayName}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
       {followGateSocialLinks.spotify && (
@@ -713,6 +772,8 @@ export default function ProductPage({ params }: ProductPageProps) {
           url={followGateSocialLinks.spotify}
           onConfirmed={() => handlePlatformConfirmed("spotify")}
           creatorName={displayName}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
     </div>

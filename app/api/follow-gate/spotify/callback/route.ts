@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-const SPOTIFY_REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL
-  ? `${process.env.NEXT_PUBLIC_APP_URL}/api/follow-gate/spotify/callback`
-  : "http://localhost:3000/api/follow-gate/spotify/callback";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const SPOTIFY_REDIRECT_URI = `${BASE_URL}/api/follow-gate/spotify/callback`;
 
 interface SpotifyTokenResponse {
   access_token: string;
@@ -14,9 +13,22 @@ interface SpotifyTokenResponse {
   refresh_token?: string;
 }
 
+interface StateData {
+  artistId: string;
+  returnUrl: string;
+  productId?: string;
+  mode: string;
+  timestamp: number;
+}
+
 /**
- * Handle Spotify OAuth callback and verify follow status
- * GET /api/follow-gate/spotify/callback
+ * Handle Spotify OAuth callback
+ *
+ * This callback:
+ * 1. Exchanges the auth code for an access token
+ * 2. Checks if the user already follows the artist
+ * 3. If not following, triggers the follow via API
+ * 4. Redirects back to the product page with success status
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -25,40 +37,53 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
 
   // Parse state to get original params
-  let stateData: {
-    artistId: string;
-    returnUrl: string;
-    productId: string;
-    timestamp: number;
-  } | null = null;
+  let stateData: StateData | null = null;
 
   try {
     if (state) {
       stateData = JSON.parse(Buffer.from(state, "base64").toString());
     }
   } catch {
-    return createErrorRedirect("Invalid state parameter", stateData?.returnUrl);
+    return createRedirect(BASE_URL, {
+      spotifyError: "Invalid state parameter",
+      platform: "spotify",
+    });
   }
 
+  const returnUrl = stateData?.returnUrl || BASE_URL;
+
+  // Handle user cancellation or error
   if (error) {
-    return createErrorRedirect(`Spotify auth failed: ${error}`, stateData?.returnUrl);
+    return createRedirect(returnUrl, {
+      spotifyError: error === "access_denied" ? "Authorization cancelled" : `Spotify error: ${error}`,
+      platform: "spotify",
+    });
   }
 
   if (!code) {
-    return createErrorRedirect("No authorization code received", stateData?.returnUrl);
+    return createRedirect(returnUrl, {
+      spotifyError: "No authorization code received",
+      platform: "spotify",
+    });
   }
 
   if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
-    return createErrorRedirect("Spotify OAuth not configured", stateData?.returnUrl);
+    return createRedirect(returnUrl, {
+      spotifyError: "Spotify OAuth not configured",
+      platform: "spotify",
+    });
   }
 
   // Verify state is not too old (max 10 minutes)
   if (stateData && Date.now() - stateData.timestamp > 10 * 60 * 1000) {
-    return createErrorRedirect("Authorization session expired", stateData.returnUrl);
+    return createRedirect(returnUrl, {
+      spotifyError: "Authorization session expired. Please try again.",
+      platform: "spotify",
+    });
   }
 
   try {
-    // Exchange code for access token
+    // Step 1: Exchange code for access token
     const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
       headers: {
@@ -77,51 +102,111 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
       console.error("Spotify token error:", errorData);
-      return createErrorRedirect("Failed to get Spotify access token", stateData?.returnUrl);
+      return createRedirect(returnUrl, {
+        spotifyError: "Failed to authenticate with Spotify",
+        platform: "spotify",
+      });
     }
 
     const tokenData: SpotifyTokenResponse = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
 
-    // Check if user follows the artist
     const artistId = stateData?.artistId;
     if (!artistId) {
-      return createErrorRedirect("Missing artist ID", stateData?.returnUrl);
+      return createRedirect(returnUrl, {
+        spotifyError: "Missing artist ID",
+        platform: "spotify",
+      });
     }
 
-    const followCheckResponse = await fetch(
+    // Step 2: Check if user already follows the artist
+    const checkFollowResponse = await fetch(
       `https://api.spotify.com/v1/me/following/contains?type=artist&ids=${artistId}`,
       {
         headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       }
     );
 
-    if (!followCheckResponse.ok) {
-      console.error("Spotify follow check error:", await followCheckResponse.text());
-      return createErrorRedirect("Failed to check follow status", stateData?.returnUrl);
+    if (!checkFollowResponse.ok) {
+      console.error("Spotify follow check error:", await checkFollowResponse.text());
+      return createRedirect(returnUrl, {
+        spotifyError: "Failed to check follow status",
+        platform: "spotify",
+      });
     }
 
-    const followResults: boolean[] = await followCheckResponse.json();
-    const isFollowing = followResults[0] === true;
+    const followResults: boolean[] = await checkFollowResponse.json();
+    let isFollowing = followResults[0] === true;
 
-    // Build redirect URL with result
-    const returnUrl = new URL(stateData?.returnUrl || "/");
-    returnUrl.searchParams.set("spotifyVerified", isFollowing ? "true" : "false");
-    returnUrl.searchParams.set("platform", "spotify");
-    if (stateData?.productId) {
-      returnUrl.searchParams.set("productId", stateData.productId);
+    // Step 3: If not following, trigger the follow
+    if (!isFollowing) {
+      const followResponse = await fetch(
+        `https://api.spotify.com/v1/me/following?type=artist&ids=${artistId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (followResponse.ok || followResponse.status === 204) {
+        isFollowing = true;
+        console.log(`Successfully followed Spotify artist: ${artistId}`);
+      } else {
+        const errorText = await followResponse.text();
+        console.error("Spotify follow error:", errorText);
+        // Don't fail completely - user might have already followed manually
+      }
     }
 
-    return NextResponse.redirect(returnUrl.toString());
+    // Step 4: Verify the follow was successful
+    if (isFollowing || stateData?.mode === "verify") {
+      // Double-check the follow status
+      const verifyResponse = await fetch(
+        `https://api.spotify.com/v1/me/following/contains?type=artist&ids=${artistId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (verifyResponse.ok) {
+        const verifyResults: boolean[] = await verifyResponse.json();
+        isFollowing = verifyResults[0] === true;
+      }
+    }
+
+    // Step 5: Redirect back with result
+    return createRedirect(returnUrl, {
+      spotifyVerified: isFollowing ? "true" : "false",
+      spotifyFollowed: isFollowing ? "true" : "false",
+      platform: "spotify",
+      productId: stateData?.productId,
+    });
+
   } catch (err) {
     console.error("Spotify OAuth error:", err);
-    return createErrorRedirect("An error occurred during verification", stateData?.returnUrl);
+    return createRedirect(returnUrl, {
+      spotifyError: "An error occurred during Spotify verification",
+      platform: "spotify",
+    });
   }
 }
 
-function createErrorRedirect(error: string, returnUrl?: string | null): NextResponse {
-  const url = new URL(returnUrl || "/");
-  url.searchParams.set("spotifyError", error);
+function createRedirect(
+  baseUrl: string,
+  params: Record<string, string | undefined>
+): NextResponse {
+  const url = new URL(baseUrl);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      url.searchParams.set(key, value);
+    }
+  });
   return NextResponse.redirect(url.toString());
 }

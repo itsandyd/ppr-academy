@@ -21,10 +21,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (!GOOGLE_CLIENT_ID) {
-    return NextResponse.json(
-      { error: "YouTube OAuth not configured" },
-      { status: 500 }
-    );
+    // Return JSON error for API calls, redirect for browser requests
+    const acceptHeader = request.headers.get("accept") || "";
+    if (acceptHeader.includes("application/json")) {
+      return NextResponse.json(
+        { error: "YouTube OAuth not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to environment variables." },
+        { status: 500 }
+      );
+    }
+    // Redirect back with error
+    const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const errorUrl = new URL(returnUrl || BASE_URL);
+    errorUrl.searchParams.set("youtubeError", "YouTube OAuth not configured");
+    return NextResponse.redirect(errorUrl.toString());
   }
 
   // Store state in a cookie for verification
@@ -33,12 +42,16 @@ export async function GET(request: NextRequest) {
   ).toString("base64");
 
   // Build Google OAuth URL for YouTube
-  const scope = "https://www.googleapis.com/auth/youtube.readonly";
+  // We need both read and force (subscribe) scopes
+  const scopes = [
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl" // Required for subscriptions.insert
+  ];
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("redirect_uri", YOUTUBE_REDIRECT_URI);
-  authUrl.searchParams.set("scope", scope);
+  authUrl.searchParams.set("scope", scopes.join(" "));
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("access_type", "online");
   authUrl.searchParams.set("prompt", "consent");

@@ -111,47 +111,31 @@ export async function GET(request: NextRequest) {
       return createErrorRedirect("Missing channel ID", stateData?.returnUrl);
     }
 
-    // Check subscriptions - we need to iterate through pages to find the channel
-    let isSubscribed = false;
-    let nextPageToken: string | undefined;
+    // Step 1: Check if user is already subscribed
+    let isSubscribed = await checkSubscription(tokenData.access_token, channelId);
 
-    // Check first 100 subscriptions (2 pages of 50)
-    for (let i = 0; i < 2 && !isSubscribed; i++) {
-      const subsUrl = new URL("https://www.googleapis.com/youtube/v3/subscriptions");
-      subsUrl.searchParams.set("part", "snippet");
-      subsUrl.searchParams.set("mine", "true");
-      subsUrl.searchParams.set("maxResults", "50");
-      if (nextPageToken) {
-        subsUrl.searchParams.set("pageToken", nextPageToken);
+    // Step 2: If not subscribed, trigger the subscription via API
+    if (!isSubscribed) {
+      const subscribeResult = await triggerSubscription(tokenData.access_token, channelId);
+      if (subscribeResult.success) {
+        isSubscribed = true;
+        console.log(`Successfully subscribed to YouTube channel: ${channelId}`);
+      } else {
+        console.error("YouTube subscribe error:", subscribeResult.error);
+        // Don't fail completely - user might subscribe manually
       }
-
-      const subsResponse = await fetch(subsUrl.toString(), {
-        headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
-        },
-      });
-
-      if (!subsResponse.ok) {
-        console.error("YouTube subscriptions check error:", await subsResponse.text());
-        return createErrorRedirect("Failed to check subscription status", stateData?.returnUrl);
-      }
-
-      const subsData: YouTubeSubscriptionsResponse = await subsResponse.json();
-
-      // Check if the target channel is in the subscriptions
-      if (subsData.items) {
-        isSubscribed = subsData.items.some(
-          (sub) => sub.snippet.resourceId.channelId === channelId
-        );
-      }
-
-      nextPageToken = subsData.nextPageToken;
-      if (!nextPageToken) break;
     }
 
-    // Build redirect URL with result
+    // Step 3: Verify the subscription was successful (double-check)
+    if (isSubscribed) {
+      const verified = await checkSubscription(tokenData.access_token, channelId);
+      isSubscribed = verified;
+    }
+
+    // Step 4: Build redirect URL with result
     const returnUrl = new URL(stateData?.returnUrl || "/");
     returnUrl.searchParams.set("youtubeVerified", isSubscribed ? "true" : "false");
+    returnUrl.searchParams.set("youtubeSubscribed", isSubscribed ? "true" : "false");
     returnUrl.searchParams.set("platform", "youtube");
     if (stateData?.productId) {
       returnUrl.searchParams.set("productId", stateData.productId);
@@ -165,7 +149,109 @@ export async function GET(request: NextRequest) {
 }
 
 function createErrorRedirect(error: string, returnUrl?: string | null): NextResponse {
-  const url = new URL(returnUrl || "/");
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const url = new URL(returnUrl || BASE_URL);
   url.searchParams.set("youtubeError", error);
+  url.searchParams.set("platform", "youtube");
   return NextResponse.redirect(url.toString());
+}
+
+/**
+ * Check if the user is subscribed to a specific YouTube channel
+ */
+async function checkSubscription(accessToken: string, channelId: string): Promise<boolean> {
+  try {
+    // Check first 100 subscriptions (2 pages of 50)
+    let nextPageToken: string | undefined;
+
+    for (let i = 0; i < 2; i++) {
+      const subsUrl = new URL("https://www.googleapis.com/youtube/v3/subscriptions");
+      subsUrl.searchParams.set("part", "snippet");
+      subsUrl.searchParams.set("mine", "true");
+      subsUrl.searchParams.set("maxResults", "50");
+      if (nextPageToken) {
+        subsUrl.searchParams.set("pageToken", nextPageToken);
+      }
+
+      const subsResponse = await fetch(subsUrl.toString(), {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!subsResponse.ok) {
+        console.error("YouTube subscriptions check error:", await subsResponse.text());
+        return false;
+      }
+
+      const subsData: YouTubeSubscriptionsResponse = await subsResponse.json();
+
+      // Check if the target channel is in the subscriptions
+      if (subsData.items) {
+        const found = subsData.items.some(
+          (sub) => sub.snippet.resourceId.channelId === channelId
+        );
+        if (found) return true;
+      }
+
+      nextPageToken = subsData.nextPageToken;
+      if (!nextPageToken) break;
+    }
+
+    return false;
+  } catch (err) {
+    console.error("Error checking YouTube subscription:", err);
+    return false;
+  }
+}
+
+/**
+ * Subscribe the user to a YouTube channel
+ */
+async function triggerSubscription(
+  accessToken: string,
+  channelId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const subscribeResponse = await fetch(
+      "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          snippet: {
+            resourceId: {
+              kind: "youtube#channel",
+              channelId: channelId,
+            },
+          },
+        }),
+      }
+    );
+
+    if (subscribeResponse.ok) {
+      return { success: true };
+    }
+
+    // Handle specific error cases
+    const errorData = await subscribeResponse.json();
+
+    // If already subscribed, treat as success
+    if (errorData.error?.errors?.[0]?.reason === "subscriptionDuplicate") {
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: errorData.error?.message || "Failed to subscribe"
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error"
+    };
+  }
 }
