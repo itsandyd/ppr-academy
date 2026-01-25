@@ -102,12 +102,79 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const product = digitalProduct;
 
-  // Handle wizard completion
+  // Handle wizard completion - must be before early returns
   const handleFollowGateComplete = useCallback((email: string, completedSteps: Record<string, boolean>) => {
     setCapturedEmail(email);
     setFollowGateCompleted(true);
     setFollowGateWizardOpen(false);
   }, []);
+
+  // Handle follow gate wizard opening - must be before early returns
+  const handleOpenFollowGate = useCallback(() => {
+    setFollowGateWizardOpen(true);
+  }, []);
+
+  // Build steps array from either new or legacy schema - must be before early returns
+  const followGateSteps = useMemo((): FollowGateStep[] => {
+    if (!product) return [];
+
+    // Check for new schema first
+    const newSteps = (product as any).followGateSteps;
+    if (newSteps && Array.isArray(newSteps) && newSteps.length > 0) {
+      return newSteps as FollowGateStep[];
+    }
+
+    // Fall back to legacy schema
+    const requirements = product.followGateRequirements || {};
+    const socialLinks = product.followGateSocialLinks || {};
+    const legacySteps: FollowGateStep[] = [];
+    let order = 0;
+
+    // Email step (always first if required)
+    if (requirements.requireEmail !== false) {
+      legacySteps.push({
+        platform: "email",
+        mandatory: true,
+        order: order++,
+      });
+    }
+
+    // Social platforms
+    if (requirements.requireInstagram && socialLinks.instagram) {
+      legacySteps.push({
+        platform: "instagram",
+        url: socialLinks.instagram,
+        mandatory: true,
+        order: order++,
+      });
+    }
+    if (requirements.requireTiktok && socialLinks.tiktok) {
+      legacySteps.push({
+        platform: "tiktok",
+        url: socialLinks.tiktok,
+        mandatory: true,
+        order: order++,
+      });
+    }
+    if (requirements.requireYoutube && socialLinks.youtube) {
+      legacySteps.push({
+        platform: "youtube",
+        url: socialLinks.youtube,
+        mandatory: true,
+        order: order++,
+      });
+    }
+    if (requirements.requireSpotify && socialLinks.spotify) {
+      legacySteps.push({
+        platform: "spotify",
+        url: socialLinks.spotify,
+        mandatory: true,
+        order: order++,
+      });
+    }
+
+    return legacySteps;
+  }, [product]);
 
   // Handle OAuth callback parameters from Spotify/YouTube verification
   useEffect(() => {
@@ -185,67 +252,6 @@ export default function ProductPage({ params }: ProductPageProps) {
   // Follow gate config - support both new followGateSteps and legacy schema
   const hasFollowGate = product.followGateEnabled;
   const followGateMessage = product.followGateMessage;
-
-  // Build steps array from either new or legacy schema
-  const followGateSteps = useMemo((): FollowGateStep[] => {
-    // Check for new schema first
-    const newSteps = (product as any).followGateSteps;
-    if (newSteps && Array.isArray(newSteps) && newSteps.length > 0) {
-      return newSteps as FollowGateStep[];
-    }
-
-    // Fall back to legacy schema
-    const requirements = product.followGateRequirements || {};
-    const socialLinks = product.followGateSocialLinks || {};
-    const legacySteps: FollowGateStep[] = [];
-    let order = 0;
-
-    // Email step (always first if required)
-    if (requirements.requireEmail !== false) {
-      legacySteps.push({
-        platform: "email",
-        mandatory: true,
-        order: order++,
-      });
-    }
-
-    // Social platforms
-    if (requirements.requireInstagram && socialLinks.instagram) {
-      legacySteps.push({
-        platform: "instagram",
-        url: socialLinks.instagram,
-        mandatory: true,
-        order: order++,
-      });
-    }
-    if (requirements.requireTiktok && socialLinks.tiktok) {
-      legacySteps.push({
-        platform: "tiktok",
-        url: socialLinks.tiktok,
-        mandatory: true,
-        order: order++,
-      });
-    }
-    if (requirements.requireYoutube && socialLinks.youtube) {
-      legacySteps.push({
-        platform: "youtube",
-        url: socialLinks.youtube,
-        mandatory: true,
-        order: order++,
-      });
-    }
-    if (requirements.requireSpotify && socialLinks.spotify) {
-      legacySteps.push({
-        platform: "spotify",
-        url: socialLinks.spotify,
-        mandatory: true,
-        order: order++,
-      });
-    }
-
-    return legacySteps;
-  }, [product]);
-
   const hasFollowGateSteps = followGateSteps.length > 0;
 
   // Handle email submission for free products (without follow gate or after wizard completion)
@@ -292,12 +298,6 @@ export default function ProductPage({ params }: ProductPageProps) {
       setIsSubmitting(false);
     }
   };
-
-  // Handle follow gate wizard opening
-  const handleOpenFollowGate = useCallback(() => {
-    setFollowGateWizardOpen(true);
-  }, []);
-
 
   // Handle download
   const handleDownload = () => {
