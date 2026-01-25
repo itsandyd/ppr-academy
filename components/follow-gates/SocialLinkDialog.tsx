@@ -53,10 +53,14 @@ interface SocialLinkDialogProps {
 const MIN_VIEW_TIME = 3;
 
 // Platforms that support OAuth verification
-const OAUTH_SUPPORTED_PLATFORMS: SocialPlatform[] = ["spotify", "youtube"];
+// Spotify/YouTube: Full OAuth with auto-follow capability
+// Instagram/TikTok: OAuth login verification, then manual follow (Hypeddit-style)
+const OAUTH_SUPPORTED_PLATFORMS: SocialPlatform[] = ["spotify", "youtube", "instagram", "tiktok"];
 
 /**
  * Extract platform-specific ID from a URL or input
+ * For Spotify/YouTube: Returns the artist/channel ID for API calls
+ * For Instagram/TikTok: Returns the profile URL for OAuth redirect flow
  */
 function extractPlatformId(platform: SocialPlatform, input: string): string | null {
   if (!input) return null;
@@ -81,6 +85,22 @@ function extractPlatformId(platform: SocialPlatform, input: string): string | nu
       if (handleMatch) return null; // Can't verify handle-based URLs without API lookup
       // Check if it's a raw channel ID (starts with UC)
       if (trimmed.startsWith("UC") && trimmed.length === 24) return trimmed;
+      return null;
+    }
+    case "instagram": {
+      // For Instagram, we pass the profile URL to the OAuth flow
+      // Accept full URLs or usernames
+      if (trimmed.includes("instagram.com")) return trimmed;
+      if (trimmed.startsWith("@")) return `https://instagram.com/${trimmed.slice(1)}`;
+      if (trimmed.length > 0) return `https://instagram.com/${trimmed}`;
+      return null;
+    }
+    case "tiktok": {
+      // For TikTok, we pass the profile URL to the OAuth flow
+      // Accept full URLs or usernames
+      if (trimmed.includes("tiktok.com")) return trimmed;
+      if (trimmed.startsWith("@")) return `https://tiktok.com/${trimmed}`;
+      if (trimmed.length > 0) return `https://tiktok.com/@${trimmed}`;
       return null;
     }
     default:
@@ -222,6 +242,14 @@ export function SocialLinkDialog({
         break;
       case "youtube":
         oauthUrl = `/api/follow-gate/youtube?channelId=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
+        break;
+      case "instagram":
+        // Instagram OAuth flow - verify login, then open profile for manual follow
+        oauthUrl = `/api/follow-gate/instagram?profileUrl=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
+        break;
+      case "tiktok":
+        // TikTok OAuth flow - verify login, then open profile for manual follow
+        oauthUrl = `/api/follow-gate/tiktok?profileUrl=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
         break;
       default:
         setIsVerifying(false);

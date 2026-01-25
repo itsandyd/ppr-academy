@@ -132,7 +132,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     setActivePlatformDialog(null);
   }, []);
 
-  // Handle OAuth callback parameters from Spotify/YouTube verification
+  // Handle OAuth callback parameters from Spotify/YouTube/Instagram/TikTok verification
   useEffect(() => {
     if (oauthProcessed) return;
 
@@ -141,6 +141,10 @@ export default function ProductPage({ params }: ProductPageProps) {
     const spotifyError = searchParams.get("spotifyError");
     const youtubeVerified = searchParams.get("youtubeVerified");
     const youtubeError = searchParams.get("youtubeError");
+    const instagramVerified = searchParams.get("instagramVerified");
+    const instagramError = searchParams.get("instagramError");
+    const tiktokVerified = searchParams.get("tiktokVerified");
+    const tiktokError = searchParams.get("tiktokError");
 
     let hasOAuthResult = false;
 
@@ -170,6 +174,28 @@ export default function ProductPage({ params }: ProductPageProps) {
       }
     }
 
+    // Handle Instagram OAuth callback (Hypeddit-style: OAuth + manual follow)
+    if (platform === "instagram" || instagramVerified || instagramError) {
+      hasOAuthResult = true;
+      if (instagramVerified === "true") {
+        setFollowedPlatforms((prev) => ({ ...prev, instagram: true }));
+        toast.success("Thanks for following on Instagram!");
+      } else if (instagramError) {
+        toast.error(`Instagram: ${instagramError}`);
+      }
+    }
+
+    // Handle TikTok OAuth callback (Hypeddit-style: OAuth + manual follow)
+    if (platform === "tiktok" || tiktokVerified || tiktokError) {
+      hasOAuthResult = true;
+      if (tiktokVerified === "true") {
+        setFollowedPlatforms((prev) => ({ ...prev, tiktok: true }));
+        toast.success("Thanks for following on TikTok!");
+      } else if (tiktokError) {
+        toast.error(`TikTok: ${tiktokError}`);
+      }
+    }
+
     // Clean up URL parameters after processing
     if (hasOAuthResult) {
       setOauthProcessed(true);
@@ -181,6 +207,10 @@ export default function ProductPage({ params }: ProductPageProps) {
       newUrl.searchParams.delete("youtubeVerified");
       newUrl.searchParams.delete("youtubeSubscribed");
       newUrl.searchParams.delete("youtubeError");
+      newUrl.searchParams.delete("instagramVerified");
+      newUrl.searchParams.delete("instagramError");
+      newUrl.searchParams.delete("tiktokVerified");
+      newUrl.searchParams.delete("tiktokError");
       newUrl.searchParams.delete("productId");
       window.history.replaceState({}, "", newUrl.toString());
     }
@@ -731,7 +761,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         {/* Related products section would go here */}
       </main>
 
-      {/* Social Platform Dialogs for Follow Gate */}
+      {/* Social Platform Dialogs for Follow Gate - All platforms support OAuth */}
       {followGateSocialLinks.instagram && (
         <SocialLinkDialog
           open={activePlatformDialog === "instagram"}
@@ -740,6 +770,8 @@ export default function ProductPage({ params }: ProductPageProps) {
           url={followGateSocialLinks.instagram}
           onConfirmed={() => handlePlatformConfirmed("instagram")}
           creatorName={displayName}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
       {followGateSocialLinks.tiktok && (
@@ -750,6 +782,8 @@ export default function ProductPage({ params }: ProductPageProps) {
           url={followGateSocialLinks.tiktok}
           onConfirmed={() => handlePlatformConfirmed("tiktok")}
           creatorName={displayName}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
       {followGateSocialLinks.youtube && (

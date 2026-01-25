@@ -517,6 +517,8 @@ export function FollowGateModal({
           platform="instagram"
           url={socialLinks.instagram}
           onConfirmed={() => handlePlatformConfirmed("instagram")}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
       {socialLinks.tiktok && (
@@ -526,6 +528,8 @@ export function FollowGateModal({
           platform="tiktok"
           url={socialLinks.tiktok}
           onConfirmed={() => handlePlatformConfirmed("tiktok")}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
       {socialLinks.youtube && (
@@ -535,6 +539,8 @@ export function FollowGateModal({
           platform="youtube"
           url={socialLinks.youtube}
           onConfirmed={() => handlePlatformConfirmed("youtube")}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
       {socialLinks.spotify && (
@@ -544,6 +550,8 @@ export function FollowGateModal({
           platform="spotify"
           url={socialLinks.spotify}
           onConfirmed={() => handlePlatformConfirmed("spotify")}
+          productId={product._id}
+          oauthEnabled={true}
         />
       )}
     </Dialog>
