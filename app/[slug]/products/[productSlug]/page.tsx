@@ -467,7 +467,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                       </p>
                     </div>
 
-                    {/* Follow Gate Requirements */}
+                    {/* Follow Gate Requirements - v2 with validation */}
                     {hasFollowGate && requiredPlatforms.length > 0 && (
                       <div className="space-y-3 rounded-lg bg-muted/50 p-4">
                         <div className="flex items-center justify-between text-sm">
