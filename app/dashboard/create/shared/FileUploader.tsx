@@ -70,9 +70,11 @@ export function FileUploader({
         const uploadUrl = await generateUploadUrl();
 
         // Step 2: Upload file to Convex storage
+        // Use application/octet-stream as fallback for files without recognized MIME types (e.g., .adg, .flp)
+        const contentType = file.type || "application/octet-stream";
         const result = await fetch(uploadUrl, {
           method: "POST",
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": contentType },
           body: file,
         });
 

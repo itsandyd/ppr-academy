@@ -8512,6 +8512,7 @@ export declare const api: {
         packFiles?: string;
         pinnedAt?: number;
         price?: number;
+        pricingModel?: "free_with_gate" | "paid";
         productType?:
           | "digital"
           | "urlMedia"
@@ -8635,6 +8636,7 @@ export declare const api: {
         rackType?: "audioEffect" | "instrument" | "midiEffect" | "drumRack";
         requiresMaxForLive?: boolean;
         sessionType?: string;
+        slug?: string;
         stemsUrl?: string;
         storeId: string;
         style?: "button" | "callout" | "preview" | "card" | "minimal";

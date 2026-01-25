@@ -1173,6 +1173,8 @@ export const updateProduct = mutation({
     // Pinned product - appears first in storefront
     isPinned: v.optional(v.boolean()),
     pinnedAt: v.optional(v.number()),
+    // Pricing model for free with gate vs paid
+    pricingModel: v.optional(v.union(v.literal("free_with_gate"), v.literal("paid"))),
   },
   returns: v.union(
     v.object({
@@ -1185,6 +1187,7 @@ export const updateProduct = mutation({
       downloadUrl: v.optional(v.string()),
       storeId: v.string(),
       userId: v.string(),
+      slug: v.optional(v.string()), // URL-friendly product slug
       isPublished: v.optional(v.boolean()),
       buttonLabel: v.optional(v.string()),
       style: v.optional(
@@ -1347,7 +1350,7 @@ export const updateProduct = mutation({
     v.null()
   ),
   handler: async (ctx, args) => {
-    const { id, title, ...otherUpdates } = args;
+    const { id, title, pricingModel, ...otherUpdates } = args;
 
     const product = await ctx.db.get(id);
     if (!product) {
@@ -1355,6 +1358,20 @@ export const updateProduct = mutation({
     }
 
     const updates: Record<string, any> = { ...otherUpdates };
+
+    // Handle pricingModel changes
+    if (pricingModel) {
+      if (pricingModel === "free_with_gate") {
+        updates.followGateEnabled = true;
+        updates.price = 0;
+      } else if (pricingModel === "paid") {
+        // Only disable follow gate if explicitly switching to paid
+        // and no follow gate requirements are set
+        if (!updates.followGateRequirements) {
+          updates.followGateEnabled = false;
+        }
+      }
+    }
 
     if (title && title !== product.title) {
       const store = await ctx.db
