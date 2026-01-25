@@ -2616,11 +2616,38 @@ export type DataModel = {
         requireYoutube?: boolean;
       };
       followGateSocialLinks?: {
+        appleMusic?: string;
+        bandcamp?: string;
+        deezer?: string;
+        facebook?: string;
         instagram?: string;
+        mixcloud?: string;
+        soundcloud?: string;
         spotify?: string;
         tiktok?: string;
+        twitch?: string;
+        twitter?: string;
         youtube?: string;
       };
+      followGateSteps?: Array<{
+        mandatory: boolean;
+        order: number;
+        platform:
+          | "email"
+          | "instagram"
+          | "tiktok"
+          | "youtube"
+          | "spotify"
+          | "soundcloud"
+          | "appleMusic"
+          | "deezer"
+          | "twitch"
+          | "mixcloud"
+          | "facebook"
+          | "twitter"
+          | "bandcamp";
+        url?: string;
+      }>;
       guaranteeText?: string;
       imageUrl?: string;
       instructorId?: string;
@@ -2664,10 +2691,19 @@ export type DataModel = {
       | "followGateRequirements.requireTiktok"
       | "followGateRequirements.requireYoutube"
       | "followGateSocialLinks"
+      | "followGateSocialLinks.appleMusic"
+      | "followGateSocialLinks.bandcamp"
+      | "followGateSocialLinks.deezer"
+      | "followGateSocialLinks.facebook"
       | "followGateSocialLinks.instagram"
+      | "followGateSocialLinks.mixcloud"
+      | "followGateSocialLinks.soundcloud"
       | "followGateSocialLinks.spotify"
       | "followGateSocialLinks.tiktok"
+      | "followGateSocialLinks.twitch"
+      | "followGateSocialLinks.twitter"
       | "followGateSocialLinks.youtube"
+      | "followGateSteps"
       | "guaranteeText"
       | "imageUrl"
       | "instructorId"
@@ -3457,11 +3493,38 @@ export type DataModel = {
         requireYoutube?: boolean;
       };
       followGateSocialLinks?: {
+        appleMusic?: string;
+        bandcamp?: string;
+        deezer?: string;
+        facebook?: string;
         instagram?: string;
+        mixcloud?: string;
+        soundcloud?: string;
         spotify?: string;
         tiktok?: string;
+        twitch?: string;
+        twitter?: string;
         youtube?: string;
       };
+      followGateSteps?: Array<{
+        mandatory: boolean;
+        order: number;
+        platform:
+          | "email"
+          | "instagram"
+          | "tiktok"
+          | "youtube"
+          | "spotify"
+          | "soundcloud"
+          | "appleMusic"
+          | "deezer"
+          | "twitch"
+          | "mixcloud"
+          | "facebook"
+          | "twitter"
+          | "bandcamp";
+        url?: string;
+      }>;
       genre?: Array<string>;
       imageUrl?: string;
       installationNotes?: string;
@@ -3653,10 +3716,19 @@ export type DataModel = {
       | "followGateRequirements.requireTiktok"
       | "followGateRequirements.requireYoutube"
       | "followGateSocialLinks"
+      | "followGateSocialLinks.appleMusic"
+      | "followGateSocialLinks.bandcamp"
+      | "followGateSocialLinks.deezer"
+      | "followGateSocialLinks.facebook"
       | "followGateSocialLinks.instagram"
+      | "followGateSocialLinks.mixcloud"
+      | "followGateSocialLinks.soundcloud"
       | "followGateSocialLinks.spotify"
       | "followGateSocialLinks.tiktok"
+      | "followGateSocialLinks.twitch"
+      | "followGateSocialLinks.twitter"
       | "followGateSocialLinks.youtube"
+      | "followGateSteps"
       | "genre"
       | "imageUrl"
       | "installationNotes"
@@ -5401,9 +5473,17 @@ export type DataModel = {
       downloadCount?: number;
       email: string;
       followedPlatforms: {
+        appleMusic?: boolean;
+        bandcamp?: boolean;
+        deezer?: boolean;
+        facebook?: boolean;
         instagram?: boolean;
+        mixcloud?: boolean;
+        soundcloud?: boolean;
         spotify?: boolean;
         tiktok?: boolean;
+        twitch?: boolean;
+        twitter?: boolean;
         youtube?: boolean;
       };
       hasDownloaded?: boolean;
@@ -5424,9 +5504,17 @@ export type DataModel = {
       | "downloadCount"
       | "email"
       | "followedPlatforms"
+      | "followedPlatforms.appleMusic"
+      | "followedPlatforms.bandcamp"
+      | "followedPlatforms.deezer"
+      | "followedPlatforms.facebook"
       | "followedPlatforms.instagram"
+      | "followedPlatforms.mixcloud"
+      | "followedPlatforms.soundcloud"
       | "followedPlatforms.spotify"
       | "followedPlatforms.tiktok"
+      | "followedPlatforms.twitch"
+      | "followedPlatforms.twitter"
       | "followedPlatforms.youtube"
       | "hasDownloaded"
       | "ipAddress"

@@ -57,7 +57,8 @@ export async function GET(request: NextRequest) {
 
   // Use basic Instagram/Facebook OAuth scopes - we only need to verify identity
   // We don't need any special permissions since we can't follow programmatically anyway
-  const scopes = ["public_profile"];
+  // Note: public_profile is implicit, email is needed for OAuth dialog to work
+  const scopes = ["email"];
 
   // Build Facebook OAuth URL
   // Using Facebook OAuth because Instagram Basic Display API is deprecated

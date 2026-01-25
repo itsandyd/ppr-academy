@@ -11,12 +11,9 @@ import {
   Loader2,
   ArrowLeft,
   Download,
-  ExternalLink,
   ShoppingCart,
   Share2,
-  Heart,
   Check,
-  CheckCircle2,
   Star,
   Clock,
   Package,
@@ -25,8 +22,6 @@ import {
   Users,
   Play,
   Pause,
-  Instagram,
-  Youtube,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,22 +34,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { generateProductStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
-import { SocialLinkDialog, SocialPlatform } from "@/components/follow-gates/SocialLinkDialog";
+import { FollowGateWizard, FollowGateStep, FollowGatePlatform } from "@/components/follow-gates/FollowGateWizard";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
-
-// TikTok and Spotify icons (not in lucide)
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-  </svg>
-);
-
-const SpotifyIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-  </svg>
-);
 
 interface ProductPageProps {
   params: Promise<{
@@ -76,8 +58,9 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Follow gate state
-  const [followedPlatforms, setFollowedPlatforms] = useState<Record<string, boolean>>({});
-  const [activePlatformDialog, setActivePlatformDialog] = useState<SocialPlatform | null>(null);
+  const [followGateWizardOpen, setFollowGateWizardOpen] = useState(false);
+  const [followGateCompleted, setFollowGateCompleted] = useState(false);
+  const [capturedEmail, setCapturedEmail] = useState("");
   const [oauthProcessed, setOauthProcessed] = useState(false);
 
   // Fetch store by slug
@@ -119,80 +102,44 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const product = digitalProduct;
 
-  // Define callbacks before any early returns (React hooks rule)
-  const openPlatformDialog = useCallback((platform: SocialPlatform) => {
-    setActivePlatformDialog(platform);
+  // Handle wizard completion
+  const handleFollowGateComplete = useCallback((email: string, completedSteps: Record<string, boolean>) => {
+    setCapturedEmail(email);
+    setFollowGateCompleted(true);
+    setFollowGateWizardOpen(false);
   }, []);
 
-  const handlePlatformConfirmed = useCallback((platform: SocialPlatform) => {
-    setFollowedPlatforms((prev) => ({
-      ...prev,
-      [platform]: true,
-    }));
-    setActivePlatformDialog(null);
-  }, []);
-
-  // Handle OAuth callback parameters from Spotify/YouTube/Instagram/TikTok verification
+  // Handle OAuth callback parameters from Spotify/YouTube verification
   useEffect(() => {
     if (oauthProcessed) return;
 
-    const platform = searchParams.get("platform");
     const spotifyVerified = searchParams.get("spotifyVerified");
     const spotifyError = searchParams.get("spotifyError");
     const youtubeVerified = searchParams.get("youtubeVerified");
     const youtubeError = searchParams.get("youtubeError");
-    const instagramVerified = searchParams.get("instagramVerified");
-    const instagramError = searchParams.get("instagramError");
-    const tiktokVerified = searchParams.get("tiktokVerified");
-    const tiktokError = searchParams.get("tiktokError");
 
     let hasOAuthResult = false;
 
     // Handle Spotify OAuth callback
-    if (platform === "spotify" || spotifyVerified || spotifyError) {
+    if (spotifyVerified || spotifyError) {
       hasOAuthResult = true;
       if (spotifyVerified === "true") {
-        setFollowedPlatforms((prev) => ({ ...prev, spotify: true }));
         toast.success("Successfully followed on Spotify!");
+        // If this was the only requirement, mark as complete
+        setFollowGateCompleted(true);
       } else if (spotifyError) {
         toast.error(`Spotify: ${spotifyError}`);
-      } else if (spotifyVerified === "false") {
-        toast.error("Could not verify Spotify follow. Please try again.");
       }
     }
 
     // Handle YouTube OAuth callback
-    if (platform === "youtube" || youtubeVerified || youtubeError) {
+    if (youtubeVerified || youtubeError) {
       hasOAuthResult = true;
       if (youtubeVerified === "true") {
-        setFollowedPlatforms((prev) => ({ ...prev, youtube: true }));
         toast.success("Successfully subscribed on YouTube!");
+        setFollowGateCompleted(true);
       } else if (youtubeError) {
         toast.error(`YouTube: ${youtubeError}`);
-      } else if (youtubeVerified === "false") {
-        toast.error("Could not verify YouTube subscription. Please try again.");
-      }
-    }
-
-    // Handle Instagram OAuth callback (Hypeddit-style: OAuth + manual follow)
-    if (platform === "instagram" || instagramVerified || instagramError) {
-      hasOAuthResult = true;
-      if (instagramVerified === "true") {
-        setFollowedPlatforms((prev) => ({ ...prev, instagram: true }));
-        toast.success("Thanks for following on Instagram!");
-      } else if (instagramError) {
-        toast.error(`Instagram: ${instagramError}`);
-      }
-    }
-
-    // Handle TikTok OAuth callback (Hypeddit-style: OAuth + manual follow)
-    if (platform === "tiktok" || tiktokVerified || tiktokError) {
-      hasOAuthResult = true;
-      if (tiktokVerified === "true") {
-        setFollowedPlatforms((prev) => ({ ...prev, tiktok: true }));
-        toast.success("Thanks for following on TikTok!");
-      } else if (tiktokError) {
-        toast.error(`TikTok: ${tiktokError}`);
       }
     }
 
@@ -200,17 +147,10 @@ export default function ProductPage({ params }: ProductPageProps) {
     if (hasOAuthResult) {
       setOauthProcessed(true);
       const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete("platform");
       newUrl.searchParams.delete("spotifyVerified");
-      newUrl.searchParams.delete("spotifyFollowed");
       newUrl.searchParams.delete("spotifyError");
       newUrl.searchParams.delete("youtubeVerified");
-      newUrl.searchParams.delete("youtubeSubscribed");
       newUrl.searchParams.delete("youtubeError");
-      newUrl.searchParams.delete("instagramVerified");
-      newUrl.searchParams.delete("instagramError");
-      newUrl.searchParams.delete("tiktokVerified");
-      newUrl.searchParams.delete("tiktokError");
       newUrl.searchParams.delete("productId");
       window.history.replaceState({}, "", newUrl.toString());
     }
@@ -242,33 +182,77 @@ export default function ProductPage({ params }: ProductPageProps) {
   const isFree = product.price === 0;
   const price = product.price || 0;
 
-  // Follow gate config
+  // Follow gate config - support both new followGateSteps and legacy schema
   const hasFollowGate = product.followGateEnabled;
-  const followGateRequirements = product.followGateRequirements || {};
-  const followGateSocialLinks = product.followGateSocialLinks || {};
   const followGateMessage = product.followGateMessage;
 
-  // Calculate required follows
-  const requiredPlatforms: string[] = [];
-  if (followGateRequirements.requireInstagram) requiredPlatforms.push("instagram");
-  if (followGateRequirements.requireTiktok) requiredPlatforms.push("tiktok");
-  if (followGateRequirements.requireYoutube) requiredPlatforms.push("youtube");
-  if (followGateRequirements.requireSpotify) requiredPlatforms.push("spotify");
+  // Build steps array from either new or legacy schema
+  const followGateSteps = useMemo((): FollowGateStep[] => {
+    // Check for new schema first
+    const newSteps = (product as any).followGateSteps;
+    if (newSteps && Array.isArray(newSteps) && newSteps.length > 0) {
+      return newSteps as FollowGateStep[];
+    }
 
-  const minFollowsRequired = followGateRequirements.minFollowsRequired || requiredPlatforms.length;
-  const currentFollowCount = Object.values(followedPlatforms).filter(Boolean).length;
-  const hasMetFollowRequirement = currentFollowCount >= minFollowsRequired;
+    // Fall back to legacy schema
+    const requirements = product.followGateRequirements || {};
+    const socialLinks = product.followGateSocialLinks || {};
+    const legacySteps: FollowGateStep[] = [];
+    let order = 0;
 
-  // Handle email submission for free products
+    // Email step (always first if required)
+    if (requirements.requireEmail !== false) {
+      legacySteps.push({
+        platform: "email",
+        mandatory: true,
+        order: order++,
+      });
+    }
+
+    // Social platforms
+    if (requirements.requireInstagram && socialLinks.instagram) {
+      legacySteps.push({
+        platform: "instagram",
+        url: socialLinks.instagram,
+        mandatory: true,
+        order: order++,
+      });
+    }
+    if (requirements.requireTiktok && socialLinks.tiktok) {
+      legacySteps.push({
+        platform: "tiktok",
+        url: socialLinks.tiktok,
+        mandatory: true,
+        order: order++,
+      });
+    }
+    if (requirements.requireYoutube && socialLinks.youtube) {
+      legacySteps.push({
+        platform: "youtube",
+        url: socialLinks.youtube,
+        mandatory: true,
+        order: order++,
+      });
+    }
+    if (requirements.requireSpotify && socialLinks.spotify) {
+      legacySteps.push({
+        platform: "spotify",
+        url: socialLinks.spotify,
+        mandatory: true,
+        order: order++,
+      });
+    }
+
+    return legacySteps;
+  }, [product]);
+
+  const hasFollowGateSteps = followGateSteps.length > 0;
+
+  // Handle email submission for free products (without follow gate or after wizard completion)
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !store) return;
-
-    // Check follow gate requirements
-    if (hasFollowGate && !hasMetFollowRequirement) {
-      toast.error(`Please follow at least ${minFollowsRequired} account(s) to continue`);
-      return;
-    }
+    const emailToUse = capturedEmail || email;
+    if (!emailToUse || !store) return;
 
     setIsSubmitting(true);
     try {
@@ -278,7 +262,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
       await createContact({
         storeId: store._id,
-        email: email.toLowerCase(),
+        email: emailToUse.toLowerCase(),
         firstName,
         lastName,
         source: "product_page",
@@ -287,8 +271,8 @@ export default function ProductPage({ params }: ProductPageProps) {
 
       if (isFree) {
         await submitLead({
-          name: name.trim() || email.split("@")[0],
-          email: email.toLowerCase(),
+          name: name.trim() || emailToUse.split("@")[0],
+          email: emailToUse.toLowerCase(),
           productId: product._id,
           storeId: store._id,
           adminUserId: store.userId,
@@ -309,37 +293,11 @@ export default function ProductPage({ params }: ProductPageProps) {
     }
   };
 
-  // Get social link for platform
-  const getSocialLink = (platform: string) => {
-    switch (platform) {
-      case "instagram":
-        return followGateSocialLinks.instagram;
-      case "tiktok":
-        return followGateSocialLinks.tiktok;
-      case "youtube":
-        return followGateSocialLinks.youtube;
-      case "spotify":
-        return followGateSocialLinks.spotify;
-      default:
-        return null;
-    }
-  };
+  // Handle follow gate wizard opening
+  const handleOpenFollowGate = useCallback(() => {
+    setFollowGateWizardOpen(true);
+  }, []);
 
-  // Get platform icon
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case "instagram":
-        return <Instagram className="h-4 w-4" />;
-      case "tiktok":
-        return <TikTokIcon className="h-4 w-4" />;
-      case "youtube":
-        return <Youtube className="h-4 w-4" />;
-      case "spotify":
-        return <SpotifyIcon className="h-4 w-4" />;
-      default:
-        return null;
-    }
-  };
 
   // Handle download
   const handleDownload = () => {
@@ -538,140 +496,45 @@ export default function ProductPage({ params }: ProductPageProps) {
             )}
 
             {/* CTA Section */}
-            <Card className={cn("border-2", hasFollowGate && "border-primary/50")}>
+            <Card className={cn("border-2", hasFollowGate && hasFollowGateSteps && "border-primary/50")}>
               <CardContent className="p-6">
-                {isFree && !hasSubmittedEmail ? (
-                  <form onSubmit={handleEmailSubmit} className="space-y-4">
-                    <div className="text-center">
-                      <h3 className="font-semibold">
-                        {hasFollowGate ? "Follow to Unlock" : "Get Free Access"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {followGateMessage || (hasFollowGate
-                          ? `Follow ${minFollowsRequired} account(s) and enter your email`
-                          : "Enter your email to download instantly"
-                        )}
+                {isFree && !hasSubmittedEmail && !followGateCompleted ? (
+                  // Show wizard trigger for follow gate products, or simple email form otherwise
+                  hasFollowGate && hasFollowGateSteps ? (
+                    <div className="space-y-4 text-center">
+                      <div>
+                        <h3 className="font-semibold">
+                          <Lock className="inline-block mr-2 h-4 w-4" />
+                          Follow to Unlock
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {followGateMessage || "Support the creator to get free access"}
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={handleOpenFollowGate}
+                        className="w-full"
+                        size="lg"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Get Free Download
+                      </Button>
+
+                      <p className="text-xs text-muted-foreground">
+                        Complete a few quick steps to unlock
                       </p>
                     </div>
-
-                    {/* Follow Gate Requirements - v2 with validation */}
-                    {hasFollowGate && requiredPlatforms.length > 0 && (
-                      <div className="space-y-3 rounded-lg bg-muted/50 p-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium flex items-center gap-2">
-                            <Lock className="h-4 w-4 text-primary" />
-                            Follow to unlock
-                          </span>
-                          <Badge variant={hasMetFollowRequirement ? "default" : "secondary"}>
-                            {currentFollowCount}/{minFollowsRequired}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          {requiredPlatforms.map((platform) => {
-                            const rawLink = getSocialLink(platform);
-                            // Validate link - must be non-empty string
-                            const link = rawLink && typeof rawLink === "string" && rawLink.trim().length > 0
-                              ? rawLink.trim()
-                              : null;
-
-                            // Log warning for missing social links
-                            if (!link && typeof window !== "undefined") {
-                              console.warn(`[FollowGate] Platform "${platform}" is required but no social link is configured. Raw value:`, rawLink);
-                            }
-
-                            const isFollowed = followedPlatforms[platform];
-
-                            // Get platform-specific styling
-                            const getPlatformStyle = () => {
-                              switch (platform) {
-                                case "instagram":
-                                  return {
-                                    bg: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400",
-                                    hoverBorder: "hover:border-pink-500/50",
-                                  };
-                                case "tiktok":
-                                  return {
-                                    bg: "bg-black",
-                                    hoverBorder: "hover:border-gray-500/50",
-                                  };
-                                case "youtube":
-                                  return {
-                                    bg: "bg-red-600",
-                                    hoverBorder: "hover:border-red-500/50",
-                                  };
-                                case "spotify":
-                                  return {
-                                    bg: "bg-green-600",
-                                    hoverBorder: "hover:border-green-500/50",
-                                  };
-                                default:
-                                  return {
-                                    bg: "bg-primary",
-                                    hoverBorder: "hover:border-primary/50",
-                                  };
-                              }
-                            };
-
-                            const style = getPlatformStyle();
-
-                            // If link is not configured, show a disabled state
-                            if (!link) {
-                              return (
-                                <div
-                                  key={platform}
-                                  className="flex items-center gap-3 p-3 rounded-lg w-full bg-muted/30 border-2 border-dashed border-muted-foreground/20 opacity-60"
-                                >
-                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted flex-shrink-0">
-                                    <span className="text-muted-foreground">{getPlatformIcon(platform)}</span>
-                                  </div>
-                                  <span className="flex-1 font-medium capitalize text-muted-foreground">
-                                    {platform} (not configured)
-                                  </span>
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <button
-                                key={platform}
-                                type="button"
-                                onClick={() => !isFollowed && link && openPlatformDialog(platform as SocialPlatform)}
-                                disabled={isFollowed}
-                                className={cn(
-                                  "flex items-center gap-3 p-3 rounded-lg w-full transition-all text-left",
-                                  isFollowed
-                                    ? "bg-green-50 dark:bg-green-950/30 border-2 border-green-500"
-                                    : `bg-background border-2 border-transparent ${style.hoverBorder} hover:bg-muted/50`
-                                )}
-                              >
-                                <div className={cn(
-                                  "flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0",
-                                  isFollowed ? "bg-green-500" : style.bg
-                                )}>
-                                  {isFollowed ? (
-                                    <CheckCircle2 className="w-4 h-4 text-white" />
-                                  ) : (
-                                    <span className="text-white">{getPlatformIcon(platform)}</span>
-                                  )}
-                                </div>
-                                <span className="flex-1 font-medium capitalize">
-                                  {isFollowed
-                                    ? `Following on ${platform}`
-                                    : `Follow on ${platform}`
-                                  }
-                                </span>
-                                {!isFollowed && (
-                                  <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
+                  ) : (
+                    // Simple email form for non-follow gate products
+                    <form onSubmit={handleEmailSubmit} className="space-y-4">
+                      <div className="text-center">
+                        <h3 className="font-semibold">Get Free Access</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Enter your email to download instantly
+                        </p>
                       </div>
-                    )}
 
-                    {/* Email form */}
-                    {followGateRequirements.requireEmail !== false && (
                       <div className="space-y-3">
                         <Input
                           type="text"
@@ -687,28 +550,65 @@ export default function ProductPage({ params }: ProductPageProps) {
                           required
                         />
                       </div>
-                    )}
 
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        size="lg"
+                        disabled={isSubmitting || !email}
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="mr-2 h-4 w-4" />
+                        )}
+                        Get Free Access
+                      </Button>
+                      <p className="text-center text-xs text-muted-foreground">
+                        We respect your privacy. Unsubscribe anytime.
+                      </p>
+                    </form>
+                  )
+                ) : followGateCompleted && !hasSubmittedEmail ? (
+                  // After wizard completion, submit email and show download
+                  <div className="space-y-4 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
+                      <Check className="h-6 w-6 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Thanks for your support!</h3>
+                      <p className="text-sm text-muted-foreground">Click below to get your download</p>
+                    </div>
                     <Button
-                      type="submit"
                       className="w-full"
                       size="lg"
-                      disabled={isSubmitting || !email || (hasFollowGate && !hasMetFollowRequirement)}
+                      onClick={() => {
+                        // If email was captured via wizard, submit it
+                        if (capturedEmail && store) {
+                          createContact({
+                            storeId: store._id,
+                            email: capturedEmail.toLowerCase(),
+                            source: "product_page",
+                            sourceProductId: product._id,
+                          }).then(() => {
+                            submitLead({
+                              name: capturedEmail.split("@")[0],
+                              email: capturedEmail.toLowerCase(),
+                              productId: product._id,
+                              storeId: store._id,
+                              adminUserId: store.userId,
+                              source: "product_page",
+                            });
+                          }).catch(() => {});
+                        }
+                        setHasSubmittedEmail(true);
+                        handleDownload();
+                      }}
                     >
-                      {isSubmitting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="mr-2 h-4 w-4" />
-                      )}
-                      {hasFollowGate && !hasMetFollowRequirement
-                        ? `Follow ${minFollowsRequired - currentFollowCount} more to unlock`
-                        : "Get Free Access"
-                      }
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Now
                     </Button>
-                    <p className="text-center text-xs text-muted-foreground">
-                      We respect your privacy. Unsubscribe anytime.
-                    </p>
-                  </form>
+                  </div>
                 ) : hasSubmittedEmail ? (
                   <div className="space-y-4 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
@@ -761,53 +661,15 @@ export default function ProductPage({ params }: ProductPageProps) {
         {/* Related products section would go here */}
       </main>
 
-      {/* Social Platform Dialogs for Follow Gate - All platforms support OAuth */}
-      {followGateSocialLinks.instagram && (
-        <SocialLinkDialog
-          open={activePlatformDialog === "instagram"}
-          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
-          platform="instagram"
-          url={followGateSocialLinks.instagram}
-          onConfirmed={() => handlePlatformConfirmed("instagram")}
+      {/* Follow Gate Wizard */}
+      {hasFollowGate && hasFollowGateSteps && (
+        <FollowGateWizard
+          open={followGateWizardOpen}
+          onOpenChange={setFollowGateWizardOpen}
+          steps={followGateSteps}
+          customMessage={followGateMessage}
           creatorName={displayName}
-          productId={product._id}
-          oauthEnabled={true}
-        />
-      )}
-      {followGateSocialLinks.tiktok && (
-        <SocialLinkDialog
-          open={activePlatformDialog === "tiktok"}
-          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
-          platform="tiktok"
-          url={followGateSocialLinks.tiktok}
-          onConfirmed={() => handlePlatformConfirmed("tiktok")}
-          creatorName={displayName}
-          productId={product._id}
-          oauthEnabled={true}
-        />
-      )}
-      {followGateSocialLinks.youtube && (
-        <SocialLinkDialog
-          open={activePlatformDialog === "youtube"}
-          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
-          platform="youtube"
-          url={followGateSocialLinks.youtube}
-          onConfirmed={() => handlePlatformConfirmed("youtube")}
-          creatorName={displayName}
-          productId={product._id}
-          oauthEnabled={true}
-        />
-      )}
-      {followGateSocialLinks.spotify && (
-        <SocialLinkDialog
-          open={activePlatformDialog === "spotify"}
-          onOpenChange={(open) => !open && setActivePlatformDialog(null)}
-          platform="spotify"
-          url={followGateSocialLinks.spotify}
-          onConfirmed={() => handlePlatformConfirmed("spotify")}
-          creatorName={displayName}
-          productId={product._id}
-          oauthEnabled={true}
+          onComplete={handleFollowGateComplete}
         />
       )}
     </div>

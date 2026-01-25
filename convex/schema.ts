@@ -207,7 +207,7 @@ export default defineSchema({
     deletedAt: v.optional(v.number()),
     deletedBy: v.optional(v.string()),
 
-    // Follow Gate Configuration (NEW - for free courses)
+    // Follow Gate Configuration (for free courses)
     followGateEnabled: v.optional(v.boolean()),
     followGateRequirements: v.optional(
       v.object({
@@ -225,9 +225,41 @@ export default defineSchema({
         tiktok: v.optional(v.string()),
         youtube: v.optional(v.string()),
         spotify: v.optional(v.string()),
+        soundcloud: v.optional(v.string()),
+        appleMusic: v.optional(v.string()),
+        deezer: v.optional(v.string()),
+        twitch: v.optional(v.string()),
+        mixcloud: v.optional(v.string()),
+        facebook: v.optional(v.string()),
+        twitter: v.optional(v.string()),
+        bandcamp: v.optional(v.string()),
       })
     ),
     followGateMessage: v.optional(v.string()),
+    followGateSteps: v.optional(
+      v.array(
+        v.object({
+          platform: v.union(
+            v.literal("email"),
+            v.literal("instagram"),
+            v.literal("tiktok"),
+            v.literal("youtube"),
+            v.literal("spotify"),
+            v.literal("soundcloud"),
+            v.literal("appleMusic"),
+            v.literal("deezer"),
+            v.literal("twitch"),
+            v.literal("mixcloud"),
+            v.literal("facebook"),
+            v.literal("twitter"),
+            v.literal("bandcamp")
+          ),
+          url: v.optional(v.string()),
+          mandatory: v.boolean(),
+          order: v.number(),
+        })
+      )
+    ),
 
     // Pinned product - appears first in storefront
     isPinned: v.optional(v.boolean()),
@@ -1093,6 +1125,7 @@ export default defineSchema({
 
     // Follow Gate Configuration
     followGateEnabled: v.optional(v.boolean()),
+    // Legacy fields (kept for backward compatibility)
     followGateRequirements: v.optional(
       v.object({
         requireEmail: v.optional(v.boolean()), // Require email to unlock
@@ -1109,9 +1142,43 @@ export default defineSchema({
         tiktok: v.optional(v.string()),
         youtube: v.optional(v.string()),
         spotify: v.optional(v.string()),
+        // New platforms
+        soundcloud: v.optional(v.string()),
+        appleMusic: v.optional(v.string()),
+        deezer: v.optional(v.string()),
+        twitch: v.optional(v.string()),
+        mixcloud: v.optional(v.string()),
+        facebook: v.optional(v.string()),
+        twitter: v.optional(v.string()),
+        bandcamp: v.optional(v.string()),
       })
     ),
     followGateMessage: v.optional(v.string()), // Custom message to show users
+    // New: Multi-step follow gate with mandatory/optional per platform
+    followGateSteps: v.optional(
+      v.array(
+        v.object({
+          platform: v.union(
+            v.literal("email"),
+            v.literal("instagram"),
+            v.literal("tiktok"),
+            v.literal("youtube"),
+            v.literal("spotify"),
+            v.literal("soundcloud"),
+            v.literal("appleMusic"),
+            v.literal("deezer"),
+            v.literal("twitch"),
+            v.literal("mixcloud"),
+            v.literal("facebook"),
+            v.literal("twitter"),
+            v.literal("bandcamp")
+          ),
+          url: v.optional(v.string()), // Not needed for email
+          mandatory: v.boolean(), // true = required, false = optional
+          order: v.number(), // Display order (0-indexed)
+        })
+      )
+    ),
     affiliateCommissionRate: v.optional(v.number()),
     affiliateMinPayout: v.optional(v.number()),
     affiliateCookieDuration: v.optional(v.number()),
@@ -1422,6 +1489,14 @@ export default defineSchema({
       tiktok: v.optional(v.boolean()),
       youtube: v.optional(v.boolean()),
       spotify: v.optional(v.boolean()),
+      soundcloud: v.optional(v.boolean()),
+      appleMusic: v.optional(v.boolean()),
+      deezer: v.optional(v.boolean()),
+      twitch: v.optional(v.boolean()),
+      mixcloud: v.optional(v.boolean()),
+      facebook: v.optional(v.boolean()),
+      twitter: v.optional(v.boolean()),
+      bandcamp: v.optional(v.boolean()),
     }),
 
     // Metadata

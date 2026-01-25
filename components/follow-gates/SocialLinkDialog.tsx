@@ -4,20 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Instagram,
   Youtube,
-  ExternalLink,
-  CheckCircle2,
-  Loader2,
-  Clock,
-  ShieldCheck,
   AlertTriangle,
+  Loader2,
+  CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,18 +44,42 @@ interface SocialLinkDialogProps {
   oauthEnabled?: boolean;
 }
 
-// Minimum time user must have the dialog open before confirming (in seconds)
-const MIN_VIEW_TIME = 3;
-
-// Platforms that support OAuth verification
-// Spotify/YouTube: Full OAuth with auto-follow capability
-// Instagram/TikTok: OAuth login verification, then manual follow (Hypeddit-style)
-const OAUTH_SUPPORTED_PLATFORMS: SocialPlatform[] = ["spotify", "youtube", "instagram", "tiktok"];
+// Platforms that support OAuth verification with AUTO-FOLLOW capability
+// Only Spotify and YouTube have APIs that allow programmatic following
+const OAUTH_SUPPORTED_PLATFORMS: SocialPlatform[] = ["spotify", "youtube"];
 
 /**
- * Extract platform-specific ID from a URL or input
- * For Spotify/YouTube: Returns the artist/channel ID for API calls
- * For Instagram/TikTok: Returns the profile URL for OAuth redirect flow
+ * Extract username from a social media URL or input
+ */
+function extractUsername(platform: SocialPlatform, input: string): string {
+  if (!input || typeof input !== "string") return "";
+  const trimmed = input.trim();
+
+  // If it starts with @, just remove it
+  if (trimmed.startsWith("@")) return trimmed.slice(1);
+
+  // Try to extract from URL
+  try {
+    if (trimmed.includes("/")) {
+      const url = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+      const pathParts = url.pathname.split("/").filter(Boolean);
+
+      if (pathParts.length > 0) {
+        let username = pathParts[pathParts.length - 1];
+        // Remove @ if present in path
+        if (username.startsWith("@")) username = username.slice(1);
+        return username;
+      }
+    }
+  } catch {
+    // Not a valid URL, treat as username
+  }
+
+  return trimmed;
+}
+
+/**
+ * Extract platform-specific ID from a URL or input (for OAuth platforms)
  */
 function extractPlatformId(platform: SocialPlatform, input: string): string | null {
   if (!input) return null;
@@ -68,39 +87,15 @@ function extractPlatformId(platform: SocialPlatform, input: string): string | nu
 
   switch (platform) {
     case "spotify": {
-      // Extract artist ID from Spotify URL or raw ID
       const artistMatch = trimmed.match(/artist\/([a-zA-Z0-9]+)/);
       if (artistMatch) return artistMatch[1];
-      // Check if it's a raw ID (22 alphanumeric chars)
       if (/^[a-zA-Z0-9]{22}$/.test(trimmed)) return trimmed;
       return null;
     }
     case "youtube": {
-      // Extract channel ID from YouTube URL
       const channelMatch = trimmed.match(/channel\/([a-zA-Z0-9_-]+)/);
       if (channelMatch) return channelMatch[1];
-      // Extract from /c/ or /@ URLs - these need to be resolved to channel IDs
-      // For now, return null for these (require manual setup)
-      const handleMatch = trimmed.match(/(?:c\/|@)([a-zA-Z0-9_-]+)/);
-      if (handleMatch) return null; // Can't verify handle-based URLs without API lookup
-      // Check if it's a raw channel ID (starts with UC)
       if (trimmed.startsWith("UC") && trimmed.length === 24) return trimmed;
-      return null;
-    }
-    case "instagram": {
-      // For Instagram, we pass the profile URL to the OAuth flow
-      // Accept full URLs or usernames
-      if (trimmed.includes("instagram.com")) return trimmed;
-      if (trimmed.startsWith("@")) return `https://instagram.com/${trimmed.slice(1)}`;
-      if (trimmed.length > 0) return `https://instagram.com/${trimmed}`;
-      return null;
-    }
-    case "tiktok": {
-      // For TikTok, we pass the profile URL to the OAuth flow
-      // Accept full URLs or usernames
-      if (trimmed.includes("tiktok.com")) return trimmed;
-      if (trimmed.startsWith("@")) return `https://tiktok.com/${trimmed}`;
-      if (trimmed.length > 0) return `https://tiktok.com/@${trimmed}`;
       return null;
     }
     default:
@@ -110,47 +105,33 @@ function extractPlatformId(platform: SocialPlatform, input: string): string | nu
 
 /**
  * Normalize a social media link to a full URL
- * Handles: @username, username, or full URLs
- * Returns empty string if input is invalid/empty
  */
 function normalizeSocialUrl(platform: SocialPlatform, input: string): string {
-  // Guard against null, undefined, or non-string inputs
   if (!input || typeof input !== "string") return "";
-
   const trimmed = input.trim();
+  if (!trimmed) return "";
 
-  // Guard against empty or whitespace-only input
-  if (!trimmed || trimmed.length === 0) return "";
-
-  // If it's already a full URL, return it
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
   }
 
-  // Remove @ if present
   const username = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+  if (!username) return "";
 
-  // Guard against empty username after removing @
-  if (!username || username.length === 0) return "";
-
-  // Build full URL based on platform
   switch (platform) {
     case "instagram":
       return `https://instagram.com/${username}`;
     case "tiktok":
       return `https://tiktok.com/@${username}`;
     case "youtube":
-      // YouTube can be channel name or ID
       if (username.startsWith("UC") && username.length === 24) {
         return `https://youtube.com/channel/${username}`;
       }
       return `https://youtube.com/@${username}`;
     case "spotify":
-      // Spotify artist IDs are 22 characters
       if (username.length === 22 && /^[a-zA-Z0-9]+$/.test(username)) {
         return `https://open.spotify.com/artist/${username}`;
       }
-      // Try as user
       return `https://open.spotify.com/user/${username}`;
     default:
       return trimmed;
@@ -163,72 +144,48 @@ export function SocialLinkDialog({
   platform,
   url,
   onConfirmed,
-  creatorName = "the creator",
+  creatorName,
   productId,
   oauthEnabled = false,
 }: SocialLinkDialogProps) {
   const [hasOpenedLink, setHasOpenedLink] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(MIN_VIEW_TIME);
-  const [canConfirm, setCanConfirm] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Check if OAuth verification is available for this platform
+  // OAuth support check
   const supportsOAuth = oauthEnabled && OAUTH_SUPPORTED_PLATFORMS.includes(platform);
   const platformId = supportsOAuth ? extractPlatformId(platform, url) : null;
   const canUseOAuth = supportsOAuth && platformId !== null;
+
+  // Extract username for display
+  const username = extractUsername(platform, url);
+  const displayName = username || creatorName || "the creator";
+
+  // Get normalized URL
+  const normalizedUrl = normalizeSocialUrl(platform, url);
 
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setHasOpenedLink(false);
-      setTimeRemaining(MIN_VIEW_TIME);
-      setCanConfirm(false);
+      setIsVerifying(false);
     }
   }, [open]);
 
-  // Countdown timer after link is opened
-  useEffect(() => {
-    if (!hasOpenedLink || canConfirm) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          setCanConfirm(true);
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [hasOpenedLink, canConfirm]);
-
-  // Get the normalized URL for this platform
-  const normalizedUrl = normalizeSocialUrl(platform, url);
-
-  // Debug: Log URL issues in development
-  if (process.env.NODE_ENV === "development" && open) {
-    console.log(`[SocialLinkDialog] Platform: ${platform}, Raw URL: "${url}", Normalized: "${normalizedUrl}"`);
-  }
-
   const handleOpenLink = useCallback(() => {
-    // Guard against empty URLs - don't open if URL is empty or invalid
-    if (!normalizedUrl || normalizedUrl === "" || !normalizedUrl.startsWith("http")) {
-      console.error(`[SocialLinkDialog] Invalid URL for ${platform}: "${url}" -> "${normalizedUrl}"`);
-      // Show error state instead of opening invalid URL
+    if (!normalizedUrl || !normalizedUrl.startsWith("http")) {
+      console.error(`[SocialLinkDialog] Invalid URL for ${platform}: "${url}"`);
       return;
     }
     window.open(normalizedUrl, "_blank", "noopener,noreferrer");
     setHasOpenedLink(true);
   }, [normalizedUrl, platform, url]);
 
-  const handleConfirm = useCallback(() => {
+  const handleNext = useCallback(() => {
     onConfirmed();
     onOpenChange(false);
   }, [onConfirmed, onOpenChange]);
 
-  // Handle OAuth verification
+  // Handle OAuth verification (Spotify/YouTube only)
   const handleOAuthVerify = useCallback(() => {
     if (!canUseOAuth || !platformId) return;
 
@@ -243,216 +200,154 @@ export function SocialLinkDialog({
       case "youtube":
         oauthUrl = `/api/follow-gate/youtube?channelId=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
         break;
-      case "instagram":
-        // Instagram OAuth flow - verify login, then open profile for manual follow
-        oauthUrl = `/api/follow-gate/instagram?profileUrl=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
-        break;
-      case "tiktok":
-        // TikTok OAuth flow - verify login, then open profile for manual follow
-        oauthUrl = `/api/follow-gate/tiktok?profileUrl=${encodeURIComponent(platformId)}&returnUrl=${encodeURIComponent(returnUrl)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`;
-        break;
       default:
         setIsVerifying(false);
         return;
     }
 
-    // Redirect to OAuth flow
     window.location.href = oauthUrl;
   }, [canUseOAuth, platformId, platform, productId]);
 
-  const getPlatformInfo = () => {
+  // Platform styling
+  const getPlatformStyle = () => {
     switch (platform) {
       case "instagram":
         return {
-          icon: <Instagram className="h-8 w-8 text-pink-500" />,
+          icon: <Instagram className="h-5 w-5" />,
           name: "Instagram",
           action: "Follow",
-          color: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400",
-          buttonClass: "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 hover:opacity-90",
+          buttonClass: "bg-[#5851DB] hover:bg-[#4840c4] text-white",
         };
       case "tiktok":
         return {
-          icon: <TikTokIcon className="h-8 w-8" />,
+          icon: <TikTokIcon className="h-5 w-5" />,
           name: "TikTok",
           action: "Follow",
-          color: "bg-black",
-          buttonClass: "bg-black hover:bg-gray-900",
+          buttonClass: "bg-black hover:bg-gray-900 text-white",
         };
       case "youtube":
         return {
-          icon: <Youtube className="h-8 w-8 text-red-600" />,
+          icon: <Youtube className="h-5 w-5" />,
           name: "YouTube",
-          action: "Subscribe",
-          color: "bg-red-600",
-          buttonClass: "bg-red-600 hover:bg-red-700",
+          action: "Subscribe to",
+          buttonClass: "bg-red-600 hover:bg-red-700 text-white",
         };
       case "spotify":
         return {
-          icon: <SpotifyIcon className="h-8 w-8 text-green-500" />,
+          icon: <SpotifyIcon className="h-5 w-5" />,
           name: "Spotify",
           action: "Follow",
-          color: "bg-green-500",
-          buttonClass: "bg-green-500 hover:bg-green-600",
+          buttonClass: "bg-[#1DB954] hover:bg-[#1aa34a] text-white",
         };
     }
   };
 
-  const info = getPlatformInfo();
+  const style = getPlatformStyle();
+
+  // Error state - URL not configured
+  if (!normalizedUrl || !normalizedUrl.startsWith("http")) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-sm p-6">
+          <div className="text-center space-y-4">
+            <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
+            <p className="font-medium">Social link not configured</p>
+            <p className="text-sm text-muted-foreground">
+              The creator hasn't set up their {style.name} link yet.
+            </p>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Loading state for OAuth
+  if (isVerifying) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-sm p-6">
+          <div className="text-center space-y-4 py-4">
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-muted-foreground" />
+            <p className="font-medium">Connecting to {style.name}...</p>
+            <p className="text-sm text-muted-foreground">
+              Please complete the authorization
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            {info.icon}
+      <DialogContent className="sm:max-w-sm p-6">
+        <div className="space-y-6">
+          {/* Header - Hypeddit style */}
+          <div className="text-center">
+            <div className="w-2 h-2 bg-foreground rounded-full mx-auto mb-4" />
+            <p className="font-bold text-sm uppercase tracking-wide">
+              Please support the artist to unlock your download
+            </p>
           </div>
-          <DialogTitle className="text-xl">
-            {info.action} on {info.name}
-          </DialogTitle>
-          <DialogDescription className="text-base">
-            {info.action} {creatorName} on {info.name} to unlock your free download
-          </DialogDescription>
-        </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Error state: URL not configured properly */}
-          {!normalizedUrl || !normalizedUrl.startsWith("http") ? (
-            <div className="text-center space-y-3 py-4">
-              <AlertTriangle className="mx-auto h-10 w-10 text-amber-500" />
-              <p className="font-medium">Social link not configured</p>
-              <p className="text-sm text-muted-foreground">
-                The creator hasn't set up their {info.name} link yet.
-                Please contact them or try again later.
-              </p>
+          {/* Main action button */}
+          {canUseOAuth ? (
+            // OAuth flow for Spotify/YouTube - auto-follow
+            <div className="space-y-3">
               <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="mt-2"
+                onClick={handleOAuthVerify}
+                className={cn("w-full font-semibold h-12", style.buttonClass)}
               >
-                Close
+                {style.icon}
+                <span className="ml-2">{style.action} {displayName}</span>
               </Button>
-            </div>
-          ) : isVerifying ? (
-            <div className="text-center space-y-3 py-4">
-              <Loader2 className="mx-auto h-10 w-10 animate-spin text-muted-foreground" />
-              <p className="font-medium">Verifying your {info.action.toLowerCase()}...</p>
-              <p className="text-sm text-muted-foreground">
-                Please complete the authorization in the new window
-              </p>
-            </div>
-          ) : !hasOpenedLink ? (
-            <>
-              <p className="text-center text-sm text-muted-foreground">
-                {canUseOAuth
-                  ? `We can automatically verify your ${info.action.toLowerCase()} using ${info.name}. Click below to connect securely.`
-                  : `Click the button below to open ${info.name} and ${info.action.toLowerCase()}. After following, come back here to confirm.`
-                }
-              </p>
-              {canUseOAuth ? (
-                <div className="space-y-3">
-                  <Button
-                    onClick={handleOAuthVerify}
-                    className={cn("w-full text-white font-semibold", info.buttonClass)}
-                    size="lg"
-                  >
-                    Verify with {info.name}
-                    <CheckCircle2 className="ml-2 h-4 w-4" />
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                  <Button
-                    onClick={handleOpenLink}
-                    variant="outline"
-                    className="w-full"
-                    size="lg"
-                  >
-                    Open {info.name} Manually
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  onClick={handleOpenLink}
-                  className={cn("w-full text-white font-semibold", info.buttonClass)}
-                  size="lg"
-                >
-                  Open {info.name}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </>
-          ) : !canConfirm ? (
-            <>
-              <div className="text-center space-y-3">
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Clock className="h-5 w-5 animate-pulse" />
-                  <span>
-                    Please {info.action.toLowerCase()} on {info.name}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Waiting {timeRemaining} seconds...
-                </p>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={cn("h-full transition-all duration-1000", info.color)}
-                    style={{ width: `${((MIN_VIEW_TIME - timeRemaining) / MIN_VIEW_TIME) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleOpenLink}
-                className="w-full"
-              >
-                Open {info.name} Again
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className="text-center space-y-2">
-                <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-                <p className="font-medium">Great! Did you {info.action.toLowerCase()}?</p>
-                <p className="text-sm text-muted-foreground">
-                  Click confirm if you've followed {creatorName} on {info.name}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              {hasOpenedLink && (
                 <Button
                   variant="outline"
-                  onClick={handleOpenLink}
+                  onClick={handleNext}
+                  className="w-full h-12"
                 >
-                  Open Again
+                  Next
                 </Button>
-                <Button
-                  onClick={handleConfirm}
-                  className={cn("text-white", info.buttonClass)}
-                >
-                  I've Followed
-                  <CheckCircle2 className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
+              )}
 
-        {!hasOpenedLink && !isVerifying && (
-          <div className="text-center">
-            {canUseOAuth && (
-              <p className="flex items-center justify-center gap-1 text-xs text-green-600 dark:text-green-400 mb-1">
+              <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                 <ShieldCheck className="h-3 w-3" />
                 Secure verification - we never post on your behalf
               </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              By following, you're supporting {creatorName}'s work and unlocking free content.
-            </p>
-          </div>
-        )}
+            </div>
+          ) : (
+            // Simple flow for Instagram/TikTok - open profile + Next
+            <div className="space-y-3">
+              <Button
+                onClick={handleOpenLink}
+                className={cn("w-full font-semibold h-12", style.buttonClass)}
+              >
+                {style.icon}
+                <span className="ml-2">{style.action} {displayName}</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleNext}
+                className="w-full h-12 border-2"
+                disabled={!hasOpenedLink}
+              >
+                Next
+              </Button>
+
+              {!hasOpenedLink && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Click the button above to open {style.name}, then click Next
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
