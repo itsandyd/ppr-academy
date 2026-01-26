@@ -321,13 +321,24 @@ export function FollowGateWizard({
     }
   }, [currentStep, currentStepIndex, sortedSteps.length]);
 
-  // Handle open link
+  // Handle open link - opens in a smaller popup window
   const handleOpenLink = useCallback(() => {
     if (!currentStep || currentStep.platform === "email") return;
 
     const url = normalizeUrl(currentStep.platform, currentStep.url);
     if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
+      // Calculate popup position (centered on screen)
+      const width = 550;
+      const height = 650;
+      const left = Math.max(0, (window.screen.width - width) / 2);
+      const top = Math.max(0, (window.screen.height - height) / 2);
+
+      // Open in a popup window instead of a new tab
+      window.open(
+        url,
+        "followGatePopup",
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+      );
       setHasOpenedLink(true);
     }
   }, [currentStep]);
