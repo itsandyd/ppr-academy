@@ -40,6 +40,7 @@ type PlanKey = "free" | "starter" | "creator" | "creator_pro" | "business";
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const { user } = useUser();
   const searchParams = useSearchParams();
 
@@ -223,6 +224,42 @@ export default function PricingPage() {
     return currentPlan === planKey || (currentPlan === "early_access" && planKey === "creator_pro");
   };
 
+  const handleManageSubscription = async () => {
+    const stripeCustomerId = currentStore?.stripeCustomerId;
+
+    if (!stripeCustomerId) {
+      toast.info("Your plan was granted by an administrator. Contact support to make changes.");
+      return;
+    }
+
+    setIsManagingSubscription(true);
+
+    try {
+      const response = await fetch("/api/creator-plans/billing-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stripeCustomerId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to open billing portal");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No portal URL received");
+      }
+    } catch (error: any) {
+      console.error("Billing portal error:", error);
+      toast.error(error.message || "Failed to open billing portal");
+    } finally {
+      setIsManagingSubscription(false);
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-7xl space-y-8 p-4 md:p-6">
       {/* Header */}
@@ -285,8 +322,17 @@ export default function PricingPage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              Manage Subscription
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManageSubscription}
+              disabled={isManagingSubscription}
+            >
+              {isManagingSubscription ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...</>
+              ) : (
+                "Manage Subscription"
+              )}
             </Button>
           </CardContent>
         </Card>
