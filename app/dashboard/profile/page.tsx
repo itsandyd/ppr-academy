@@ -154,6 +154,7 @@ function SocialIcon({ platform, className = "h-4 w-4" }: { platform: string; cla
 interface SocialLink {
   platform: string;
   url: string;
+  label?: string;
 }
 
 export default function ProfilePage() {
@@ -240,6 +241,7 @@ export default function ProfilePage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [dialogPlatform, setDialogPlatform] = useState("");
   const [dialogUrl, setDialogUrl] = useState("");
+  const [dialogLabel, setDialogLabel] = useState("");
 
   useEffect(() => {
     if (store) {
@@ -250,8 +252,12 @@ export default function ProfilePage() {
         isPublic: store.isPublic ?? true,
       });
 
-      // Convert store.socialLinks object to array
-      if (store.socialLinks) {
+      // Load social links - prefer V2 format, fallback to legacy
+      if (store.socialLinksV2 && store.socialLinksV2.length > 0) {
+        // Use new V2 format directly
+        setSocialLinks(store.socialLinksV2);
+      } else if (store.socialLinks) {
+        // Convert legacy store.socialLinks object to array
         const links: SocialLink[] = [];
         Object.entries(store.socialLinks).forEach(([platform, url]) => {
           if (url && typeof url === "string" && url.trim()) {
@@ -271,6 +277,7 @@ export default function ProfilePage() {
     setEditingIndex(null);
     setDialogPlatform("");
     setDialogUrl("");
+    setDialogLabel("");
     setIsAddDialogOpen(true);
   };
 
@@ -279,6 +286,7 @@ export default function ProfilePage() {
     setEditingIndex(index);
     setDialogPlatform(link.platform);
     setDialogUrl(link.url);
+    setDialogLabel(link.label || "");
     setIsAddDialogOpen(true);
   };
 
@@ -288,19 +296,26 @@ export default function ProfilePage() {
       return;
     }
 
+    const newLink: SocialLink = {
+      platform: dialogPlatform,
+      url: dialogUrl.trim(),
+      label: dialogLabel.trim() || undefined,
+    };
+
     if (editingIndex !== null) {
       // Edit existing
       const updated = [...socialLinks];
-      updated[editingIndex] = { platform: dialogPlatform, url: dialogUrl.trim() };
+      updated[editingIndex] = newLink;
       setSocialLinks(updated);
     } else {
-      // Add new
-      setSocialLinks([...socialLinks, { platform: dialogPlatform, url: dialogUrl.trim() }]);
+      // Add new - no longer preventing duplicates since we support multiple of same platform
+      setSocialLinks([...socialLinks, newLink]);
     }
 
     setIsAddDialogOpen(false);
     setDialogPlatform("");
     setDialogUrl("");
+    setDialogLabel("");
     setEditingIndex(null);
   };
 
@@ -313,11 +328,12 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      // Convert socialLinks array back to object
-      const socialLinksObject: Record<string, string> = {};
-      socialLinks.forEach((link) => {
-        socialLinksObject[link.platform] = link.url;
-      });
+      // Use new V2 format - array that supports multiple links per platform with labels
+      const socialLinksV2 = socialLinks.map((link) => ({
+        platform: link.platform,
+        url: link.url,
+        label: link.label,
+      }));
 
       await updateStoreProfile({
         storeId: store._id,
@@ -326,7 +342,7 @@ export default function ProfilePage() {
         bio: formData.bio || undefined,
         avatar: formData.avatar || undefined,
         isPublic: formData.isPublic,
-        socialLinks: Object.keys(socialLinksObject).length > 0 ? socialLinksObject as any : undefined,
+        socialLinksV2: socialLinksV2.length > 0 ? socialLinksV2 : undefined,
       });
       toast.success("Profile updated successfully!");
     } catch (error) {
@@ -542,7 +558,14 @@ export default function ProfilePage() {
                           <SocialIcon platform={link.platform} className="h-5 w-5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium">{platformInfo?.label || link.platform}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{platformInfo?.label || link.platform}</p>
+                            {link.label && (
+                              <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                                {link.label}
+                              </span>
+                            )}
+                          </div>
                           <a
                             href={link.url}
                             target="_blank"
@@ -888,6 +911,19 @@ export default function ProfilePage() {
                     : "https://..."
                 }
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="label">Label (optional)</Label>
+              <Input
+                id="label"
+                value={dialogLabel}
+                onChange={(e) => setDialogLabel(e.target.value)}
+                placeholder="e.g., Ableton Tips, Main Account, Music Channel"
+              />
+              <p className="text-xs text-muted-foreground">
+                Add a custom label to distinguish this link from others
+              </p>
             </div>
           </div>
 

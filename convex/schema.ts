@@ -388,6 +388,16 @@ export default defineSchema({
         beatport: v.optional(v.string()),
       })
     ),
+    // New social links format: array that supports multiple links per platform with labels
+    socialLinksV2: v.optional(
+      v.array(
+        v.object({
+          platform: v.string(), // e.g., "instagram", "youtube", etc.
+          url: v.string(),
+          label: v.optional(v.string()), // Custom label like "Ableton Tips"
+        })
+      )
+    ),
     // Creator Plan & Visibility Settings
     plan: v.optional(
       v.union(

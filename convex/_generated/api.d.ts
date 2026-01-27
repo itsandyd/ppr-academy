@@ -17707,6 +17707,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -17783,6 +17788,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -17846,6 +17856,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -17922,6 +17937,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -17985,6 +18005,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -18048,6 +18073,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -18156,6 +18186,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:
@@ -18196,6 +18231,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         storeId: Id<"stores">;
         userId: string;
       },
@@ -18246,6 +18286,11 @@ export declare const api: {
           website?: string;
           youtube?: string;
         };
+        socialLinksV2?: Array<{
+          label?: string;
+          platform: string;
+          url: string;
+        }>;
         stripeCustomerId?: string;
         stripeSubscriptionId?: string;
         subscriptionStatus?:

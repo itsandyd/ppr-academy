@@ -9805,6 +9805,7 @@ export type DataModel = {
         website?: string;
         youtube?: string;
       };
+      socialLinksV2?: Array<{ label?: string; platform: string; url: string }>;
       strikeHistory?: Array<{
         issuedAt: number;
         issuedBy: string;
@@ -9878,6 +9879,7 @@ export type DataModel = {
       | "socialLinks.twitter"
       | "socialLinks.website"
       | "socialLinks.youtube"
+      | "socialLinksV2"
       | "strikeHistory"
       | "stripeCustomerId"
       | "stripeSubscriptionId"

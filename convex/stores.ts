@@ -32,6 +32,12 @@ const storeValidator = v.object({
     twitch: v.optional(v.string()),
     beatport: v.optional(v.string()),
   })),
+  // New social links format: array that supports multiple links per platform with labels
+  socialLinksV2: v.optional(v.array(v.object({
+    platform: v.string(),
+    url: v.string(),
+    label: v.optional(v.string()),
+  }))),
   emailConfig: v.optional(v.object({
     fromEmail: v.string(),
     fromName: v.optional(v.string()),
@@ -313,7 +319,7 @@ export const updateStoreProfile = mutation({
     avatar: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
     bannerImage: v.optional(v.string()),
-    // Social links
+    // Social links (legacy format - single link per platform)
     socialLinks: v.optional(
       v.object({
         website: v.optional(v.string()),
@@ -331,6 +337,16 @@ export const updateStoreProfile = mutation({
         twitch: v.optional(v.string()),
         beatport: v.optional(v.string()),
       })
+    ),
+    // New social links format: array that supports multiple links per platform with labels
+    socialLinksV2: v.optional(
+      v.array(
+        v.object({
+          platform: v.string(),
+          url: v.string(),
+          label: v.optional(v.string()),
+        })
+      )
     ),
     // Visibility
     isPublic: v.optional(v.boolean()),
