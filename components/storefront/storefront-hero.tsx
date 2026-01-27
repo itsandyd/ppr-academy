@@ -6,6 +6,12 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { SendMessageButton } from "@/components/messages/SendMessageButton";
 
+interface SocialLinkV2 {
+  platform: string;
+  url: string;
+  label?: string;
+}
+
 interface StorefrontHeroProps {
   displayName: string;
   storeName: string;
@@ -33,6 +39,7 @@ interface StorefrontHeroProps {
     website?: string;
     linkedin?: string;
   };
+  socialLinksV2?: SocialLinkV2[];
   userId?: string; // Clerk ID for messaging
 }
 
@@ -44,9 +51,12 @@ export function StorefrontHero({
   initials,
   stats,
   socialLinks,
+  socialLinksV2,
   userId,
 }: StorefrontHeroProps) {
-  const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
+  // Prefer V2 format if available, otherwise use legacy
+  const hasSocialsV2 = socialLinksV2 && socialLinksV2.length > 0;
+  const hasSocials = hasSocialsV2 || (socialLinks && Object.values(socialLinks).some(Boolean));
 
   return (
     <section className="relative overflow-hidden bg-black">
@@ -211,47 +221,62 @@ export function StorefrontHero({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.6 }}
             >
-              {socialLinks?.instagram && (
-                <SocialPill href={socialLinks.instagram} platform="instagram" />
-              )}
-              {socialLinks?.twitter && (
-                <SocialPill href={socialLinks.twitter} platform="twitter" />
-              )}
-              {socialLinks?.youtube && (
-                <SocialPill href={socialLinks.youtube} platform="youtube" />
-              )}
-              {socialLinks?.tiktok && (
-                <SocialPill href={socialLinks.tiktok} platform="tiktok" />
-              )}
-              {socialLinks?.spotify && (
-                <SocialPill href={socialLinks.spotify} platform="spotify" />
-              )}
-              {socialLinks?.soundcloud && (
-                <SocialPill href={socialLinks.soundcloud} platform="soundcloud" />
-              )}
-              {socialLinks?.appleMusic && (
-                <SocialPill href={socialLinks.appleMusic} platform="appleMusic" />
-              )}
-              {socialLinks?.bandcamp && (
-                <SocialPill href={socialLinks.bandcamp} platform="bandcamp" />
-              )}
-              {socialLinks?.threads && (
-                <SocialPill href={socialLinks.threads} platform="threads" />
-              )}
-              {socialLinks?.discord && (
-                <SocialPill href={socialLinks.discord} platform="discord" />
-              )}
-              {socialLinks?.twitch && (
-                <SocialPill href={socialLinks.twitch} platform="twitch" />
-              )}
-              {socialLinks?.beatport && (
-                <SocialPill href={socialLinks.beatport} platform="beatport" />
-              )}
-              {socialLinks?.linkedin && (
-                <SocialPill href={socialLinks.linkedin} platform="linkedin" />
-              )}
-              {socialLinks?.website && (
-                <SocialPill href={socialLinks.website} platform="website" />
+              {hasSocialsV2 ? (
+                // Use new V2 format with labels
+                socialLinksV2!.map((link, index) => (
+                  <SocialPill
+                    key={`${link.platform}-${index}`}
+                    href={link.url}
+                    platform={link.platform}
+                    label={link.label}
+                  />
+                ))
+              ) : (
+                // Fallback to legacy format
+                <>
+                  {socialLinks?.instagram && (
+                    <SocialPill href={socialLinks.instagram} platform="instagram" />
+                  )}
+                  {socialLinks?.twitter && (
+                    <SocialPill href={socialLinks.twitter} platform="twitter" />
+                  )}
+                  {socialLinks?.youtube && (
+                    <SocialPill href={socialLinks.youtube} platform="youtube" />
+                  )}
+                  {socialLinks?.tiktok && (
+                    <SocialPill href={socialLinks.tiktok} platform="tiktok" />
+                  )}
+                  {socialLinks?.spotify && (
+                    <SocialPill href={socialLinks.spotify} platform="spotify" />
+                  )}
+                  {socialLinks?.soundcloud && (
+                    <SocialPill href={socialLinks.soundcloud} platform="soundcloud" />
+                  )}
+                  {socialLinks?.appleMusic && (
+                    <SocialPill href={socialLinks.appleMusic} platform="appleMusic" />
+                  )}
+                  {socialLinks?.bandcamp && (
+                    <SocialPill href={socialLinks.bandcamp} platform="bandcamp" />
+                  )}
+                  {socialLinks?.threads && (
+                    <SocialPill href={socialLinks.threads} platform="threads" />
+                  )}
+                  {socialLinks?.discord && (
+                    <SocialPill href={socialLinks.discord} platform="discord" />
+                  )}
+                  {socialLinks?.twitch && (
+                    <SocialPill href={socialLinks.twitch} platform="twitch" />
+                  )}
+                  {socialLinks?.beatport && (
+                    <SocialPill href={socialLinks.beatport} platform="beatport" />
+                  )}
+                  {socialLinks?.linkedin && (
+                    <SocialPill href={socialLinks.linkedin} platform="linkedin" />
+                  )}
+                  {socialLinks?.website && (
+                    <SocialPill href={socialLinks.website} platform="website" />
+                  )}
+                </>
               )}
             </motion.div>
           )}
@@ -298,7 +323,7 @@ function StatCard({
   );
 }
 
-function SocialPill({ href, platform }: { href: string; platform: string }) {
+function SocialPill({ href, platform, label }: { href: string; platform: string; label?: string }) {
   const icons: Record<string, React.ReactNode> = {
     instagram: (
       <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
@@ -406,20 +431,28 @@ function SocialPill({ href, platform }: { href: string; platform: string }) {
     website: "Website",
   };
 
+  // If custom label provided, show icon + label
+  // If no label, just show icon (icon-only pill)
+  const hasLabel = !!label;
+
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full",
+        "inline-flex items-center rounded-full",
         "bg-white/5 border border-white/10 text-white/70",
         "transition-all duration-300 hover:text-white hover:border-transparent hover:scale-105",
+        hasLabel ? "gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2" : "p-2 sm:p-2.5",
         colors[platform]
       )}
+      title={label || labels[platform] || platform}
     >
       {icons[platform]}
-      <span className="text-xs sm:text-sm font-medium">{labels[platform] || platform}</span>
+      {hasLabel && (
+        <span className="text-xs sm:text-sm font-medium">{label}</span>
+      )}
     </a>
   );
 }
