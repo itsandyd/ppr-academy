@@ -1820,10 +1820,23 @@ export const getProductBySlug = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    const product = await ctx.db
+    // First try to find by slug
+    let product = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId_and_slug", (q) => q.eq("storeId", args.storeId).eq("slug", args.slug))
       .unique();
+
+    // If not found by slug, try to find by ID (for products without slugs)
+    if (!product) {
+      try {
+        const productById = await ctx.db.get(args.slug as Id<"digitalProducts">);
+        if (productById && (productById as any).storeId === args.storeId) {
+          product = productById;
+        }
+      } catch {
+        // Invalid ID format, ignore
+      }
+    }
 
     if (!product || !product.isPublished) return null;
 
