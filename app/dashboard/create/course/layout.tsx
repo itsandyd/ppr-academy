@@ -101,7 +101,8 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     }
   };
 
-  if (!user) {
+  // Show loading skeleton while user/stores loading
+  if (!user || userStores === undefined) {
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 lg:pt-10 pb-24">
@@ -119,8 +120,8 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     );
   }
 
-  // Show loading state while checking access
-  if (isCheckingAccess) {
+  // Show loading state while checking access (only when we have a valid storeId)
+  if (storeId && isCheckingAccess) {
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 lg:pt-10 pb-24">
