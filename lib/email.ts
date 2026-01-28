@@ -1403,6 +1403,126 @@ export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailD
   }
 }
 
+// Coaching Session Reminder Email
+export interface CoachingReminderEmailData {
+  customerEmail: string;
+  customerName: string;
+  sessionTitle: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  duration: string;
+  hoursUntilSession: number;
+  creatorName?: string;
+  meetingLink?: string;
+  isCoachReminder?: boolean; // true if sending to coach, false for student
+}
+
+const getCoachingReminderEmailTemplate = (data: CoachingReminderEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Reminder: ${data.sessionTitle}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">⏰ Session Reminder</h1>
+  </div>
+
+  <div style="background: #fffbeb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #fde68a;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      ${data.hoursUntilSession <= 1
+        ? `Your coaching session is starting <strong>in ${data.hoursUntilSession < 1 ? 'less than an hour' : '1 hour'}</strong>!`
+        : `Your coaching session is coming up in <strong>${data.hoursUntilSession} hours</strong>.`
+      }
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📅 Session Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Session:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.sessionTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Date:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.scheduledDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Time:</td>
+          <td style="padding: 8px 0; color: #1f2937; font-weight: bold; color: #f59e0b;">${data.scheduledTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Duration:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.duration}</td>
+        </tr>
+        ${data.isCoachReminder ? '' : `
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Coach:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+        `}
+      </table>
+    </div>
+
+    ${data.meetingLink ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.meetingLink}"
+         style="background: #f59e0b; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        🔗 Join Meeting
+      </a>
+    </div>
+    ` : ''}
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">✅ Quick Checklist:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Test your audio and video setup</li>
+        <li style="margin-bottom: 8px;">Find a quiet space with good lighting</li>
+        <li style="margin-bottom: 8px;">Have your questions ready</li>
+        <li style="margin-bottom: 8px;">Be ready 5 minutes early</li>
+      </ul>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #fde68a; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      Can't make it? Please reschedule at least 24 hours in advance by replying to this email.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendCoachingReminderEmail(data: CoachingReminderEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const urgency = data.hoursUntilSession <= 1 ? '⚡ STARTING SOON' : `⏰ In ${data.hoursUntilSession}h`;
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `${urgency} - Reminder: ${data.sessionTitle} on ${data.scheduledDate}`,
+      html: getCoachingReminderEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send coaching reminder email:', error);
+    throw new Error(`Coaching reminder email failed: ${error}`);
+  }
+}
+
 // Utility to verify email configuration
 export async function verifyEmailConfig() {
   if (!process.env.RESEND_API_KEY) {

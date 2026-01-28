@@ -730,6 +730,25 @@ export declare const api: {
       { clerkId: string; profileId: Id<"coachProfiles"> },
       { message: string; success: boolean }
     >;
+    getActiveCoachProfilesByUserId: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      Array<{
+        _creationTime: number;
+        _id: Id<"coachProfiles">;
+        availableDays: string;
+        availableHours?: string;
+        basePrice: number;
+        category: string;
+        description: string;
+        imageSrc: string;
+        location: string;
+        timezone: string;
+        title: string;
+        userId: string;
+      }>
+    >;
     getAllCoachProfiles: FunctionReference<
       "query",
       "public",
@@ -5617,6 +5636,31 @@ export declare const api: {
           | "NO_SHOW";
       },
       { error?: string; success: boolean }
+    >;
+  };
+  coachingSessionQueries: {
+    getSessionsNeedingReminders: FunctionReference<
+      "query",
+      "public",
+      {},
+      Array<{
+        _id: Id<"coachingSessions">;
+        coachId: string;
+        duration: number;
+        endTime: string;
+        productId: Id<"digitalProducts">;
+        reminderSent?: boolean;
+        scheduledDate: number;
+        startTime: string;
+        studentId: string;
+        totalCost: number;
+      }>
+    >;
+    markReminderSent: FunctionReference<
+      "mutation",
+      "public",
+      { sessionId: Id<"coachingSessions"> },
+      null
     >;
   };
   collaborativeNotes: {

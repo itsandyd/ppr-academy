@@ -2,8 +2,60 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 /**
+ * Coach Profile Management
+ * Public queries and admin mutations for managing coach profiles
+ */
+
+/**
+ * Get active coach profiles by user ID (public - for storefront)
+ */
+export const getActiveCoachProfilesByUserId = query({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("coachProfiles"),
+      userId: v.string(),
+      category: v.string(),
+      location: v.string(),
+      imageSrc: v.string(),
+      basePrice: v.number(),
+      title: v.string(),
+      description: v.string(),
+      timezone: v.string(),
+      availableDays: v.string(),
+      availableHours: v.optional(v.string()),
+      _creationTime: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const profiles = await ctx.db
+      .query("coachProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    // Return only public-facing fields
+    return profiles.map((profile) => ({
+      _id: profile._id,
+      userId: profile.userId,
+      category: profile.category,
+      location: profile.location,
+      imageSrc: profile.imageSrc,
+      basePrice: profile.basePrice,
+      title: profile.title,
+      description: profile.description,
+      timezone: profile.timezone,
+      availableDays: profile.availableDays,
+      availableHours: profile.availableHours,
+      _creationTime: profile._creationTime,
+    }));
+  },
+});
+
+/*
  * Admin Coach Profile Management
- * Mutations and queries for managing coach profiles from the admin dashboard
  */
 
 // Helper to verify admin status

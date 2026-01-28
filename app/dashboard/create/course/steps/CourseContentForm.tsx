@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, Save, Upload, X, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,6 +241,7 @@ function CourseThumbnailCard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (field: string, value: string) => {
     updateData("course", { [field]: value });
@@ -341,6 +342,35 @@ function CourseThumbnailCard() {
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const imageFile = files[0];
+
+    if (!imageFile.type.startsWith("image/")) {
+      toast.error("Please select an image file (JPG, PNG, WebP)");
+      return;
+    }
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      toast.error("Image must be less than 4MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await startUpload([imageFile]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploading(false);
+    }
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -415,7 +445,7 @@ function CourseThumbnailCard() {
 
           {/* Upload Area */}
           <div
-            className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors cursor-pointer ${
               isDragOver
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-border-strong"
@@ -423,18 +453,43 @@ function CourseThumbnailCard() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 text-muted-foreground" />
-            <div className="space-y-2 sm:space-y-3">
-              <p className="text-foreground font-medium text-sm sm:text-base">Drop your thumbnail here</p>
-              <p className="text-xs sm:text-sm text-muted-foreground">or click to browse files</p>
-              <Button variant="outline" size="sm" className="h-10 px-6">
-                Choose File
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3 sm:mt-4 leading-relaxed">
-              Recommended: 1920x1080px (16:9 ratio), max 5MB
-            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            {isUploading ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-primary" />
+                <p className="text-foreground font-medium text-sm sm:text-base">Uploading...</p>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 text-muted-foreground" />
+                <div className="space-y-2 sm:space-y-3">
+                  <p className="text-foreground font-medium text-sm sm:text-base">Drop your thumbnail here</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">or click to browse files</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    Choose File
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 sm:mt-4 leading-relaxed">
+                  Recommended: 1920x1080px (16:9 ratio), max 5MB
+                </p>
+              </>
+            )}
           </div>
 
           {/* URL Input */}

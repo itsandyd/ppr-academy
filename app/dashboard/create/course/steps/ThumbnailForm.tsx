@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,7 @@ export function ThumbnailForm() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // UploadThing hook for thumbnail uploads
   const { startUpload } = useUploadThing("imageUploader", {
@@ -237,6 +238,35 @@ export function ThumbnailForm() {
       toast.error("Failed to upload image");
       setIsUploading(false);
     }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const imageFile = files[0];
+
+    if (!imageFile.type.startsWith("image/")) {
+      toast.error("Please select an image file (JPG, PNG, WebP)");
+      return;
+    }
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      toast.error("Image must be less than 4MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await startUpload([imageFile]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploading(false);
+    }
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
   };
 
   const isValid = formData.title && formData.description && formData.category && formData.skillLevel;
@@ -380,7 +410,7 @@ export function ThumbnailForm() {
 
             {/* Upload Area */}
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
                 isDragOver
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-border-strong"
@@ -388,18 +418,42 @@ export function ThumbnailForm() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <div className="space-y-2">
-                <p className="text-foreground font-medium">Drop your thumbnail here</p>
-                <p className="text-sm text-muted-foreground">or click to browse files</p>
-                <Button variant="outline" size="sm">
-                  Choose File
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                Recommended: 1920x1080px (16:9 ratio), max 5MB
-              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              {isUploading ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                  <p className="text-foreground font-medium">Uploading...</p>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <div className="space-y-2">
+                    <p className="text-foreground font-medium">Drop your thumbnail here</p>
+                    <p className="text-sm text-muted-foreground">or click to browse files</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      Choose File
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Recommended: 1920x1080px (16:9 ratio), max 5MB
+                  </p>
+                </>
+              )}
             </div>
 
             {/* URL Input */}

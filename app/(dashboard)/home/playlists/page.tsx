@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ import {
   Trash2,
   ExternalLink,
   X,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -51,6 +53,80 @@ export default function PlaylistsPage() {
   const [showAddTrackDialog, setShowAddTrackDialog] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [coverUrl, setCoverUrl] = useState("");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Convex mutations for file upload
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const getFileUrl = useMutation(api.files.getUrl);
+
+  const handleCoverFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const imageFile = files[0];
+
+    if (!imageFile.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (JPG, PNG, WebP)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be less than 4MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      // Step 1: Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Step 2: Upload the file to Convex storage
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": imageFile.type },
+        body: imageFile,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload file");
+      }
+
+      const { storageId } = await response.json();
+
+      // Step 3: Get the public URL for the uploaded file
+      const publicUrl = await getFileUrl({ storageId });
+
+      if (publicUrl) {
+        setCoverUrl(publicUrl);
+        toast({
+          title: "Cover uploaded!",
+          description: "Your playlist cover has been uploaded",
+          className: "bg-white dark:bg-black",
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload cover image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingCover(false);
+    }
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
 
   // Fetch user's tracks for Add Track selector
   const userTracks = useQuery(api.tracks.getUserTracks, user?.id ? { userId: user.id } : "skip");
@@ -508,31 +584,71 @@ export default function PlaylistsPage() {
               />
             </div>
 
-            {/* Cover URL */}
+            {/* Cover Image Upload */}
             <div>
-              <Label htmlFor="cover-url">Cover Image URL (Optional)</Label>
-              <Input
-                id="cover-url"
-                type="url"
-                value={coverUrl}
-                onChange={(e) => setCoverUrl(e.target.value)}
-                placeholder="https://... or leave empty for default"
-                className="mt-2"
-              />
-              {coverUrl && (
-                <div className="relative mt-2 h-32 w-32 overflow-hidden rounded-lg border">
-                  <Image
-                    src={coverUrl}
-                    alt="Cover preview"
-                    width={128}
-                    height={128}
-                    className="h-full w-full object-cover"
+              <Label htmlFor="cover-url">Cover Image (Optional)</Label>
+              <div className="mt-2 space-y-3">
+                {/* Upload Button */}
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={coverFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverFileSelect}
+                    className="hidden"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => coverFileInputRef.current?.click()}
+                    disabled={isUploadingCover}
+                    className="gap-2"
+                  >
+                    {isUploadingCover ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {isUploadingCover ? "Uploading..." : "Upload Image"}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">or</span>
                 </div>
-              )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                Paste an image URL or upload from your computer (coming soon)
-              </p>
+
+                {/* URL Input */}
+                <Input
+                  id="cover-url"
+                  type="url"
+                  value={coverUrl}
+                  onChange={(e) => setCoverUrl(e.target.value)}
+                  placeholder="Paste image URL..."
+                />
+
+                {/* Preview */}
+                {coverUrl && (
+                  <div className="relative mt-2 h-32 w-32 overflow-hidden rounded-lg border">
+                    <Image
+                      src={coverUrl}
+                      alt="Cover preview"
+                      width={128}
+                      height={128}
+                      className="h-full w-full object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute right-1 top-1 h-6 w-6 p-0"
+                      onClick={() => setCoverUrl("")}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Recommended: Square image, 500x500px or larger
+                </p>
+              </div>
             </div>
 
             {/* Genres */}

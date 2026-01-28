@@ -1,8 +1,9 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { sendCoachingReminderEmail } from "@/lib/email";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -228,12 +229,107 @@ export async function processScheduledSessions(): Promise<{
   success: boolean;
   message?: string;
   error?: string;
+  remindersCount?: number;
 }> {
   try {
-    // TODO: Implement actual session processing (reminders, status updates)
+    // Get sessions needing reminders using internal API call
+    const sessions = await convex.query(api.coachingSessionQueries.getSessionsNeedingReminders, {});
+
+    if (!sessions || sessions.length === 0) {
+      return {
+        success: true,
+        message: "No sessions need reminders at this time",
+        remindersCount: 0,
+      };
+    }
+
+    const clerk = await clerkClient();
+    let remindersSent = 0;
+
+    for (const session of sessions) {
+      try {
+        // Get session product details
+        const product = await convex.query(api.digitalProducts.getProductById, {
+          productId: session.productId,
+        });
+
+        if (!product) continue;
+
+        // Get coach and student info from Clerk
+        const [coachUser, studentUser] = await Promise.all([
+          clerk.users.getUser(session.coachId).catch(() => null),
+          clerk.users.getUser(session.studentId).catch(() => null),
+        ]);
+
+        if (!coachUser || !studentUser) continue;
+
+        const coachEmail = coachUser.emailAddresses[0]?.emailAddress;
+        const studentEmail = studentUser.emailAddresses[0]?.emailAddress;
+        const coachName = `${coachUser.firstName || ''} ${coachUser.lastName || ''}`.trim() || 'Your Coach';
+        const studentName = `${studentUser.firstName || ''} ${studentUser.lastName || ''}`.trim() || 'Student';
+
+        // Calculate hours until session
+        const hoursUntilSession = Math.max(
+          0,
+          Math.round((session.scheduledDate - Date.now()) / (1000 * 60 * 60))
+        );
+
+        // Format date and time
+        const sessionDate = new Date(session.scheduledDate);
+        const scheduledDate = sessionDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        const scheduledTime = session.startTime;
+        const duration = `${session.duration} minutes`;
+
+        // Send reminder to student
+        if (studentEmail) {
+          await sendCoachingReminderEmail({
+            customerEmail: studentEmail,
+            customerName: studentName,
+            sessionTitle: product.title,
+            scheduledDate,
+            scheduledTime,
+            duration,
+            hoursUntilSession,
+            creatorName: coachName,
+            isCoachReminder: false,
+          });
+        }
+
+        // Send reminder to coach
+        if (coachEmail) {
+          await sendCoachingReminderEmail({
+            customerEmail: coachEmail,
+            customerName: coachName,
+            sessionTitle: product.title,
+            scheduledDate,
+            scheduledTime,
+            duration,
+            hoursUntilSession,
+            isCoachReminder: true,
+          });
+        }
+
+        // Mark reminder as sent
+        await convex.mutation(api.coachingSessionQueries.markReminderSent, {
+          sessionId: session._id,
+        });
+
+        remindersSent++;
+      } catch (sessionError) {
+        console.error(`Error processing session ${session._id}:`, sessionError);
+        // Continue with other sessions
+      }
+    }
+
     return {
       success: true,
-      message: "Scheduled sessions processed successfully",
+      message: `Successfully sent ${remindersSent} session reminders`,
+      remindersCount: remindersSent,
     };
   } catch (error) {
     console.error("Error processing scheduled sessions:", error);

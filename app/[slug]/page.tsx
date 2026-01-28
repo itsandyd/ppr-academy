@@ -424,11 +424,11 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { storeId: store._id } : "skip"
   );
 
-  // TODO: Fetch coaching profiles for this store
-  // const coachProfiles = useQuery(
-  //   api.coachProfiles.getProfilesByStore,
-  //   store ? { storeId: store._id } : "skip"
-  // );
+  // Fetch coaching profiles for this store's creator
+  const coachProfiles = useQuery(
+    api.adminCoach.getActiveCoachProfilesByUserId,
+    store ? { userId: store.userId } : "skip"
+  );
 
 
   // Combine all product types into unified list with BaseProduct shape
@@ -488,8 +488,23 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         duration: course.duration,
         lessonsCount: course.lessonsCount,
       })),
+
+      // Coaching Profiles
+      ...(coachProfiles || []).map((profile: any): BaseProduct => ({
+        _id: profile._id,
+        title: profile.title,
+        description: profile.description,
+        price: profile.basePrice || 0,
+        imageUrl: profile.imageSrc,
+        buttonLabel: "Book Session",
+        slug: profile._id,
+        category: profile.category || "Coaching",
+        productType: "coaching",
+        _creationTime: profile._creationTime,
+        isPublished: true,
+      })),
     ],
-    [products, courses]
+    [products, courses, coachProfiles]
   );
 
   // Enhanced filtering and search logic

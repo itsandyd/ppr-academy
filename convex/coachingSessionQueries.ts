@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalQuery, internalMutation } from "./_generated/server";
+import { internalQuery, internalMutation, query, mutation } from "./_generated/server";
 
 // ==================== QUERIES ====================
 
@@ -147,6 +147,62 @@ export const markSessionCleanedUp = internalMutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.sessionId, {
       discordCleanedUp: true,
+    });
+    return null;
+  },
+});
+
+// Get sessions that need reminder notifications (starting in 24h or 1h, not yet reminded)
+export const getSessionsNeedingReminders = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("coachingSessions"),
+      productId: v.id("digitalProducts"),
+      coachId: v.string(),
+      studentId: v.string(),
+      scheduledDate: v.number(),
+      startTime: v.string(),
+      endTime: v.string(),
+      duration: v.number(),
+      totalCost: v.number(),
+      reminderSent: v.optional(v.boolean()),
+    })
+  ),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const oneHourFromNow = now + 1 * 60 * 60 * 1000; // 1 hour
+    const twentyFourHoursFromNow = now + 24 * 60 * 60 * 1000; // 24 hours
+
+    // Get all scheduled sessions
+    const sessions = await ctx.db
+      .query("coachingSessions")
+      .filter((q) => q.eq(q.field("status"), "SCHEDULED"))
+      .collect();
+
+    // Filter for sessions that need reminders
+    return sessions.filter((session) => {
+      const sessionTime = session.scheduledDate;
+      const notReminded = !session.reminderSent;
+
+      // Sessions starting in ~1 hour or ~24 hours
+      const isOneHourReminder = sessionTime >= now && sessionTime <= oneHourFromNow;
+      const isTwentyFourHourReminder =
+        sessionTime >= twentyFourHoursFromNow - (30 * 60 * 1000) &&
+        sessionTime <= twentyFourHoursFromNow + (30 * 60 * 1000);
+
+      return notReminded && (isOneHourReminder || isTwentyFourHourReminder);
+    });
+  },
+});
+
+// Mark session reminder as sent
+export const markReminderSent = mutation({
+  args: { sessionId: v.id("coachingSessions") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, {
+      reminderSent: true,
     });
     return null;
   },
