@@ -40,4 +40,11 @@ crons.interval(
   {}
 );
 
+crons.interval(
+  "process course drip content unlocks",
+  { minutes: 15 },
+  internal.courseDrip.processPendingDripUnlocks,
+  {}
+);
+
 export default crons;
