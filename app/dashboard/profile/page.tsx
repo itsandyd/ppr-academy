@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useUploadThing } from "@/lib/uploadthing-hooks";
 import {
   User,
   Save,
@@ -26,6 +27,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Banknote,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -235,6 +237,60 @@ export default function ProfilePage() {
     isPublic: true,
   });
 
+  // AI bio generation state
+  const [isGeneratingBio, setIsGeneratingBio] = useState(false);
+
+  // Avatar upload state
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // UploadThing hook for avatar uploads
+  const { startUpload } = useUploadThing("avatarUploader", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]?.url) {
+        setFormData((prev) => ({ ...prev, avatar: res[0].url }));
+        toast.success("Profile picture uploaded!");
+      }
+      setIsUploadingAvatar(false);
+    },
+    onUploadError: (error) => {
+      console.error("Avatar upload error:", error);
+      toast.error("Failed to upload profile picture");
+      setIsUploadingAvatar(false);
+    },
+  });
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (2MB max for avatars)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      await startUpload([file]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploadingAvatar(false);
+    }
+
+    // Reset input so same file can be selected again
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
+  };
+
   // Social links state - array of { platform, url }
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -271,6 +327,37 @@ export default function ProfilePage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const generateBio = async () => {
+    if (!store) return;
+
+    setIsGeneratingBio(true);
+    try {
+      const response = await fetch("/api/generate-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: store._id,
+          creatorName: formData.name || store.name,
+          existingBio: formData.bio,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.bio) {
+        setFormData((prev) => ({ ...prev, bio: data.bio }));
+        toast.success(`Bio generated based on ${data.productCount} products!`);
+      } else {
+        toast.error(data.error || "Failed to generate bio");
+      }
+    } catch (error) {
+      console.error("Failed to generate bio:", error);
+      toast.error("Failed to generate bio");
+    } finally {
+      setIsGeneratingBio(false);
+    }
   };
 
   const openAddDialog = () => {
@@ -431,8 +518,25 @@ export default function ProfilePage() {
                       </span>
                     )}
                   </div>
-                  <button className="absolute bottom-0 right-0 p-1.5 bg-background border rounded-full shadow-sm hover:bg-muted transition-colors">
-                    <Camera className="h-3.5 w-3.5" />
+                  {/* Hidden file input */}
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute bottom-0 right-0 p-1.5 bg-background border rounded-full shadow-sm hover:bg-muted transition-colors disabled:opacity-50"
+                  >
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Camera className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 </div>
                 <div className="flex-1">
@@ -453,18 +557,38 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="avatar">Avatar URL</Label>
+                  <Label htmlFor="avatar">Avatar URL (or use camera button)</Label>
                   <Input
                     id="avatar"
                     value={formData.avatar}
                     onChange={(e) => handleInputChange("avatar", e.target.value)}
                     placeholder="https://example.com/avatar.jpg"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Click the camera icon to upload, or paste an image URL
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateBio}
+                    disabled={isGeneratingBio}
+                    className="gap-1.5 text-xs"
+                  >
+                    {isGeneratingBio ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {isGeneratingBio ? "Generating..." : "Generate with AI"}
+                  </Button>
+                </div>
                 <Textarea
                   id="bio"
                   value={formData.bio}
@@ -472,6 +596,9 @@ export default function ProfilePage() {
                   placeholder="Tell visitors about yourself..."
                   rows={3}
                 />
+                <p className="text-xs text-muted-foreground">
+                  AI will analyze your products to create a relevant bio
+                </p>
               </div>
 
               {/* Visibility */}
