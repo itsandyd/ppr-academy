@@ -197,6 +197,124 @@ export const getCourseBySlug = query({
   },
 });
 
+/**
+ * Get course with full instructor/creator information
+ * Used on course pages to display instructor details
+ */
+export const getCourseWithInstructor = query({
+  args: { courseId: v.id("courses") },
+  returns: v.union(
+    v.object({
+      course: v.any(),
+      instructor: v.object({
+        name: v.string(),
+        avatar: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        rating: v.number(),
+        studentCount: v.number(),
+        courseCount: v.number(),
+        verified: v.boolean(),
+        socialLinks: v.optional(v.object({
+          instagram: v.optional(v.string()),
+          youtube: v.optional(v.string()),
+          twitter: v.optional(v.string()),
+        })),
+      }),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const course = await ctx.db.get(args.courseId);
+    if (!course) return null;
+
+    // Try to get instructor from store
+    let instructorInfo = {
+      name: "Course Instructor",
+      avatar: undefined as string | undefined,
+      bio: undefined as string | undefined,
+      rating: 0,
+      studentCount: 0,
+      courseCount: 0,
+      verified: false,
+      socialLinks: undefined as { instagram?: string; youtube?: string; twitter?: string } | undefined,
+    };
+
+    // Get store for this course
+    if (course.storeId) {
+      const store = await ctx.db.get(course.storeId as Id<"stores">);
+      if (store) {
+        instructorInfo.name = store.name || "Course Instructor";
+        instructorInfo.avatar = store.logoUrl || undefined;
+        instructorInfo.bio = store.description || undefined;
+        instructorInfo.verified = (store as any).verified === true || false;
+
+        // Get social links from store
+        if (store.socialLinks) {
+          instructorInfo.socialLinks = store.socialLinks;
+        }
+
+        // Count students enrolled in this creator's courses
+        const creatorCourses = await ctx.db
+          .query("courses")
+          .filter((q) => q.eq(q.field("storeId"), course.storeId))
+          .collect();
+        instructorInfo.courseCount = creatorCourses.length;
+
+        // Count unique students
+        const enrollmentCounts = await Promise.all(
+          creatorCourses.map(async (c) => {
+            const enrollments = await ctx.db
+              .query("purchases")
+              .filter((q) =>
+                q.and(
+                  q.eq(q.field("courseId"), c._id),
+                  q.eq(q.field("status"), "completed")
+                )
+              )
+              .collect();
+            return enrollments.length;
+          })
+        );
+        instructorInfo.studentCount = enrollmentCounts.reduce((sum, count) => sum + count, 0);
+
+        // Calculate average rating from course reviews
+        const allReviews = await Promise.all(
+          creatorCourses.map(async (c) => {
+            const reviews = await ctx.db
+              .query("courseReviews")
+              .withIndex("by_courseId", (q) => q.eq("courseId", c._id))
+              .filter((q) => q.eq(q.field("isPublished"), true))
+              .collect();
+            return reviews;
+          })
+        );
+        const flatReviews = allReviews.flat();
+        if (flatReviews.length > 0) {
+          instructorInfo.rating =
+            Math.round((flatReviews.reduce((sum, r) => sum + r.rating, 0) / flatReviews.length) * 10) / 10;
+        }
+      }
+    }
+
+    // Fallback: try to get from user
+    if (instructorInfo.name === "Course Instructor" && course.userId) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", course.userId))
+        .first();
+      if (user) {
+        instructorInfo.name = user.name || user.firstName || "Instructor";
+        instructorInfo.avatar = user.imageUrl || undefined;
+      }
+    }
+
+    return {
+      course,
+      instructor: instructorInfo,
+    };
+  },
+});
+
 // Get courses by user 
 export const getCoursesByUser = query({
   args: { userId: v.string() },

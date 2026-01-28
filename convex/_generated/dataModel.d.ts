@@ -2594,6 +2594,51 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  courseReviews: {
+    document: {
+      courseId: Id<"courses">;
+      createdAt: number;
+      helpfulCount?: number;
+      instructorResponse?: string;
+      instructorResponseAt?: number;
+      isPublished: boolean;
+      isVerifiedPurchase: boolean;
+      rating: number;
+      reportCount?: number;
+      reviewText: string;
+      title?: string;
+      updatedAt?: number;
+      userId: string;
+      _id: Id<"courseReviews">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "courseId"
+      | "createdAt"
+      | "helpfulCount"
+      | "instructorResponse"
+      | "instructorResponseAt"
+      | "isPublished"
+      | "isVerifiedPurchase"
+      | "rating"
+      | "reportCount"
+      | "reviewText"
+      | "title"
+      | "updatedAt"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_courseId: ["courseId", "_creationTime"];
+      by_courseId_rating: ["courseId", "rating", "_creationTime"];
+      by_published: ["isPublished", "_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   courses: {
     document: {
       acceptsPayPal?: boolean;

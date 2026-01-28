@@ -142,7 +142,56 @@ export const getLearnerFunnel = query({
     const signupCount = signups.length;
     const enrollCount = enrolledUsers.size;
     const returnCount = returnedUsers.size;
-    
+
+    // Calculate funnel duration (time from first visit to enrollment)
+    // Build a map of user timestamps for each stage
+    const userVisitTimes: Record<string, number> = {};
+    const userEnrollTimes: Record<string, number> = {};
+
+    for (const visit of visits) {
+      const userId = visit.userId || visit.sessionId;
+      if (userId && (!userVisitTimes[userId] || visit.timestamp < userVisitTimes[userId])) {
+        userVisitTimes[userId] = visit.timestamp;
+      }
+    }
+
+    for (const enrollment of allEnrollments) {
+      if (!userEnrollTimes[enrollment.userId] || enrollment.timestamp < userEnrollTimes[enrollment.userId]) {
+        userEnrollTimes[enrollment.userId] = enrollment.timestamp;
+      }
+    }
+
+    // Calculate durations for users who completed the funnel
+    const funnelDurations: number[] = [];
+    for (const userId of enrolledUsers) {
+      if (userVisitTimes[userId] && userEnrollTimes[userId]) {
+        const duration = userEnrollTimes[userId] - userVisitTimes[userId];
+        if (duration > 0) {
+          funnelDurations.push(duration);
+        }
+      }
+    }
+
+    // Calculate median and average duration (in hours)
+    let median = 0;
+    let average = 0;
+
+    if (funnelDurations.length > 0) {
+      // Sort for median
+      const sorted = [...funnelDurations].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      median = sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+
+      // Convert to hours
+      median = Math.round(median / (1000 * 60 * 60) * 10) / 10;
+
+      // Calculate average in hours
+      const sum = funnelDurations.reduce((a, b) => a + b, 0);
+      average = Math.round((sum / funnelDurations.length) / (1000 * 60 * 60) * 10) / 10;
+    }
+
     return {
       steps: [
         {
@@ -171,8 +220,8 @@ export const getLearnerFunnel = query({
         },
       ],
       totalDuration: {
-        median: 0, // TODO: Calculate from event timestamps
-        average: 0,
+        median, // Time in hours from visit to enrollment
+        average,
       },
     };
   },
@@ -254,7 +303,67 @@ export const getCreatorFunnel = query({
     const startCount = creatorStarts.length;
     const publishCount = published.length;
     const saleCount = firstSales.length;
-    
+
+    // Calculate time between steps (median in days)
+    // Build maps of user timestamps for each step
+    const userStartTimes: Record<string, number> = {};
+    const userPublishTimes: Record<string, number> = {};
+    const userSaleTimes: Record<string, number> = {};
+
+    for (const event of creatorStarts) {
+      if (!userStartTimes[event.userId] || event.timestamp < userStartTimes[event.userId]) {
+        userStartTimes[event.userId] = event.timestamp;
+      }
+    }
+
+    for (const event of published) {
+      if (!userPublishTimes[event.userId] || event.timestamp < userPublishTimes[event.userId]) {
+        userPublishTimes[event.userId] = event.timestamp;
+      }
+    }
+
+    for (const event of firstSales) {
+      if (!userSaleTimes[event.userId] || event.timestamp < userSaleTimes[event.userId]) {
+        userSaleTimes[event.userId] = event.timestamp;
+      }
+    }
+
+    // Helper to calculate median in days
+    const calculateMedianDays = (durations: number[]): number => {
+      if (durations.length === 0) return 0;
+      const sorted = [...durations].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const medianMs = sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+      return Math.round(medianMs / (1000 * 60 * 60 * 24) * 10) / 10;
+    };
+
+    // Time from start to publish
+    const startToPublishDurations: number[] = [];
+    for (const userId of publishedUserIds) {
+      if (userStartTimes[userId] && userPublishTimes[userId]) {
+        const duration = userPublishTimes[userId] - userStartTimes[userId];
+        if (duration > 0) {
+          startToPublishDurations.push(duration);
+        }
+      }
+    }
+
+    // Time from publish to first sale
+    const publishToSaleDurations: number[] = [];
+    for (const userId of firstSaleUserIds) {
+      if (userPublishTimes[userId] && userSaleTimes[userId]) {
+        const duration = userSaleTimes[userId] - userPublishTimes[userId];
+        if (duration > 0) {
+          publishToSaleDurations.push(duration);
+        }
+      }
+    }
+
+    const medianStartToPublish = calculateMedianDays(startToPublishDurations);
+    const medianPublishToSale = calculateMedianDays(publishToSaleDurations);
+
     return {
       steps: [
         {
@@ -268,14 +377,14 @@ export const getCreatorFunnel = query({
           count: startCount,
           conversionRate: visitCount > 0 ? (startCount / visitCount) * 100 : 0,
           dropOff: visitCount > 0 ? ((visitCount - startCount) / visitCount) * 100 : 0,
-          medianTimeToNext: 0, // TODO: Calculate
+          medianTimeToNext: medianStartToPublish,
         },
         {
           name: "Publish First Item",
           count: publishCount,
           conversionRate: startCount > 0 ? (publishCount / startCount) * 100 : 0,
           dropOff: startCount > 0 ? ((startCount - publishCount) / startCount) * 100 : 0,
-          medianTimeToNext: 0,
+          medianTimeToNext: medianPublishToSale,
         },
         {
           name: "First Sale",

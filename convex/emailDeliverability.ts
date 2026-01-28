@@ -383,9 +383,36 @@ export const updateDeliverabilityStats = internalMutation({
       }
     }
 
-    // Estimate total sent (this would ideally come from email send logs)
-    // For now, use a placeholder calculation
-    const totalSent = 1000; // This should be calculated from actual sends
+    // Get actual email send count from resendLogs for this store
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("_id"), args.storeId))
+      .first();
+
+    let totalSent = 0;
+    if (store) {
+      // Get resend connection for this store
+      const connection = await ctx.db
+        .query("resendConnections")
+        .withIndex("by_store", (q) => q.eq("storeId", store._id))
+        .first();
+
+      if (connection) {
+        // Count emails sent in this period
+        const emailLogs = await ctx.db
+          .query("resendLogs")
+          .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
+          .filter((q) => q.gte(q.field("sentAt"), periodStart))
+          .collect();
+        totalSent = emailLogs.length;
+      }
+    }
+
+    // If no logs found, use a minimum to avoid division by zero
+    if (totalSent === 0) {
+      totalSent = Math.max(1, hardBounces + softBounces + blocks + 1);
+    }
+
     const delivered = totalSent - hardBounces - softBounces - blocks;
 
     const deliveryRate = totalSent > 0 ? (delivered / totalSent) * 100 : 100;

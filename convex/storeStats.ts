@@ -52,14 +52,25 @@ export const getCourseSocialProof = query({
       })
     );
 
-    // Note: courseReviews table doesn't exist yet, return placeholder values
+    // Get course reviews for real rating data
+    const reviews = await ctx.db
+      .query("courseReviews")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .collect();
+
+    const totalReviews = reviews.length;
+    const averageRating = totalReviews > 0
+      ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews) * 10) / 10
+      : 0;
+
     return {
       totalEnrollments: completedPurchases.length,
       enrollmentsThisWeek: weeklyPurchases.length,
       enrollmentsThisMonth: monthlyPurchases.length,
       recentEnrollments,
-      averageRating: 0, // No reviews system for courses yet
-      totalReviews: 0,
+      averageRating,
+      totalReviews,
     };
   },
 });

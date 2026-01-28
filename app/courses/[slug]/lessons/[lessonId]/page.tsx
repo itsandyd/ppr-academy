@@ -91,8 +91,8 @@ export default async function LessonDetailPage({
             id: ch._id,
             title: ch.title,
             description: ch.description,
-            videoUrl: ch.videoUrl,
-            audioUrl: ch.audioUrl,
+            videoUrl: ch.videoUrl || ch.generatedVideoUrl, // Fallback to generated
+            audioUrl: ch.audioUrl || ch.generatedAudioUrl, // Fallback to generated
             position: ch.position,
             isPublished: ch.isPublished ?? true,
             isFree: ch.isFree ?? false,

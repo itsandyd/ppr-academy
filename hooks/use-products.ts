@@ -140,23 +140,38 @@ export function useProductBySlug(slug: string): {
   };
 }
 
-// Hook to get product metrics (placeholder - returns empty metrics)
-export function useProductMetrics(_id: string): {
+// Hook to get product metrics with real data from Convex
+export function useProductMetrics(productId: string, productType: "course" | "digitalProduct" = "course"): {
   data: ProductMetrics;
   isLoading: boolean;
   error: null;
 } {
-  // TODO: Implement actual metrics from Convex analytics
-  const data: ProductMetrics = {
-    views: 0,
-    sales: 0,
-    revenue: 0,
-    conversionRate: 0,
-  };
+  // Query real metrics from purchases and analytics
+  const purchaseStats = useQuery(
+    api.analytics.getProductMetrics,
+    productId ? { productId, productType } : "skip"
+  );
+
+  const data: ProductMetrics = useMemo(() => {
+    if (!purchaseStats) {
+      return {
+        views: 0,
+        sales: 0,
+        revenue: 0,
+        conversionRate: 0,
+      };
+    }
+    return {
+      views: purchaseStats.views || 0,
+      sales: purchaseStats.sales || 0,
+      revenue: purchaseStats.revenue || 0,
+      conversionRate: purchaseStats.conversionRate || 0,
+    };
+  }, [purchaseStats]);
 
   return {
     data,
-    isLoading: false,
+    isLoading: purchaseStats === undefined,
     error: null,
   };
 }

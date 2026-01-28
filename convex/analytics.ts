@@ -565,6 +565,115 @@ export const getProductAnalytics = query({
 });
 
 /**
+ * Get metrics for a specific product (course or digital product)
+ * Returns real view counts, sales, revenue, and conversion rates
+ */
+export const getProductMetrics = query({
+  args: {
+    productId: v.string(),
+    productType: v.union(v.literal("course"), v.literal("digitalProduct")),
+  },
+  returns: v.object({
+    views: v.number(),
+    sales: v.number(),
+    revenue: v.number(),
+    conversionRate: v.number(),
+    reviewCount: v.number(),
+    averageRating: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let views = 0;
+    let sales = 0;
+    let revenue = 0;
+    let reviewCount = 0;
+    let averageRating = 0;
+
+    if (args.productType === "course") {
+      // Get views from productViews or analyticsEvents
+      const viewEvents = await ctx.db
+        .query("productViews")
+        .withIndex("by_resourceId", (q) => q.eq("resourceId", args.productId))
+        .collect();
+      views = viewEvents.length;
+
+      // Get sales from purchases
+      const purchases = await ctx.db
+        .query("purchases")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("courseId"), args.productId),
+            q.eq(q.field("status"), "completed")
+          )
+        )
+        .collect();
+      sales = purchases.length;
+      revenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+      // Get reviews from courseReviews
+      const reviews = await ctx.db
+        .query("courseReviews")
+        .filter((q) => q.eq(q.field("courseId"), args.productId))
+        .collect();
+      reviewCount = reviews.length;
+      if (reviews.length > 0) {
+        averageRating =
+          Math.round(
+            (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) /
+              reviews.length) *
+              10
+          ) / 10;
+      }
+    } else {
+      // Digital product metrics
+      const viewEvents = await ctx.db
+        .query("productViews")
+        .withIndex("by_resourceId", (q) => q.eq("resourceId", args.productId))
+        .collect();
+      views = viewEvents.length;
+
+      const purchases = await ctx.db
+        .query("purchases")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("productId"), args.productId),
+            q.eq(q.field("status"), "completed")
+          )
+        )
+        .collect();
+      sales = purchases.length;
+      revenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+      // Get reviews from productReviews
+      const reviews = await ctx.db
+        .query("productReviews")
+        .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+        .collect();
+      reviewCount = reviews.length;
+      if (reviews.length > 0) {
+        averageRating =
+          Math.round(
+            (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) /
+              reviews.length) *
+              10
+          ) / 10;
+      }
+    }
+
+    // Calculate conversion rate (sales / views * 100)
+    const conversionRate = views > 0 ? Math.round((sales / views) * 1000) / 10 : 0;
+
+    return {
+      views,
+      sales,
+      revenue,
+      conversionRate,
+      reviewCount,
+      averageRating,
+    };
+  },
+});
+
+/**
  * Get creator engagement rate
  * Calculates: (active students in last 7 days / total enrolled students) * 100
  */

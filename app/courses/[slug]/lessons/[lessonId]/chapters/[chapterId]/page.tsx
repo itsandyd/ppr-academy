@@ -81,8 +81,8 @@ export default async function ChapterDetailPage({
             id: ch._id,
             title: ch.title,
             description: ch.description,
-            videoUrl: ch.videoUrl,
-            audioUrl: ch.audioUrl,
+            videoUrl: ch.videoUrl || ch.generatedVideoUrl, // Fallback to generated
+            audioUrl: ch.audioUrl || ch.generatedAudioUrl, // Fallback to generated
             position: ch.position,
             isPublished: ch.isPublished ?? true,
             isFree: ch.isFree ?? false,
@@ -115,8 +115,8 @@ export default async function ChapterDetailPage({
         id: foundChapter._id,
         title: foundChapter.title,
         description: foundChapter.description,
-        videoUrl: foundChapter.videoUrl,
-        audioUrl: foundChapter.audioUrl,
+        videoUrl: foundChapter.videoUrl || foundChapter.generatedVideoUrl, // Fallback to generated
+        audioUrl: foundChapter.audioUrl || foundChapter.generatedAudioUrl, // Fallback to generated
         position: foundChapter.position,
         isPublished: foundChapter.isPublished ?? true,
         isFree: foundChapter.isFree ?? false,

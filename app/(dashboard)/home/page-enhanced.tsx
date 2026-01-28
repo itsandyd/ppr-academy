@@ -25,6 +25,12 @@ export default function DashboardHomeEnhanced() {
     user?.id ? { userId: user.id } : "skip"
   );
 
+  // Fetch learning streak
+  const learningStreak = useQuery(
+    api.analytics.getLearningStreak,
+    user?.id ? { userId: user.id } : "skip"
+  );
+
   // Calculate real stats from data
   const coursesEnrolled = enrolledCourses?.length || 0;
   const coursesCompleted = enrolledCourses?.filter(c => c.progress === 100).length || 0;
@@ -40,11 +46,14 @@ export default function DashboardHomeEnhanced() {
     nextLevelXp: (Math.floor(coursesCompleted / 2) + 2) * 1000,
   };
 
+  // Calculate total hours from actual time spent (estimate based on course count for now)
+  const totalHoursLearned = (enrolledCourses?.length || 0) * 6; // Estimate 6 hours per course
+
   const stats = {
     coursesEnrolled,
     coursesCompleted,
-    totalHoursLearned: coursesEnrolled * 6, // Estimate 6 hours per course
-    currentStreak: 1, // Would need activity tracking for real streaks
+    totalHoursLearned,
+    currentStreak: learningStreak?.currentStreak || 0,
     certificatesEarned,
     nextMilestone: {
       title: `Complete ${coursesCompleted + 2} Courses`,

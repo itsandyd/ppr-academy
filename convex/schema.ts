@@ -1326,6 +1326,28 @@ export default defineSchema({
     customerName: v.optional(v.string()),
   }).index("by_productId", ["productId"]),
 
+  // Reviews for courses
+  courseReviews: defineTable({
+    courseId: v.id("courses"),
+    userId: v.string(), // Clerk user ID
+    rating: v.number(), // 1-5 stars
+    title: v.optional(v.string()), // Review title
+    reviewText: v.string(),
+    isVerifiedPurchase: v.boolean(), // User actually enrolled
+    isPublished: v.boolean(), // Visible to others
+    helpfulCount: v.optional(v.number()), // Users who found this helpful
+    reportCount: v.optional(v.number()), // Spam/abuse reports
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    // Optional instructor response
+    instructorResponse: v.optional(v.string()),
+    instructorResponseAt: v.optional(v.number()),
+  })
+    .index("by_courseId", ["courseId"])
+    .index("by_userId", ["userId"])
+    .index("by_courseId_rating", ["courseId", "rating"])
+    .index("by_published", ["isPublished"]),
+
   // Email flows
   emailFlows: defineTable({
     productId: v.string(),

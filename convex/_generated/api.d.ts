@@ -3773,6 +3773,19 @@ export declare const api: {
       { userId: string },
       null
     >;
+    getProductMetrics: FunctionReference<
+      "query",
+      "public",
+      { productId: string; productType: "course" | "digitalProduct" },
+      {
+        averageRating: number;
+        conversionRate: number;
+        revenue: number;
+        reviewCount: number;
+        sales: number;
+        views: number;
+      }
+    >;
     getRecommendations: FunctionReference<
       "query",
       "public",
@@ -6183,6 +6196,128 @@ export declare const api: {
       any
     >;
   };
+  courseReviews: {
+    addInstructorResponse: FunctionReference<
+      "mutation",
+      "public",
+      { instructorId: string; response: string; reviewId: Id<"courseReviews"> },
+      any
+    >;
+    canUserReviewCourse: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses">; userId: string },
+      {
+        canReview: boolean;
+        existingReviewId?: Id<"courseReviews">;
+        reason?: string;
+      }
+    >;
+    createReview: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseId: Id<"courses">;
+        rating: number;
+        reviewText: string;
+        title?: string;
+        userId: string;
+      },
+      Id<"courseReviews">
+    >;
+    deleteReview: FunctionReference<
+      "mutation",
+      "public",
+      { reviewId: Id<"courseReviews">; userId: string },
+      any
+    >;
+    getCourseRatingSummary: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses"> },
+      {
+        averageRating: number;
+        ratingDistribution: {
+          five: number;
+          four: number;
+          one: number;
+          three: number;
+          two: number;
+        };
+        totalReviews: number;
+      }
+    >;
+    getCourseReviews: FunctionReference<
+      "query",
+      "public",
+      {
+        courseId: Id<"courses">;
+        limit?: number;
+        sortBy?: "recent" | "helpful" | "highest" | "lowest";
+      },
+      {
+        averageRating: number;
+        ratingDistribution: {
+          five: number;
+          four: number;
+          one: number;
+          three: number;
+          two: number;
+        };
+        reviews: Array<{
+          _id: Id<"courseReviews">;
+          createdAt: number;
+          helpfulCount: number;
+          instructorResponse?: string;
+          instructorResponseAt?: number;
+          isVerifiedPurchase: boolean;
+          rating: number;
+          reviewText: string;
+          title?: string;
+          userAvatar?: string;
+          userId: string;
+          userName?: string;
+        }>;
+        totalCount: number;
+      }
+    >;
+    getUserReviewForCourse: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses">; userId: string },
+      any
+    >;
+    getUserReviews: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; userId: string },
+      any
+    >;
+    markReviewHelpful: FunctionReference<
+      "mutation",
+      "public",
+      { reviewId: Id<"courseReviews">; userId: string },
+      any
+    >;
+    reportReview: FunctionReference<
+      "mutation",
+      "public",
+      { reason?: string; reviewId: Id<"courseReviews">; userId: string },
+      any
+    >;
+    updateReview: FunctionReference<
+      "mutation",
+      "public",
+      {
+        rating?: number;
+        reviewId: Id<"courseReviews">;
+        reviewText?: string;
+        title?: string;
+        userId: string;
+      },
+      any
+    >;
+  };
   courses: {
     cleanupDuplicateChapters: FunctionReference<
       "mutation",
@@ -6649,6 +6784,28 @@ export declare const api: {
         title: string;
         userId: string;
       }>
+    >;
+    getCourseWithInstructor: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses"> },
+      {
+        course: any;
+        instructor: {
+          avatar?: string;
+          bio?: string;
+          courseCount: number;
+          name: string;
+          rating: number;
+          socialLinks?: {
+            instagram?: string;
+            twitter?: string;
+            youtube?: string;
+          };
+          studentCount: number;
+          verified: boolean;
+        };
+      } | null
     >;
     getPublishedCoursesByStore: FunctionReference<
       "query",
@@ -10272,7 +10429,14 @@ export declare const api: {
       {
         bounceRate: number;
         clickRate: number;
+        clickToOpenRate: number;
+        deliveryRate: number;
         openRate: number;
+        totalBounced: number;
+        totalClicked: number;
+        totalComplaints: number;
+        totalDelivered: number;
+        totalOpened: number;
         totalSent: number;
       }
     >;
@@ -20780,6 +20944,14 @@ export declare const internal: {
         userId: string;
         verificationCode: string;
       },
+      any
+    >;
+  };
+  courseReviews: {
+    getCourseAverageRating: FunctionReference<
+      "query",
+      "internal",
+      { courseId: Id<"courses"> },
       any
     >;
   };

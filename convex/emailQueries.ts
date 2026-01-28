@@ -12,23 +12,74 @@ import { internal } from "./_generated/api";
 
 /**
  * Get email analytics for admin (no connection required)
+ * Calculates real metrics from resendLogs table
  */
 export const getEmailAnalytics = query({
   args: { days: v.optional(v.number()) },
   returns: v.object({
     totalSent: v.number(),
+    totalDelivered: v.number(),
+    totalOpened: v.number(),
+    totalClicked: v.number(),
+    totalBounced: v.number(),
+    totalComplaints: v.number(),
     openRate: v.number(),
     clickRate: v.number(),
     bounceRate: v.number(),
+    deliveryRate: v.number(),
+    clickToOpenRate: v.number(),
   }),
   handler: async (ctx, args) => {
-    // For now, return placeholder data
-    // TODO: Implement real analytics from email logs
+    const numDays = args.days || 30;
+    const cutoffTime = Date.now() - numDays * 24 * 60 * 60 * 1000;
+
+    // Query all email logs within the time range
+    const allLogs = await ctx.db
+      .query("resendLogs")
+      .filter((q) => q.gte(q.field("sentAt"), cutoffTime))
+      .collect();
+
+    // Calculate metrics
+    const totalSent = allLogs.length;
+    const totalDelivered = allLogs.filter((l) =>
+      l.status === "delivered" || l.status === "opened" || l.status === "clicked"
+    ).length;
+    const totalOpened = allLogs.filter((l) =>
+      l.status === "opened" || l.status === "clicked"
+    ).length;
+    const totalClicked = allLogs.filter((l) => l.status === "clicked").length;
+    const totalBounced = allLogs.filter((l) => l.status === "bounced").length;
+    const totalComplaints = allLogs.filter((l) => l.status === "complained").length;
+
+    // Calculate rates as percentages
+    const openRate = totalDelivered > 0
+      ? Math.round((totalOpened / totalDelivered) * 1000) / 10
+      : 0;
+    const clickRate = totalDelivered > 0
+      ? Math.round((totalClicked / totalDelivered) * 1000) / 10
+      : 0;
+    const bounceRate = totalSent > 0
+      ? Math.round((totalBounced / totalSent) * 1000) / 10
+      : 0;
+    const deliveryRate = totalSent > 0
+      ? Math.round((totalDelivered / totalSent) * 1000) / 10
+      : 0;
+    const clickToOpenRate = totalOpened > 0
+      ? Math.round((totalClicked / totalOpened) * 1000) / 10
+      : 0;
+
     return {
-      totalSent: 0,
-      openRate: 0,
-      clickRate: 0,
-      bounceRate: 0,
+      totalSent,
+      totalDelivered,
+      totalOpened,
+      totalClicked,
+      totalBounced,
+      totalComplaints,
+      openRate,
+      clickRate,
+      bounceRate,
+      deliveryRate,
+      clickToOpenRate,
     };
   },
 });
