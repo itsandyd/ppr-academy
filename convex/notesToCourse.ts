@@ -69,10 +69,21 @@ export const generateCourseFromNotes: any = action({
       }
       
       // Get related content using RAG for additional context
-      // TODO: Fix RAG integration after basic functions are deployed
-      const ragContext: any[] = [];
-      
-      console.log(`🔍 Found ${ragContext.length} related notes via RAG`);
+      let ragContext: any[] = [];
+      try {
+        const ragResults = await ctx.runAction(api.ragActions.searchSimilar, {
+          query: `${args.courseTitle} ${notes.map(n => n.title).join(" ")}`,
+          userId: args.userId,
+          sourceType: "note",
+          limit: 5,
+          threshold: 0.6,
+        });
+        ragContext = ragResults || [];
+        console.log(`🔍 Found ${ragContext.length} related notes via RAG`);
+      } catch (error) {
+        console.log("⚠️ RAG search failed, continuing without additional context:", error);
+        ragContext = [];
+      }
       
       // Generate course structure using AI
       const courseStructure = await generateCourseStructureFromNotes({

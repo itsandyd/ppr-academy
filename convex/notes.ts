@@ -190,11 +190,11 @@ export const createNote = mutation({
       isFavorite: false,
     });
     
-    // TODO: Add RAG processing later when AI system is stable
-    // await ctx.scheduler.runAfter(0, internal.notes.processNoteForRAG, {
-    //   noteId,
-    // });
-    
+    // Schedule RAG processing for searchability
+    await ctx.scheduler.runAfter(0, internal.notes.processNoteForRAG, {
+      noteId,
+    });
+
     return noteId;
   },
 });
@@ -409,11 +409,11 @@ export const updateNote = mutation({
       updates.wordCount = wordCount;
       updates.readTimeMinutes = readTimeMinutes;
       updates.isProcessedForRAG = false; // Mark for reprocessing
-      
-      // TODO: Add RAG reprocessing later when AI system is stable
-      // await ctx.scheduler.runAfter(0, internal.notes.processNoteForRAG, {
-      //   noteId: args.noteId,
-      // });
+
+      // Schedule RAG reprocessing
+      await ctx.scheduler.runAfter(0, internal.notes.processNoteForRAG, {
+        noteId: args.noteId,
+      });
     }
     
     await ctx.db.patch(args.noteId, updates);
@@ -484,15 +484,120 @@ export const searchNotes = query({
 });
 
 // ==================== RAG INTEGRATION ====================
-// TODO: RAG integration temporarily disabled for initial deployment
-// Will be re-enabled once core notes system is stable
+
+/**
+ * Process a note for RAG (Retrieval-Augmented Generation)
+ * Creates embeddings from note content for AI-powered search and Q&A
+ */
+export const processNoteForRAG = internalAction({
+  args: { noteId: v.id("notes") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      // Get the note
+      const note = await ctx.runQuery(internal.notes.getNoteInternal, {
+        noteId: args.noteId,
+      });
+
+      if (!note || note.isArchived) {
+        console.log(`Note ${args.noteId} not found or archived, skipping RAG processing`);
+        return null;
+      }
+
+      // Check if already processed
+      if (note.isProcessedForRAG) {
+        console.log(`Note ${args.noteId} already processed for RAG`);
+        return null;
+      }
+
+      // Extract plain text content
+      const content = note.plainTextContent || note.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+      if (content.length < 10) {
+        console.log(`Note ${args.noteId} too short for RAG processing`);
+        await ctx.runMutation(internal.notes.markNoteAsProcessed, { noteId: args.noteId });
+        return null;
+      }
+
+      // Add to RAG system using the existing rag.addContent mutation
+      await ctx.runMutation(api.rag.addContent, {
+        content: `${note.title}\n\n${content}`,
+        userId: note.userId,
+        title: note.title,
+        category: note.category || "notes",
+        sourceType: "note",
+        sourceId: note._id,
+        metadata: {
+          noteId: note._id,
+          storeId: note.storeId,
+          tags: note.tags,
+          priority: note.priority,
+          wordCount: note.wordCount,
+        },
+      });
+
+      // Mark as processed
+      await ctx.runMutation(internal.notes.markNoteAsProcessed, { noteId: args.noteId });
+
+      console.log(`✅ Note ${args.noteId} processed for RAG`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Error processing note ${args.noteId} for RAG:`, error);
+      return null;
+    }
+  },
+});
+
+/**
+ * Internal query to get note data for RAG processing
+ */
+export const getNoteInternal = internalQuery({
+  args: { noteId: v.id("notes") },
+  returns: v.union(v.object({
+    _id: v.id("notes"),
+    title: v.string(),
+    content: v.string(),
+    userId: v.string(),
+    storeId: v.string(),
+    plainTextContent: v.optional(v.string()),
+    tags: v.array(v.string()),
+    category: v.optional(v.string()),
+    priority: v.optional(v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high"),
+      v.literal("urgent")
+    )),
+    wordCount: v.optional(v.number()),
+    isProcessedForRAG: v.boolean(),
+    isArchived: v.boolean(),
+  }), v.null()),
+  handler: async (ctx, args) => {
+    const note = await ctx.db.get(args.noteId);
+    if (!note) return null;
+    return {
+      _id: note._id,
+      title: note.title,
+      content: note.content,
+      userId: note.userId,
+      storeId: note.storeId,
+      plainTextContent: note.plainTextContent,
+      tags: note.tags,
+      category: note.category,
+      priority: note.priority,
+      wordCount: note.wordCount,
+      isProcessedForRAG: note.isProcessedForRAG,
+      isArchived: note.isArchived,
+    };
+  },
+});
 
 export const markNoteAsProcessed = internalMutation({
   args: { noteId: v.id("notes") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.noteId, { 
-      isProcessedForRAG: true 
+    await ctx.db.patch(args.noteId, {
+      isProcessedForRAG: true
     });
     return null;
   },

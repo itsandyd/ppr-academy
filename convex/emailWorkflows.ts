@@ -1461,21 +1461,138 @@ export const callWebhook = internalAction({
 });
 
 /**
- * Track A/B test result
+ * Track A/B test result - stores variant assignment and updates metrics
  */
 export const trackABTestResult = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
+    nodeId: v.string(),
     contactId: v.optional(v.id("emailContacts")),
     variant: v.union(v.literal("A"), v.literal("B")),
+    eventType: v.optional(
+      v.union(v.literal("sent"), v.literal("delivered"), v.literal("opened"), v.literal("clicked"))
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Log A/B test assignment for now
-    // TODO: Store in a dedicated ab_test_results table when needed
+    const eventType = args.eventType || "sent";
+
+    // Find or create the A/B test record for this workflow node
+    let abTest = await ctx.db
+      .query("workflowNodeABTests")
+      .withIndex("by_workflowId_nodeId", (q) =>
+        q.eq("workflowId", args.workflowId).eq("nodeId", args.nodeId)
+      )
+      .first();
+
+    if (!abTest) {
+      // Create a new A/B test record with default variants
+      const now = Date.now();
+      const testId = await ctx.db.insert("workflowNodeABTests", {
+        workflowId: args.workflowId,
+        nodeId: args.nodeId,
+        isEnabled: true,
+        variants: [
+          {
+            id: "A",
+            name: "Variant A",
+            subject: "Variant A Subject",
+            percentage: 50,
+            sent: 0,
+            delivered: 0,
+            opened: 0,
+            clicked: 0,
+          },
+          {
+            id: "B",
+            name: "Variant B",
+            subject: "Variant B Subject",
+            percentage: 50,
+            sent: 0,
+            delivered: 0,
+            opened: 0,
+            clicked: 0,
+          },
+        ],
+        sampleSize: 100,
+        winnerMetric: "open_rate",
+        autoSelectWinner: true,
+        winnerThreshold: 0.05,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      abTest = await ctx.db.get(testId);
+    }
+
+    if (!abTest) {
+      console.error(`[ABTest] Failed to create/find A/B test for workflow ${args.workflowId}`);
+      return null;
+    }
+
+    // Update the metrics for the specified variant
+    const updatedVariants = abTest.variants.map((v) => {
+      if (v.id === args.variant) {
+        const currentValue = v[eventType as "sent" | "delivered" | "opened" | "clicked"];
+        return {
+          ...v,
+          [eventType]: currentValue + 1,
+        };
+      }
+      return v;
+    });
+
+    await ctx.db.patch(abTest._id, {
+      variants: updatedVariants,
+      updatedAt: Date.now(),
+    });
+
     console.log(
-      `[ABTest] Workflow ${args.workflowId}: Contact ${args.contactId} assigned to variant ${args.variant}`
+      `[ABTest] Workflow ${args.workflowId}, Node ${args.nodeId}: Contact ${args.contactId} - variant ${args.variant} ${eventType}`
     );
+
+    // Check if we should auto-select a winner
+    if (abTest.autoSelectWinner && abTest.status === "active") {
+      const totalSent = updatedVariants.reduce((sum, v) => sum + v.sent, 0);
+
+      if (totalSent >= abTest.sampleSize) {
+        // Calculate winner based on the configured metric
+        const getRate = (v: (typeof updatedVariants)[0]) => {
+          if (abTest.winnerMetric === "click_rate") {
+            return v.sent > 0 ? v.clicked / v.sent : 0;
+          }
+          return v.sent > 0 ? v.opened / v.sent : 0;
+        };
+
+        const variantA = updatedVariants.find((v) => v.id === "A");
+        const variantB = updatedVariants.find((v) => v.id === "B");
+
+        if (variantA && variantB) {
+          const rateA = getRate(variantA);
+          const rateB = getRate(variantB);
+          const diff = Math.abs(rateA - rateB);
+          const threshold = abTest.winnerThreshold || 0.05;
+
+          if (diff >= threshold) {
+            const winner = rateA > rateB ? "A" : "B";
+            const confidence = Math.min(0.99, 0.8 + diff * 2); // Simplified confidence
+
+            await ctx.db.patch(abTest._id, {
+              status: "completed",
+              winner,
+              confidence,
+              completedAt: Date.now(),
+            });
+
+            console.log(
+              `[ABTest] Winner selected: Variant ${winner} with ${(confidence * 100).toFixed(1)}% confidence`
+            );
+          }
+        }
+      }
+    }
+
     return null;
   },
 });

@@ -1,18 +1,20 @@
 "use client";
 
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertCircle, ExternalLink } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface DiscordVerificationCardProps {
   onVerificationChange?: (isVerified: boolean) => void;
+  storeId?: Id<"stores">; // Optional storeId for dynamic guild lookup
 }
 
-export function DiscordVerificationCard({ onVerificationChange }: DiscordVerificationCardProps) {
+export function DiscordVerificationCard({ onVerificationChange, storeId }: DiscordVerificationCardProps) {
   const { user } = useUser();
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -22,28 +24,51 @@ export function DiscordVerificationCard({ onVerificationChange }: DiscordVerific
     user?.id ? { userId: user.id } : "skip"
   );
 
+  // Get store's Discord guild configuration for dynamic invite links
+  const storeGuild = useQuery(
+    api.discordPublic.getStoreDiscordGuild,
+    storeId ? { storeId } : "skip"
+  );
+
   const isConnected = discordConnection?.isConnected ?? false;
   const isInGuild = discordConnection?.guildMemberStatus === "joined";
 
   // Notify parent component of verification status
-  React.useEffect(() => {
+  useEffect(() => {
     if (onVerificationChange && discordConnection) {
       onVerificationChange(isConnected && isInGuild);
     }
   }, [isConnected, isInGuild, onVerificationChange, discordConnection]);
 
-  const handleConnectDiscord = () => {
+  const handleConnectDiscord = useCallback(() => {
     setIsConnecting(true);
     // Redirect to Discord OAuth flow
     window.location.href = "/api/auth/discord";
-  };
+  }, []);
+
+  const handleJoinServer = useCallback(() => {
+    // Use store's guild invite code if available, otherwise fall back to default
+    let inviteUrl = "https://discord.gg/dX2JNRqpZd"; // Default fallback
+
+    if (storeGuild?.inviteCode) {
+      inviteUrl = `https://discord.gg/${storeGuild.inviteCode}`;
+    } else if (typeof window !== "undefined") {
+      // Fall back to environment variable or static config
+      const envInviteCode = process.env.NEXT_PUBLIC_DISCORD_INVITE_CODE;
+      if (envInviteCode) {
+        inviteUrl = `https://discord.gg/${envInviteCode}`;
+      }
+    }
+
+    window.open(inviteUrl, "_blank", "noopener,noreferrer");
+  }, [storeGuild]);
 
   if (!discordConnection) {
     return (
       <Card className="border-[#E5E7F5]">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-gray-400" />
+            <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
             Discord Connection
           </CardTitle>
           <CardDescription>Loading Discord status...</CardDescription>
@@ -71,7 +96,10 @@ export function DiscordVerificationCard({ onVerificationChange }: DiscordVerific
             className="bg-[#5865F2] hover:bg-[#4752C4] text-white"
           >
             {isConnecting ? (
-              "Connecting..."
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Connecting...
+              </>
             ) : (
               <>
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -90,7 +118,7 @@ export function DiscordVerificationCard({ onVerificationChange }: DiscordVerific
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-500" />
-            Join Our Discord Server
+            Join {storeGuild?.guildName || "Our"} Discord Server
           </CardTitle>
           <CardDescription className="text-blue-800 dark:text-blue-300">
             You're connected to Discord as <strong>{discordConnection.discordUsername}</strong>, but
@@ -99,11 +127,7 @@ export function DiscordVerificationCard({ onVerificationChange }: DiscordVerific
         </CardHeader>
         <CardContent>
           <Button
-            onClick={() => {
-              // TODO: Get invite link from store's Discord guild
-              const { discordConfig } = require("@/lib/discord-config");
-              window.open(discordConfig.inviteUrl, "_blank");
-            }}
+            onClick={handleJoinServer}
             className="bg-[#5865F2] hover:bg-[#4752C4] text-white"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
@@ -130,7 +154,4 @@ export function DiscordVerificationCard({ onVerificationChange }: DiscordVerific
     </Card>
   );
 }
-
-// Import React for useEffect
-import React from "react";
 

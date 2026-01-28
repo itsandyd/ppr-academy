@@ -314,6 +314,12 @@ export default function AIAssistantPage() {
     user ? { userId: user.id, limit: 5 } : "skip"
   );
 
+  // Get user's store for AI context (products, courses, etc.)
+  const userStore = useQuery(
+    api.stores.getUserStore,
+    user ? { userId: user.id } : "skip"
+  );
+
   // Cancel any pending request and reset state when conversation changes
   useEffect(() => {
     // Cancel any pending request from previous conversation
@@ -720,7 +726,7 @@ export default function AIAssistantPage() {
             question: userMessage.content,
             settings,
             userId: user.id,
-            storeId: "", // TODO: Get user's store ID
+            storeId: userStore?._id ?? "",
             userRole: "creator",
             conversationContext,
             // Pass agent-specific parameters
@@ -1133,16 +1139,13 @@ export default function AIAssistantPage() {
     setIsExecutingActions(true);
 
     try {
-      // Get the user's store ID (you may need to fetch this differently)
-      const storeId = ""; // TODO: Get from user context or query
-
       const result = await executeConfirmedActions({
         actions: pendingProposal.proposal.proposedActions.map((a) => ({
           tool: a.tool,
           parameters: a.parameters,
         })),
         userId: user.id,
-        storeId,
+        storeId: userStore?._id ?? "",
       });
 
       // Update the message with executed actions

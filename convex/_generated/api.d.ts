@@ -22532,6 +22532,8 @@ export declare const internal: {
       "internal",
       {
         contactId?: Id<"emailContacts">;
+        eventType?: "sent" | "delivered" | "opened" | "clicked";
+        nodeId: string;
         variant: "A" | "B";
         workflowId: Id<"emailWorkflows">;
       },
@@ -25449,6 +25451,25 @@ export declare const internal: {
       { courseId: Id<"courses"> },
       Array<{ description?: string; title: string }>
     >;
+    getNoteInternal: FunctionReference<
+      "query",
+      "internal",
+      { noteId: Id<"notes"> },
+      {
+        _id: Id<"notes">;
+        category?: string;
+        content: string;
+        isArchived: boolean;
+        isProcessedForRAG: boolean;
+        plainTextContent?: string;
+        priority?: "low" | "medium" | "high" | "urgent";
+        storeId: string;
+        tags: Array<string>;
+        title: string;
+        userId: string;
+        wordCount?: number;
+      } | null
+    >;
     linkNotesToCourse: FunctionReference<
       "mutation",
       "internal",
@@ -25457,6 +25478,12 @@ export declare const internal: {
     >;
     markNoteAsProcessed: FunctionReference<
       "mutation",
+      "internal",
+      { noteId: Id<"notes"> },
+      null
+    >;
+    processNoteForRAG: FunctionReference<
+      "action",
       "internal",
       { noteId: Id<"notes"> },
       null

@@ -14,6 +14,28 @@ import {
 // Initialize Convex client
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+// Cache for user store IDs (simple in-memory cache for server-side)
+const storeCache = new Map<string, { storeId: string; timestamp: number }>();
+const CACHE_TTL = 60 * 1000; // 1 minute cache
+
+async function getUserStoreId(userId: string): Promise<string> {
+  // Check cache first
+  const cached = storeCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.storeId;
+  }
+
+  try {
+    const store = await convex.query(api.stores.getUserStore, { userId });
+    const storeId = store?._id ?? "";
+    storeCache.set(userId, { storeId, timestamp: Date.now() });
+    return storeId;
+  } catch (error) {
+    console.warn("Failed to get user store:", error);
+    return "";
+  }
+}
+
 // ============================================================================
 // STREAMING AI CHAT ENDPOINT
 // ============================================================================
@@ -166,6 +188,9 @@ export async function POST(request: NextRequest) {
           let result: any;
           
           if (isAgentMode) {
+            // Get user's store ID for context
+            const userStoreId = await getUserStoreId(userId);
+
             // Use agentic AI for agents with tools
             result = await convex.action(
               (api as any).masterAI.index.askAgenticAI,
@@ -173,7 +198,7 @@ export async function POST(request: NextRequest) {
                 question,
                 settings: chatSettings,
                 userId,
-                storeId: "", // TODO: Get user's store ID from profile
+                storeId: userStoreId,
                 userRole: "creator",
                 conversationContext,
                 agentId: agentId || undefined,

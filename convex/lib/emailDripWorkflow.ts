@@ -250,6 +250,7 @@ export const emailDripWorkflow = workflow.define({
 export const abTestWorkflow = workflow.define({
   args: {
     workflowId: v.id("emailWorkflows"),
+    nodeId: v.string(), // The email node ID for A/B test tracking
     contactId: v.optional(v.id("emailContacts")),
     storeId: v.string(),
     customerEmail: v.string(),
@@ -290,6 +291,7 @@ export const abTestWorkflow = workflow.define({
     // Track which variant was sent
     await ctx.runMutation(internal.emailWorkflows.trackABTestResult, {
       workflowId: args.workflowId,
+      nodeId: args.nodeId,
       contactId: args.contactId,
       variant: variantName,
     });
