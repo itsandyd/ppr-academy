@@ -9,7 +9,7 @@ import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 
 export interface IncludedContent { id: string; type: "course" | "product"; title: string; imageUrl?: string; }
-export interface MembershipData { tierName?: string; description?: string; priceMonthly?: string; priceYearly?: string; benefits?: string[]; trialDays?: number; includedContent?: IncludedContent[]; includeAllContent?: boolean; }
+export interface MembershipData { tierName?: string; description?: string; priceMonthly?: string; priceYearly?: string; benefits?: string[]; trialDays?: number; includedContent?: IncludedContent[]; includeAllContent?: boolean; thumbnail?: string; }
 export interface StepCompletion { basics: boolean; pricing: boolean; content: boolean; }
 
 interface MembershipState { data: MembershipData; stepCompletion: StepCompletion; isLoading: boolean; isSaving: boolean; tierId?: string; lastSaved?: Date; }

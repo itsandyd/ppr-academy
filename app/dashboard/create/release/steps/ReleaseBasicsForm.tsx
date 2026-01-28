@@ -23,8 +23,11 @@ import {
   Building2,
   Hash,
   Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
+import { toast } from "sonner";
 
 const releaseTypes = [
   { value: "single", label: "Single", icon: "🎵", description: "One track release" },
@@ -55,6 +58,56 @@ const timezones = [
 export function ReleaseBasicsForm() {
   const { state, updateData } = useReleaseCreation();
   const [featuredArtistInput, setFeaturedArtistInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const generateUploadUrl = useGenerateUploadUrl();
+  const getFileUrl = useGetFileUrl();
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be less than 10MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) throw new Error("Failed to upload image");
+
+      const { storageId } = await result.json();
+      const publicUrl = await getFileUrl({ storageId });
+
+      if (publicUrl) {
+        updateData("basics", { coverArtUrl: publicUrl });
+        toast.success("Cover art uploaded successfully!");
+      } else {
+        throw new Error("Failed to get image URL");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleAddFeaturedArtist = () => {
     if (featuredArtistInput.trim()) {
@@ -322,7 +375,17 @@ export function ReleaseBasicsForm() {
           <CardDescription>Upload your release artwork (3000x3000px recommended)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 hover:border-muted-foreground/50 transition-colors">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <div
+            className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 hover:border-muted-foreground/50 transition-colors cursor-pointer"
+            onClick={() => !isUploading && fileInputRef.current?.click()}
+          >
             {state.data.coverArtUrl ? (
               <div className="relative">
                 <img
@@ -334,7 +397,10 @@ export function ReleaseBasicsForm() {
                   variant="destructive"
                   size="sm"
                   className="absolute -top-2 -right-2"
-                  onClick={() => updateData("basics", { coverArtUrl: undefined })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateData("basics", { coverArtUrl: undefined });
+                  }}
                 >
                   Remove
                 </Button>
@@ -342,26 +408,20 @@ export function ReleaseBasicsForm() {
             ) : (
               <>
                 <div className="rounded-full bg-muted p-4">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  {isUploading ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                  )}
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium">Upload cover art</p>
+                  <p className="text-sm font-medium">
+                    {isUploading ? "Uploading..." : "Upload cover art"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     PNG, JPG up to 10MB
                   </p>
                 </div>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  className="max-w-xs"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const url = URL.createObjectURL(file);
-                      updateData("basics", { coverArtUrl: url });
-                    }
-                  }}
-                />
               </>
             )}
           </div>

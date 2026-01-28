@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { DAW_TYPES } from "../../types";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 
 const GENRES = [
   "Hip Hop",
@@ -205,6 +206,17 @@ export function ProjectBasicsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Project Thumbnail"
+        description="Add an image to showcase your project file"
+        productType="project-files"
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
 
       {/* What's Included Info */}
       <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 dark:border-purple-900 dark:from-purple-950/30 dark:to-indigo-950/30">

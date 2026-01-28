@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BEAT_GENRES } from "../types";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 
 export function BasicsForm() {
   const { state, updateData, saveBeat } = useBeatLeaseCreation();
@@ -117,6 +118,17 @@ export function BasicsForm() {
           />
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Beat Artwork"
+        description="Add cover artwork for your beat"
+        productType="beat-lease"
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">

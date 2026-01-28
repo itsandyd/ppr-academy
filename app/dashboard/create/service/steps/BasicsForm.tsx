@@ -11,6 +11,7 @@ import { useServiceCreation } from "../context";
 import { SERVICE_TYPES, ServiceType } from "../types";
 import { Settings } from "lucide-react";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 import { ValidatedField } from "@/shared/components/ValidatedField";
 import { validationRules } from "@/hooks/useFieldValidation";
 
@@ -121,6 +122,17 @@ export function BasicsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Service Thumbnail"
+        description="Add an image to promote your service"
+        productType={state.data.serviceType === "mastering" ? "mastering-service" : "mixing-service"}
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
     </div>
   );
 }

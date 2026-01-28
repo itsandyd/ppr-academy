@@ -1,24 +1,77 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { List, Eye, EyeOff, ImageIcon, Link as LinkIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { List, Eye, EyeOff, ImageIcon, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
 import { usePlaylistCuration } from "../context";
 import { GENRE_OPTIONS } from "../types";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
+import { toast } from "sonner";
 
 export function BasicsForm() {
   const { state, updateData, validateStep } = usePlaylistCuration();
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const generateUploadUrl = useGenerateUploadUrl();
+  const getFileUrl = useGetFileUrl();
 
   // Validate on mount and data changes
   useEffect(() => {
     validateStep("basics");
   }, [state.data.name, state.data.description]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) throw new Error("Failed to upload image");
+
+      const { storageId } = await result.json();
+      const publicUrl = await getFileUrl({ storageId });
+
+      if (publicUrl) {
+        updateData("basics", { coverUrl: publicUrl });
+        toast.success("Cover image uploaded successfully!");
+      } else {
+        throw new Error("Failed to get image URL");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleGenreToggle = (genre: string) => {
     const currentGenres = state.data.genres || [];
@@ -84,29 +137,66 @@ export function BasicsForm() {
             </p>
           </div>
 
-          {/* Cover Image URL */}
+          {/* Cover Image */}
           <div className="space-y-2">
             <Label htmlFor="coverUrl" className="flex items-center gap-2">
               <ImageIcon className="h-4 w-4" />
-              Cover Image URL
+              Cover Image
             </Label>
-            <Input
-              id="coverUrl"
-              type="url"
-              value={state.data.coverUrl || ""}
-              onChange={(e) => updateData("basics", { coverUrl: e.target.value })}
-              placeholder="https://... (paste image URL)"
-              className="bg-white dark:bg-black"
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
             />
-            {state.data.coverUrl && (
-              <div className="relative mt-2 h-32 w-32 overflow-hidden rounded-lg border">
-                <img
-                  src={state.data.coverUrl}
-                  alt="Cover preview"
-                  className="h-full w-full object-cover"
+            <div className="flex items-center gap-4">
+              {state.data.coverUrl ? (
+                <div className="relative h-32 w-32 overflow-hidden rounded-lg border">
+                  <img
+                    src={state.data.coverUrl}
+                    alt="Cover preview"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-32 w-32 items-center justify-center rounded-lg border bg-muted">
+                  {isUploading ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  )}
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <Input
+                  id="coverUrl"
+                  type="url"
+                  value={state.data.coverUrl || ""}
+                  onChange={(e) => updateData("basics", { coverUrl: e.target.value })}
+                  placeholder="Paste image URL..."
+                  className="bg-white dark:bg-black"
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Image
+                    </>
+                  )}
+                </Button>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Genres */}

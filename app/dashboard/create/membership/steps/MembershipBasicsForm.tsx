@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Plus, ArrowRight, Save } from "lucide-react";
 import { useMembershipCreation } from "../context";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 
 export function MembershipBasicsForm() {
   const router = useRouter();
@@ -111,6 +112,17 @@ export function MembershipBasicsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Membership Thumbnail"
+        description="Add an image to promote your membership tier"
+        productType="membership"
+        productTitle={state.data.tierName}
+        productDescription={state.data.description}
+      />
 
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => router.push("/dashboard?mode=create")}>

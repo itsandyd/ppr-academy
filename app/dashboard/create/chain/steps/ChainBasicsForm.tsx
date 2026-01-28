@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { DAW_TYPES } from "../../types";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 
 export function ChainBasicsForm() {
   const { state, updateData, saveChain } = useEffectChainCreation();
@@ -129,6 +130,17 @@ export function ChainBasicsForm() {
           />
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Effect Chain Thumbnail"
+        description="Add an image to make your effect chain stand out"
+        productType="effect-chain"
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">

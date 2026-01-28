@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 import { ValidatedField } from "@/shared/components/ValidatedField";
 import { validationRules } from "@/hooks/useFieldValidation";
 
@@ -158,6 +159,17 @@ export function BasicsForm() {
           />
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Session Thumbnail"
+        description="Add an image to promote your coaching session"
+        productType="coaching"
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">

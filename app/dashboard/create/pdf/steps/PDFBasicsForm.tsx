@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 
 export function PDFBasicsForm() {
   const { state, updateData, savePDF } = usePDFCreation();
@@ -122,6 +123,17 @@ export function PDFBasicsForm() {
           />
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="PDF Cover Image"
+        description="Add a cover image to make your PDF stand out"
+        productType="pdf"
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">

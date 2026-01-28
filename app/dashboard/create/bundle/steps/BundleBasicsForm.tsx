@@ -9,15 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Sparkles, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
 
 export function BundleBasicsForm() {
   const { state, updateData, saveBundle } = useBundleCreation();
   const router = useRouter();
   const [tagInput, setTagInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const generateUploadUrl = useGenerateUploadUrl();
+  const getFileUrl = useGetFileUrl();
 
   const handleNext = async () => {
     await saveBundle();
@@ -69,6 +75,51 @@ export function BundleBasicsForm() {
       toast.error(error.message || "Failed to generate thumbnail");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) throw new Error("Failed to upload image");
+
+      const { storageId } = await result.json();
+      const publicUrl = await getFileUrl({ storageId });
+
+      if (publicUrl) {
+        updateData("basics", { thumbnail: publicUrl });
+        toast.success("Thumbnail uploaded successfully!");
+      } else {
+        throw new Error("Failed to get image URL");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -129,6 +180,13 @@ export function BundleBasicsForm() {
           <CardDescription>Add an eye-catching cover image for your bundle</CardDescription>
         </CardHeader>
         <CardContent>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
           <div className="flex items-center gap-4">
             {state.data.thumbnail ? (
               <img
@@ -138,7 +196,11 @@ export function BundleBasicsForm() {
               />
             ) : (
               <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
-                <Upload className="h-8 w-8 text-muted-foreground" />
+                {isUploading ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                ) : (
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                )}
               </div>
             )}
             <div className="flex-1 space-y-2">
@@ -168,9 +230,23 @@ export function BundleBasicsForm() {
                     </>
                   )}
                 </Button>
-                <Button variant="outline" size="sm">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

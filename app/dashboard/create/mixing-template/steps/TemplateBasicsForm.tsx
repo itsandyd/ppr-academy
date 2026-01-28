@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { DAW_TYPES } from "../../types";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ImageUploader } from "../../shared/ImageUploader";
 
 const TEMPLATE_TYPES = [
   {
@@ -235,6 +236,17 @@ export function TemplateBasicsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Thumbnail Image */}
+      <ImageUploader
+        value={state.data.thumbnail}
+        onChange={(url) => updateData("basics", { thumbnail: url })}
+        title="Template Thumbnail"
+        description="Add an image to showcase your mixing template"
+        productType="mixing-template"
+        productTitle={state.data.title}
+        productDescription={state.data.description}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">
