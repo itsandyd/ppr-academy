@@ -12350,6 +12350,12 @@ export declare const api: {
       { slug: string; storeId: string },
       any
     >;
+    getLandingPageByStoreSlug: FunctionReference<
+      "query",
+      "public",
+      { pageSlug: string; storeSlug: string },
+      any
+    >;
     getLandingPages: FunctionReference<
       "query",
       "public",

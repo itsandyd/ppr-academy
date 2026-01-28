@@ -5,14 +5,16 @@ import { api } from "@/convex/_generated/api";
 import { PublicLandingPage } from "./client";
 
 interface Props {
-  params: { slug: string; pageSlug: string };
+  params: Promise<{ slug: string; pageSlug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug, pageSlug } = await params;
+
   try {
-    const page = await fetchQuery(api.landingPages.getLandingPageBySlug, {
-      storeSlug: params.slug,
-      pageSlug: params.pageSlug,
+    const page = await fetchQuery(api.landingPages.getLandingPageByStoreSlug, {
+      storeSlug: slug,
+      pageSlug: pageSlug,
     });
 
     if (!page) {
@@ -38,14 +40,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function LandingPageRoute({ params }: Props) {
-  const page = await fetchQuery(api.landingPages.getLandingPageBySlug, {
-    storeSlug: params.slug,
-    pageSlug: params.pageSlug,
+  const { slug, pageSlug } = await params;
+
+  const page = await fetchQuery(api.landingPages.getLandingPageByStoreSlug, {
+    storeSlug: slug,
+    pageSlug: pageSlug,
   });
 
   if (!page || !page.isPublished) {
     notFound();
   }
 
-  return <PublicLandingPage page={page} storeSlug={params.slug} />;
+  return <PublicLandingPage page={page} storeSlug={slug} />;
 }

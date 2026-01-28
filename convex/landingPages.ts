@@ -156,6 +156,61 @@ export const getLandingPageBySlug = query({
         .collect();
 
       if (variants.length > 0) {
+        const random = Math.random() * 100;
+        let cumulative = page.trafficSplit || (100 / (variants.length + 1));
+
+        if (random < cumulative) {
+          return page;
+        }
+
+        for (const variant of variants) {
+          cumulative += variant.trafficSplit || (100 / (variants.length + 1));
+          if (random < cumulative) {
+            return variant;
+          }
+        }
+      }
+    }
+
+    return page;
+  },
+});
+
+/**
+ * Get landing page by store slug and page slug (for public routes)
+ */
+export const getLandingPageByStoreSlug = query({
+  args: {
+    storeSlug: v.string(),
+    pageSlug: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // First find the store by slug
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_slug", (q) => q.eq("slug", args.storeSlug))
+      .first();
+
+    if (!store) return null;
+
+    const page = await ctx.db
+      .query("landingPages")
+      .withIndex("by_slug", (q) =>
+        q.eq("storeId", store._id).eq("slug", args.pageSlug)
+      )
+      .first();
+
+    if (!page || !page.isPublished) return null;
+
+    // Handle A/B testing - return random variant based on traffic split
+    if (!page.isVariant) {
+      const variants = await ctx.db
+        .query("landingPages")
+        .withIndex("by_parent", (q) => q.eq("parentPageId", page._id))
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .collect();
+
+      if (variants.length > 0) {
         // Calculate which page to show based on traffic split
         const random = Math.random() * 100;
         let cumulative = page.trafficSplit || (100 / (variants.length + 1));

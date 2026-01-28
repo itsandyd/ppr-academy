@@ -45,6 +45,16 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+interface LandingPage {
+  _id: Id<"landingPages">;
+  title: string;
+  slug: string;
+  isPublished: boolean;
+  views?: number;
+  conversions?: number;
+  createdAt: number;
+}
+
 export default function LandingPagesPage() {
   const { user, isLoaded } = useUser();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -62,24 +72,32 @@ export default function LandingPagesPage() {
   const landingPages = useQuery(
     api.landingPages.getLandingPages,
     store?._id ? { storeId: store._id } : "skip"
-  );
+  ) as LandingPage[] | undefined;
 
   const createLandingPage = useMutation(api.landingPages.createLandingPage);
   const togglePublish = useMutation(api.landingPages.togglePublish);
   const deletePage = useMutation(api.landingPages.deletePage);
 
   const handleCreatePage = async () => {
-    if (!store?._id || !newPageTitle.trim()) {
+    if (!store?._id || !user?.id || !newPageTitle.trim()) {
       toast.error("Please enter a title");
       return;
     }
 
     setIsCreating(true);
     try {
+      // Generate slug from title
+      const slug = newPageTitle
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
       const pageId = await createLandingPage({
         storeId: store._id,
+        userId: user.id,
         title: newPageTitle.trim(),
-        description: newPageDescription.trim() || undefined,
+        slug: slug || `page-${Date.now()}`,
       });
 
       toast.success("Landing page created!");
