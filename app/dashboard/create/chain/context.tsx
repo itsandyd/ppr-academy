@@ -67,6 +67,8 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
         pricingModel: (existingChain.pricingModel || "paid") as "free_with_gate" | "paid",
         tags: existingChain.tags,
         genre: (existingChain as any).genre as string[] | undefined,
+        // Load download URL
+        downloadUrl: existingChain.downloadUrl,
         // Load follow gate data
         followGateEnabled: existingChain.followGateEnabled,
         followGateMessage: existingChain.followGateMessage,
@@ -101,7 +103,7 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
       } : undefined;
 
       // Base params for both create and update
-      const baseParams = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined };
+      const baseParams = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.pricingModel === "free_with_gate" ? 0 : (state.data.price ? parseFloat(state.data.price) : undefined), pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined, downloadUrl: state.data.downloadUrl };
 
       if (state.chainId) {
         // Update uses individual followGate fields (not followGateConfig)
