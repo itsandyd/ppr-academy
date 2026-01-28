@@ -309,17 +309,28 @@ export function FollowGateWizard({
   const handleStepComplete = useCallback(() => {
     if (!currentStep) return;
 
-    setCompletedSteps((prev) => ({
-      ...prev,
+    const newCompletedSteps = {
+      ...completedSteps,
       [currentStep.platform]: true,
-    }));
+    };
+    setCompletedSteps(newCompletedSteps);
 
-    // Move to next step
-    if (currentStepIndex < sortedSteps.length - 1) {
+    // Check if this completes all mandatory steps
+    const allMandatoryNowComplete = mandatorySteps.every(
+      (s) => newCompletedSteps[s.platform]
+    );
+
+    // If this is the last step OR all mandatory steps are complete, trigger completion
+    if (currentStepIndex >= sortedSteps.length - 1) {
+      // Last step - complete the wizard
+      onComplete(email, newCompletedSteps);
+      handleOpenChange(false);
+    } else {
+      // Move to next step
       setCurrentStepIndex(currentStepIndex + 1);
       setHasOpenedLink(false);
     }
-  }, [currentStep, currentStepIndex, sortedSteps.length]);
+  }, [currentStep, currentStepIndex, sortedSteps.length, completedSteps, mandatorySteps, email, onComplete, handleOpenChange]);
 
   // Handle open link - opens in a smaller popup window
   const handleOpenLink = useCallback(() => {
