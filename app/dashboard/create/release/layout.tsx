@@ -216,7 +216,7 @@ function LayoutContent({ children }: ReleaseCreateLayoutProps) {
   const { saveRelease } = useReleaseCreation();
 
   return (
-    <AutoSaveProvider onSave={saveRelease} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveRelease} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

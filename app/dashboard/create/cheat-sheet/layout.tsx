@@ -186,7 +186,7 @@ function LayoutContent({ children }: CheatSheetLayoutProps) {
   const { saveCheatSheet } = useCheatSheetCreation();
 
   return (
-    <AutoSaveProvider onSave={saveCheatSheet} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveCheatSheet} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

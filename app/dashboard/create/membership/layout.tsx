@@ -33,7 +33,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const { saveTier } = useMembershipCreation();
 
   return (
-    <AutoSaveProvider onSave={saveTier} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveTier} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

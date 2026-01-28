@@ -230,7 +230,7 @@ function LayoutContent({ children }: MixingTemplateCreateLayoutProps) {
   const { saveTemplate } = useMixingTemplateCreation();
 
   return (
-    <AutoSaveProvider onSave={saveTemplate} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveTemplate} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

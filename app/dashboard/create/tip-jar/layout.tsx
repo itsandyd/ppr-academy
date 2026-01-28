@@ -186,7 +186,7 @@ function LayoutContent({ children }: TipJarLayoutProps) {
   const { saveTipJar } = useTipJarCreation();
 
   return (
-    <AutoSaveProvider onSave={saveTipJar} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveTipJar} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

@@ -194,7 +194,7 @@ function LayoutContent({ children }: CommunityLayoutProps) {
   const { saveCommunity } = useCommunityCreation();
 
   return (
-    <AutoSaveProvider onSave={saveCommunity} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveCommunity} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

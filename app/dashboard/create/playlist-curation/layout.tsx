@@ -242,7 +242,7 @@ function LayoutContent({ children }: PlaylistCurationLayoutProps) {
   const { savePlaylist } = usePlaylistCuration();
 
   return (
-    <AutoSaveProvider onSave={savePlaylist} debounceMs={1500}>
+    <AutoSaveProvider onSave={savePlaylist} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

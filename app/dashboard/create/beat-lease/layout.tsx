@@ -196,7 +196,7 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
   const { saveBeat } = useBeatLeaseCreation();
 
   return (
-    <AutoSaveProvider onSave={saveBeat} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveBeat} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

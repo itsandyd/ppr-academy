@@ -197,7 +197,7 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
   const { saveService } = useServiceCreation();
 
   return (
-    <AutoSaveProvider onSave={saveService} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveService} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

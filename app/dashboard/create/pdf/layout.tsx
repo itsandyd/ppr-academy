@@ -235,7 +235,7 @@ function LayoutContent({ children }: PDFCreateLayoutProps) {
   const { savePDF } = usePDFCreation();
 
   return (
-    <AutoSaveProvider onSave={savePDF} debounceMs={1500}>
+    <AutoSaveProvider onSave={savePDF} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

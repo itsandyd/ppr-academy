@@ -224,7 +224,7 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
   const { saveChain } = useEffectChainCreation();
 
   return (
-    <AutoSaveProvider onSave={saveChain} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveChain} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

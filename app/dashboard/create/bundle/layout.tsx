@@ -186,7 +186,7 @@ function LayoutContent({ children }: BundleCreateLayoutProps) {
   const { saveBundle } = useBundleCreation();
 
   return (
-    <AutoSaveProvider onSave={saveBundle} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveBundle} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

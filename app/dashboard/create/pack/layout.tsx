@@ -227,7 +227,7 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
   const { savePack } = usePackCreation();
 
   return (
-    <AutoSaveProvider onSave={savePack} debounceMs={1500}>
+    <AutoSaveProvider onSave={savePack} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

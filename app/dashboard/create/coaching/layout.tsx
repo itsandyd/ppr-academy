@@ -224,7 +224,7 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
   const { saveCoaching } = useCoachingCreation();
 
   return (
-    <AutoSaveProvider onSave={saveCoaching} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveCoaching} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );

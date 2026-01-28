@@ -230,7 +230,7 @@ function LayoutContent({ children }: ProjectFileCreateLayoutProps) {
   const { saveProject } = useProjectFileCreation();
 
   return (
-    <AutoSaveProvider onSave={saveProject} debounceMs={1500}>
+    <AutoSaveProvider onSave={saveProject} debounceMs={1500} enabled={false}>
       <LayoutContentInner>{children}</LayoutContentInner>
     </AutoSaveProvider>
   );
