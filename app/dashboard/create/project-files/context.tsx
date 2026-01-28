@@ -52,6 +52,7 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
   const updateMutation = useUpdateDigitalProduct();
 
   const [state, setState] = useState<ProjectFileState>({ data: { pricingModel: "paid" }, stepCompletion: { basics: false, files: false, pricing: false }, isLoading: false, isSaving: false, projectId });
+  const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
 
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
@@ -60,11 +61,12 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
   }, [user, stores, router, toast]);
 
   useEffect(() => {
-    if (existingProject && projectId) {
-      const newData: ProjectFileData = { title: existingProject.title, description: existingProject.description, dawType: existingProject.dawType as DAWType, dawVersion: existingProject.dawVersion as string | undefined, thumbnail: existingProject.imageUrl, price: existingProject.price?.toString(), pricingModel: (existingProject.pricingModel || "paid") as "free_with_gate" | "paid", tags: existingProject.tags, genre: (existingProject as any).genre as string[] | undefined };
+    if (existingProject && projectId && !hasLoadedFromDb) {
+      const newData: ProjectFileData = { title: existingProject.title, description: existingProject.description, dawType: existingProject.dawType as DAWType, dawVersion: existingProject.dawVersion as string | undefined, thumbnail: existingProject.imageUrl, price: existingProject.price?.toString(), pricingModel: (existingProject.pricingModel || "paid") as "free_with_gate" | "paid", tags: existingProject.tags, genre: (existingProject as any).genre as string[] | undefined, downloadUrl: existingProject.downloadUrl };
       setState(prev => ({ ...prev, projectId, data: newData, stepCompletion: { basics: validateStep("basics", newData), files: validateStep("files", newData), pricing: validateStep("pricing", newData) } }));
+      setHasLoadedFromDb(true);
     }
-  }, [existingProject, projectId]);
+  }, [existingProject, projectId, hasLoadedFromDb]);
 
   const updateData = useCallback((step: string, newData: Partial<ProjectFileData>) => {
     setState(prev => {

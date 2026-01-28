@@ -52,6 +52,7 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
   const updateMutation = useUpdateDigitalProduct();
 
   const [state, setState] = useState<MixingTemplateState>({ data: { pricingModel: "paid" }, stepCompletion: { basics: false, files: false, pricing: false }, isLoading: false, isSaving: false, templateId });
+  const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
 
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
@@ -60,11 +61,12 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
   }, [user, stores, router, toast]);
 
   useEffect(() => {
-    if (existingTemplate && templateId) {
-      const newData: MixingTemplateData = { title: existingTemplate.title, description: existingTemplate.description, dawType: existingTemplate.dawType as DAWType, dawVersion: existingTemplate.dawVersion as string | undefined, thumbnail: existingTemplate.imageUrl, price: existingTemplate.price?.toString(), pricingModel: (existingTemplate.pricingModel || "paid") as "free_with_gate" | "paid", tags: existingTemplate.tags, genre: (existingTemplate as any).genre as string[] | undefined };
+    if (existingTemplate && templateId && !hasLoadedFromDb) {
+      const newData: MixingTemplateData = { title: existingTemplate.title, description: existingTemplate.description, dawType: existingTemplate.dawType as DAWType, dawVersion: existingTemplate.dawVersion as string | undefined, thumbnail: existingTemplate.imageUrl, price: existingTemplate.price?.toString(), pricingModel: (existingTemplate.pricingModel || "paid") as "free_with_gate" | "paid", tags: existingTemplate.tags, genre: (existingTemplate as any).genre as string[] | undefined, downloadUrl: existingTemplate.downloadUrl };
       setState(prev => ({ ...prev, templateId, data: newData, stepCompletion: { basics: validateStep("basics", newData), files: validateStep("files", newData), pricing: validateStep("pricing", newData) } }));
+      setHasLoadedFromDb(true);
     }
-  }, [existingTemplate, templateId]);
+  }, [existingTemplate, templateId, hasLoadedFromDb]);
 
   const updateData = useCallback((step: string, newData: Partial<MixingTemplateData>) => {
     setState(prev => {

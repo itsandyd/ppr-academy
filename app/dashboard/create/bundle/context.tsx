@@ -81,6 +81,7 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
     stepCompletion: { basics: false, products: false, pricing: false },
     isLoading: false, isSaving: false, bundleId,
   });
+  const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
 
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
@@ -90,14 +91,15 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
   }, [user, stores, router, toast]);
 
   useEffect(() => {
-    if (existingBundle && existingBundle._id === bundleId) {
+    if (existingBundle && existingBundle._id === bundleId && !hasLoadedFromDb) {
       const bundleProducts: BundleProduct[] = [];
       existingBundle.courses?.forEach((c: any) => c && bundleProducts.push({ id: c._id, type: "course", title: c.title, price: c.price || 0, imageUrl: c.imageUrl, productCategory: "course" }));
       existingBundle.products?.forEach((p: any) => p && bundleProducts.push({ id: p._id, type: "digital", title: p.title, price: p.price || 0, imageUrl: p.imageUrl, productCategory: p.productCategory }));
       const newData: BundleData = { title: existingBundle.name || "", description: existingBundle.description || "", thumbnail: existingBundle.imageUrl || "", products: bundleProducts, price: existingBundle.bundlePrice?.toString() || "", originalPrice: existingBundle.originalPrice?.toString() || "", discountPercentage: existingBundle.discountPercentage, showSavings: true };
       setState(prev => ({ ...prev, bundleId: existingBundle._id, data: newData, stepCompletion: { basics: validateStep("basics", newData), products: validateStep("products", newData), pricing: validateStep("pricing", newData) } }));
+      setHasLoadedFromDb(true);
     }
-  }, [existingBundle, bundleId]);
+  }, [existingBundle, bundleId, hasLoadedFromDb]);
 
   const updateData = useCallback((step: string, newData: Partial<BundleData>) => {
     setState(prev => {

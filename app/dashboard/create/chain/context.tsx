@@ -48,6 +48,7 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
   const updateMutation = useUpdateDigitalProduct();
 
   const [state, setState] = useState<EffectChainState>({ data: { pricingModel: "paid" }, stepCompletion: { basics: false, files: false, pricing: false }, isLoading: false, isSaving: false, chainId });
+  const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
 
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
@@ -55,8 +56,9 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
     }
   }, [user, stores, router, toast]);
 
+  // Only load from DB once on initial mount when we have a chainId
   useEffect(() => {
-    if (existingChain && chainId) {
+    if (existingChain && chainId && !hasLoadedFromDb) {
       const newData: EffectChainData = {
         title: existingChain.title,
         description: existingChain.description,
@@ -76,8 +78,9 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
         followGateSocialLinks: existingChain.followGateSocialLinks,
       };
       setState(prev => ({ ...prev, chainId, data: newData, stepCompletion: { basics: validateStep("basics", newData), files: validateStep("files", newData), pricing: validateStep("pricing", newData) } }));
+      setHasLoadedFromDb(true);
     }
-  }, [existingChain, chainId]);
+  }, [existingChain, chainId, hasLoadedFromDb]);
 
   const updateData = useCallback((step: string, newData: Partial<EffectChainData>) => {
     setState(prev => {

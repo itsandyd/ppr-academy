@@ -44,6 +44,7 @@ export function MembershipCreationProvider({ children }: { children: React.React
   const existingTier = useQuery(api.memberships.getMembershipTierDetails, tierId ? { tierId: tierId as Id<"creatorSubscriptionTiers"> } : "skip");
 
   const [state, setState] = useState<MembershipState>({ data: { benefits: [], includedContent: [], includeAllContent: false, trialDays: 0 }, stepCompletion: { basics: false, pricing: false, content: false }, isLoading: false, isSaving: false });
+  const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
 
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
@@ -53,14 +54,15 @@ export function MembershipCreationProvider({ children }: { children: React.React
   }, [user, stores, router, toast]);
 
   useEffect(() => {
-    if (existingTier && (existingTier as any)._id === tierId) {
+    if (existingTier && (existingTier as any)._id === tierId && !hasLoadedFromDb) {
       const includedContent: IncludedContent[] = [];
       (existingTier as any).courses?.forEach((c: any) => c && includedContent.push({ id: c._id, type: "course", title: c.title, imageUrl: c.imageUrl }));
       (existingTier as any).products?.forEach((p: any) => p && includedContent.push({ id: p._id, type: "product", title: p.title, imageUrl: p.imageUrl }));
-      const newData: MembershipData = { tierName: (existingTier as any).tierName || "", description: (existingTier as any).description || "", priceMonthly: (existingTier as any).priceMonthly?.toString() || "", priceYearly: (existingTier as any).priceYearly?.toString() || "", benefits: (existingTier as any).benefits || [], trialDays: (existingTier as any).trialDays || 0, includedContent, includeAllContent: (existingTier as any).maxCourses === null };
+      const newData: MembershipData = { tierName: (existingTier as any).tierName || "", description: (existingTier as any).description || "", priceMonthly: (existingTier as any).priceMonthly?.toString() || "", priceYearly: (existingTier as any).priceYearly?.toString() || "", benefits: (existingTier as any).benefits || [], trialDays: (existingTier as any).trialDays || 0, includedContent, includeAllContent: (existingTier as any).maxCourses === null, thumbnail: (existingTier as any).imageUrl };
       setState(prev => ({ ...prev, tierId: (existingTier as any)._id, data: newData, stepCompletion: { basics: validateStep("basics", newData), pricing: validateStep("pricing", newData), content: validateStep("content", newData) } }));
+      setHasLoadedFromDb(true);
     }
-  }, [existingTier, tierId]);
+  }, [existingTier, tierId, hasLoadedFromDb]);
 
   const updateData = useCallback((step: string, newData: Partial<MembershipData>) => {
     setState(prev => {
