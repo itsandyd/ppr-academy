@@ -386,6 +386,38 @@ export const createUniversalProduct = mutation({
     }
 
     // For all other products, create in digitalProducts table
+    // Generate slug for digital products
+    const generateSlug = (title: string): string => {
+      return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    };
+
+    const generateUniqueProductSlug = async (baseSlug: string): Promise<string> => {
+      let slug = baseSlug;
+      let counter = 1;
+
+      while (true) {
+        const existing = await ctx.db
+          .query("digitalProducts")
+          .withIndex("by_storeId_and_slug", (q) =>
+            q.eq("storeId", args.storeId).eq("slug", slug)
+          )
+          .first();
+
+        if (!existing) {
+          return slug;
+        }
+
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+    };
+
+    const baseSlug = generateSlug(args.title);
+    const uniqueSlug = await generateUniqueProductSlug(baseSlug);
+
     const productData: any = {
       title: args.title,
       description: args.description,
@@ -397,6 +429,7 @@ export const createUniversalProduct = mutation({
       imageUrl: args.imageUrl,
       downloadUrl: args.downloadUrl,
       tags: args.tags,
+      slug: uniqueSlug, // Add generated slug
       isPublished: false, // Start as draft
 
       // Follow Gate Setup (only for digitalProducts that support it)
@@ -821,5 +854,75 @@ export const getUniversalProductsByStore = query({
     }));
 
     return enrichedProducts;
+  },
+});
+
+/**
+ * Generate Slugs for Existing Products
+ *
+ * Migration function to add slugs to products that don't have them.
+ */
+export const generateMissingSlugs = mutation({
+  args: {},
+  returns: v.object({
+    updated: v.number(),
+    products: v.array(v.object({
+      id: v.string(),
+      title: v.string(),
+      slug: v.string(),
+    })),
+  }),
+  handler: async (ctx) => {
+    // Get all products without slugs
+    const products = await ctx.db
+      .query("digitalProducts")
+      .collect();
+
+    const productsWithoutSlugs = products.filter((p) => !p.slug);
+
+    const generateSlug = (title: string): string => {
+      return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    };
+
+    const updatedProducts: { id: string; title: string; slug: string }[] = [];
+
+    for (const product of productsWithoutSlugs) {
+      const baseSlug = generateSlug(product.title);
+
+      // Check for uniqueness within the store
+      let slug = baseSlug;
+      let counter = 1;
+
+      while (true) {
+        const existing = await ctx.db
+          .query("digitalProducts")
+          .withIndex("by_storeId_and_slug", (q) =>
+            q.eq("storeId", product.storeId).eq("slug", slug)
+          )
+          .first();
+
+        if (!existing || existing._id === product._id) {
+          break;
+        }
+
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      await ctx.db.patch(product._id, { slug });
+      updatedProducts.push({
+        id: product._id,
+        title: product.title,
+        slug,
+      });
+    }
+
+    return {
+      updated: updatedProducts.length,
+      products: updatedProducts,
+    };
   },
 });

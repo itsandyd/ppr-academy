@@ -19431,6 +19431,15 @@ export declare const api: {
       },
       Id<"digitalProducts"> | Id<"courses">
     >;
+    generateMissingSlugs: FunctionReference<
+      "mutation",
+      "public",
+      {},
+      {
+        products: Array<{ id: string; slug: string; title: string }>;
+        updated: number;
+      }
+    >;
     getProductsByCategory: FunctionReference<
       "query",
       "public",
