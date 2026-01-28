@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Node, Edge } from "reactflow";
@@ -275,6 +275,7 @@ export default function WorkflowBuilderPage() {
   const [contactSearchQuery, setContactSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isEnrollingAll, setIsEnrollingAll] = useState(false);
 
   // Debounce the search query
   useEffect(() => {
@@ -338,6 +339,12 @@ export default function WorkflowBuilderPage() {
 
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
 
+  // Get contact stats for total count
+  const contactStats = useQuery(
+    api.emailContacts.getContactStats,
+    storeId ? { storeId } : "skip"
+  );
+
   // Get segments for segment-based triggers
   const segments = useQuery(
     api.emailCreatorSegments.getCreatorSegments,
@@ -363,6 +370,7 @@ export default function WorkflowBuilderPage() {
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
+  const bulkEnrollAll = useAction(api.emailWorkflows.bulkEnrollAllContactsByFilter);
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
   const saveABTest = useMutation(api.emailWorkflowABTesting.saveNodeABTest);
@@ -588,6 +596,30 @@ export default function WorkflowBuilderPage() {
       toast({ title: "Error", description: "Failed to enroll contacts", variant: "destructive" });
     } finally {
       setIsEnrolling(false);
+    }
+  };
+
+  const handleEnrollAllContacts = async () => {
+    if (!workflowId || !storeId) return;
+    setIsEnrollingAll(true);
+    try {
+      const result = await bulkEnrollAll({
+        workflowId: workflowId as Id<"emailWorkflows">,
+        storeId,
+      });
+      toast({
+        title: "All Contacts Enrolled",
+        description: result.message,
+      });
+      setIsAddContactsOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enroll all contacts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEnrollingAll(false);
     }
   };
 
@@ -1454,6 +1486,36 @@ export default function WorkflowBuilderPage() {
             </DialogHeader>
 
             <div className="space-y-4 py-4">
+              {/* Enroll All Contacts Option */}
+              {contactStats && contactStats.total > 0 && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 dark:border-purple-900 dark:bg-purple-950/30">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                        Enroll All Contacts
+                      </p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400">
+                        Add all {contactStats.total.toLocaleString()} contacts to this automation
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleEnrollAllContacts}
+                      disabled={isEnrollingAll}
+                      className="shrink-0 gap-2 bg-purple-600 hover:bg-purple-700"
+                    >
+                      <Users className="h-4 w-4" />
+                      {isEnrollingAll ? "Enrolling..." : "Enroll All"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="relative flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">or select specific contacts</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

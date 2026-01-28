@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect, DragEvent } from "react";
+import { useCallback, useRef, useState, useEffect, DragEvent, useMemo } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -85,6 +85,10 @@ function WorkflowCanvasInner({
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  // Track pending callbacks to avoid calling during render
+  const pendingNodesUpdate = useRef<Node[] | null>(null);
+  const pendingEdgesUpdate = useRef<Edge[] | null>(null);
+
   useEffect(() => {
     if (initialNodes.length > 0 || initialEdges.length > 0) {
       setNodes(initialNodes);
@@ -98,13 +102,29 @@ function WorkflowCanvasInner({
     }
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  const nodesWithCounts = nodes.map((node) => ({
+  // Sync nodes changes to parent after render is complete
+  useEffect(() => {
+    if (pendingNodesUpdate.current !== null) {
+      onNodesChangeCallback?.(pendingNodesUpdate.current);
+      pendingNodesUpdate.current = null;
+    }
+  });
+
+  // Sync edges changes to parent after render is complete
+  useEffect(() => {
+    if (pendingEdgesUpdate.current !== null) {
+      onEdgesChangeCallback?.(pendingEdgesUpdate.current);
+      pendingEdgesUpdate.current = null;
+    }
+  });
+
+  const nodesWithCounts = useMemo(() => nodes.map((node) => ({
     ...node,
     data: {
       ...node.data,
       waitingCount: nodeExecutionCounts[node.id] || 0,
     },
-  }));
+  })), [nodes, nodeExecutionCounts]);
 
   const addNodeToCanvas = useCallback(
     (type: string) => {
@@ -117,9 +137,9 @@ function WorkflowCanvasInner({
       };
       const newNodes = [...nodes, newNode];
       setNodes(newNodes);
-      onNodesChangeCallback?.(newNodes);
+      pendingNodesUpdate.current = newNodes;
     },
-    [nodes, setNodes, onNodesChangeCallback]
+    [nodes, setNodes]
   );
 
   useEffect(() => {
@@ -138,9 +158,9 @@ function WorkflowCanvasInner({
         edges
       );
       setEdges(newEdges);
-      onEdgesChangeCallback?.(newEdges);
+      pendingEdgesUpdate.current = newEdges;
     },
-    [edges, setEdges, onEdgesChangeCallback]
+    [edges, setEdges]
   );
 
   const onDragOver = useCallback((event: DragEvent) => {
@@ -170,9 +190,9 @@ function WorkflowCanvasInner({
 
       const newNodes = [...nodes, newNode];
       setNodes(newNodes);
-      onNodesChangeCallback?.(newNodes);
+      pendingNodesUpdate.current = newNodes;
     },
-    [reactFlowInstance, nodes, setNodes, onNodesChangeCallback]
+    [reactFlowInstance, nodes, setNodes]
   );
 
   const handleNodesChange = useCallback(
@@ -180,12 +200,12 @@ function WorkflowCanvasInner({
       // Apply changes and get the new nodes
       setNodes((nds) => {
         const updatedNodes = applyNodeChanges(changes, nds);
-        // Notify parent with updated nodes
-        onNodesChangeCallback?.(updatedNodes);
+        // Schedule parent callback for after render
+        pendingNodesUpdate.current = updatedNodes;
         return updatedNodes;
       });
     },
-    [setNodes, onNodesChangeCallback]
+    [setNodes]
   );
 
   const handleEdgesChange = useCallback(
@@ -193,12 +213,12 @@ function WorkflowCanvasInner({
       // Apply changes and get the new edges
       setEdges((eds) => {
         const updatedEdges = applyEdgeChanges(changes, eds);
-        // Notify parent with updated edges
-        onEdgesChangeCallback?.(updatedEdges);
+        // Schedule parent callback for after render
+        pendingEdgesUpdate.current = updatedEdges;
         return updatedEdges;
       });
     },
-    [setEdges, onEdgesChangeCallback]
+    [setEdges]
   );
 
   const onNodeClick = useCallback(
