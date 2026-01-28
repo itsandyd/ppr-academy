@@ -2,8 +2,8 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { use, useState } from "react";
-import { notFound, useRouter } from "next/navigation";
+import { use, useState, useEffect } from "react";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,6 +14,7 @@ import {
   Share2,
   Star,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { generateProductStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
+import { useUser } from "@clerk/nextjs";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
@@ -39,10 +41,16 @@ const SUGGESTED_AMOUNTS = [5, 10, 25, 50];
 export default function TipJarLandingPage({ params }: TipPageProps) {
   const { slug, tipSlug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user: clerkUser, isLoaded: isUserLoaded } = useUser();
+
+  // Check for success state
+  const isSuccess = searchParams.get("success") === "true";
 
   // Tip amount state
   const [selectedAmount, setSelectedAmount] = useState<number | null>(10);
   const [customAmount, setCustomAmount] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug });
@@ -65,8 +73,8 @@ export default function TipJarLandingPage({ params }: TipPageProps) {
     );
   }
 
-  // Not found or not a tip jar
-  if (!store || !tipJar || tipJar.productType !== "tip-jar") {
+  // Not found or not a tip jar (check productCategory, not productType)
+  if (!store || !tipJar || tipJar.productCategory !== "tip-jar") {
     notFound();
   }
 
@@ -116,14 +124,54 @@ export default function TipJarLandingPage({ params }: TipPageProps) {
   };
 
   // Handle tip
-  const handleTip = () => {
+  const handleTip = async () => {
     const amount = getFinalAmount();
     if (amount <= 0) {
       toast.error("Please select or enter an amount");
       return;
     }
-    // TODO: Integrate with Stripe payment
-    toast.success(`Processing $${amount} tip - Thank you for your support!`);
+
+    if (!clerkUser) {
+      toast.error("Please sign in to send a tip");
+      router.push(`/sign-in?redirect_url=/${slug}/tips/${tipSlug}`);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch("/api/tips/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tipJarId: tipJar._id,
+          amount,
+          customerEmail: clerkUser.primaryEmailAddress?.emailAddress || "",
+          customerName: clerkUser.fullName || clerkUser.firstName || "",
+          userId: clerkUser.id,
+          storeId: store._id,
+          creatorStripeAccountId: user?.stripeConnectAccountId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error) {
+      console.error("Tip checkout error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to process tip");
+      setIsProcessing(false);
+    }
   };
 
   // Handle amount selection
@@ -161,6 +209,28 @@ export default function TipJarLandingPage({ params }: TipPageProps) {
 
       <main className="container mx-auto px-4 py-8 md:py-12">
         <div className="mx-auto max-w-md">
+          {/* Success State */}
+          {isSuccess && (
+            <Card className="mb-8 border-2 border-green-500/50 bg-green-50 dark:bg-green-950/20">
+              <CardContent className="p-6 text-center space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-green-800 dark:text-green-200">Thank You!</h2>
+                  <p className="text-green-700 dark:text-green-300 mt-1">
+                    Your tip has been sent successfully. {displayName} appreciates your support!
+                  </p>
+                </div>
+                <Link href={`/${slug}`}>
+                  <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-100">
+                    Back to Store
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Creator Card */}
           <Card className="mb-8 overflow-hidden">
             {/* Background gradient */}
@@ -265,13 +335,22 @@ export default function TipJarLandingPage({ params }: TipPageProps) {
                 className="w-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white"
                 size="lg"
                 onClick={handleTip}
-                disabled={getFinalAmount() <= 0}
+                disabled={getFinalAmount() <= 0 || isProcessing}
               >
-                <Coffee className="mr-2 h-5 w-5" />
-                {getFinalAmount() > 0
-                  ? `Send $${getFinalAmount()} Tip`
-                  : "Select an amount"
-                }
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Coffee className="mr-2 h-5 w-5" />
+                    {getFinalAmount() > 0
+                      ? `Send $${getFinalAmount()} Tip`
+                      : "Select an amount"
+                    }
+                  </>
+                )}
               </Button>
 
               {/* Message */}

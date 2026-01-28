@@ -436,6 +436,973 @@ export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData)
   }
 }
 
+// Tip Confirmation Email
+export interface TipConfirmationEmailData {
+  customerEmail: string;
+  customerName: string;
+  tipJarTitle: string;
+  amount: number;
+  currency: string;
+  message?: string;
+  creatorName?: string;
+}
+
+const getTipConfirmationEmailTemplate = (data: TipConfirmationEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank You for Your Support!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">💝 Thank You!</h1>
+  </div>
+
+  <div style="background: #fff1f2; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #fecdd3;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Your tip of <strong>$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</strong> has been sent to <strong>${data.tipJarTitle}</strong>!
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f43f5e; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🧾 Receipt:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Tip Jar:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.tipJarTitle}</td>
+        </tr>
+        ${data.message ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Message:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.message}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Date:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${new Date().toLocaleDateString()}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 25px 0;">
+      <p style="font-size: 18px; margin: 0; color: #1e293b;">
+        ❤️ Your support means the world to ${data.creatorName || 'the creator'}!
+      </p>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #fecdd3; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      This is your receipt for your tip. If you have any questions, simply reply to this email.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `💝 Thank you for your $${data.amount.toFixed(2)} tip!`,
+      html: getTipConfirmationEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send tip confirmation email:', error);
+    throw new Error(`Tip confirmation email failed: ${error}`);
+  }
+}
+
+// Membership Subscription Confirmation Email
+export interface MembershipConfirmationEmailData {
+  customerEmail: string;
+  customerName: string;
+  membershipName: string;
+  tierName: string;
+  amount: number;
+  currency: string;
+  billingCycle: 'monthly' | 'yearly';
+  creatorName?: string;
+  storeName?: string;
+  benefits?: string[];
+}
+
+const getMembershipConfirmationEmailTemplate = (data: MembershipConfirmationEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to ${data.membershipName}!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">⭐ Welcome, Member!</h1>
+  </div>
+
+  <div style="background: #f5f3ff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #ddd6fe;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Thank you for joining <strong>${data.membershipName}</strong>! Your membership is now active.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #8b5cf6; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📋 Membership Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Membership:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.membershipName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Tier:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.tierName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Billing:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)}/${data.billingCycle === 'yearly' ? 'year' : 'month'}</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Creator:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    ${data.benefits && data.benefits.length > 0 ? `
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🎁 Your Member Benefits:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        ${data.benefits.map(b => `<li style="margin-bottom: 8px; color: #1f2937;">${b}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+         style="background: #8b5cf6; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        🚀 Access Your Benefits
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #ddd6fe; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">
+      Best regards,<br>
+      <strong>${data.storeName || 'PPR Academy'}</strong>
+    </p>
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      You can manage your subscription anytime from your account settings.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendMembershipConfirmationEmail(data: MembershipConfirmationEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `⭐ Welcome to ${data.membershipName} - Your Membership is Active!`,
+      html: getMembershipConfirmationEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send membership confirmation email:', error);
+    throw new Error(`Membership confirmation email failed: ${error}`);
+  }
+}
+
+// Beat Purchase Confirmation Email
+export interface BeatPurchaseEmailData {
+  customerEmail: string;
+  customerName: string;
+  beatTitle: string;
+  tierName: string;
+  tierType: string;
+  amount: number;
+  currency: string;
+  creatorName?: string;
+  licenseTerms?: string;
+}
+
+const getBeatPurchaseEmailTemplate = (data: BeatPurchaseEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Beat License is Ready!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🎵 Beat License Acquired!</h1>
+  </div>
+
+  <div style="background: #ecfeff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #a5f3fc;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      You've successfully purchased a <strong>${data.tierName}</strong> license for <strong>${data.beatTitle}</strong>!
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #06b6d4; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🎫 License Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Beat:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.beatTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">License:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.tierName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Price:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Producer:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+         style="background: #06b6d4; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        📥 Download Your Files
+      </a>
+    </div>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📜 License Terms:</h3>
+      <p style="margin-bottom: 0; color: #64748b; font-size: 14px;">
+        ${data.licenseTerms || 'Your license is available in your dashboard. Please review the terms before distributing any content using this beat.'}
+      </p>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #a5f3fc; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      Questions about your license? Reply to this email for support.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `🎵 Your ${data.tierName} License for "${data.beatTitle}" is Ready!`,
+      html: getBeatPurchaseEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send beat purchase email:', error);
+    throw new Error(`Beat purchase email failed: ${error}`);
+  }
+}
+
+// Digital Product Purchase Email
+export interface DigitalProductPurchaseEmailData {
+  customerEmail: string;
+  customerName: string;
+  productTitle: string;
+  productType: string;
+  amount: number;
+  currency: string;
+  creatorName?: string;
+  storeName?: string;
+}
+
+const getDigitalProductPurchaseEmailTemplate = (data: DigitalProductPurchaseEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Purchase is Ready!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #22c55e 0%, #10b981 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">📦 Purchase Complete!</h1>
+  </div>
+
+  <div style="background: #f0fdf4; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #bbf7d0;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Thank you for purchasing <strong>${data.productTitle}</strong>! Your product is now available in your library.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #22c55e; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🧾 Order Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Product:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.productTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.amount > 0 ? `$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}` : 'FREE'}</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Creator:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+         style="background: #22c55e; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        📥 Access Your Purchase
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #bbf7d0; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">
+      Best regards,<br>
+      <strong>${data.storeName || 'PPR Academy'}</strong>
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurchaseEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `📦 Your purchase of "${data.productTitle}" is ready!`,
+      html: getDigitalProductPurchaseEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send digital product purchase email:', error);
+    throw new Error(`Digital product purchase email failed: ${error}`);
+  }
+}
+
+// Bundle Purchase Email
+export interface BundlePurchaseEmailData {
+  customerEmail: string;
+  customerName: string;
+  bundleTitle: string;
+  itemCount: number;
+  amount: number;
+  currency: string;
+  creatorName?: string;
+  storeName?: string;
+}
+
+const getBundlePurchaseEmailTemplate = (data: BundlePurchaseEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Bundle is Ready!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🎁 Bundle Unlocked!</h1>
+  </div>
+
+  <div style="background: #fffbeb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #fde68a;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      You've unlocked <strong>${data.bundleTitle}</strong> with <strong>${data.itemCount} items</strong>!
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🧾 Order Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Bundle:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.bundleTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Items:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.itemCount} products included</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Creator:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+         style="background: #f59e0b; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        📥 Access Your Bundle
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #fde68a; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">
+      Best regards,<br>
+      <strong>${data.storeName || 'PPR Academy'}</strong>
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `🎁 Your bundle "${data.bundleTitle}" is ready!`,
+      html: getBundlePurchaseEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send bundle purchase email:', error);
+    throw new Error(`Bundle purchase email failed: ${error}`);
+  }
+}
+
+// Coaching Session Confirmation Email
+export interface CoachingConfirmationEmailData {
+  customerEmail: string;
+  customerName: string;
+  sessionTitle: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  duration: string;
+  amount: number;
+  currency: string;
+  creatorName?: string;
+  meetingLink?: string;
+}
+
+const getCoachingConfirmationEmailTemplate = (data: CoachingConfirmationEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Coaching Session is Booked!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">💬 Session Booked!</h1>
+  </div>
+
+  <div style="background: #fdf4ff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #f5d0fe;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Your coaching session <strong>${data.sessionTitle}</strong> has been booked!
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ec4899; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📅 Session Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Session:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.sessionTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Date:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.scheduledDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Time:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.scheduledTime}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Duration:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.duration}</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Coach:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${data.meetingLink ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.meetingLink}"
+         style="background: #ec4899; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        🔗 Join Meeting
+      </a>
+    </div>
+    ` : ''}
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">💡 Before Your Session:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Prepare any questions you have</li>
+        <li style="margin-bottom: 8px;">Test your audio and video setup</li>
+        <li style="margin-bottom: 8px;">Be ready 5 minutes before the session</li>
+      </ul>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #f5d0fe; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      Need to reschedule? Reply to this email at least 24 hours before your session.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `💬 Your coaching session is booked for ${data.scheduledDate}!`,
+      html: getCoachingConfirmationEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send coaching confirmation email:', error);
+    throw new Error(`Coaching confirmation email failed: ${error}`);
+  }
+}
+
+// Credits Purchase Confirmation Email
+export interface CreditsPurchaseEmailData {
+  customerEmail: string;
+  customerName: string;
+  packageName: string;
+  credits: number;
+  bonusCredits: number;
+  amount: number;
+  currency: string;
+}
+
+const getCreditsPurchaseEmailTemplate = (data: CreditsPurchaseEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credits Added to Your Account!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #eab308 0%, #f59e0b 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🪙 Credits Added!</h1>
+  </div>
+
+  <div style="background: #fefce8; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #fef08a;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Your credit purchase was successful! <strong>${data.credits + data.bonusCredits} credits</strong> have been added to your account.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #eab308; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🧾 Purchase Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Package:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.packageName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Credits:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.credits}</td>
+        </tr>
+        ${data.bonusCredits > 0 ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Bonus:</td>
+          <td style="padding: 8px 0; color: #22c55e; font-weight: bold;">+${data.bonusCredits} FREE</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Total:</td>
+          <td style="padding: 8px 0; color: #1f2937; font-weight: bold;">${data.credits + data.bonusCredits} credits</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard"
+         style="background: #eab308; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        🚀 Start Using Your Credits
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #fef08a; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      Credits never expire. Use them anytime for AI features and premium services.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `🪙 ${data.credits + data.bonusCredits} credits added to your account!`,
+      html: getCreditsPurchaseEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send credits purchase email:', error);
+    throw new Error(`Credits purchase email failed: ${error}`);
+  }
+}
+
+// Mixing Service Order Confirmation Email
+export interface MixingServiceEmailData {
+  customerEmail: string;
+  customerName: string;
+  serviceTitle: string;
+  serviceType: string;
+  tierName: string;
+  turnaroundDays: number;
+  revisions: number;
+  isRush: boolean;
+  amount: number;
+  currency: string;
+  creatorName?: string;
+  customerNotes?: string;
+}
+
+const getMixingServiceEmailTemplate = (data: MixingServiceEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your ${data.serviceType} Order is Confirmed!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🎚️ Order Confirmed!</h1>
+  </div>
+
+  <div style="background: #f5f3ff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #ddd6fe;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Your <strong>${data.serviceType}</strong> order has been confirmed! ${data.creatorName ? `${data.creatorName} will` : 'The engineer will'} begin working on your project soon.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #7c3aed; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📋 Order Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Service:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.serviceTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Type:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.serviceType}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Package:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.tierName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Turnaround:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.turnaroundDays} days${data.isRush ? ' (Rush)' : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Revisions:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.revisions} included</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Engineer:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${data.isRush ? `
+    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+      <p style="margin: 0; color: #92400e; font-weight: bold;">
+        ⚡ Rush Order - Priority processing enabled
+      </p>
+    </div>
+    ` : ''}
+
+    ${data.customerNotes ? `
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📝 Your Notes:</h3>
+      <p style="margin-bottom: 0; color: #64748b; font-style: italic;">"${data.customerNotes}"</p>
+    </div>
+    ` : ''}
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📤 What's Next:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Upload your stems/files through the dashboard</li>
+        <li style="margin-bottom: 8px;">The engineer will review and begin work</li>
+        <li style="margin-bottom: 8px;">You'll receive updates on progress</li>
+        <li style="margin-bottom: 8px;">Download your final mix when complete</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard/my-orders"
+         style="background: #7c3aed; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        📂 View Your Order
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #ddd6fe; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      Questions about your order? Reply to this email for support.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `🎚️ Your ${data.serviceType} order is confirmed!`,
+      html: getMixingServiceEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send mixing service email:', error);
+    throw new Error(`Mixing service email failed: ${error}`);
+  }
+}
+
+// Playlist Submission Confirmation Email
+export interface PlaylistSubmissionEmailData {
+  customerEmail: string;
+  customerName: string;
+  trackName: string;
+  playlistName: string;
+  amount: number;
+  currency: string;
+  curatorName?: string;
+  message?: string;
+}
+
+const getPlaylistSubmissionEmailTemplate = (data: PlaylistSubmissionEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Submitted for Review!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1db954 0%, #14532d 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🎧 Submission Received!</h1>
+  </div>
+
+  <div style="background: #f0fdf4; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #bbf7d0;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Your track has been successfully submitted for playlist consideration! ${data.curatorName ? `${data.curatorName} will` : 'The curator will'} review your submission soon.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #1db954; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">🎵 Submission Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Track:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.trackName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Playlist:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.playlistName}</td>
+        </tr>
+        ${data.curatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Curator:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.curatorName}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Submission Fee:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${data.message ? `
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">💬 Your Message:</h3>
+      <p style="margin-bottom: 0; color: #64748b; font-style: italic;">"${data.message}"</p>
+    </div>
+    ` : ''}
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">⏳ What Happens Next:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">The curator will listen to your track</li>
+        <li style="margin-bottom: 8px;">You'll receive feedback within 7 days</li>
+        <li style="margin-bottom: 8px;">If approved, your track will be added to the playlist</li>
+        <li style="margin-bottom: 8px;">You'll be notified of the decision via email</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard"
+         style="background: #1db954; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        📊 Track Your Submissions
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #bbf7d0; margin: 30px 0;">
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      Note: Submission fees are non-refundable regardless of the curator's decision.
+      This ensures curators can dedicate time to thoroughly review each submission.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `🎧 Your track "${data.trackName}" has been submitted for review!`,
+      html: getPlaylistSubmissionEmailTemplate(data),
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send playlist submission email:', error);
+    throw new Error(`Playlist submission email failed: ${error}`);
+  }
+}
+
 // Utility to verify email configuration
 export async function verifyEmailConfig() {
   if (!process.env.RESEND_API_KEY) {

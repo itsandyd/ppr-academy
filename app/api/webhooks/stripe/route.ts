@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
           }
           // Handle membership subscriptions
           else if (productType === "membership" && userId) {
-            const { tierId, creatorId } = session.metadata || {};
+            const { tierId, creatorId, tierName, membershipName, customerEmail, customerName } = session.metadata || {};
 
             console.log("⭐ Creating membership subscription:", {
               userId,
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
               billingCycle,
             });
 
-            const { fetchMutation: fetchMutationMembership } = await import("convex/nextjs");
+            const { fetchMutation: fetchMutationMembership, fetchQuery: fetchQueryMembership } = await import("convex/nextjs");
             const { api: apiMembership } = await import("@/convex/_generated/api");
 
             const subscription = await stripe.subscriptions.retrieve(
@@ -170,7 +170,24 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              // console.log(...);
+              console.log("✅ Membership subscription created");
+
+              // Send membership confirmation email
+              try {
+                const { sendMembershipConfirmationEmail } = await import("@/lib/email");
+                await sendMembershipConfirmationEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Member",
+                  membershipName: membershipName || "Membership",
+                  tierName: tierName || "Standard",
+                  amount: (session.amount_total || 0) / 100,
+                  currency: session.currency || "usd",
+                  billingCycle: (billingCycle as "monthly" | "yearly") || "monthly",
+                });
+                console.log("✅ Membership confirmation email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send membership confirmation email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to create membership subscription:", error);
             }
@@ -200,7 +217,7 @@ export async function POST(request: NextRequest) {
 
         // Handle course purchases
         if (session.metadata?.productType === "course") {
-          const { userId, courseId, amount, currency } = session.metadata;
+          const { userId, courseId, amount, currency, courseTitle, customerEmail, customerName } = session.metadata;
 
           if (userId && courseId && amount) {
             console.log("📚 Processing course purchase:", {
@@ -229,6 +246,21 @@ export async function POST(request: NextRequest) {
               );
 
               console.log("✅ Course enrollment created:", { purchaseId, userId, courseId });
+
+              // Send course enrollment email
+              try {
+                const { sendCourseEnrollmentEmail } = await import("@/lib/email");
+                await sendCourseEnrollmentEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Student",
+                  courseTitle: courseTitle || "Course",
+                  amount: parseInt(amount) / 100,
+                  currency: currency || "USD",
+                });
+                console.log("✅ Course enrollment email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send course enrollment email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to create course enrollment:", error);
             }
@@ -237,7 +269,7 @@ export async function POST(request: NextRequest) {
 
         // Handle digital product purchases
         if (session.metadata?.productType === "digitalProduct") {
-          const { userId, productId, amount, currency } = session.metadata;
+          const { userId, productId, amount, currency, productTitle, customerEmail, customerName } = session.metadata;
 
           if (userId && productId && amount) {
             console.log("📦 Processing digital product purchase:", {
@@ -270,6 +302,22 @@ export async function POST(request: NextRequest) {
                 userId,
                 productId,
               });
+
+              // Send digital product purchase email
+              try {
+                const { sendDigitalProductPurchaseEmail } = await import("@/lib/email");
+                await sendDigitalProductPurchaseEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Customer",
+                  productTitle: productTitle || "Digital Product",
+                  productType: "digital",
+                  amount: parseInt(amount) / 100,
+                  currency: currency || "USD",
+                });
+                console.log("✅ Digital product purchase email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send digital product purchase email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to create digital product purchase:", error);
             }
@@ -277,7 +325,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (session.metadata?.productType === "bundle") {
-          const { userId, bundleId, amount, currency } = session.metadata;
+          const { userId, bundleId, amount, currency, bundleTitle, itemCount, customerEmail, customerName } = session.metadata;
 
           if (userId && bundleId && amount) {
             console.log("📦 Processing bundle purchase:", {
@@ -307,6 +355,22 @@ export async function POST(request: NextRequest) {
                 userId,
                 bundleId,
               });
+
+              // Send bundle purchase email
+              try {
+                const { sendBundlePurchaseEmail } = await import("@/lib/email");
+                await sendBundlePurchaseEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Customer",
+                  bundleTitle: bundleTitle || "Bundle",
+                  itemCount: parseInt(itemCount || "0") || 1,
+                  amount: parseInt(amount) / 100,
+                  currency: currency || "USD",
+                });
+                console.log("✅ Bundle purchase email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send bundle purchase email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to create bundle purchase:", error);
             }
@@ -315,7 +379,7 @@ export async function POST(request: NextRequest) {
 
         // Handle beat lease purchases
         if (session.metadata?.productType === "beatLease") {
-          const { userId, beatId, tierType, tierName, storeId, amount, currency } = session.metadata;
+          const { userId, beatId, tierType, tierName, storeId, amount, currency, customerEmail, customerName } = session.metadata;
 
           if (userId && beatId && tierType && storeId && amount) {
             console.log("🎵 Processing beat lease purchase:", {
@@ -329,10 +393,15 @@ export async function POST(request: NextRequest) {
               paymentIntentId: session.payment_intent,
             });
 
-            const { fetchMutation: fetchMutationBeatLease } = await import("convex/nextjs");
+            const { fetchMutation: fetchMutationBeatLease, fetchQuery: fetchQueryBeat } = await import("convex/nextjs");
             const { api: apiBeatLease, internal: internalBeatLease } = await import("@/convex/_generated/api");
 
             try {
+              // Get beat details for email
+              const beat = await fetchQueryBeat(apiBeatLease.digitalProducts.getProductById, {
+                productId: beatId as any,
+              });
+
               // Create the beat license purchase
               const result = await fetchMutationBeatLease(
                 apiBeatLease.beatLeases.createBeatLicensePurchase,
@@ -346,8 +415,8 @@ export async function POST(request: NextRequest) {
                   currency: currency || "USD",
                   paymentMethod: "stripe",
                   transactionId: session.payment_intent as string,
-                  buyerEmail: session.customer_details?.email || session.metadata?.customerEmail || "",
-                  buyerName: session.customer_details?.name || session.metadata?.customerName,
+                  buyerEmail: session.customer_details?.email || customerEmail || "",
+                  buyerName: session.customer_details?.name || customerName,
                 }
               );
 
@@ -358,6 +427,23 @@ export async function POST(request: NextRequest) {
                 beatId,
                 tierType,
               });
+
+              // Send beat purchase email
+              try {
+                const { sendBeatPurchaseEmail } = await import("@/lib/email");
+                await sendBeatPurchaseEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Customer",
+                  beatTitle: beat?.title || "Beat",
+                  tierName: tierName || tierType,
+                  tierType: tierType,
+                  amount: parseInt(amount) / 100,
+                  currency: currency || "USD",
+                });
+                console.log("✅ Beat purchase email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send beat purchase email:", emailError);
+              }
 
               // If exclusive tier, mark beat as sold (hides from marketplace)
               if (tierType === "exclusive") {
@@ -381,7 +467,7 @@ export async function POST(request: NextRequest) {
 
         // Handle credit package purchases
         if (session.metadata?.productType === "credit_package") {
-          const { userId, packageId, credits, bonusCredits, packageName } = session.metadata;
+          const { userId, packageId, credits, bonusCredits, packageName, customerEmail, customerName } = session.metadata;
           const creditsAmount = parseInt(credits || "0");
           const bonusAmount = parseInt(bonusCredits || "0");
           const totalCredits = creditsAmount + bonusAmount;
@@ -431,6 +517,23 @@ export async function POST(request: NextRequest) {
                 bonus: bonusAmount,
                 total: totalCredits,
               });
+
+              // Send credits purchase email
+              try {
+                const { sendCreditsPurchaseEmail } = await import("@/lib/email");
+                await sendCreditsPurchaseEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Customer",
+                  packageName: packageName || "Credit Package",
+                  credits: creditsAmount,
+                  bonusCredits: bonusAmount,
+                  amount: (session.amount_total || 0) / 100,
+                  currency: session.currency || "usd",
+                });
+                console.log("✅ Credits purchase email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send credits purchase email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to add credits:", error);
             }
@@ -439,7 +542,7 @@ export async function POST(request: NextRequest) {
 
         // Handle playlist submission payments
         if (session.metadata?.productType === "playlist_submission") {
-          const { submitterId, creatorId, trackId, playlistId, message, amount } =
+          const { submitterId, creatorId, trackId, playlistId, message, amount, trackName, playlistName, customerEmail, customerName } =
             session.metadata;
 
           if (submitterId && creatorId && trackId && playlistId) {
@@ -452,7 +555,7 @@ export async function POST(request: NextRequest) {
               sessionId: session.id,
             });
 
-            const { fetchMutation: fetchMutationSubmission } = await import("convex/nextjs");
+            const { fetchMutation: fetchMutationSubmission, fetchQuery: fetchQuerySubmission } = await import("convex/nextjs");
             const { api: apiSubmission } = await import("@/convex/_generated/api");
 
             try {
@@ -485,6 +588,23 @@ export async function POST(request: NextRequest) {
                 submitterId,
                 playlistId,
               });
+
+              // Send playlist submission confirmation email
+              try {
+                const { sendPlaylistSubmissionEmail } = await import("@/lib/email");
+                await sendPlaylistSubmissionEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Artist",
+                  trackName: trackName || "Your Track",
+                  playlistName: playlistName || "Playlist",
+                  amount: parseInt(amount || "0") / 100,
+                  currency: session.currency || "usd",
+                  message: message || undefined,
+                });
+                console.log("✅ Playlist submission confirmation email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send playlist submission email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to create playlist submission:", error);
             }
@@ -505,6 +625,9 @@ export async function POST(request: NextRequest) {
             basePrice,
             totalPrice,
             customerNotes,
+            customerEmail,
+            customerName,
+            serviceTitle,
           } = session.metadata;
 
           if (userId && creatorId && productId && selectedTier) {
@@ -517,7 +640,7 @@ export async function POST(request: NextRequest) {
               sessionId: session.id,
             });
 
-            const { fetchMutation: fetchMutationService } = await import("convex/nextjs");
+            const { fetchMutation: fetchMutationService, fetchQuery: fetchQueryService } = await import("convex/nextjs");
             const { api: apiService } = await import("@/convex/_generated/api");
 
             try {
@@ -556,6 +679,41 @@ export async function POST(request: NextRequest) {
                 creatorId,
                 productId,
               });
+
+              // Send mixing service confirmation email
+              try {
+                const { sendMixingServiceEmail } = await import("@/lib/email");
+
+                // Get product details for email
+                const product = await fetchQueryService(
+                  apiService.digitalProducts.getProductById,
+                  { productId: productId as any }
+                );
+
+                const serviceTypeLabel = {
+                  'mixing': 'Mixing',
+                  'mastering': 'Mastering',
+                  'mix-and-master': 'Mix & Master',
+                  'stem-mixing': 'Stem Mixing',
+                }[serviceType as string] || 'Mixing';
+
+                await sendMixingServiceEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Customer",
+                  serviceTitle: serviceTitle || product?.title || "Mixing Service",
+                  serviceType: serviceTypeLabel,
+                  tierName: tierData.name || "Basic Mix",
+                  turnaroundDays: tierData.turnaroundDays || 7,
+                  revisions: tierData.revisions || 2,
+                  isRush: isRush === "true",
+                  amount: parseInt(totalPrice || "0") / 100,
+                  currency: session.currency || "usd",
+                  customerNotes: customerNotes || undefined,
+                });
+                console.log("✅ Mixing service confirmation email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send mixing service email:", emailError);
+              }
             } catch (error) {
               console.error("❌ Failed to create mixing service order:", error);
             }
@@ -574,6 +732,8 @@ export async function POST(request: NextRequest) {
             notes,
             amount,
             currency,
+            sessionTitle,
+            duration,
           } = session.metadata;
 
           if (userId && productId && scheduledDate && startTime) {
@@ -586,7 +746,7 @@ export async function POST(request: NextRequest) {
               sessionId: session.id,
             });
 
-            const { fetchMutation: fetchMutationCoaching } = await import("convex/nextjs");
+            const { fetchMutation: fetchMutationCoaching, fetchQuery: fetchQueryCoaching } = await import("convex/nextjs");
             const { api: apiCoaching } = await import("@/convex/_generated/api");
 
             try {
@@ -611,7 +771,6 @@ export async function POST(request: NextRequest) {
                 });
 
                 // Create a purchase record for the coaching session with correct productType
-                const { fetchQuery: fetchQueryCoaching } = await import("convex/nextjs");
                 const product = await fetchQueryCoaching(
                   apiCoaching.digitalProducts.getProductById,
                   { productId: productId as any }
@@ -632,12 +791,93 @@ export async function POST(request: NextRequest) {
                     }
                   );
                   console.log("✅ Coaching purchase record created");
+
+                  // Send coaching confirmation email
+                  try {
+                    const { sendCoachingConfirmationEmail } = await import("@/lib/email");
+                    const dateObj = new Date(parseInt(scheduledDate));
+                    await sendCoachingConfirmationEmail({
+                      customerEmail: customerEmail || session.customer_details?.email || "",
+                      customerName: customerName || session.customer_details?.name || "Student",
+                      sessionTitle: sessionTitle || product.title || "Coaching Session",
+                      scheduledDate: dateObj.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+                      scheduledTime: startTime,
+                      duration: duration || "60 minutes",
+                      amount: parseInt(amount || "0") / 100,
+                      currency: currency || "USD",
+                    });
+                    console.log("✅ Coaching confirmation email sent");
+                  } catch (emailError) {
+                    console.error("❌ Failed to send coaching confirmation email:", emailError);
+                  }
                 }
               } else {
                 console.error("❌ Failed to book coaching session:", result.error);
               }
             } catch (error) {
               console.error("❌ Failed to process coaching purchase:", error);
+            }
+          }
+        }
+
+        // Handle tip jar purchases
+        if (session.metadata?.productType === "tip") {
+          const { userId, tipJarId, tipJarTitle, amount, currency, customerEmail, customerName, message, storeId } =
+            session.metadata;
+
+          if (userId && tipJarId && amount) {
+            console.log("💝 Processing tip purchase:", {
+              userId,
+              tipJarId,
+              tipJarTitle,
+              amount: parseInt(amount) / 100,
+              currency: currency || "USD",
+              sessionId: session.id,
+              paymentIntentId: session.payment_intent,
+            });
+
+            const { fetchMutation: fetchMutationTip } = await import("convex/nextjs");
+            const { api: apiTip } = await import("@/convex/_generated/api");
+
+            try {
+              // Create the tip purchase record using digital product purchase mutation
+              const purchaseId = await fetchMutationTip(
+                apiTip.library.createDigitalProductPurchase,
+                {
+                  userId,
+                  productId: tipJarId as any,
+                  amount: parseInt(amount),
+                  currency: currency || "USD",
+                  paymentMethod: "stripe",
+                  transactionId: session.payment_intent as string,
+                }
+              );
+
+              console.log("✅ Tip purchase created:", {
+                purchaseId,
+                userId,
+                tipJarId,
+                amount: parseInt(amount) / 100,
+              });
+
+              // Send tip confirmation email
+              try {
+                const { sendTipConfirmationEmail } = await import("@/lib/email");
+                await sendTipConfirmationEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Supporter",
+                  tipJarTitle: tipJarTitle || "Tip Jar",
+                  amount: parseInt(amount) / 100,
+                  currency: currency || "USD",
+                  message: message || undefined,
+                });
+                console.log("✅ Tip confirmation email sent");
+              } catch (emailError) {
+                console.error("❌ Failed to send tip confirmation email:", emailError);
+                // Don't fail the webhook if email fails
+              }
+            } catch (error) {
+              console.error("❌ Failed to create tip purchase:", error);
             }
           }
         }
