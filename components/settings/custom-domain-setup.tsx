@@ -63,7 +63,7 @@ export function CustomDomainSetup({
   const [verificationAttempts, setVerificationAttempts] = useState(0);
 
   const connectDomain = useAction(api.customDomains.connectCustomDomain);
-  const verifyDomain = useMutation(api.customDomains.verifyCustomDomain);
+  const verifyDomain = useAction(api.customDomains.verifyCustomDomain);
   const removeDomain = useAction(api.customDomains.removeCustomDomain);
 
   // DNS instructions for Vercel

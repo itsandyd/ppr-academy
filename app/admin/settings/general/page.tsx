@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,12 @@ import {
   Link as LinkIcon,
   Settings2,
 } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useUser } from "@clerk/nextjs";
 
 export default function GeneralSettingsPage() {
+  const { user } = useUser();
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState({
     platformName: "PPR Academy",
@@ -44,13 +48,73 @@ export default function GeneralSettingsPage() {
     currency: "USD",
   });
 
+  // Fetch existing settings from Convex
+  const existingSettings = useQuery(
+    api.platformSettings.getSettings,
+    user?.id ? { clerkId: user.id, key: "general" } : "skip"
+  );
+
+  // Save settings mutation
+  const saveSettingsMutation = useMutation(api.platformSettings.saveSettings);
+
+  // Load existing settings when they become available
+  useEffect(() => {
+    if (existingSettings) {
+      setSettings({
+        platformName: existingSettings.platformName || "PPR Academy",
+        tagline: existingSettings.tagline || "Master music production with expert-led courses",
+        description: existingSettings.description || "The ultimate platform for music producers to learn, create, and grow.",
+        supportEmail: existingSettings.supportEmail || "support@ppracademy.com",
+        logoUrl: existingSettings.logoUrl || "",
+        faviconUrl: existingSettings.faviconUrl || "",
+        primaryColor: existingSettings.primaryColor || "#7c3aed",
+        secondaryColor: existingSettings.secondaryColor || "#ec4899",
+        maintenanceMode: existingSettings.maintenanceMode || false,
+        allowRegistration: existingSettings.allowRegistration ?? true,
+        requireEmailVerification: existingSettings.requireEmailVerification ?? true,
+        defaultUserRole: existingSettings.defaultUserRole || "student",
+        timezone: existingSettings.timezone || "America/New_York",
+        dateFormat: existingSettings.dateFormat || "MM/DD/YYYY",
+        currency: existingSettings.currency || "USD",
+      });
+    }
+  }, [existingSettings]);
+
   const handleSave = async () => {
+    if (!user?.id) {
+      toast.error("You must be logged in to save settings");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // TODO: Implement actual save logic with Convex
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Settings saved successfully!");
+      const result = await saveSettingsMutation({
+        clerkId: user.id,
+        key: "general",
+        platformName: settings.platformName,
+        tagline: settings.tagline,
+        description: settings.description,
+        supportEmail: settings.supportEmail,
+        logoUrl: settings.logoUrl || undefined,
+        faviconUrl: settings.faviconUrl || undefined,
+        primaryColor: settings.primaryColor,
+        secondaryColor: settings.secondaryColor,
+        maintenanceMode: settings.maintenanceMode,
+        allowRegistration: settings.allowRegistration,
+        requireEmailVerification: settings.requireEmailVerification,
+        defaultUserRole: settings.defaultUserRole,
+        timezone: settings.timezone,
+        dateFormat: settings.dateFormat,
+        currency: settings.currency,
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
     } catch (error) {
+      console.error("Failed to save settings:", error);
       toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);

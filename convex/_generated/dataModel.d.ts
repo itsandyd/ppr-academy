@@ -7146,6 +7146,58 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  platformSettings: {
+    document: {
+      allowRegistration?: boolean;
+      currency?: string;
+      dateFormat?: string;
+      defaultUserRole?: string;
+      description?: string;
+      faviconUrl?: string;
+      key: string;
+      logoUrl?: string;
+      maintenanceMode?: boolean;
+      platformName?: string;
+      primaryColor?: string;
+      requireEmailVerification?: boolean;
+      secondaryColor?: string;
+      supportEmail?: string;
+      tagline?: string;
+      timezone?: string;
+      updatedAt: number;
+      updatedBy?: string;
+      _id: Id<"platformSettings">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "allowRegistration"
+      | "currency"
+      | "dateFormat"
+      | "defaultUserRole"
+      | "description"
+      | "faviconUrl"
+      | "key"
+      | "logoUrl"
+      | "maintenanceMode"
+      | "platformName"
+      | "primaryColor"
+      | "requireEmailVerification"
+      | "secondaryColor"
+      | "supportEmail"
+      | "tagline"
+      | "timezone"
+      | "updatedAt"
+      | "updatedBy";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_key: ["key", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   playlistTracks: {
     document: {
       addedBy: string;

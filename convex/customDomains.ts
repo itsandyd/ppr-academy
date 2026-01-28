@@ -3,6 +3,9 @@ import { mutation, query, internalMutation, internalQuery, action } from "./_gen
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
+// Vercel's CNAME target for custom domains
+const VERCEL_CNAME_TARGET = "cname.vercel-dns.com";
+
 /**
  * Connect a custom domain to a store
  */
@@ -110,8 +113,9 @@ export const updateStoreDomain = internalMutation({
 
 /**
  * Verify domain DNS configuration
+ * Uses DNS lookup to check if domain is correctly configured
  */
-export const verifyCustomDomain = mutation({
+export const verifyCustomDomain = action({
   args: {
     storeId: v.id("stores"),
   },
@@ -119,27 +123,136 @@ export const verifyCustomDomain = mutation({
     success: v.boolean(),
     message: v.string(),
     status: v.string(),
+    dnsRecords: v.optional(v.object({
+      cname: v.optional(v.string()),
+      aRecords: v.optional(v.array(v.string())),
+    })),
   }),
-  handler: async (ctx, args) => {
-    const store = await ctx.db.get(args.storeId);
-    
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    message: string;
+    status: string;
+    dnsRecords?: { cname?: string; aRecords?: string[] };
+  }> => {
+    // Get store domain
+    const store = await ctx.runQuery(internal.customDomains.getStoreDomain, {
+      storeId: args.storeId,
+    });
+
     if (!store?.customDomain) {
       return { success: false, message: "No domain configured", status: "none" };
     }
 
-    // In production, you would check DNS here via an action
-    // For now, we'll simulate verification
-    
-    // TODO: Implement actual DNS verification
-    // This would be an action that calls a DNS lookup service
-    
-    return {
-      success: true,
-      message: "Verification in progress. This can take 5-60 minutes.",
-      status: "verifying",
-    };
+    const domain = store.customDomain;
+
+    try {
+      // Use DNS over HTTPS (DoH) for DNS lookup - works in Convex actions
+      const dnsResult = await performDNSLookup(domain);
+
+      // Check if CNAME points to Vercel
+      const hasValidCNAME = dnsResult.cname?.toLowerCase().includes('vercel') ||
+                           dnsResult.cname?.toLowerCase() === VERCEL_CNAME_TARGET;
+
+      // Check if A records point to Vercel IPs (76.76.21.21)
+      const vercelIPs = ['76.76.21.21', '76.76.21.22', '76.76.21.98', '76.76.21.123'];
+      const hasValidARecord = dnsResult.aRecords?.some(ip => vercelIPs.includes(ip));
+
+      if (hasValidCNAME || hasValidARecord) {
+        // DNS is correctly configured
+        await ctx.runMutation(internal.customDomains.updateDomainStatus, {
+          storeId: args.storeId,
+          status: "verified",
+        });
+
+        return {
+          success: true,
+          message: "Domain verified successfully! Your custom domain is now active.",
+          status: "verified",
+          dnsRecords: dnsResult,
+        };
+      } else {
+        // DNS not configured correctly
+        await ctx.runMutation(internal.customDomains.updateDomainStatus, {
+          storeId: args.storeId,
+          status: "pending",
+        });
+
+        return {
+          success: false,
+          message: `DNS not configured. Please add a CNAME record pointing to ${VERCEL_CNAME_TARGET}`,
+          status: "pending",
+          dnsRecords: dnsResult,
+        };
+      }
+    } catch (error) {
+      console.error("DNS verification error:", error);
+
+      // Keep status as pending if DNS lookup fails
+      await ctx.runMutation(internal.customDomains.updateDomainStatus, {
+        storeId: args.storeId,
+        status: "pending",
+      });
+
+      return {
+        success: false,
+        message: "Could not verify DNS. Please ensure your DNS records are configured and try again in a few minutes.",
+        status: "pending",
+      };
+    }
   },
 });
+
+/**
+ * Perform DNS lookup using DNS over HTTPS (Cloudflare)
+ */
+async function performDNSLookup(domain: string): Promise<{ cname?: string; aRecords?: string[] }> {
+  const result: { cname?: string; aRecords?: string[] } = {};
+
+  try {
+    // Query CNAME records via Cloudflare DoH
+    const cnameResponse = await fetch(
+      `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=CNAME`,
+      {
+        headers: {
+          'Accept': 'application/dns-json',
+        },
+      }
+    );
+
+    if (cnameResponse.ok) {
+      const cnameData = await cnameResponse.json() as { Answer?: Array<{ data: string }> };
+      if (cnameData.Answer && cnameData.Answer.length > 0) {
+        // Remove trailing dot from CNAME if present
+        result.cname = cnameData.Answer[0].data.replace(/\.$/, '');
+      }
+    }
+  } catch (e) {
+    console.log("CNAME lookup failed:", e);
+  }
+
+  try {
+    // Query A records via Cloudflare DoH
+    const aResponse = await fetch(
+      `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`,
+      {
+        headers: {
+          'Accept': 'application/dns-json',
+        },
+      }
+    );
+
+    if (aResponse.ok) {
+      const aData = await aResponse.json() as { Answer?: Array<{ data: string }> };
+      if (aData.Answer && aData.Answer.length > 0) {
+        result.aRecords = aData.Answer.map((record) => record.data);
+      }
+    }
+  } catch (e) {
+    console.log("A record lookup failed:", e);
+  }
+
+  return result;
+}
 
 /**
  * Remove custom domain

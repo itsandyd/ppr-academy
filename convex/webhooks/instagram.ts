@@ -361,18 +361,19 @@ async function executeAutomation(
 
   // LISTENER TYPE 2: Smart AI (Pro feature)
   if (listener.listener === "SMART_AI" || listener.listener === "SMARTAI") {
-    // TODO: Revert to subscription check when ready for production
-    // if (userPlan !== "PRO") {
-    //   console.log("⚠️ Smart AI requires PRO plan");
-    //   // Send upgrade message
-    //   await sendInstagramDM({
-    //     accessToken,
-    //     recipientId: senderId,
-    //     message: "🤖 Smart AI conversations are available on our Pro plan! Upgrade to unlock AI-powered responses.",
-    //   });
-    //   return;
-    // }
-    console.log("🤖 Smart AI enabled (plan check bypassed for development)");
+    // Pro plan check for Smart AI feature
+    if (userPlan !== "PRO") {
+      console.log("⚠️ Smart AI requires PRO plan, user has:", userPlan);
+      // Send upgrade message
+      await sendInstagramDM({
+        accessToken,
+        recipientId: senderId,
+        message: "🤖 Smart AI conversations are available on our Pro plan! Upgrade to unlock AI-powered responses.",
+        instagramBusinessAccountId: receiverId,
+      });
+      return;
+    }
+    console.log("🤖 Smart AI enabled for PRO user");
 
     console.log("🤖 Activating Smart AI conversation");
 
@@ -501,13 +502,12 @@ async function continueSmartAIConversation(
     return;
   }
 
-  // TODO: Revert to subscription check when ready for production
-  // Check if user still has PRO plan
-  // if (automation.userPlan !== "PRO") {
-  //   console.log("⚠️ User no longer has PRO plan");
-  //   return;
-  // }
-  console.log("🤖 Continuing Smart AI (plan check bypassed for development)");
+  // Check if user still has PRO plan for Smart AI
+  if (automation.userPlan !== "PRO") {
+    console.log("⚠️ User no longer has PRO plan, cannot continue Smart AI");
+    return;
+  }
+  console.log("🤖 Continuing Smart AI for PRO user");
 
   // Get Instagram token - use the exact account that received the webhook
   type TokenData = {

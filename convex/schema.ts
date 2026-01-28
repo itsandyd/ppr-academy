@@ -6145,4 +6145,31 @@ export default defineSchema({
     .index("by_actionType", ["actionType"])
     .index("by_resourceType", ["resourceType"])
     .index("by_timestamp", ["timestamp"]),
+
+  // Platform Settings (admin configurable)
+  platformSettings: defineTable({
+    key: v.string(), // Unique key like "general", "branding", "email", etc.
+    // Platform Identity
+    platformName: v.optional(v.string()),
+    tagline: v.optional(v.string()),
+    description: v.optional(v.string()),
+    supportEmail: v.optional(v.string()),
+    // Branding
+    logoUrl: v.optional(v.string()),
+    faviconUrl: v.optional(v.string()),
+    primaryColor: v.optional(v.string()),
+    secondaryColor: v.optional(v.string()),
+    // Platform Settings
+    maintenanceMode: v.optional(v.boolean()),
+    allowRegistration: v.optional(v.boolean()),
+    requireEmailVerification: v.optional(v.boolean()),
+    defaultUserRole: v.optional(v.string()),
+    // Localization
+    timezone: v.optional(v.string()),
+    dateFormat: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    // Metadata
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()), // Clerk ID of admin who made the change
+  }).index("by_key", ["key"]),
 });

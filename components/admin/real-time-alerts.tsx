@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,17 @@ import {
   X,
   Bell,
   BellOff,
-  Activity
+  Activity,
+  DollarSign,
+  UserPlus,
+  GraduationCap,
+  BookOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useUser } from "@clerk/nextjs";
 
 export type AlertType = "error" | "warning" | "success" | "info";
 export type AlertSeverity = "critical" | "high" | "medium" | "low";
@@ -252,30 +259,101 @@ export function useMockAlerts() {
   return alerts;
 }
 
-// Real alert generator (connect to Convex)
+// Real alert generator connected to Convex
 export function useRealTimeAlerts() {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
+  const { user } = useUser();
+  const processedIdsRef = useRef<Set<string>>(new Set());
 
-  // TODO: Replace with Convex subscription
-  // Example:
-  // const newEnrollments = useQuery(api.enrollments.getRecentEnrollments, { limit: 5 });
-  // const newPurchases = useQuery(api.purchases.getRecentPurchases, { limit: 5 });
-  // 
-  // useEffect(() => {
-  //   if (newEnrollments) {
-  //     const enrollmentAlerts = newEnrollments.map(e => ({
-  //       id: e._id,
-  //       type: "success" as const,
-  //       severity: "low" as const,
-  //       title: "New Enrollment",
-  //       message: `${e.studentName} enrolled in ${e.courseName}`,
-  //       timestamp: new Date(e._creationTime),
-  //       source: "Enrollments"
-  //     }));
-  //     setAlerts(prev => [...enrollmentAlerts, ...prev].slice(0, 10));
-  //   }
-  // }, [newEnrollments]);
+  // Subscribe to recent activity from Convex
+  const recentActivity = useQuery(
+    api.adminAnalytics.getRecentActivity,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+
+  useEffect(() => {
+    if (!recentActivity) return;
+
+    // Convert activity to alerts, only adding new ones
+    const newAlerts: SystemAlert[] = [];
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+    for (const activity of recentActivity) {
+      // Skip if already processed or older than 5 minutes
+      const activityId = `${activity.type}-${activity.timestamp}`;
+      if (processedIdsRef.current.has(activityId)) continue;
+      if (activity.timestamp < fiveMinutesAgo) continue;
+
+      processedIdsRef.current.add(activityId);
+
+      let alertType: AlertType = "info";
+      let severity: AlertSeverity = "low";
+      let icon = "info";
+
+      switch (activity.type) {
+        case "purchase":
+          alertType = "success";
+          severity = activity.amount && activity.amount > 5000 ? "medium" : "low";
+          icon = "dollar";
+          break;
+        case "enrollment":
+          alertType = "success";
+          severity = "low";
+          icon = "graduation";
+          break;
+        case "user_signup":
+          alertType = "info";
+          severity = "low";
+          icon = "user";
+          break;
+        case "course_published":
+          alertType = "success";
+          severity = "medium";
+          icon = "book";
+          break;
+        default:
+          alertType = "info";
+          severity = "low";
+      }
+
+      newAlerts.push({
+        id: activityId,
+        type: alertType,
+        severity,
+        title: formatActivityTitle(activity.type),
+        message: activity.description,
+        timestamp: new Date(activity.timestamp),
+        source: formatActivitySource(activity.type),
+      });
+    }
+
+    if (newAlerts.length > 0) {
+      setAlerts(prev => [...newAlerts, ...prev].slice(0, 20));
+    }
+  }, [recentActivity]);
 
   return alerts;
+}
+
+// Helper to format activity type to title
+function formatActivityTitle(type: string): string {
+  switch (type) {
+    case "purchase": return "New Purchase";
+    case "enrollment": return "New Enrollment";
+    case "user_signup": return "New User";
+    case "course_published": return "Course Published";
+    default: return "Activity";
+  }
+}
+
+// Helper to format activity source
+function formatActivitySource(type: string): string {
+  switch (type) {
+    case "purchase": return "Sales";
+    case "enrollment": return "Enrollments";
+    case "user_signup": return "Users";
+    case "course_published": return "Courses";
+    default: return "System";
+  }
 }
 

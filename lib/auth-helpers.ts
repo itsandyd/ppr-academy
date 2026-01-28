@@ -152,3 +152,118 @@ export function forbiddenResponse(message = "Forbidden") {
   return NextResponse.json({ error: message }, { status: 403 });
 }
 
+/**
+ * Admin role levels for granular permission checking
+ */
+export type AdminRole = 'admin' | 'AGENCY_OWNER' | 'AGENCY_ADMIN' | 'MODERATOR';
+
+/**
+ * Check if user is admin without throwing
+ * Returns { isAdmin: boolean, role?: AdminRole }
+ */
+export async function checkIsAdmin(): Promise<{ isAdmin: boolean; role?: AdminRole; userId?: string }> {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      return { isAdmin: false };
+    }
+
+    const userEmail = user.emailAddresses[0]?.emailAddress || '';
+
+    // Check 1: Environment variable list of admin emails
+    const adminEmails = (process.env.ADMIN_EMAILS?.split(',') || []).map(e => e.trim().toLowerCase());
+    if (adminEmails.includes(userEmail.toLowerCase())) {
+      return { isAdmin: true, role: 'admin', userId: user.id };
+    }
+
+    // Check 2: Clerk public metadata
+    const clerkMetadata = user.publicMetadata as { role?: string; isAdmin?: boolean } | undefined;
+    if (clerkMetadata?.isAdmin === true || clerkMetadata?.role === 'admin') {
+      return { isAdmin: true, role: 'admin', userId: user.id };
+    }
+    if (clerkMetadata?.role === 'AGENCY_OWNER') {
+      return { isAdmin: true, role: 'AGENCY_OWNER', userId: user.id };
+    }
+    if (clerkMetadata?.role === 'AGENCY_ADMIN') {
+      return { isAdmin: true, role: 'AGENCY_ADMIN', userId: user.id };
+    }
+    if (clerkMetadata?.role === 'MODERATOR') {
+      return { isAdmin: true, role: 'MODERATOR', userId: user.id };
+    }
+
+    // Check 3: Clerk private metadata (more secure)
+    const privateMetadata = user.privateMetadata as { role?: string; isAdmin?: boolean } | undefined;
+    if (privateMetadata?.isAdmin === true || privateMetadata?.role === 'admin') {
+      return { isAdmin: true, role: 'admin', userId: user.id };
+    }
+
+    return { isAdmin: false, userId: user.id };
+  } catch {
+    return { isAdmin: false };
+  }
+}
+
+/**
+ * Check if user has a specific admin role or higher
+ * Role hierarchy: admin > AGENCY_OWNER > AGENCY_ADMIN > MODERATOR
+ */
+export async function requireRole(requiredRole: AdminRole) {
+  const user = await requireAuth();
+  const { isAdmin, role } = await checkIsAdmin();
+
+  if (!isAdmin || !role) {
+    throw new Error("Forbidden: Admin access required");
+  }
+
+  // Role hierarchy check
+  const roleHierarchy: Record<AdminRole, number> = {
+    'admin': 4,
+    'AGENCY_OWNER': 3,
+    'AGENCY_ADMIN': 2,
+    'MODERATOR': 1,
+  };
+
+  if (roleHierarchy[role] < roleHierarchy[requiredRole]) {
+    throw new Error(`Forbidden: ${requiredRole} access or higher required`);
+  }
+
+  return { user, role };
+}
+
+/**
+ * Middleware wrapper for role-based routes
+ */
+export function withRole<T extends any[]>(
+  requiredRole: AdminRole,
+  handler: (request: Request, user: NonNullable<Awaited<ReturnType<typeof currentUser>>>, role: AdminRole, ...args: T) => Promise<Response>
+) {
+  return async (request: Request, ...args: T): Promise<Response> => {
+    try {
+      const { user, role } = await requireRole(requiredRole);
+      return await handler(request, user, role, ...args);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "Unauthorized") {
+          return NextResponse.json(
+            { error: "Unauthorized. Please sign in." },
+            { status: 401 }
+          );
+        }
+        if (error.message.includes("Forbidden")) {
+          return NextResponse.json(
+            { error: error.message },
+            { status: 403 }
+          );
+        }
+      }
+
+      console.error("Role middleware error:", error);
+      return NextResponse.json(
+        { error: "Authentication error" },
+        { status: 500 }
+      );
+    }
+  };
+}
+

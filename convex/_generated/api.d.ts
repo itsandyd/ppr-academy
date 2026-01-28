@@ -7393,10 +7393,15 @@ export declare const api: {
       { message: string; success: boolean }
     >;
     verifyCustomDomain: FunctionReference<
-      "mutation",
+      "action",
       "public",
       { storeId: Id<"stores"> },
-      { message: string; status: string; success: boolean }
+      {
+        dnsRecords?: { aRecords?: Array<string>; cname?: string };
+        message: string;
+        status: string;
+        success: boolean;
+      }
     >;
   };
   customers: {
@@ -15315,6 +15320,74 @@ export declare const api: {
         stripePaymentIntentId?: string;
       },
       any
+    >;
+  };
+  platformSettings: {
+    getPublicSettings: FunctionReference<
+      "query",
+      "public",
+      {},
+      {
+        description?: string;
+        faviconUrl?: string;
+        logoUrl?: string;
+        maintenanceMode?: boolean;
+        platformName?: string;
+        primaryColor?: string;
+        secondaryColor?: string;
+        supportEmail?: string;
+        tagline?: string;
+      } | null
+    >;
+    getSettings: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; key?: string },
+      {
+        _id: Id<"platformSettings">;
+        allowRegistration?: boolean;
+        currency?: string;
+        dateFormat?: string;
+        defaultUserRole?: string;
+        description?: string;
+        faviconUrl?: string;
+        key: string;
+        logoUrl?: string;
+        maintenanceMode?: boolean;
+        platformName?: string;
+        primaryColor?: string;
+        requireEmailVerification?: boolean;
+        secondaryColor?: string;
+        supportEmail?: string;
+        tagline?: string;
+        timezone?: string;
+        updatedAt: number;
+        updatedBy?: string;
+      } | null
+    >;
+    saveSettings: FunctionReference<
+      "mutation",
+      "public",
+      {
+        allowRegistration?: boolean;
+        clerkId: string;
+        currency?: string;
+        dateFormat?: string;
+        defaultUserRole?: string;
+        description?: string;
+        faviconUrl?: string;
+        key?: string;
+        logoUrl?: string;
+        maintenanceMode?: boolean;
+        platformName?: string;
+        primaryColor?: string;
+        requireEmailVerification?: boolean;
+        secondaryColor?: string;
+        supportEmail?: string;
+        tagline?: string;
+        timezone?: string;
+      },
+      { message: string; success: boolean }
     >;
   };
   playlists: {
