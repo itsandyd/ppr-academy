@@ -68,28 +68,15 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     api.stores.getStoresByUser,
     user?.id ? { userId: user.id } : "skip"
   );
-  
-  // Detect if rawStoreId is actually a user ID and get the correct store ID
-  const isUserIdInsteadOfStoreId = rawStoreId && rawStoreId.startsWith('ks7');
-  const correctStoreId = isUserIdInsteadOfStoreId ? userStores?.[0]?._id : rawStoreId;
-  
-  // Redirect to correct URL if we detected a user ID in the URL
-  React.useEffect(() => {
-    if (isUserIdInsteadOfStoreId && correctStoreId && correctStoreId !== rawStoreId) {
-      const currentSearch = searchParams.toString();
-      const newUrl = `/store/${correctStoreId}/course/create${currentSearch ? `?${currentSearch}` : ''}`;
-      router.replace(newUrl);
-      return;
-    }
-  }, [isUserIdInsteadOfStoreId, correctStoreId, rawStoreId, router, searchParams]);
-  
-  // Use the correct store ID for queries
-  const storeId = correctStoreId;
 
-  // Get store data (skip if we're about to redirect)
+  // Get storeId from user's stores since this route doesn't have storeId in URL params
+  // Fall back to rawStoreId if provided (for backwards compatibility)
+  const storeId = rawStoreId || userStores?.[0]?._id;
+
+  // Get store data
   const store = useQuery(
     api.stores.getStoreById,
-    storeId && !isUserIdInsteadOfStoreId ? { storeId: storeId as any } : "skip"
+    storeId ? { storeId: storeId as any } : "skip"
   );
 
   // Feature access for courses
