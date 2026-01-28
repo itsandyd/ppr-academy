@@ -1555,6 +1555,20 @@ export const getExecutionInternal = internalQuery({
 });
 
 /**
+ * Get store by Clerk user ID (internal) - for workflow notifications
+ */
+export const getStoreByClerkId = internalQuery({
+  args: { userId: v.string() },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+  },
+});
+
+/**
  * Get executions that are due to run
  */
 export const getDueExecutions = internalQuery({

@@ -2454,6 +2454,56 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  courseDripAccess: {
+    document: {
+      courseId: Id<"courses">;
+      createdAt: number;
+      enrolledAt: number;
+      isUnlocked: boolean;
+      manualUnlockReason?: string;
+      manuallyUnlocked?: boolean;
+      moduleId: Id<"courseModules">;
+      notificationSentAt?: number;
+      scheduledUnlockAt: number;
+      unlockNotificationSent?: boolean;
+      unlockedAt?: number;
+      updatedAt: number;
+      userId: string;
+      _id: Id<"courseDripAccess">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "courseId"
+      | "createdAt"
+      | "enrolledAt"
+      | "isUnlocked"
+      | "manuallyUnlocked"
+      | "manualUnlockReason"
+      | "moduleId"
+      | "notificationSentAt"
+      | "scheduledUnlockAt"
+      | "unlockedAt"
+      | "unlockNotificationSent"
+      | "updatedAt"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_course_module: ["courseId", "moduleId", "_creationTime"];
+      by_notification_pending: [
+        "isUnlocked",
+        "unlockNotificationSent",
+        "_creationTime",
+      ];
+      by_scheduled_unlock: ["isUnlocked", "scheduledUnlockAt", "_creationTime"];
+      by_user_course: ["userId", "courseId", "_creationTime"];
+      by_user_module: ["userId", "moduleId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   courseLessons: {
     document: {
       description?: string;
@@ -2483,6 +2533,11 @@ export type DataModel = {
     document: {
       courseId: string;
       description?: string;
+      dripDaysAfterEnrollment?: number;
+      dripEnabled?: boolean;
+      dripNotifyStudents?: boolean;
+      dripSpecificDate?: number;
+      dripType?: "days_after_enrollment" | "specific_date" | "after_previous";
       position: number;
       title: string;
       _id: Id<"courseModules">;
@@ -2493,6 +2548,11 @@ export type DataModel = {
       | "_id"
       | "courseId"
       | "description"
+      | "dripDaysAfterEnrollment"
+      | "dripEnabled"
+      | "dripNotifyStudents"
+      | "dripSpecificDate"
+      | "dripType"
       | "position"
       | "title";
     indexes: {
@@ -5888,6 +5948,209 @@ export type DataModel = {
         filterFields: never;
       };
     };
+    vectorIndexes: {};
+  };
+  landingPageAnalytics: {
+    document: {
+      avgTimeOnPage?: number;
+      bounceRate?: number;
+      conversionRate: number;
+      conversions: number;
+      createdAt: number;
+      date: string;
+      pageId: Id<"landingPages">;
+      storeId: string;
+      trafficSources?: {
+        direct: number;
+        organic: number;
+        paid: number;
+        referral: number;
+        social: number;
+      };
+      uniqueVisitors: number;
+      variantConversions?: any;
+      variantViews?: any;
+      views: number;
+      _id: Id<"landingPageAnalytics">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "avgTimeOnPage"
+      | "bounceRate"
+      | "conversionRate"
+      | "conversions"
+      | "createdAt"
+      | "date"
+      | "pageId"
+      | "storeId"
+      | "trafficSources"
+      | "trafficSources.direct"
+      | "trafficSources.organic"
+      | "trafficSources.paid"
+      | "trafficSources.referral"
+      | "trafficSources.social"
+      | "uniqueVisitors"
+      | "variantConversions"
+      | "variantViews"
+      | "views";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_date: ["date", "_creationTime"];
+      by_page: ["pageId", "date", "_creationTime"];
+      by_store: ["storeId", "date", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  landingPages: {
+    document: {
+      blocks: Array<{
+        id: string;
+        isVisible: boolean;
+        position: number;
+        settings: any;
+        type:
+          | "hero"
+          | "features"
+          | "testimonials"
+          | "pricing"
+          | "cta"
+          | "faq"
+          | "video"
+          | "image"
+          | "text"
+          | "countdown"
+          | "social_proof"
+          | "product_showcase"
+          | "custom_html";
+      }>;
+      conversionRate?: number;
+      conversions?: number;
+      createdAt: number;
+      description?: string;
+      isPublished: boolean;
+      isVariant?: boolean;
+      linkedCourseId?: Id<"courses">;
+      linkedProductId?: Id<"digitalProducts">;
+      metaDescription?: string;
+      metaTitle?: string;
+      ogImage?: string;
+      parentPageId?: Id<"landingPages">;
+      publishedAt?: number;
+      slug: string;
+      storeId: string;
+      templateId?: string;
+      templateName?: string;
+      title: string;
+      trafficSplit?: number;
+      updatedAt: number;
+      userId: string;
+      variantName?: string;
+      views?: number;
+      _id: Id<"landingPages">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "blocks"
+      | "conversionRate"
+      | "conversions"
+      | "createdAt"
+      | "description"
+      | "isPublished"
+      | "isVariant"
+      | "linkedCourseId"
+      | "linkedProductId"
+      | "metaDescription"
+      | "metaTitle"
+      | "ogImage"
+      | "parentPageId"
+      | "publishedAt"
+      | "slug"
+      | "storeId"
+      | "templateId"
+      | "templateName"
+      | "title"
+      | "trafficSplit"
+      | "updatedAt"
+      | "userId"
+      | "variantName"
+      | "views";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_parent: ["parentPageId", "_creationTime"];
+      by_slug: ["storeId", "slug", "_creationTime"];
+      by_store: ["storeId", "isPublished", "_creationTime"];
+      by_user: ["userId", "createdAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  landingPageTemplates: {
+    document: {
+      blocks: Array<{
+        id: string;
+        isVisible: boolean;
+        position: number;
+        settings: any;
+        type: string;
+      }>;
+      category:
+        | "course"
+        | "product"
+        | "webinar"
+        | "ebook"
+        | "music"
+        | "general";
+      colorScheme?: {
+        accent: string;
+        background: string;
+        primary: string;
+        secondary: string;
+        text: string;
+      };
+      createdAt: number;
+      creatorId?: string;
+      description?: string;
+      isDefault?: boolean;
+      name: string;
+      thumbnail?: string;
+      updatedAt: number;
+      usageCount?: number;
+      _id: Id<"landingPageTemplates">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "blocks"
+      | "category"
+      | "colorScheme"
+      | "colorScheme.accent"
+      | "colorScheme.background"
+      | "colorScheme.primary"
+      | "colorScheme.secondary"
+      | "colorScheme.text"
+      | "createdAt"
+      | "creatorId"
+      | "description"
+      | "isDefault"
+      | "name"
+      | "thumbnail"
+      | "updatedAt"
+      | "usageCount";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_category: ["category", "_creationTime"];
+      by_creator: ["creatorId", "_creationTime"];
+    };
+    searchIndexes: {};
     vectorIndexes: {};
   };
   leadMagnetAnalyses: {
@@ -9877,6 +10140,12 @@ export type DataModel = {
       lastStrikeAt?: number;
       logoUrl?: string;
       name: string;
+      notificationIntegrations?: {
+        discordEnabled?: boolean;
+        discordWebhookUrl?: string;
+        slackEnabled?: boolean;
+        slackWebhookUrl?: string;
+      };
       plan?:
         | "free"
         | "starter"
@@ -9958,6 +10227,11 @@ export type DataModel = {
       | "lastStrikeAt"
       | "logoUrl"
       | "name"
+      | "notificationIntegrations"
+      | "notificationIntegrations.discordEnabled"
+      | "notificationIntegrations.discordWebhookUrl"
+      | "notificationIntegrations.slackEnabled"
+      | "notificationIntegrations.slackWebhookUrl"
       | "plan"
       | "planStartedAt"
       | "slug"

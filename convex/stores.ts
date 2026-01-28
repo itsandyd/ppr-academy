@@ -69,6 +69,13 @@ const storeValidator = v.object({
   )),
   trialEndsAt: v.optional(v.number()),
   earlyAccessExpiresAt: v.optional(v.number()), // When early access grandfathering ends
+  // Notification Integrations (Slack, Discord)
+  notificationIntegrations: v.optional(v.object({
+    slackWebhookUrl: v.optional(v.string()),
+    slackEnabled: v.optional(v.boolean()),
+    discordWebhookUrl: v.optional(v.string()),
+    discordEnabled: v.optional(v.boolean()),
+  })),
 });
 
 // Get all stores for a user
@@ -539,6 +546,49 @@ export const getStoreEmailConfigInternal = query({
   handler: async (ctx, args) => {
     const store = await ctx.db.get(args.storeId);
     return store?.emailConfig || null;
+  },
+});
+
+// Update notification integrations (Slack, Discord)
+export const updateNotificationIntegrations = mutation({
+  args: {
+    storeId: v.id("stores"),
+    notificationIntegrations: v.object({
+      slackWebhookUrl: v.optional(v.string()),
+      slackEnabled: v.optional(v.boolean()),
+      discordWebhookUrl: v.optional(v.string()),
+      discordEnabled: v.optional(v.boolean()),
+    }),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const store = await ctx.db.get(args.storeId);
+      if (!store) {
+        return { success: false, message: "Store not found" };
+      }
+
+      await ctx.db.patch(args.storeId, {
+        notificationIntegrations: {
+          ...store.notificationIntegrations,
+          ...args.notificationIntegrations,
+        },
+      });
+
+      return {
+        success: true,
+        message: "Notification integrations updated successfully",
+      };
+    } catch (error) {
+      console.error("Notification integrations update error:", error);
+      return {
+        success: false,
+        message: "Failed to update notification integrations",
+      };
+    }
   },
 });
 

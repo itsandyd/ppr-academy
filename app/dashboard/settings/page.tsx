@@ -267,45 +267,214 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>Choose what notifications you receive</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Receive updates about your courses</p>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Preferences</CardTitle>
+                <CardDescription>Choose what notifications you receive</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Receive updates about your courses</p>
+                  </div>
+                  <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
                 </div>
-                <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Marketing Emails</Label>
-                  <p className="text-sm text-muted-foreground">Receive tips and product updates</p>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Marketing Emails</Label>
+                    <p className="text-sm text-muted-foreground">Receive tips and product updates</p>
+                  </div>
+                  <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
                 </div>
-                <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Integrations Link */}
+            <Card className="border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30">
+              <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <Bell className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Slack & Discord Integrations</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Connect your team chat for workflow notifications
+                    </p>
+                  </div>
+                </div>
+                <Button asChild variant="outline">
+                  <Link href="/dashboard/settings/integrations">
+                    Configure
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="billing">
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing & Subscription</CardTitle>
-              <CardDescription>Manage your subscription and payment methods</CardDescription>
-            </CardHeader>
-            <CardContent className="flex min-h-[200px] items-center justify-center">
-              <div className="text-center">
-                <CreditCard className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                <p className="mt-4 text-muted-foreground">
-                  Billing management coming soon
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Current Plan */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Plan</CardTitle>
+                <CardDescription>Your subscription and plan details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="rounded-lg bg-primary/10 p-3">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg capitalize">
+                        {store?.plan || "Free"} Plan
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {store?.subscriptionStatus === "active" ? (
+                          <span className="text-green-600">Active subscription</span>
+                        ) : store?.subscriptionStatus === "trialing" ? (
+                          <span className="text-blue-600">Trial period</span>
+                        ) : store?.plan === "early_access" ? (
+                          <span className="text-purple-600">Early Access (Lifetime)</span>
+                        ) : (
+                          <span>Free tier</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard/pricing">
+                      {store?.plan === "free" || !store?.plan ? "Upgrade" : "Change Plan"}
+                    </Link>
+                  </Button>
+                </div>
+
+                {/* Plan Features Preview */}
+                {store?.plan && store.plan !== "free" && (
+                  <div className="rounded-lg bg-muted/50 p-4">
+                    <h4 className="font-medium mb-2">Plan Features</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {store.plan === "starter" && (
+                        <>
+                          <li>10,000 email sends/month</li>
+                          <li>5 courses</li>
+                          <li>Basic analytics</li>
+                        </>
+                      )}
+                      {store.plan === "creator" && (
+                        <>
+                          <li>50,000 email sends/month</li>
+                          <li>Unlimited courses</li>
+                          <li>Advanced analytics</li>
+                          <li>Custom domain</li>
+                        </>
+                      )}
+                      {store.plan === "creator_pro" && (
+                        <>
+                          <li>200,000 email sends/month</li>
+                          <li>Unlimited everything</li>
+                          <li>Priority support</li>
+                          <li>White-label options</li>
+                        </>
+                      )}
+                      {store.plan === "early_access" && (
+                        <>
+                          <li>Unlimited email sends</li>
+                          <li>Unlimited courses</li>
+                          <li>All features included</li>
+                          <li>Early Access benefits</li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Billing Portal */}
+            {store?.stripeCustomerId && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Manage Billing</CardTitle>
+                  <CardDescription>
+                    Update payment methods, view invoices, and manage your subscription
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch("/api/creator-plans/billing-portal", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ stripeCustomerId: store.stripeCustomerId }),
+                        });
+                        const data = await response.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          toast.error(data.error || "Failed to open billing portal");
+                        }
+                      } catch (error) {
+                        toast.error("Failed to open billing portal");
+                      }
+                    }}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open Billing Portal
+                  </Button>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Securely manage your subscription through Stripe's billing portal
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Usage Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Usage This Month</CardTitle>
+                <CardDescription>Track your resource usage</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Email Sends</span>
+                      <span className="text-muted-foreground">
+                        {store?.emailConfig?.emailsSentThisMonth || 0} / {
+                          store?.plan === "early_access" ? "Unlimited" :
+                          store?.plan === "creator_pro" ? "200,000" :
+                          store?.plan === "creator" ? "50,000" :
+                          store?.plan === "starter" ? "10,000" : "1,000"
+                        }
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(
+                            ((store?.emailConfig?.emailsSentThisMonth || 0) / (
+                              store?.plan === "creator_pro" ? 200000 :
+                              store?.plan === "creator" ? 50000 :
+                              store?.plan === "starter" ? 10000 : 1000
+                            )) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="appearance">

@@ -945,6 +945,23 @@ export declare const api: {
         }>;
       }
     >;
+    getEmailAnalyticsChartData: FunctionReference<
+      "query",
+      "public",
+      { days?: number },
+      Array<{
+        bounceRate: number;
+        bounced: number;
+        clicked: number;
+        date: string;
+        delivered: number;
+        deliveryRate: number;
+        openRate: number;
+        opened: number;
+        sent: number;
+        spamComplaints: number;
+      }>
+    >;
     getFlaggedCreators: FunctionReference<
       "query",
       "public",
@@ -987,6 +1004,20 @@ export declare const api: {
         };
         trend: { deliveryRate: number; openRate: number; sent: number };
       }
+    >;
+    getRecentEmailActivity: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      Array<{
+        domain?: string;
+        email?: string;
+        id: string;
+        message: string;
+        status?: string;
+        timestamp: number;
+        type: string;
+      }>
     >;
     listEmailDomains: FunctionReference<
       "query",
@@ -6084,6 +6115,82 @@ export declare const api: {
         requirements?: any;
         socialLinks?: any;
       }
+    >;
+  };
+  courseDrip: {
+    getCourseDripSettings: FunctionReference<
+      "query",
+      "public",
+      { courseId: string },
+      any
+    >;
+    getStudentDripAccess: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses">; userId: string },
+      any
+    >;
+    grantFullAccess: FunctionReference<
+      "mutation",
+      "public",
+      { courseId: Id<"courses">; reason?: string; userId: string },
+      any
+    >;
+    initializeDripAccess: FunctionReference<
+      "mutation",
+      "public",
+      { courseId: Id<"courses">; userId: string },
+      any
+    >;
+    isModuleAccessible: FunctionReference<
+      "query",
+      "public",
+      { moduleId: Id<"courseModules">; userId: string },
+      any
+    >;
+    manuallyUnlockModule: FunctionReference<
+      "mutation",
+      "public",
+      { moduleId: Id<"courseModules">; reason?: string; userId: string },
+      any
+    >;
+    restoreDripSchedule: FunctionReference<
+      "mutation",
+      "public",
+      { courseId: Id<"courses">; userId: string },
+      any
+    >;
+    updateCourseDripSettings: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseId: string;
+        modules: Array<{
+          dripDaysAfterEnrollment?: number;
+          dripEnabled: boolean;
+          dripNotifyStudents?: boolean;
+          dripSpecificDate?: number;
+          dripType?:
+            | "days_after_enrollment"
+            | "specific_date"
+            | "after_previous";
+          moduleId: Id<"courseModules">;
+        }>;
+      },
+      any
+    >;
+    updateModuleDripSettings: FunctionReference<
+      "mutation",
+      "public",
+      {
+        dripDaysAfterEnrollment?: number;
+        dripEnabled: boolean;
+        dripNotifyStudents?: boolean;
+        dripSpecificDate?: number;
+        dripType?: "days_after_enrollment" | "specific_date" | "after_previous";
+        moduleId: Id<"courseModules">;
+      },
+      any
     >;
   };
   courseNotificationQueries: {
@@ -12166,6 +12273,181 @@ export declare const api: {
       >;
     };
   };
+  landingPages: {
+    addBlock: FunctionReference<
+      "mutation",
+      "public",
+      {
+        pageId: Id<"landingPages">;
+        position: number;
+        settings?: any;
+        type:
+          | "hero"
+          | "features"
+          | "testimonials"
+          | "pricing"
+          | "cta"
+          | "faq"
+          | "video"
+          | "image"
+          | "text"
+          | "countdown"
+          | "social_proof"
+          | "product_showcase"
+          | "custom_html";
+      },
+      any
+    >;
+    createLandingPage: FunctionReference<
+      "mutation",
+      "public",
+      {
+        slug: string;
+        storeId: string;
+        templateId?: string;
+        title: string;
+        userId: string;
+      },
+      any
+    >;
+    createVariant: FunctionReference<
+      "mutation",
+      "public",
+      {
+        parentPageId: Id<"landingPages">;
+        trafficSplit: number;
+        variantName: string;
+      },
+      any
+    >;
+    deletePage: FunctionReference<
+      "mutation",
+      "public",
+      { pageId: Id<"landingPages"> },
+      any
+    >;
+    duplicatePage: FunctionReference<
+      "mutation",
+      "public",
+      { pageId: Id<"landingPages"> },
+      any
+    >;
+    getLandingPage: FunctionReference<
+      "query",
+      "public",
+      { pageId: Id<"landingPages"> },
+      any
+    >;
+    getLandingPageAnalytics: FunctionReference<
+      "query",
+      "public",
+      { endDate?: string; pageId: Id<"landingPages">; startDate?: string },
+      any
+    >;
+    getLandingPageBySlug: FunctionReference<
+      "query",
+      "public",
+      { slug: string; storeId: string },
+      any
+    >;
+    getLandingPages: FunctionReference<
+      "query",
+      "public",
+      { includeUnpublished?: boolean; storeId: string },
+      any
+    >;
+    getTemplates: FunctionReference<
+      "query",
+      "public",
+      {
+        category?:
+          | "course"
+          | "product"
+          | "webinar"
+          | "ebook"
+          | "music"
+          | "general";
+      },
+      any
+    >;
+    removeBlock: FunctionReference<
+      "mutation",
+      "public",
+      { blockId: string; pageId: Id<"landingPages"> },
+      any
+    >;
+    reorderBlocks: FunctionReference<
+      "mutation",
+      "public",
+      { blockIds: Array<string>; pageId: Id<"landingPages"> },
+      any
+    >;
+    togglePublish: FunctionReference<
+      "mutation",
+      "public",
+      { pageId: Id<"landingPages"> },
+      any
+    >;
+    trackConversion: FunctionReference<
+      "mutation",
+      "public",
+      { pageId: Id<"landingPages"> },
+      any
+    >;
+    trackPageView: FunctionReference<
+      "mutation",
+      "public",
+      { pageId: Id<"landingPages">; visitorId?: string },
+      any
+    >;
+    updateBlock: FunctionReference<
+      "mutation",
+      "public",
+      {
+        blockId: string;
+        isVisible?: boolean;
+        pageId: Id<"landingPages">;
+        settings: any;
+      },
+      any
+    >;
+    updateLandingPage: FunctionReference<
+      "mutation",
+      "public",
+      {
+        blocks?: Array<{
+          id: string;
+          isVisible: boolean;
+          position: number;
+          settings: any;
+          type:
+            | "hero"
+            | "features"
+            | "testimonials"
+            | "pricing"
+            | "cta"
+            | "faq"
+            | "video"
+            | "image"
+            | "text"
+            | "countdown"
+            | "social_proof"
+            | "product_showcase"
+            | "custom_html";
+        }>;
+        description?: string;
+        linkedCourseId?: Id<"courses">;
+        linkedProductId?: Id<"digitalProducts">;
+        metaDescription?: string;
+        metaTitle?: string;
+        ogImage?: string;
+        pageId: Id<"landingPages">;
+        slug?: string;
+        title?: string;
+      },
+      any
+    >;
+  };
   langchainNotes: {
     deleteSource: FunctionReference<
       "mutation",
@@ -17963,6 +18245,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18044,6 +18332,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18112,6 +18406,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18193,6 +18493,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18261,6 +18567,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18329,6 +18641,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18416,6 +18734,20 @@ export declare const api: {
       { emailsSent: number; storeId: Id<"stores"> },
       null
     >;
+    updateNotificationIntegrations: FunctionReference<
+      "mutation",
+      "public",
+      {
+        notificationIntegrations: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
+        storeId: Id<"stores">;
+      },
+      { message: string; success: boolean }
+    >;
     updateStore: FunctionReference<
       "mutation",
       "public",
@@ -18442,6 +18774,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -18542,6 +18880,12 @@ export declare const api: {
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name: string;
+        notificationIntegrations?: {
+          discordEnabled?: boolean;
+          discordWebhookUrl?: string;
+          slackEnabled?: boolean;
+          slackWebhookUrl?: string;
+        };
         plan?:
           | "free"
           | "starter"
@@ -21018,6 +21362,53 @@ export declare const internal: {
       any
     >;
   };
+  courseDrip: {
+    getPendingDripUnlocks: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number },
+      any
+    >;
+    onModuleCompleted: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        courseId: Id<"courses">;
+        moduleId: Id<"courseModules">;
+        userId: string;
+      },
+      any
+    >;
+    processPendingDripUnlocks: FunctionReference<
+      "mutation",
+      "internal",
+      {},
+      any
+    >;
+    recalculateDripAccessForCourse: FunctionReference<
+      "mutation",
+      "internal",
+      { courseId: string },
+      any
+    >;
+    recalculateDripAccessForModule: FunctionReference<
+      "mutation",
+      "internal",
+      { moduleId: Id<"courseModules"> },
+      any
+    >;
+    sendDripUnlockNotification: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        accessId: Id<"courseDripAccess">;
+        courseId: Id<"courses">;
+        moduleId: Id<"courseModules">;
+        userId: string;
+      },
+      any
+    >;
+  };
   courseNotifications: {
     sendCourseUpdateEmails: FunctionReference<
       "action",
@@ -21969,6 +22360,20 @@ export declare const internal: {
       },
       null
     >;
+    sendTeamNotification: FunctionReference<
+      "action",
+      "internal",
+      {
+        contactEmail: string;
+        contactName?: string;
+        message: string;
+        notifyMethod: string;
+        storeId: string;
+        triggerType?: string;
+        workflowName: string;
+      },
+      null
+    >;
     sendWorkflowEmail: FunctionReference<
       "action",
       "internal",
@@ -22084,6 +22489,12 @@ export declare const internal: {
       "query",
       "internal",
       { executionId: Id<"workflowExecutions"> },
+      any
+    >;
+    getStoreByClerkId: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
       any
     >;
     getTagByNameInternal: FunctionReference<

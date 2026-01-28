@@ -47,9 +47,24 @@ import {
   Activity,
   RefreshCw,
   Plus,
+  Send,
+  MousePointer,
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function AdminEmailMonitoringPage() {
   const { toast } = useToast();
@@ -67,6 +82,8 @@ export default function AdminEmailMonitoringPage() {
     api.adminEmailMonitoring?.getDomainDetails,
     selectedDomainId ? { domainId: selectedDomainId } : "skip"
   );
+  const chartData = useQuery(api.adminEmailMonitoring?.getEmailAnalyticsChartData, { days: 30 });
+  const activityFeed = useQuery(api.adminEmailMonitoring?.getRecentEmailActivity, { limit: 50 });
 
   // Mutations
   const addDomain = useMutation(api.adminEmailMonitoring?.addEmailDomain);
@@ -619,30 +636,235 @@ export default function AdminEmailMonitoringPage() {
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-4">
+          {/* Volume Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Email Analytics</CardTitle>
-              <CardDescription>Detailed platform-wide email performance metrics</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Email Volume (Last 30 Days)
+              </CardTitle>
+              <CardDescription>Daily email sending volume across all domains</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="py-12 text-center text-muted-foreground">
-                Charts and detailed analytics coming soon...
-              </div>
+              {chartData && chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      className="text-xs"
+                    />
+                    <YAxis className="text-xs" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="sent"
+                      stackId="1"
+                      stroke="#3b82f6"
+                      fill="#3b82f6"
+                      fillOpacity={0.6}
+                      name="Sent"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="delivered"
+                      stackId="2"
+                      stroke="#22c55e"
+                      fill="#22c55e"
+                      fillOpacity={0.6}
+                      name="Delivered"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="bounced"
+                      stackId="3"
+                      stroke="#ef4444"
+                      fill="#ef4444"
+                      fillOpacity={0.6}
+                      name="Bounced"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  No email data available for the selected period
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {/* Engagement Rates Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Engagement Rates (Last 30 Days)
+              </CardTitle>
+              <CardDescription>Delivery, open, and bounce rates over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {chartData && chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      className="text-xs"
+                    />
+                    <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} className="text-xs" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                      formatter={(value: number) => [`${value.toFixed(1)}%`, ""]}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="deliveryRate"
+                      stroke="#22c55e"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Delivery Rate"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="openRate"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Open Rate"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="bounceRate"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Bounce Rate"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  No engagement data available for the selected period
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Summary Stats */}
+          {chartData && chartData.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-2xl font-bold">
+                    {formatNumber(chartData.reduce((sum, d) => sum + d.sent, 0))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total Emails Sent</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatNumber(chartData.reduce((sum, d) => sum + d.delivered, 0))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total Delivered</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {formatNumber(chartData.reduce((sum, d) => sum + d.opened, 0))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total Opens</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatNumber(chartData.reduce((sum, d) => sum + d.bounced, 0))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total Bounces</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         {/* Live Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Live Activity Feed</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Live Activity Feed
+              </CardTitle>
               <CardDescription>Real-time email events across all domains</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="py-12 text-center text-muted-foreground">
-                Live activity feed coming soon...
-              </div>
+              {activityFeed && activityFeed.length > 0 ? (
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {activityFeed.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className={`flex items-center gap-3 rounded-lg border p-3 ${
+                        activity.type === "error" || activity.type === "bounce"
+                          ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                          : activity.type === "delivered"
+                          ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30"
+                          : activity.type === "opened" || activity.type === "clicked"
+                          ? "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30"
+                          : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/30"
+                      }`}
+                    >
+                      <div className="flex-shrink-0">
+                        {activity.type === "error" || activity.type === "bounce" ? (
+                          <XCircle className="h-5 w-5 text-red-500" />
+                        ) : activity.type === "delivered" ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        ) : activity.type === "opened" ? (
+                          <Eye className="h-5 w-5 text-blue-500" />
+                        ) : activity.type === "clicked" ? (
+                          <MousePointer className="h-5 w-5 text-blue-500" />
+                        ) : (
+                          <Send className="h-5 w-5 text-gray-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{activity.message}</p>
+                        {activity.email && (
+                          <p className="text-xs text-muted-foreground truncate">{activity.email}</p>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(activity.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <Activity className="mx-auto h-12 w-12 text-muted-foreground/30" />
+                  <p className="mt-4 text-muted-foreground">No recent email activity</p>
+                  <p className="text-sm text-muted-foreground">
+                    Activity will appear here as emails are sent
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

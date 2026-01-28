@@ -1397,8 +1397,8 @@ export default function WorkflowBuilderPage() {
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-black">
                           <SelectItem value="email">Email Store Owner</SelectItem>
-                          <SelectItem value="slack">Slack (coming soon)</SelectItem>
-                          <SelectItem value="discord">Discord (coming soon)</SelectItem>
+                          <SelectItem value="slack">Slack</SelectItem>
+                          <SelectItem value="discord">Discord</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

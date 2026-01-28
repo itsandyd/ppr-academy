@@ -227,6 +227,24 @@ export const executeWorkflowNode = internalAction({
       } else if (!execution.contactId) {
         console.log(`[EmailWorkflows] Cannot add/remove tag: no contactId on execution`);
       }
+    } else if (currentNode.type === "notify") {
+      // Notify node - send notification to team via email, Slack, or Discord
+      const notifyMethod = currentNode.data?.notifyMethod || "email";
+      const message = currentNode.data?.message || "Workflow notification triggered";
+
+      console.log(`[EmailWorkflows] Processing notify node (${notifyMethod}) for ${execution.customerEmail}`);
+
+      await ctx.runAction(internal.emailWorkflowActions.sendTeamNotification, {
+        storeId: execution.storeId,
+        notifyMethod,
+        message,
+        contactEmail: execution.customerEmail,
+        contactName: execution.executionData?.customerName,
+        workflowName: workflow.name,
+        triggerType: execution.executionData?.triggerType,
+      });
+
+      console.log(`[EmailWorkflows] Team notification sent via ${notifyMethod}`);
     } else if (currentNode.type === "stop") {
       // Stop node - complete the workflow execution
       console.log(`[EmailWorkflows] Stop node reached, completing workflow for ${execution.customerEmail}`);
@@ -451,6 +469,230 @@ export const sendWorkflowEmail = internalAction({
     } catch (error) {
       console.error(`[WorkflowEmail] Failed to send email:`, error);
       throw error;
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Send team notification via email, Slack, or Discord
+ * Used by notify workflow nodes
+ */
+export const sendTeamNotification = internalAction({
+  args: {
+    storeId: v.string(),
+    notifyMethod: v.string(), // "email", "slack", "discord"
+    message: v.string(),
+    contactEmail: v.string(),
+    contactName: v.optional(v.string()),
+    workflowName: v.string(),
+    triggerType: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Get store settings for webhook URLs
+    const store = await ctx.runQuery(internal.emailWorkflows.getStoreByClerkId, {
+      userId: args.storeId,
+    });
+
+    if (!store) {
+      console.error(`[Notify] Store not found for ${args.storeId}`);
+      return null;
+    }
+
+    const contactDisplay = args.contactName
+      ? `${args.contactName} (${args.contactEmail})`
+      : args.contactEmail;
+
+    const notificationPayload = {
+      message: args.message,
+      contact: contactDisplay,
+      workflow: args.workflowName,
+      trigger: args.triggerType || "manual",
+      timestamp: new Date().toISOString(),
+    };
+
+    if (args.notifyMethod === "slack") {
+      const webhookUrl = store.notificationIntegrations?.slackWebhookUrl;
+      if (!webhookUrl || !store.notificationIntegrations?.slackEnabled) {
+        console.log(`[Notify] Slack not configured for store ${args.storeId}`);
+        return null;
+      }
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            blocks: [
+              {
+                type: "header",
+                text: {
+                  type: "plain_text",
+                  text: "Workflow Notification",
+                  emoji: true,
+                },
+              },
+              {
+                type: "section",
+                fields: [
+                  {
+                    type: "mrkdwn",
+                    text: `*Message:*\n${args.message}`,
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: `*Contact:*\n${contactDisplay}`,
+                  },
+                ],
+              },
+              {
+                type: "section",
+                fields: [
+                  {
+                    type: "mrkdwn",
+                    text: `*Workflow:*\n${args.workflowName}`,
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: `*Trigger:*\n${args.triggerType || "manual"}`,
+                  },
+                ],
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: `Sent from PPR Academy at ${new Date().toLocaleString()}`,
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`[Notify] Slack webhook failed: ${response.status}`);
+        } else {
+          console.log(`[Notify] Slack notification sent for ${args.contactEmail}`);
+        }
+      } catch (error) {
+        console.error(`[Notify] Slack webhook error:`, error);
+      }
+    } else if (args.notifyMethod === "discord") {
+      const webhookUrl = store.notificationIntegrations?.discordWebhookUrl;
+      if (!webhookUrl || !store.notificationIntegrations?.discordEnabled) {
+        console.log(`[Notify] Discord not configured for store ${args.storeId}`);
+        return null;
+      }
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            embeds: [
+              {
+                title: "Workflow Notification",
+                color: 0x5865f2, // Discord blurple
+                fields: [
+                  {
+                    name: "Message",
+                    value: args.message,
+                    inline: false,
+                  },
+                  {
+                    name: "Contact",
+                    value: contactDisplay,
+                    inline: true,
+                  },
+                  {
+                    name: "Workflow",
+                    value: args.workflowName,
+                    inline: true,
+                  },
+                  {
+                    name: "Trigger",
+                    value: args.triggerType || "manual",
+                    inline: true,
+                  },
+                ],
+                footer: {
+                  text: "PPR Academy",
+                },
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(`[Notify] Discord webhook failed: ${response.status}`);
+        } else {
+          console.log(`[Notify] Discord notification sent for ${args.contactEmail}`);
+        }
+      } catch (error) {
+        console.error(`[Notify] Discord webhook error:`, error);
+      }
+    } else {
+      // Default: email notification to store owner
+      const { Resend } = await import("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      // Get store owner email from store config or default
+      const ownerEmail =
+        store.emailConfig?.adminNotifications?.notificationEmail ||
+        store.emailConfig?.fromEmail ||
+        process.env.ADMIN_EMAIL;
+
+      if (!ownerEmail) {
+        console.log(`[Notify] No admin email configured for store ${args.storeId}`);
+        return null;
+      }
+
+      const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+      const fromName = process.env.FROM_NAME || "PPR Academy";
+
+      try {
+        await resend.emails.send({
+          from: `${fromName} <${fromEmail}>`,
+          to: ownerEmail,
+          subject: `[Workflow] ${args.message}`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Workflow Notification</h2>
+              <p style="font-size: 16px; color: #555;">${args.message}</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #888;">Contact:</td>
+                  <td style="padding: 8px 0; color: #333;">${contactDisplay}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #888;">Workflow:</td>
+                  <td style="padding: 8px 0; color: #333;">${args.workflowName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #888;">Trigger:</td>
+                  <td style="padding: 8px 0; color: #333;">${args.triggerType || "manual"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #888;">Time:</td>
+                  <td style="padding: 8px 0; color: #333;">${new Date().toLocaleString()}</td>
+                </tr>
+              </table>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #999;">Sent from PPR Academy Workflow Automations</p>
+            </div>
+          `,
+        });
+
+        console.log(`[Notify] Email notification sent to ${ownerEmail}`);
+      } catch (error) {
+        console.error(`[Notify] Email notification error:`, error);
+      }
     }
 
     return null;

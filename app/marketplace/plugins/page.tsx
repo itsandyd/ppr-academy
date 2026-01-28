@@ -304,10 +304,10 @@ export default function PluginsMarketplacePage() {
           <div className="flex flex-wrap items-center gap-3">
             {/* Type Filter */}
             <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-[160px] bg-white dark:bg-gray-900">
+              <SelectTrigger className="w-[160px] bg-white dark:bg-black">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-900">
+              <SelectContent className="bg-white dark:bg-black">
                 <SelectItem value="all">All Types</SelectItem>
                 {pluginTypes.map((type) => (
                   <SelectItem key={type._id} value={type._id}>
@@ -322,10 +322,10 @@ export default function PluginsMarketplacePage() {
 
             {/* Pricing Filter */}
             <Select value={pricingFilter} onValueChange={setPricingFilter}>
-              <SelectTrigger className="w-[140px] bg-white dark:bg-gray-900">
+              <SelectTrigger className="w-[140px] bg-white dark:bg-black">
                 <SelectValue placeholder="All Pricing" />
               </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-900">
+              <SelectContent className="bg-white dark:bg-black">
                 {PRICING_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -366,7 +366,7 @@ export default function PluginsMarketplacePage() {
             </span>
 
             {/* View Mode Toggle */}
-            <div className="flex rounded-lg border border-border bg-white dark:bg-gray-900">
+            <div className="flex rounded-lg border border-border bg-white dark:bg-black">
               <Button
                 variant={viewMode === "grid" ? "default" : "ghost"}
                 size="sm"
@@ -397,7 +397,7 @@ export default function PluginsMarketplacePage() {
               transition={{ duration: 0.2 }}
               className="mb-6 overflow-hidden"
             >
-              <Card className="bg-white dark:bg-gray-900">
+              <Card className="bg-white dark:bg-black">
                 <CardContent className="p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h3 className="text-sm font-semibold">Filter by Category</h3>
@@ -463,7 +463,7 @@ export default function PluginsMarketplacePage() {
 
         {/* Results */}
         {paginatedPlugins.length === 0 ? (
-          <Card className="bg-white dark:bg-gray-900">
+          <Card className="bg-white dark:bg-black">
             <CardContent className="py-16 text-center">
               <Puzzle className="mx-auto mb-4 h-16 w-16 text-muted-foreground/30" />
               <h3 className="mb-2 text-xl font-semibold">No plugins found</h3>

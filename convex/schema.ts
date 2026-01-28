@@ -284,6 +284,16 @@ export default defineSchema({
     description: v.optional(v.string()),
     position: v.number(),
     courseId: v.string(),
+    // Drip Content Configuration (Teachable Parity)
+    dripEnabled: v.optional(v.boolean()), // Whether drip is enabled for this module
+    dripType: v.optional(v.union(
+      v.literal("days_after_enrollment"), // Release X days after student enrolls
+      v.literal("specific_date"), // Release on a specific date
+      v.literal("after_previous") // Release after previous module is completed
+    )),
+    dripDaysAfterEnrollment: v.optional(v.number()), // Number of days after enrollment
+    dripSpecificDate: v.optional(v.number()), // Timestamp for specific date release
+    dripNotifyStudents: v.optional(v.boolean()), // Send email when content unlocks
   })
     .index("by_courseId", ["courseId"])
     .index("by_position", ["position"]),
@@ -466,6 +476,15 @@ export default defineSchema({
             ),
           })
         ),
+      })
+    ),
+    // Notification Integrations for Workflow Actions
+    notificationIntegrations: v.optional(
+      v.object({
+        slackWebhookUrl: v.optional(v.string()), // Slack incoming webhook URL
+        slackEnabled: v.optional(v.boolean()),
+        discordWebhookUrl: v.optional(v.string()), // Discord webhook URL
+        discordEnabled: v.optional(v.boolean()),
       })
     ),
   })
@@ -3614,6 +3633,165 @@ export default defineSchema({
   })
     .index("by_certificate", ["certificateId", "verifiedAt"])
     .index("by_date", ["verifiedAt"]),
+
+  // =============================================================================
+  // COURSE DRIP CONTENT ACCESS TRACKING (Teachable Parity)
+  // =============================================================================
+  courseDripAccess: defineTable({
+    userId: v.string(), // Clerk user ID
+    courseId: v.id("courses"),
+    moduleId: v.id("courseModules"),
+    // Access status
+    isUnlocked: v.boolean(),
+    unlockedAt: v.optional(v.number()), // When the content was unlocked
+    scheduledUnlockAt: v.number(), // When content is scheduled to unlock
+    // Notification tracking
+    unlockNotificationSent: v.optional(v.boolean()),
+    notificationSentAt: v.optional(v.number()),
+    // Manual override
+    manuallyUnlocked: v.optional(v.boolean()), // Instructor manually unlocked
+    manualUnlockReason: v.optional(v.string()),
+    // Enrollment tracking
+    enrolledAt: v.number(), // When user enrolled in course
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_course", ["userId", "courseId"])
+    .index("by_user_module", ["userId", "moduleId"])
+    .index("by_course_module", ["courseId", "moduleId"])
+    .index("by_scheduled_unlock", ["isUnlocked", "scheduledUnlockAt"])
+    .index("by_notification_pending", ["isUnlocked", "unlockNotificationSent"]),
+
+  // =============================================================================
+  // LANDING PAGE BUILDER (Competitor Feature)
+  // =============================================================================
+  landingPages: defineTable({
+    storeId: v.string(),
+    userId: v.string(), // Clerk ID
+    // Page metadata
+    title: v.string(),
+    slug: v.string(), // URL slug
+    description: v.optional(v.string()),
+    // Template & Design
+    templateId: v.optional(v.string()), // Reference to a template
+    templateName: v.optional(v.string()),
+    // Page content - array of blocks
+    blocks: v.array(v.object({
+      id: v.string(),
+      type: v.union(
+        v.literal("hero"),
+        v.literal("features"),
+        v.literal("testimonials"),
+        v.literal("pricing"),
+        v.literal("cta"),
+        v.literal("faq"),
+        v.literal("video"),
+        v.literal("image"),
+        v.literal("text"),
+        v.literal("countdown"),
+        v.literal("social_proof"),
+        v.literal("product_showcase"),
+        v.literal("custom_html")
+      ),
+      position: v.number(),
+      settings: v.any(), // Block-specific settings (colors, text, images, etc.)
+      isVisible: v.boolean(),
+    })),
+    // SEO
+    metaTitle: v.optional(v.string()),
+    metaDescription: v.optional(v.string()),
+    ogImage: v.optional(v.string()),
+    // Conversion tracking
+    linkedProductId: v.optional(v.id("digitalProducts")),
+    linkedCourseId: v.optional(v.id("courses")),
+    // A/B Testing
+    isVariant: v.optional(v.boolean()),
+    parentPageId: v.optional(v.id("landingPages")),
+    variantName: v.optional(v.string()),
+    trafficSplit: v.optional(v.number()), // Percentage of traffic (0-100)
+    // Analytics
+    views: v.optional(v.number()),
+    conversions: v.optional(v.number()),
+    conversionRate: v.optional(v.number()),
+    // Status
+    isPublished: v.boolean(),
+    publishedAt: v.optional(v.number()),
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_store", ["storeId", "isPublished"])
+    .index("by_slug", ["storeId", "slug"])
+    .index("by_user", ["userId", "createdAt"])
+    .index("by_parent", ["parentPageId"]),
+
+  // Landing Page Analytics
+  landingPageAnalytics: defineTable({
+    pageId: v.id("landingPages"),
+    storeId: v.string(),
+    date: v.string(), // YYYY-MM-DD format
+    // Metrics
+    views: v.number(),
+    uniqueVisitors: v.number(),
+    conversions: v.number(),
+    conversionRate: v.number(),
+    avgTimeOnPage: v.optional(v.number()), // Seconds
+    bounceRate: v.optional(v.number()),
+    // Traffic sources
+    trafficSources: v.optional(v.object({
+      direct: v.number(),
+      organic: v.number(),
+      social: v.number(),
+      referral: v.number(),
+      paid: v.number(),
+    })),
+    // A/B test tracking
+    variantViews: v.optional(v.any()), // { variantId: views }
+    variantConversions: v.optional(v.any()), // { variantId: conversions }
+    createdAt: v.number(),
+  })
+    .index("by_page", ["pageId", "date"])
+    .index("by_store", ["storeId", "date"])
+    .index("by_date", ["date"]),
+
+  // Landing Page Templates (Pre-built starting points)
+  landingPageTemplates: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    thumbnail: v.optional(v.string()),
+    category: v.union(
+      v.literal("course"),
+      v.literal("product"),
+      v.literal("webinar"),
+      v.literal("ebook"),
+      v.literal("music"),
+      v.literal("general")
+    ),
+    // Template content
+    blocks: v.array(v.object({
+      id: v.string(),
+      type: v.string(),
+      position: v.number(),
+      settings: v.any(),
+      isVisible: v.boolean(),
+    })),
+    // Template styling
+    colorScheme: v.optional(v.object({
+      primary: v.string(),
+      secondary: v.string(),
+      accent: v.string(),
+      background: v.string(),
+      text: v.string(),
+    })),
+    // Metadata
+    isDefault: v.optional(v.boolean()), // System template
+    creatorId: v.optional(v.string()), // User-created template
+    usageCount: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_creator", ["creatorId"]),
 
   // Analytics & Reporting
   userEvents: defineTable({

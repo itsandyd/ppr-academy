@@ -694,7 +694,45 @@ html {
 
 /* Focus visible for accessibility with style */
 *:focus-visible {
-  outline: 2px solid hsl(var(--chart-1));
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Improved focus indicators for interactive elements */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Focus within for form groups */
+.focus-within-ring:focus-within {
+  ring-width: 2px;
+  ring-color: hsl(var(--ring));
+}
+
+/* Skip to content link for keyboard navigation */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 1rem;
+  background: hsl(var(--background));
+  border: 2px solid hsl(var(--ring));
+  border-radius: 4px;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.skip-to-content:focus {
+  left: 50%;
+  transform: translateX(-50%);
+  top: 1rem;
 }

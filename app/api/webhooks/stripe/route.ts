@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
+import { serverLogger } from "@/lib/server-logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
-    console.error("❌ Webhook signature verification failed:", err);
+    serverLogger.error("Webhook signature verification failed", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       case "account.updated":
         // Handle Connect account updates
         const account = event.data.object as Stripe.Account;
-        console.log("📋 Account updated:", {
+        serverLogger.payment("Account updated", {
           id: account.id,
           detailsSubmitted: account.details_submitted,
           chargesEnabled: account.charges_enabled,
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
               },
             });
 
-            console.log("✅ Updated user Stripe account status:", {
+            serverLogger.payment("Updated user Stripe account status", {
               userId: user._id,
               status,
               onboardingComplete: account.details_submitted,
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
             // console.log(...);
           }
         } catch (error) {
-          console.error("❌ Failed to update user Stripe status:", error);
+          serverLogger.error("Failed to update user Stripe status", error);
           // Don't throw - we still want to acknowledge the webhook
         }
 
@@ -86,11 +87,11 @@ export async function POST(request: NextRequest) {
       case "payment_intent.succeeded":
         // Log successful payment (enrollment is handled in checkout.session.completed)
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log("💰 Payment succeeded:", {
+        serverLogger.payment("Payment succeeded", {
           id: paymentIntent.id,
           amount: paymentIntent.amount / 100,
           currency: paymentIntent.currency,
-          metadata: paymentIntent.metadata,
+          type: "payment_intent",
         });
         // Note: Course enrollment is created in checkout.session.completed handler
         break;
@@ -98,12 +99,12 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed":
         // Handle successful checkout (for credits and subscriptions)
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log("💳 Checkout completed:", {
+        serverLogger.payment("Checkout completed", {
           id: session.id,
           amount: session.amount_total ? session.amount_total / 100 : 0,
           currency: session.currency,
-          metadata: session.metadata,
-          mode: session.mode,
+          type: session.mode,
+          status: "completed",
         });
 
         // Handle subscription checkouts
@@ -113,11 +114,10 @@ export async function POST(request: NextRequest) {
 
           // Handle creator plan subscriptions
           if (productType === "creator_plan" && storeId && plan) {
-            console.log("🎨 Creating creator plan subscription:", {
-              userId,
-              storeId,
-              plan,
-              stripeSubscriptionId: session.subscription,
+            serverLogger.payment("Creating creator plan subscription", {
+              id: session.subscription as string,
+              type: "creator_plan",
+              status: "creating",
             });
 
             const { fetchMutation: fetchMutationPlan } = await import("convex/nextjs");
@@ -143,12 +143,10 @@ export async function POST(request: NextRequest) {
           else if (productType === "membership" && userId) {
             const { tierId, creatorId, tierName, membershipName, customerEmail, customerName } = session.metadata || {};
 
-            console.log("⭐ Creating membership subscription:", {
-              userId,
-              tierId,
-              creatorId,
-              stripeSubscriptionId: session.subscription,
-              billingCycle,
+            serverLogger.payment("Creating membership subscription", {
+              id: session.subscription as string,
+              type: "membership",
+              status: "creating",
             });
 
             const { fetchMutation: fetchMutationMembership, fetchQuery: fetchQueryMembership } = await import("convex/nextjs");
@@ -170,7 +168,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Membership subscription created");
+              serverLogger.info("Membership", "Subscription created successfully");
 
               // Send membership confirmation email
               try {
@@ -184,21 +182,20 @@ export async function POST(request: NextRequest) {
                   currency: session.currency || "usd",
                   billingCycle: (billingCycle as "monthly" | "yearly") || "monthly",
                 });
-                console.log("✅ Membership confirmation email sent");
+                serverLogger.debug("Email", "Membership confirmation email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send membership confirmation email:", emailError);
+                serverLogger.error("Failed to send membership confirmation email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create membership subscription:", error);
+              serverLogger.error("Failed to create membership subscription", error);
             }
           }
           // Handle content subscription (existing)
           else if (planId && userId) {
-            console.log("🔄 Creating content subscription in Convex:", {
-              userId,
-              planId,
-              stripeSubscriptionId: session.subscription,
-              billingCycle,
+            serverLogger.payment("Creating content subscription", {
+              id: session.subscription as string,
+              type: "content_subscription",
+              status: "creating",
             });
 
             const { fetchMutation } = await import("convex/nextjs");
@@ -220,13 +217,11 @@ export async function POST(request: NextRequest) {
           const { userId, courseId, amount, currency, courseTitle, customerEmail, customerName } = session.metadata;
 
           if (userId && courseId && amount) {
-            console.log("📚 Processing course purchase:", {
-              userId,
-              courseId,
+            serverLogger.payment("Processing course purchase", {
+              id: session.id,
+              type: "course",
               amount: parseInt(amount) / 100,
               currency: currency || "USD",
-              sessionId: session.id,
-              paymentIntentId: session.payment_intent,
             });
 
             const { fetchMutation: fetchMutationEnroll } = await import("convex/nextjs");
@@ -245,7 +240,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Course enrollment created:", { purchaseId, userId, courseId });
+              serverLogger.info("Course", "Enrollment created successfully");
 
               // Send course enrollment email
               try {
@@ -257,12 +252,12 @@ export async function POST(request: NextRequest) {
                   amount: parseInt(amount) / 100,
                   currency: currency || "USD",
                 });
-                console.log("✅ Course enrollment email sent");
+                serverLogger.debug("Email", "Course enrollment email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send course enrollment email:", emailError);
+                serverLogger.error("Failed to send course enrollment email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create course enrollment:", error);
+              serverLogger.error("Failed to create course enrollment", error);
             }
           }
         }

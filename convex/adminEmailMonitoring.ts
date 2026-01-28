@@ -588,3 +588,171 @@ export const resolveAlert = mutation({
   },
 });
 
+// ============================================
+// EMAIL ANALYTICS CHARTS DATA
+// ============================================
+
+/**
+ * Get email analytics chart data for last N days
+ */
+export const getEmailAnalyticsChartData = query({
+  args: {
+    days: v.optional(v.number()), // Default 30 days
+  },
+  returns: v.array(v.object({
+    date: v.string(),
+    sent: v.number(),
+    delivered: v.number(),
+    opened: v.number(),
+    clicked: v.number(),
+    bounced: v.number(),
+    spamComplaints: v.number(),
+    deliveryRate: v.number(),
+    openRate: v.number(),
+    bounceRate: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const days = args.days || 30;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+
+    // Generate all dates in range
+    const dates: string[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Get all analytics for date range
+    const startDateStr = startDate.toISOString().split("T")[0];
+    const analytics = await ctx.db
+      .query("emailDomainAnalytics")
+      .filter(q => q.gte(q.field("date"), startDateStr))
+      .collect();
+
+    // Aggregate by date
+    const dataByDate = new Map<string, {
+      sent: number;
+      delivered: number;
+      opened: number;
+      clicked: number;
+      bounced: number;
+      spamComplaints: number;
+    }>();
+
+    for (const record of analytics) {
+      const existing = dataByDate.get(record.date) || {
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        spamComplaints: 0,
+      };
+
+      dataByDate.set(record.date, {
+        sent: existing.sent + record.totalSent,
+        delivered: existing.delivered + record.totalDelivered,
+        opened: existing.opened + record.totalOpened,
+        clicked: existing.clicked + record.totalClicked,
+        bounced: existing.bounced + record.totalBounced,
+        spamComplaints: existing.spamComplaints + record.spamComplaints,
+      });
+    }
+
+    // Build result with all dates (fill zeros for missing days)
+    return dates.map(date => {
+      const data = dataByDate.get(date) || {
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        spamComplaints: 0,
+      };
+
+      return {
+        date,
+        ...data,
+        deliveryRate: data.sent > 0 ? (data.delivered / data.sent) * 100 : 0,
+        openRate: data.delivered > 0 ? (data.opened / data.delivered) * 100 : 0,
+        bounceRate: data.sent > 0 ? (data.bounced / data.sent) * 100 : 0,
+      };
+    });
+  },
+});
+
+/**
+ * Get recent email activity feed
+ */
+export const getRecentEmailActivity = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    id: v.string(),
+    type: v.string(),
+    message: v.string(),
+    email: v.optional(v.string()),
+    domain: v.optional(v.string()),
+    timestamp: v.number(),
+    status: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50;
+
+    // Get recent deliverability events
+    const recentEvents = await ctx.db
+      .query("emailDeliverabilityEvents")
+      .order("desc")
+      .take(limit);
+
+    // Transform to activity feed format
+    const activities = recentEvents.map(event => {
+      let type = "event";
+      let message = `Email event for ${event.email}`;
+
+      switch (event.eventType) {
+        case "hard_bounce":
+          type = "bounce";
+          message = `Hard bounce from ${event.email}`;
+          break;
+        case "soft_bounce":
+          type = "bounce";
+          message = `Soft bounce from ${event.email}`;
+          break;
+        case "spam_complaint":
+          type = "error";
+          message = `Spam complaint from ${event.email}`;
+          break;
+        case "blocked":
+          type = "error";
+          message = `Email blocked for ${event.email}`;
+          break;
+        case "unsubscribe":
+          type = "unsubscribe";
+          message = `${event.email} unsubscribed`;
+          break;
+        case "delivery_delay":
+          type = "warning";
+          message = `Delivery delayed to ${event.email}`;
+          break;
+      }
+
+      return {
+        id: event._id,
+        type,
+        message,
+        email: event.email,
+        domain: event.storeId,
+        timestamp: event.timestamp,
+        status: event.eventType,
+      };
+    });
+
+    return activities;
+  },
+});
+
