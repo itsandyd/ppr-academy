@@ -2,16 +2,62 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 
 /**
+ * Reserved paths that are NOT store slugs
+ * These are static routes in the app directory
+ */
+const RESERVED_PATHS = new Set([
+  "actions",
+  "admin",
+  "affiliate",
+  "ai",
+  "api",
+  "artist",
+  "audio",
+  "auth",
+  "become-a-coach",
+  "blog",
+  "bundles",
+  "coach-application",
+  "courses",
+  "create-course",
+  "credits",
+  "dashboard",
+  "dashboard-demo",
+  "debug-courses",
+  "dmca",
+  "for-creators",
+  "leaderboards",
+  "marketplace",
+  "playlists",
+  "privacy",
+  "privacy-policy",
+  "products",
+  "sign-in",
+  "sign-up",
+  "store",
+  "subscribe",
+  "terms",
+  "terms-of-service",
+  "unsubscribe",
+  "verify",
+]);
+
+/**
  * Helper: Extract store/product slugs from URL path
+ * Store pages use /{slug} pattern (e.g., /ppr, /username)
  */
 function extractSlugs(path: string): { storeSlug: string | null; productSlug: string | null } {
-  // /store/my-store-slug/... → storeSlug: "my-store-slug"
-  const storeMatch = path.match(/^\/store\/([^\/]+)/);
+  // Extract first path segment: /ppr/something → "ppr"
+  const firstSegment = path.split("/")[1]?.toLowerCase();
+
+  // If it's not a reserved path and exists, it's a store slug
+  const storeSlug = firstSegment && !RESERVED_PATHS.has(firstSegment) ? firstSegment : null;
+
   // /products/my-product-slug → productSlug: "my-product-slug"
   const productMatch = path.match(/^\/products\/([^\/]+)/);
 
   return {
-    storeSlug: storeMatch?.[1] || null,
+    storeSlug,
     productSlug: productMatch?.[1] || null,
   };
 }
@@ -57,6 +103,48 @@ export const ingestEvents = internalMutation({
   },
 });
 
+/**
+ * Debug: Check what sessionIds are stored
+ */
+export const debugSessionIds = query({
+  args: {},
+  handler: async (ctx) => {
+    const events = await ctx.db.query("webAnalyticsEvents").take(20);
+    return events.map((e) => ({
+      path: e.path,
+      sessionId: e.sessionId,
+      deviceId: e.deviceId,
+    }));
+  },
+});
+
+/**
+ * Backfill migration: Re-extract slugs for existing events
+ * Run with: npx convex run webAnalytics:backfillSlugs
+ */
+export const backfillSlugs = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const events = await ctx.db.query("webAnalyticsEvents").collect();
+
+    let updated = 0;
+    for (const event of events) {
+      const { storeSlug, productSlug } = extractSlugs(event.path || "");
+
+      // Only update if slugs changed
+      if (storeSlug !== event.storeSlug || productSlug !== event.productSlug) {
+        await ctx.db.patch(event._id, {
+          storeSlug: storeSlug || undefined,
+          productSlug: productSlug || undefined,
+        });
+        updated++;
+      }
+    }
+
+    return { total: events.length, updated };
+  },
+});
+
 // ==================== ADMIN QUERIES ====================
 
 /**
@@ -80,7 +168,7 @@ export const getPageViews = query({
 });
 
 /**
- * Get unique visitors (by sessionId) for a time period
+ * Get unique visitors (by deviceId) for a time period
  */
 export const getUniqueVisitors = query({
   args: {
@@ -94,8 +182,8 @@ export const getUniqueVisitors = query({
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .collect();
 
-    const uniqueSessions = new Set(events.map((e) => e.sessionId).filter(Boolean));
-    return { total: uniqueSessions.size, days };
+    const uniqueDevices = new Set(events.map((e) => e.deviceId).filter(Boolean));
+    return { total: uniqueDevices.size, days };
   },
 });
 
@@ -258,8 +346,8 @@ export const getTrafficOverTime = query({
         dayBuckets[date] = { views: 0, visitors: new Set() };
       }
       dayBuckets[date].views++;
-      if (event.sessionId) {
-        dayBuckets[date].visitors.add(event.sessionId);
+      if (event.deviceId) {
+        dayBuckets[date].visitors.add(event.deviceId);
       }
     }
 
@@ -294,11 +382,11 @@ export const getStoreTraffic = query({
       .collect();
 
     const pageviews = events.filter((e) => e.eventType === "pageview").length;
-    const uniqueSessions = new Set(events.map((e) => e.sessionId).filter(Boolean));
+    const uniqueDevices = new Set(events.map((e) => e.deviceId).filter(Boolean));
 
     return {
       pageviews,
-      visitors: uniqueSessions.size,
+      visitors: uniqueDevices.size,
       days,
     };
   },
@@ -442,8 +530,8 @@ export const getStoreTrafficOverTime = query({
         dayBuckets[date] = { views: 0, visitors: new Set() };
       }
       dayBuckets[date].views++;
-      if (event.sessionId) {
-        dayBuckets[date].visitors.add(event.sessionId);
+      if (event.deviceId) {
+        dayBuckets[date].visitors.add(event.deviceId);
       }
     }
 

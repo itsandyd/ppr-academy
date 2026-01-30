@@ -5,15 +5,15 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { 
-  Users, 
-  UserPlus, 
-  TrendingUp, 
+import {
+  Users,
+  UserPlus,
+  TrendingUp,
   DollarSign,
   Mail,
   Activity,
@@ -27,6 +27,13 @@ type TimeWindow = "today" | "7d" | "28d";
 
 export function PlatformKPIsOverview() {
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Timeout after 5 seconds to prevent infinite skeleton
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const getTimeRange = () => {
     const now = Date.now();
@@ -43,13 +50,25 @@ export function PlatformKPIsOverview() {
   const { start, end } = getTimeRange();
 
   // Platform-wide KPIs (no storeId = all creators)
-  const kpis = useQuery(api.analytics.kpis.getKPIs, {
+  const kpisResult = useQuery(api.analytics.kpis.getKPIs, {
     startTime: start,
     endTime: end,
     // No storeId = platform-wide
   });
 
-  if (!kpis) {
+  // Default values if query fails or returns no data
+  const kpis = kpisResult ?? {
+    newSignups: 0,
+    newCreatorSignups: 0,
+    learnerActivationRate: 0,
+    creatorActivationRate: 0,
+    totalRevenue: 0,
+    emailHealth: { sent: 0, delivered: 0, bounced: 0, bounceRate: 0 },
+    traffic: { total: 0, instagram: 0, tiktok: 0, email: 0, direct: 0 },
+  };
+
+  // Show skeleton only briefly, then show empty/default state
+  if (kpisResult === undefined && !timedOut) {
     return <PlatformKPIsOverviewSkeleton />;
   }
 

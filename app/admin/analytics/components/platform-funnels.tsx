@@ -5,7 +5,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -26,6 +26,13 @@ interface PlatformFunnelsProps {
 }
 
 export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const learnerFunnel = useQuery(api.analytics.funnels.getLearnerFunnel, {
     startTime,
     endTime,
@@ -37,8 +44,14 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
     endTime,
   });
 
-  if (!learnerFunnel || !creatorFunnel) {
+  // Hide component if data doesn't load after timeout
+  if ((!learnerFunnel || !creatorFunnel) && !timedOut) {
     return <PlatformFunnelsSkeleton />;
+  }
+
+  // If timed out and no data, don't render anything
+  if (!learnerFunnel || !creatorFunnel) {
+    return null;
   }
 
   return (

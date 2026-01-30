@@ -5,15 +5,15 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { 
-  Activity, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle,
   Mail,
   Server,
   Zap,
@@ -27,6 +27,13 @@ interface SystemHealthMonitorProps {
 }
 
 export function SystemHealthMonitor({ startTime, endTime }: SystemHealthMonitorProps) {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Get email health from KPIs
   const kpis = useQuery(api.analytics.kpis.getKPIs, {
     startTime,
@@ -38,8 +45,12 @@ export function SystemHealthMonitor({ startTime, endTime }: SystemHealthMonitorP
     limit: 10,
   });
 
-  if (!kpis) {
+  if (!kpis && !timedOut) {
     return <SystemHealthMonitorSkeleton />;
+  }
+
+  if (!kpis) {
+    return null;
   }
 
   const emailHealth = kpis.emailHealth;

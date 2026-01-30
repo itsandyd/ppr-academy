@@ -19797,6 +19797,7 @@ export declare const api: {
     >;
   };
   webAnalytics: {
+    debugSessionIds: FunctionReference<"query", "public", {}, any>;
     getCountryBreakdown: FunctionReference<
       "query",
       "public",
@@ -26212,6 +26213,7 @@ export declare const internal: {
     >;
   };
   webAnalytics: {
+    backfillSlugs: FunctionReference<"mutation", "internal", {}, any>;
     ingestEvents: FunctionReference<
       "mutation",
       "internal",

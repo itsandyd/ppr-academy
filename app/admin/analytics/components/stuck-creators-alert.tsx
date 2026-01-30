@@ -5,7 +5,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +15,21 @@ import { AlertTriangle, Mail, MessageSquare, Clock, ChevronRight } from "lucide-
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function StuckCreatorsAlert() {
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const stuckCreators = useQuery(api.analytics.creatorPipeline.getStuckCreators, {});
 
-  if (!stuckCreators) {
+  if (!stuckCreators && !timedOut) {
     return <StuckCreatorsAlertSkeleton />;
+  }
+
+  if (!stuckCreators) {
+    return null;
   }
 
   if (stuckCreators.length === 0) {

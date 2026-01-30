@@ -5,16 +5,16 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { 
-  Users, 
-  Mail, 
-  MessageSquare, 
+import {
+  Users,
+  Mail,
+  MessageSquare,
   Phone,
   Clock,
   DollarSign,
@@ -27,6 +27,12 @@ import { useToast } from "@/hooks/use-toast";
 
 export function CreatorPipelineBoard() {
   const { toast } = useToast();
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Get pipeline stats for column headers
   const pipelineStats = useQuery(api.analytics.creatorPipeline.getPipelineStats, {});
@@ -48,8 +54,12 @@ export function CreatorPipelineBoard() {
   const updateStage = useMutation(api.analytics.creatorPipeline.updateCreatorStage);
   const addTouch = useMutation(api.analytics.creatorPipeline.addCreatorTouch);
 
-  if (!pipelineStats || !prospects || !invited || !signedUp || !drafting) {
+  if ((!pipelineStats || !prospects || !invited || !signedUp || !drafting) && !timedOut) {
     return <CreatorPipelineBoardSkeleton />;
+  }
+
+  if (!pipelineStats || !prospects || !invited || !signedUp || !drafting) {
+    return null;
   }
 
   const handleSendEmail = async (creatorId: string, creatorEmail?: string) => {
