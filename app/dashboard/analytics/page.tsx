@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RevenueChart, CoursePerformanceChart, LiveActivityFeed, VideoAnalytics, StudentProgress } from "@/components/dashboard/analytics";
+import { RevenueChart, CoursePerformanceChart, LiveActivityFeed, VideoAnalytics, StudentProgress, TrafficAnalytics } from "@/components/dashboard/analytics";
 
 export default function AnalyticsPage() {
   const { user, isLoaded } = useUser();
@@ -200,6 +200,9 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Traffic Analytics */}
+      {store?.slug && <TrafficAnalytics storeSlug={store.slug} plan={store.plan} />}
 
       {/* Charts Section */}
       {user?.id && (

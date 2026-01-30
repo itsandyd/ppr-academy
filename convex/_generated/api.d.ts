@@ -19795,6 +19795,81 @@ export declare const api: {
       { message: string; success: boolean }
     >;
   };
+  webAnalytics: {
+    getCountryBreakdown: FunctionReference<
+      "query",
+      "public",
+      { days?: number; limit?: number },
+      any
+    >;
+    getDeviceBreakdown: FunctionReference<
+      "query",
+      "public",
+      { days?: number },
+      any
+    >;
+    getPageViews: FunctionReference<"query", "public", { days?: number }, any>;
+    getStoreCountries: FunctionReference<
+      "query",
+      "public",
+      { days?: number; limit?: number; storeSlug: string },
+      any
+    >;
+    getStoreDevices: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeSlug: string },
+      any
+    >;
+    getStoreReferrers: FunctionReference<
+      "query",
+      "public",
+      { days?: number; limit?: number; storeSlug: string },
+      any
+    >;
+    getStoreTopPages: FunctionReference<
+      "query",
+      "public",
+      { days?: number; limit?: number; storeSlug: string },
+      any
+    >;
+    getStoreTraffic: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeSlug: string },
+      any
+    >;
+    getStoreTrafficOverTime: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeSlug: string },
+      any
+    >;
+    getTopPages: FunctionReference<
+      "query",
+      "public",
+      { days?: number; limit?: number },
+      any
+    >;
+    getTopReferrers: FunctionReference<
+      "query",
+      "public",
+      { days?: number; limit?: number },
+      any
+    >;
+    getTrafficOverTime: FunctionReference<
+      "query",
+      "public",
+      { days?: number },
+      any
+    >;
+    getUniqueVisitors: FunctionReference<
+      "query",
+      "public",
+      { days?: number },
+      any
+    >;
+  };
   wishlists: {
     addCourseToWishlist: FunctionReference<
       "mutation",
@@ -26133,6 +26208,14 @@ export declare const internal: {
         email?: string;
         name?: string;
       } | null
+    >;
+  };
+  webAnalytics: {
+    ingestEvents: FunctionReference<
+      "mutation",
+      "internal",
+      { events: Array<any> },
+      any
     >;
   };
   webhooks: {

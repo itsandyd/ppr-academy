@@ -41,6 +41,7 @@ import { PlatformFunnels } from "./components/platform-funnels";
 import { CreatorPipelineBoard } from "./components/creator-pipeline-board";
 import { StuckCreatorsAlert } from "./components/stuck-creators-alert";
 import { SystemHealthMonitor } from "./components/system-health-monitor";
+import { WebAnalyticsOverview } from "./components/web-analytics-overview";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -252,6 +253,9 @@ export default function AdminAnalyticsPage() {
 
       {/* Platform KPIs with time window toggle */}
       <PlatformKPIsOverview />
+
+      {/* Web Analytics from Vercel Drain */}
+      <WebAnalyticsOverview />
 
       {/* Platform-Wide Funnels */}
       <PlatformFunnels startTime={start} endTime={end} />

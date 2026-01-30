@@ -11393,6 +11393,64 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  webAnalyticsEvents: {
+    document: {
+      city?: string;
+      clientName?: string;
+      country?: string;
+      deviceId?: number;
+      deviceType?: string;
+      eventName?: string;
+      eventType: string;
+      origin?: string;
+      osName?: string;
+      path: string;
+      productSlug?: string;
+      projectId?: string;
+      queryParams?: string;
+      referrer?: string;
+      region?: string;
+      sessionId?: number;
+      storeSlug?: string;
+      timestamp: number;
+      _id: Id<"webAnalyticsEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "city"
+      | "clientName"
+      | "country"
+      | "deviceId"
+      | "deviceType"
+      | "eventName"
+      | "eventType"
+      | "origin"
+      | "osName"
+      | "path"
+      | "productSlug"
+      | "projectId"
+      | "queryParams"
+      | "referrer"
+      | "region"
+      | "sessionId"
+      | "storeSlug"
+      | "timestamp";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_country: ["country", "timestamp", "_creationTime"];
+      by_device_type: ["deviceType", "timestamp", "_creationTime"];
+      by_path: ["path", "timestamp", "_creationTime"];
+      by_product_slug: ["productSlug", "timestamp", "_creationTime"];
+      by_session: ["sessionId", "_creationTime"];
+      by_store_slug: ["storeSlug", "timestamp", "_creationTime"];
+      by_timestamp: ["timestamp", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   webhookCallLogs: {
     document: {
       errorMessage?: string;

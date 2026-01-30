@@ -3900,6 +3900,46 @@ export default defineSchema({
     .index("by_store", ["storeId", "date"])
     .index("by_date", ["date"]),
 
+  // Vercel Web Analytics Drain Events
+  webAnalyticsEvents: defineTable({
+    // Vercel drain fields
+    eventType: v.string(), // "pageview" | "event"
+    eventName: v.optional(v.string()),
+    path: v.string(),
+    origin: v.optional(v.string()),
+    referrer: v.optional(v.string()),
+    queryParams: v.optional(v.string()),
+
+    // Geo
+    country: v.optional(v.string()),
+    region: v.optional(v.string()),
+    city: v.optional(v.string()),
+
+    // Device
+    deviceType: v.optional(v.string()), // desktop/mobile/tablet
+    osName: v.optional(v.string()),
+    clientName: v.optional(v.string()), // browser
+
+    // Session
+    sessionId: v.optional(v.number()),
+    deviceId: v.optional(v.number()),
+
+    // Vercel metadata
+    projectId: v.optional(v.string()),
+    timestamp: v.number(),
+
+    // Derived fields (for efficient queries)
+    storeSlug: v.optional(v.string()), // extracted from path
+    productSlug: v.optional(v.string()),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_path", ["path", "timestamp"])
+    .index("by_store_slug", ["storeSlug", "timestamp"])
+    .index("by_product_slug", ["productSlug", "timestamp"])
+    .index("by_session", ["sessionId"])
+    .index("by_country", ["country", "timestamp"])
+    .index("by_device_type", ["deviceType", "timestamp"]),
+
   studentProgress: defineTable({
     userId: v.string(),
     courseId: v.id("courses"),

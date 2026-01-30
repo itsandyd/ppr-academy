@@ -78,4 +78,48 @@ http.route({
  * The Next.js route handles all Stripe events and uses Convex for mutations/queries
  */
 
+/**
+ * Vercel Web Analytics Drain (POST)
+ * Receives analytics events from Vercel's Web Analytics Drain feature.
+ * Events include pageviews and custom events with device/geo/session data.
+ *
+ * Configure in Vercel Dashboard → Team Settings → Drains → Web Analytics
+ */
+http.route({
+  path: "/drains/analytics",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      // Vercel sends events as a JSON array
+      const events = await request.json();
+
+      if (!Array.isArray(events)) {
+        console.error("❌ Analytics drain: expected array, got", typeof events);
+        return new Response(JSON.stringify({ error: "Invalid payload" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`📊 Analytics drain received ${events.length} events`);
+
+      // Process events asynchronously
+      await ctx.runMutation(internal.webAnalytics.ingestEvents, { events });
+
+      return new Response(JSON.stringify({ success: true, count: events.length }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("❌ Analytics drain error:", error);
+
+      // Return 200 to prevent Vercel retries on parsing errors
+      return new Response(JSON.stringify({ success: false, error: "Processing failed" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
 export default http;
