@@ -3166,6 +3166,7 @@ export declare const api: {
           | "generating_outline"
           | "outline_ready"
           | "expanding_content"
+          | "reformatting"
           | "ready_to_create"
           | "creating_course"
           | "completed"

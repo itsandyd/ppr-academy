@@ -401,6 +401,7 @@ export const updateQueueStatus = mutation({
       v.literal("generating_outline"),
       v.literal("outline_ready"),
       v.literal("expanding_content"),
+      v.literal("reformatting"),
       v.literal("ready_to_create"),
       v.literal("creating_course"),
       v.literal("completed"),
@@ -1071,13 +1072,19 @@ export const startBackgroundExistingCourseExpansion = mutation({
         return { success: false, error: "Course not found" };
       }
 
+      // Normalize skillLevel to valid values (courses table allows any string)
+      const validSkillLevels = ["beginner", "intermediate", "advanced"] as const;
+      const normalizedSkillLevel = validSkillLevels.includes(course.skillLevel as typeof validSkillLevels[number])
+        ? (course.skillLevel as "beginner" | "intermediate" | "advanced")
+        : "intermediate"; // Default to intermediate for invalid/missing values like "All Levels"
+
       // Create queue item for tracking
       const queueId = await ctx.db.insert("aiCourseQueue", {
         userId: args.userId,
         storeId: args.storeId,
         prompt: `Expand chapters for: ${course.title}`,
         topic: course.title,
-        skillLevel: (course.skillLevel as "beginner" | "intermediate" | "advanced") || "intermediate",
+        skillLevel: normalizedSkillLevel,
         targetModules: 0, // Not creating new modules
         targetLessonsPerModule: 0,
         status: "expanding_content",
@@ -1136,13 +1143,19 @@ export const startBackgroundReformatting = mutation({
         return { success: false, error: "Course not found" };
       }
 
+      // Normalize skillLevel to valid values (courses table allows any string)
+      const validSkillLevels = ["beginner", "intermediate", "advanced"] as const;
+      const normalizedSkillLevel = validSkillLevels.includes(course.skillLevel as typeof validSkillLevels[number])
+        ? (course.skillLevel as "beginner" | "intermediate" | "advanced")
+        : "intermediate"; // Default to intermediate for invalid/missing values like "All Levels"
+
       // Create queue item for tracking
       const queueId = await ctx.db.insert("aiCourseQueue", {
         userId: args.userId,
         storeId: args.storeId,
         prompt: `Reformat chapters for: ${course.title}`,
         topic: course.title,
-        skillLevel: (course.skillLevel as "beginner" | "intermediate" | "advanced") || "intermediate",
+        skillLevel: normalizedSkillLevel,
         targetModules: 0,
         targetLessonsPerModule: 0,
         status: "reformatting",
