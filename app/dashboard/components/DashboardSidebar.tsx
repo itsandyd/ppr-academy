@@ -6,6 +6,7 @@ import { useUser, UserButton } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 import {
   Home,
   BookOpen,
@@ -32,6 +33,10 @@ import {
   MessageCircle,
   User,
   CreditCard,
+  ChevronDown,
+  ChevronRight,
+  Megaphone,
+  UserCog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,6 +54,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ModeToggle } from "./ModeToggle";
 import { ModeToggle as ThemeToggle } from "@/components/mode-toggle";
 
@@ -60,6 +66,14 @@ interface SidebarLink {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   highlight?: boolean;
+}
+
+interface SidebarCategory {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  defaultOpen: boolean;
+  links: SidebarLink[];
 }
 
 interface DashboardSidebarProps {
@@ -119,88 +133,134 @@ const learnLinks: SidebarLink[] = [
   },
 ];
 
-const createLinks: SidebarLink[] = [
-  { href: "/dashboard?mode=create", label: "Dashboard", icon: Home, color: "text-purple-500" },
+// Organized into collapsible categories for cleaner UX
+const createCategories: SidebarCategory[] = [
   {
-    href: "/dashboard/products?mode=create",
-    label: "My Products",
-    icon: Package,
-    color: "text-blue-500",
+    id: "core",
+    label: "Core",
+    icon: Home,
+    defaultOpen: true,
+    links: [
+      { href: "/dashboard?mode=create", label: "Dashboard", icon: Home, color: "text-purple-500" },
+      {
+        href: "/dashboard/products?mode=create",
+        label: "My Products",
+        icon: Package,
+        color: "text-blue-500",
+      },
+      {
+        href: "/dashboard/create",
+        label: "Create New",
+        icon: Plus,
+        color: "text-indigo-500",
+        highlight: true,
+      },
+    ],
   },
   {
-    href: "/dashboard/courses?mode=create",
-    label: "My Courses",
+    id: "content",
+    label: "Content",
     icon: BookOpen,
-    color: "text-green-500",
+    defaultOpen: true,
+    links: [
+      {
+        href: "/dashboard/courses?mode=create",
+        label: "My Courses",
+        icon: BookOpen,
+        color: "text-green-500",
+      },
+      {
+        href: "/dashboard/coaching/sessions",
+        label: "Coaching",
+        icon: Video,
+        color: "text-teal-500",
+      },
+      {
+        href: "/dashboard/notes?mode=create",
+        label: "AI Notes",
+        icon: StickyNote,
+        color: "text-amber-500",
+      },
+    ],
   },
   {
-    href: "/dashboard/coaching/sessions",
-    label: "Coaching",
-    icon: Video,
-    color: "text-teal-500",
+    id: "marketing",
+    label: "Marketing",
+    icon: Megaphone,
+    defaultOpen: false,
+    links: [
+      {
+        href: "/dashboard/social?mode=create",
+        label: "Social Media",
+        icon: Instagram,
+        color: "text-pink-500",
+      },
+      {
+        href: "/dashboard/emails?mode=create",
+        label: "Email Campaigns",
+        icon: Mail,
+        color: "text-cyan-500",
+      },
+    ],
   },
   {
-    href: "/dashboard/messages?mode=create",
-    label: "Messages",
-    icon: MessageCircle,
-    color: "text-blue-500",
+    id: "growth",
+    label: "Growth",
+    icon: TrendingUp,
+    defaultOpen: false,
+    links: [
+      {
+        href: "/dashboard/analytics?mode=create",
+        label: "Analytics",
+        icon: BarChart3,
+        color: "text-orange-500",
+      },
+      {
+        href: "/dashboard/students?mode=create",
+        label: "Students",
+        icon: Users,
+        color: "text-emerald-500",
+      },
+      {
+        href: "/dashboard/affiliates?mode=create",
+        label: "Affiliates",
+        icon: Handshake,
+        color: "text-rose-500",
+      },
+    ],
   },
   {
-    href: "/dashboard/notes?mode=create",
-    label: "AI Notes",
-    icon: StickyNote,
-    color: "text-amber-500",
-  },
-  {
-    href: "/dashboard/social?mode=create",
-    label: "Social Media",
-    icon: Instagram,
-    color: "text-pink-500",
-  },
-  {
-    href: "/dashboard/emails?mode=create",
-    label: "Email Campaigns",
-    icon: Mail,
-    color: "text-cyan-500",
-  },
-  {
-    href: "/dashboard/create",
-    label: "Create New",
-    icon: Plus,
-    color: "text-indigo-500",
-    highlight: true,
-  },
-  {
-    href: "/dashboard/analytics?mode=create",
-    label: "Analytics",
-    icon: BarChart3,
-    color: "text-orange-500",
-  },
-  {
-    href: "/dashboard/students?mode=create",
-    label: "Students",
-    icon: Users,
-    color: "text-emerald-500",
-  },
-  {
-    href: "/dashboard/affiliates?mode=create",
-    label: "Affiliates",
-    icon: Handshake,
-    color: "text-rose-500",
-  },
-  {
-    href: "/dashboard/profile?mode=create",
-    label: "Profile",
-    icon: User,
-    color: "text-indigo-500",
-  },
-  {
-    href: "/dashboard/pricing?mode=create",
-    label: "Pricing & Plans",
-    icon: CreditCard,
-    color: "text-amber-500",
+    id: "account",
+    label: "Account",
+    icon: UserCog,
+    defaultOpen: false,
+    links: [
+      {
+        href: "/dashboard/profile?mode=create",
+        label: "Profile",
+        icon: User,
+        color: "text-indigo-500",
+      },
+      {
+        href: "/dashboard/messages?mode=create",
+        label: "Messages",
+        icon: MessageCircle,
+        color: "text-blue-500",
+      },
+      {
+        href: "/dashboard/pricing?mode=create",
+        label: "Pricing & Plans",
+        icon: CreditCard,
+        color: "text-amber-500",
+      },
+    ],
   },
 ];
+
+// Flat list for backward compatibility (used in learn mode comparison)
+const createLinks: SidebarLink[] = createCategories.flatMap((cat) => cat.links);
+
+const SIDEBAR_COLLAPSED_KEY = "ppr-sidebar-collapsed-categories";
 
 export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) {
   const pathname = usePathname();
@@ -208,6 +268,42 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
   const { user } = useUser();
   const links = mode === "learn" ? learnLinks : createLinks;
   const savePreference = useMutation(api.users.setDashboardPreference);
+
+  // Track which categories are open/closed
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
+    // Initialize with default values
+    const defaults: Record<string, boolean> = {};
+    createCategories.forEach((cat) => {
+      defaults[cat.id] = cat.defaultOpen;
+    });
+    return defaults;
+  });
+
+  // Load saved state from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setOpenCategories((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  // Save to localStorage when categories change
+  const toggleCategory = (categoryId: string) => {
+    setOpenCategories((prev) => {
+      const newState = { ...prev, [categoryId]: !prev[categoryId] };
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(newState));
+      } catch {
+        // Ignore localStorage errors
+      }
+      return newState;
+    });
+  };
 
   const handleModeChange = async (newMode: DashboardMode) => {
     if (onModeChange) {
@@ -256,43 +352,126 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
       </SidebarHeader>
 
       <SidebarContent className="p-3">
-        {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Navigation
-          </SidebarGroupLabel>
-          <SidebarGroupContent className="mt-2">
-            <SidebarMenu className="space-y-1">
-              {links.map((link) => {
-                const isActive =
-                  pathname === link.href.split("?")[0] ||
-                  (link.href.includes("/dashboard?mode=") && pathname === "/dashboard");
+        {/* Main Navigation - Learn Mode (flat list) */}
+        {mode === "learn" && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Navigation
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="mt-2">
+              <SidebarMenu className="space-y-1">
+                {learnLinks.map((link) => {
+                  const isActive =
+                    pathname === link.href.split("?")[0] ||
+                    (link.href.includes("/dashboard?mode=") && pathname === "/dashboard");
 
-                return (
-                  <SidebarMenuItem key={link.href}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link
-                        href={link.href}
+                  return (
+                    <SidebarMenuItem key={link.href}>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link
+                          href={link.href}
+                          className={cn(
+                            "group relative",
+                            link.highlight &&
+                              !isActive &&
+                              "border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                          )}
+                        >
+                          <link.icon className={cn("h-5 w-5", isActive ? "" : link.color)} />
+                          <span className="font-medium">{link.label}</span>
+                          {link.highlight && !isActive && (
+                            <Sparkles className="ml-auto h-3 w-3 text-purple-500" />
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Main Navigation - Create Mode (collapsible categories) */}
+        {mode === "create" && (
+          <div className="space-y-2">
+            {createCategories.map((category) => {
+              const isOpen = openCategories[category.id] ?? category.defaultOpen;
+              const hasActiveLink = category.links.some(
+                (link) =>
+                  pathname === link.href.split("?")[0] ||
+                  (link.href.includes("/dashboard?mode=") && pathname === "/dashboard")
+              );
+
+              return (
+                <Collapsible
+                  key={category.id}
+                  open={isOpen}
+                  onOpenChange={() => toggleCategory(category.id)}
+                >
+                  <SidebarGroup className="py-0">
+                    <CollapsibleTrigger asChild>
+                      <button
                         className={cn(
-                          "group relative",
-                          link.highlight &&
-                            !isActive &&
-                            "border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
+                          "hover:bg-accent/50",
+                          hasActiveLink && !isOpen && "text-primary"
                         )}
                       >
-                        <link.icon className={cn("h-5 w-5", isActive ? "" : link.color)} />
-                        <span className="font-medium">{link.label}</span>
-                        {link.highlight && !isActive && (
-                          <Sparkles className="ml-auto h-3 w-3 text-purple-500" />
+                        {isOpen ? (
+                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
                         )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <category.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">{category.label}</span>
+                        {!isOpen && hasActiveLink && (
+                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarGroupContent className="mt-1">
+                        <SidebarMenu className="space-y-1">
+                          {category.links.map((link) => {
+                            const isActive =
+                              pathname === link.href.split("?")[0] ||
+                              (link.href.includes("/dashboard?mode=") &&
+                                pathname === "/dashboard");
+
+                            return (
+                              <SidebarMenuItem key={link.href}>
+                                <SidebarMenuButton asChild isActive={isActive}>
+                                  <Link
+                                    href={link.href}
+                                    className={cn(
+                                      "group relative ml-5",
+                                      link.highlight &&
+                                        !isActive &&
+                                        "border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                                    )}
+                                  >
+                                    <link.icon
+                                      className={cn("h-4 w-4", isActive ? "" : link.color)}
+                                    />
+                                    <span className="text-sm font-medium">{link.label}</span>
+                                    {link.highlight && !isActive && (
+                                      <Sparkles className="ml-auto h-3 w-3 text-purple-500" />
+                                    )}
+                                  </Link>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            );
+                          })}
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </CollapsibleContent>
+                  </SidebarGroup>
+                </Collapsible>
+              );
+            })}
+          </div>
+        )}
 
         {/* Learn mode: Progress widget */}
         {mode === "learn" && userStats && (
