@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         productId,
         productSlug: productSlug || "",
+        serviceTitle: `${selectedTier.name} Mixing Service`,
         customerEmail,
         customerName,
         userId,

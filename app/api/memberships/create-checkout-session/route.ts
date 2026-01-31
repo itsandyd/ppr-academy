@@ -102,6 +102,9 @@ export async function POST(request: NextRequest) {
         billingCycle,
         productType: "membership",
         tierName,
+        membershipName: tierName, // Use tier name as membership name
+        customerEmail,
+        customerName,
       },
     };
 

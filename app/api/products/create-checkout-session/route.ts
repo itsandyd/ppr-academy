@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         productId,
         productSlug: productSlug || "",
+        productTitle: productTitle || "",
         customerEmail,
         customerName,
         userId, // Include userId in metadata for webhook

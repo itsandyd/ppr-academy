@@ -133,7 +133,7 @@ export const getProductSocialProof = query({
 
     const avgRating = reviews.length > 0
       ? reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length
-      : 4.8;
+      : 0;
 
     return {
       totalPurchases: completedPurchases.length,

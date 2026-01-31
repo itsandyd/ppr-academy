@@ -9,13 +9,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(request: NextRequest) {
   try {
     // ✅ SECURITY: Require authentication
-    await requireAuth();
-    
+    const user = await requireAuth();
+
     const { sessionId } = await request.json();
 
     if (!sessionId) {
       return NextResponse.json(
         { error: "Session ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ SECURITY: Validate sessionId format to prevent injection
+    if (typeof sessionId !== "string" || !sessionId.startsWith("cs_")) {
+      return NextResponse.json(
+        { error: "Invalid session ID format" },
         { status: 400 }
       );
     }
@@ -30,6 +38,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const metadata = session.metadata || {};
+    const { productType, courseId, userId } = metadata;
+
+    // ✅ SECURITY: Verify the authenticated user owns this payment session
+    // The userId in metadata should match the Clerk user ID of the requester
+    if (userId && userId !== user.id) {
+      console.warn("Payment verification attempted by non-owner:", {
+        sessionId,
+        paymentUserId: userId,
+        requestingUserId: user.id,
+      });
+      return NextResponse.json(
+        { error: "Unauthorized: You can only verify your own payments" },
+        { status: 403 }
+      );
+    }
+
     // Check payment status
     if (session.payment_status !== "paid") {
       return NextResponse.json({
@@ -38,9 +63,6 @@ export async function POST(request: NextRequest) {
         message: "Payment not completed",
       });
     }
-
-    const metadata = session.metadata || {};
-    const { productType, courseId, userId } = metadata;
 
     // Handle course purchases
     if (productType === "course" && courseId) {

@@ -54,8 +54,11 @@ export async function POST(request: NextRequest) {
         playlistName: playlistName || "",
         trackId,
         trackTitle: trackTitle || "",
+        trackName: trackTitle || "", // Alias for webhook handler
         creatorId,
         submitterId: user.id,
+        customerEmail: customerEmail || "",
+        customerName: "", // Name will be extracted from session.customer_details if available
         message: message || "",
         amount: (submissionFee * 100).toString(),
         currency: "usd",

@@ -166,7 +166,6 @@ export const getMixingServiceBySlug = query({
 
     if (store) {
       creatorId = store.userId;
-      creatorStripeAccountId = (store as any).stripeAccountId;
       const user = await ctx.db
         .query("users")
         .filter((q) => q.eq(q.field("clerkId"), store.userId))
@@ -175,6 +174,7 @@ export const getMixingServiceBySlug = query({
         creatorName = user.name || store.name || "Creator";
         creatorAvatar = user.imageUrl;
         creatorBio = user.bio;
+        creatorStripeAccountId = user.stripeConnectAccountId;
       } else {
         creatorName = store.name || "Creator";
       }

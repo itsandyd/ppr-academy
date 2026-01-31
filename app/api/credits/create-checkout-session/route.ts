@@ -93,6 +93,8 @@ export async function POST(request: NextRequest) {
         credits: credits.toString(),
         bonusCredits: bonusCredits?.toString() || "0",
         userId,
+        customerEmail,
+        customerName: "", // Name will be extracted from session.customer_details if available
         priceUsd: priceUsd.toString(),
       },
     });

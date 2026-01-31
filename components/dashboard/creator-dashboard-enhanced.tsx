@@ -80,6 +80,7 @@ import {
 } from "@/app/actions/coaching-actions";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
 import { SocialScheduler } from "@/components/social-media/social-scheduler";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Product type interface for compatibility
 interface Product {
@@ -131,8 +132,24 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
     convexUserId ? { userId: convexUserId } : "skip"
   );
 
+  // Fetch real store stats for accurate revenue, downloads, and ratings
+  const storeStats = useQuery(
+    api.storeStats.getStoreStats,
+    storeId ? { storeId: storeId as unknown as string } : "skip"
+  );
+
+  // Fetch creator analytics for more detailed metrics
+  const creatorAnalytics = useQuery(
+    api.analytics.getCreatorAnalytics,
+    user?.id ? { userId: user.id, timeRange: "30d" } : "skip"
+  );
+
   // Combine products for unified display
+  // Note: Real download counts and ratings come from storeStats and creatorAnalytics
   const products = React.useMemo(() => {
+    // Get real average rating from store stats or analytics
+    const realAverageRating = storeStats?.averageRating || creatorAnalytics?.overview?.avgRating || 0;
+
     const transformedCourses = (courses || []).map((course: any) => ({
       _id: course._id,
       title: course.title,
@@ -143,9 +160,11 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
       type: "course",
       slug: course.slug,
       category: course.category,
+      // Use real data - downloadCount will be 0 for courses (enrollments tracked separately)
       downloadCount: 0,
-      rating: 4.5,
-      storeId: (course as any).storeId, // Include storeId for proper routing
+      // Use real average rating from store/analytics, fallback to 0 if no reviews
+      rating: realAverageRating,
+      storeId: (course as any).storeId,
     }));
 
     const transformedDigitalProducts = (digitalProducts || []).map((product: any) => ({
@@ -158,13 +177,15 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
       type: "digitalProduct",
       slug: (product as any).slug || product._id,
       category: (product as any).category || "Digital",
+      // Use product's actual download count from the database
       downloadCount: (product as any).downloadCount || 0,
-      rating: 4.5,
-      storeId: (product as any).storeId, // Include storeId for proper routing
+      // Use real average rating from store/analytics
+      rating: realAverageRating,
+      storeId: (product as any).storeId,
     }));
 
     return [...transformedCourses, ...transformedDigitalProducts];
-  }, [courses, digitalProducts]);
+  }, [courses, digitalProducts, storeStats, creatorAnalytics]);
 
   const isLoadingProducts = courses === undefined || digitalProducts === undefined;
 
@@ -198,12 +219,15 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
   });
 
   // Enhanced dashboard metrics with music-specific data
+  // Using real data from storeStats and creatorAnalytics queries
   const dashboardMetrics = {
     totalProducts: products.length,
     publishedProducts: products.filter((p: any) => p.isPublished).length,
     draftProducts: products.filter((p: any) => !p.isPublished).length,
-    totalRevenue: products.reduce((sum: number, p: any) => sum + (p.price || 0), 0),
-    totalStudents: legacyDashboardStats?.totalStudents || 0,
+    // Use real revenue from store stats or analytics (actual sales revenue)
+    totalRevenue: storeStats?.totalRevenue || creatorAnalytics?.overview?.totalRevenue || 0,
+    // Use real student/follower count from store stats
+    totalStudents: storeStats?.followerCount || creatorAnalytics?.overview?.totalStudents || legacyDashboardStats?.totalStudents || 0,
     courseCount: products.filter((p: any) => p.type === "course").length,
     coachingCount: products.filter((p: any) => p.type === "coaching").length,
     digitalProductCount: products.filter((p: any) => p.type === "digitalProduct").length,
@@ -213,9 +237,10 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
     ).length,
     presetCount: products.filter((p: any) => p.category?.includes("preset") || p.type === "preset")
       .length,
-    totalDownloads: products.reduce((sum: number, p: any) => sum + (p.downloadCount || 0), 0),
-    averageRating:
-      products.reduce((sum: number, p: any) => sum + (p.rating || 0), 0) / products.length || 0,
+    // Use real total downloads from store stats (product purchases + enrollments)
+    totalDownloads: storeStats?.totalDownloads || 0,
+    // Use real average rating from store stats (calculated from actual reviews)
+    averageRating: storeStats?.averageRating || creatorAnalytics?.overview?.avgRating || 0,
   };
 
   // Quick action items for music creators

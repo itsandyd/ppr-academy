@@ -926,3 +926,465 @@ export const generateMissingSlugs = mutation({
     };
   },
 });
+
+/**
+ * Save Product as Draft
+ *
+ * Creates or updates a product with partial data, allowing users to save
+ * progress before all required fields are complete. Drafts are never published
+ * automatically.
+ *
+ * @example
+ * // Create a new draft with minimal info
+ * saveDraft({
+ *   title: "My New Sample Pack",
+ *   storeId: "store_123",
+ *   userId: "user_456",
+ *   productType: "digital",
+ *   productCategory: "sample-pack",
+ * })
+ *
+ * @example
+ * // Update existing draft
+ * saveDraft({
+ *   productId: "prod_123",
+ *   title: "Updated Title",
+ *   description: "Added description",
+ * })
+ */
+export const saveDraft = mutation({
+  args: {
+    // For updating existing draft
+    productId: v.optional(v.id("digitalProducts")),
+
+    // Core fields - required for new drafts
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    storeId: v.optional(v.string()),
+    userId: v.optional(v.string()),
+
+    // Product Type Classification
+    productType: v.optional(
+      v.union(
+        v.literal("digital"),
+        v.literal("playlistCuration"),
+        v.literal("effectChain"),
+        v.literal("abletonRack"),
+        v.literal("abletonPreset"),
+        v.literal("coaching"),
+        v.literal("urlMedia")
+      )
+    ),
+    productCategory: v.optional(
+      v.union(
+        // Music Production
+        v.literal("sample-pack"),
+        v.literal("preset-pack"),
+        v.literal("midi-pack"),
+        v.literal("bundle"),
+        v.literal("effect-chain"),
+        v.literal("ableton-rack"),
+        v.literal("beat-lease"),
+        v.literal("project-files"),
+        v.literal("mixing-template"),
+        // Services
+        v.literal("coaching"),
+        v.literal("mixing-service"),
+        v.literal("mastering-service"),
+        // Curation
+        v.literal("playlist-curation"),
+        // Education
+        v.literal("course"),
+        v.literal("workshop"),
+        v.literal("masterclass"),
+        // Digital Content
+        v.literal("pdf"),
+        v.literal("pdf-guide"),
+        v.literal("cheat-sheet"),
+        v.literal("template"),
+        v.literal("blog-post"),
+        // Community
+        v.literal("community"),
+        // Support & Donations
+        v.literal("tip-jar"),
+        v.literal("donation")
+      )
+    ),
+
+    // Pricing Configuration - optional for drafts
+    pricingModel: v.optional(v.union(v.literal("free_with_gate"), v.literal("paid"))),
+    price: v.optional(v.number()),
+
+    // Follow Gate Config (optional, validated loosely for drafts)
+    followGateConfig: v.optional(followGateConfigValidator),
+
+    // Media
+    imageUrl: v.optional(v.string()),
+    downloadUrl: v.optional(v.string()),
+
+    // Metadata
+    tags: v.optional(v.array(v.string())),
+
+    // Effect Chain / DAW-specific
+    dawType: v.optional(
+      v.union(
+        v.literal("ableton"),
+        v.literal("fl-studio"),
+        v.literal("logic"),
+        v.literal("bitwig"),
+        v.literal("studio-one"),
+        v.literal("reason"),
+        v.literal("cubase"),
+        v.literal("multi-daw")
+      )
+    ),
+    dawVersion: v.optional(v.string()),
+    effectTypes: v.optional(v.array(v.string())),
+    thirdPartyPlugins: v.optional(v.array(v.string())),
+    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
+
+    // Ableton-specific (legacy)
+    abletonVersion: v.optional(v.string()),
+    rackType: v.optional(
+      v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )
+    ),
+
+    // Coaching-specific
+    duration: v.optional(v.number()),
+    sessionType: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    productId: v.optional(v.id("digitalProducts")),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const { productId, ...data } = args;
+
+    // ========================================================================
+    // UPDATE EXISTING DRAFT
+    // ========================================================================
+    if (productId) {
+      const existingProduct = await ctx.db.get(productId);
+      if (!existingProduct) {
+        return {
+          success: false,
+          message: "Product not found",
+        };
+      }
+
+      // Build update object, only including provided fields
+      const updates: Record<string, unknown> = {};
+
+      if (data.title !== undefined) updates.title = data.title;
+      if (data.description !== undefined) updates.description = data.description;
+      if (data.price !== undefined) updates.price = data.price;
+      if (data.imageUrl !== undefined) updates.imageUrl = data.imageUrl;
+      if (data.downloadUrl !== undefined) updates.downloadUrl = data.downloadUrl;
+      if (data.tags !== undefined) updates.tags = data.tags;
+      if (data.productType !== undefined) updates.productType = data.productType;
+      if (data.productCategory !== undefined) updates.productCategory = data.productCategory;
+
+      // Handle pricing model
+      if (data.pricingModel !== undefined) {
+        if (data.pricingModel === "free_with_gate") {
+          updates.followGateEnabled = true;
+          if (data.price === undefined) updates.price = 0;
+        } else {
+          updates.followGateEnabled = false;
+        }
+      }
+
+      // Handle follow gate config
+      if (data.followGateConfig) {
+        updates.followGateRequirements = {
+          requireEmail: data.followGateConfig.requireEmail,
+          requireInstagram: data.followGateConfig.requireInstagram,
+          requireTiktok: data.followGateConfig.requireTiktok,
+          requireYoutube: data.followGateConfig.requireYoutube,
+          requireSpotify: data.followGateConfig.requireSpotify,
+          minFollowsRequired: data.followGateConfig.minFollowsRequired,
+        };
+        updates.followGateSocialLinks = data.followGateConfig.socialLinks;
+        updates.followGateMessage = data.followGateConfig.customMessage;
+      }
+
+      // Effect chain / DAW fields
+      if (data.dawType !== undefined) updates.dawType = data.dawType;
+      if (data.dawVersion !== undefined) updates.dawVersion = data.dawVersion;
+      if (data.effectTypes !== undefined) updates.effectType = data.effectTypes;
+      if (data.thirdPartyPlugins !== undefined) updates.thirdPartyPlugins = data.thirdPartyPlugins;
+      if (data.cpuLoad !== undefined) updates.cpuLoad = data.cpuLoad;
+      if (data.complexity !== undefined) updates.complexity = data.complexity;
+
+      // Ableton-specific
+      if (data.abletonVersion !== undefined) updates.abletonVersion = data.abletonVersion;
+      if (data.rackType !== undefined) updates.rackType = data.rackType;
+
+      // Coaching-specific
+      if (data.duration !== undefined) updates.duration = data.duration;
+      if (data.sessionType !== undefined) updates.sessionType = data.sessionType;
+
+      // Ensure draft is never auto-published
+      updates.isPublished = false;
+
+      await ctx.db.patch(productId, updates);
+
+      return {
+        success: true,
+        productId,
+        message: "Draft saved successfully",
+      };
+    }
+
+    // ========================================================================
+    // CREATE NEW DRAFT
+    // ========================================================================
+    if (!data.storeId || !data.userId) {
+      return {
+        success: false,
+        message: "Store ID and User ID are required for new drafts",
+      };
+    }
+
+    // Get the store to check plan limits
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("_id"), data.storeId as any))
+      .first();
+
+    if (!store) {
+      return {
+        success: false,
+        message: "Store not found",
+      };
+    }
+
+    // Check if user is an admin - admins bypass ALL plan limits
+    const storeUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", store.userId))
+      .first();
+    const isAdmin = storeUser?.admin === true;
+
+    // Check unified product limit (admins bypass)
+    const PLAN_LIMITS: Record<string, { maxProducts: number }> = {
+      free: { maxProducts: 1 },
+      starter: { maxProducts: 15 },
+      creator: { maxProducts: 50 },
+      creator_pro: { maxProducts: -1 },
+      business: { maxProducts: -1 },
+      early_access: { maxProducts: -1 },
+    };
+
+    const plan = store.plan || "free";
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+
+    if (!isAdmin && limits.maxProducts > 0) {
+      const [courseCount, digitalProductCount] = await Promise.all([
+        ctx.db
+          .query("courses")
+          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+          .collect()
+          .then((courses) => courses.length),
+        ctx.db
+          .query("digitalProducts")
+          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+          .collect()
+          .then((products) => products.length),
+      ]);
+
+      const totalCount = courseCount + digitalProductCount;
+      if (totalCount >= limits.maxProducts) {
+        return {
+          success: false,
+          message: `Product limit reached (${limits.maxProducts}). Upgrade your plan to create more products.`,
+        };
+      }
+    }
+
+    // Generate slug
+    const generateSlug = (title: string): string => {
+      return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    };
+
+    const productTitle = data.title || "Untitled Draft";
+    const baseSlug = generateSlug(productTitle);
+
+    let slug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const existing = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_storeId_and_slug", (q) =>
+          q.eq("storeId", data.storeId!).eq("slug", slug)
+        )
+        .first();
+
+      if (!existing) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // Create the draft product
+    const productData: Record<string, unknown> = {
+      title: productTitle,
+      description: data.description || "",
+      storeId: data.storeId,
+      userId: data.userId,
+      productType: data.productType || "digital",
+      productCategory: data.productCategory || "sample-pack",
+      price: data.price ?? 0,
+      imageUrl: data.imageUrl,
+      downloadUrl: data.downloadUrl,
+      tags: data.tags || [],
+      slug,
+      isPublished: false, // Always start as draft
+
+      // Follow gate setup
+      followGateEnabled: data.pricingModel === "free_with_gate",
+      followGateRequirements: data.followGateConfig
+        ? {
+            requireEmail: data.followGateConfig.requireEmail,
+            requireInstagram: data.followGateConfig.requireInstagram,
+            requireTiktok: data.followGateConfig.requireTiktok,
+            requireYoutube: data.followGateConfig.requireYoutube,
+            requireSpotify: data.followGateConfig.requireSpotify,
+            minFollowsRequired: data.followGateConfig.minFollowsRequired,
+          }
+        : undefined,
+      followGateSocialLinks: data.followGateConfig?.socialLinks,
+      followGateMessage: data.followGateConfig?.customMessage,
+
+      // Effect chain / DAW fields
+      dawType: data.dawType,
+      dawVersion: data.dawVersion,
+      effectType: data.effectTypes,
+      thirdPartyPlugins: data.thirdPartyPlugins,
+      cpuLoad: data.cpuLoad,
+      complexity: data.complexity,
+
+      // Ableton-specific
+      abletonVersion: data.abletonVersion,
+      rackType: data.rackType,
+
+      // Coaching-specific
+      duration: data.duration,
+      sessionType: data.sessionType,
+
+      // Defaults
+      orderBumpEnabled: false,
+      affiliateEnabled: false,
+    };
+
+    const newProductId = await ctx.db.insert("digitalProducts", productData as any);
+
+    return {
+      success: true,
+      productId: newProductId,
+      message: "Draft created successfully",
+    };
+  },
+});
+
+/**
+ * Publish Draft
+ *
+ * Validates a draft and publishes it. Performs all the validation
+ * that createUniversalProduct does, but on an existing draft.
+ */
+export const publishDraft = mutation({
+  args: {
+    productId: v.id("digitalProducts"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product) {
+      return { success: false, message: "Product not found" };
+    }
+
+    // Validate required fields
+    const errors: string[] = [];
+
+    if (!product.title || product.title === "Untitled Draft") {
+      errors.push("Title is required");
+    }
+
+    if (!product.description) {
+      errors.push("Description is required");
+    }
+
+    // Validate pricing
+    const isFollowGate = product.followGateEnabled;
+    if (isFollowGate) {
+      if (product.price !== 0) {
+        errors.push("Free products with download gates must have price = $0");
+      }
+      // Follow gate config is optional for drafts, but encourage it
+    } else {
+      if (product.price === undefined || product.price <= 0) {
+        errors.push("Paid products must have price > $0");
+      }
+    }
+
+    // Get store to check plan limits for paid products
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("_id"), product.storeId as any))
+      .first();
+
+    if (store) {
+      const storeUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", store.userId))
+        .first();
+      const isAdmin = storeUser?.admin === true;
+
+      const PLAN_LIMITS: Record<string, { canChargeMoney: boolean }> = {
+        free: { canChargeMoney: false },
+        starter: { canChargeMoney: true },
+        creator: { canChargeMoney: true },
+        creator_pro: { canChargeMoney: true },
+        business: { canChargeMoney: true },
+        early_access: { canChargeMoney: true },
+      };
+
+      const plan = store.plan || "free";
+      const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+
+      if (!isAdmin && product.price > 0 && !limits.canChargeMoney) {
+        errors.push("Free plan users can only create free products. Upgrade to Starter ($12/mo) to sell paid products.");
+      }
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        message: errors.join(". "),
+      };
+    }
+
+    // Publish the product
+    await ctx.db.patch(args.productId, { isPublished: true });
+
+    return {
+      success: true,
+      message: "Product published successfully",
+    };
+  },
+});

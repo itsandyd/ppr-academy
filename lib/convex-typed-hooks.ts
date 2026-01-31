@@ -312,3 +312,63 @@ export function usePublishBundle(): (args: { bundleId: Id<"bundles"> }) => Promi
   const mutation = useConvexMutation(api.bundles.publishBundle);
   return mutation as unknown as (args: { bundleId: Id<"bundles"> }) => Promise<unknown>;
 }
+
+// ============================================================================
+// DRAFT MUTATIONS - Save products as drafts before publishing
+// ============================================================================
+
+type SaveDraftArgs = {
+  productId?: Id<"digitalProducts">;
+  title?: string;
+  description?: string;
+  storeId?: string;
+  userId?: string;
+  productType?: string;
+  productCategory?: string;
+  pricingModel?: "free_with_gate" | "paid";
+  price?: number;
+  imageUrl?: string;
+  downloadUrl?: string;
+  tags?: string[];
+  followGateConfig?: Record<string, unknown>;
+  dawType?: string;
+  dawVersion?: string;
+  effectTypes?: string[];
+  thirdPartyPlugins?: string[];
+  cpuLoad?: "low" | "medium" | "high";
+  complexity?: "beginner" | "intermediate" | "advanced";
+  abletonVersion?: string;
+  rackType?: string;
+  duration?: number;
+  sessionType?: string;
+  [key: string]: unknown;
+};
+
+type SaveDraftResult = {
+  success: boolean;
+  productId?: Id<"digitalProducts">;
+  message: string;
+};
+
+/**
+ * Save product as draft mutation
+ * Allows saving incomplete products for later editing
+ */
+export function useSaveDraft(): (args: SaveDraftArgs) => Promise<SaveDraftResult> {
+  const mutation = useConvexMutation(api.universalProducts.saveDraft);
+  return mutation as unknown as (args: SaveDraftArgs) => Promise<SaveDraftResult>;
+}
+
+type PublishDraftResult = {
+  success: boolean;
+  message: string;
+};
+
+/**
+ * Publish draft mutation
+ * Validates and publishes a saved draft
+ */
+export function usePublishDraft(): (args: { productId: Id<"digitalProducts"> }) => Promise<PublishDraftResult> {
+  const mutation = useConvexMutation(api.universalProducts.publishDraft);
+  return mutation as unknown as (args: { productId: Id<"digitalProducts"> }) => Promise<PublishDraftResult>;
+}

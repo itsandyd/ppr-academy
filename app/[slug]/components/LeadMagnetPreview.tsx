@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface LeadMagnetPreviewProps {
   leadMagnet?: {
@@ -36,11 +37,10 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   const [formData, setFormData] = useState({ name: "", email: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<{ submissionId: string; downloadUrl?: string } | null>(null);
-  
-  // Always call hooks unconditionally
-  const submitLead = useMutation((api as any).leadSubmissions?.submitLead ?? ((() => {}) as any));
-  const trackDownload = useMutation((api as any).leadSubmissions?.trackDownload ?? ((() => {}) as any));
-  const hasLeadSubmissionsAPI = !!(api as any).leadSubmissions?.submitLead;
+
+  // Use the Convex mutations directly
+  const submitLead = useMutation(api.leadSubmissions.submitLead);
+  const trackDownload = useMutation(api.leadSubmissions.trackDownload);
 
   const handleSubmit = async () => {
     if (!formData.name?.trim() || !formData.email?.trim()) {
@@ -50,7 +50,7 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
 
     if (!leadMagnet?.productId || !storeData?.store?._id || !storeData?.store?.userId) {
       alert("Missing product or store information");
-      console.error("❌ Missing data:", {
+      console.error("Missing data:", {
         productId: leadMagnet?.productId,
         storeId: storeData?.store?._id,
         adminUserId: storeData?.store?.userId,
@@ -62,28 +62,16 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
 
     setIsSubmitting(true);
     try {
-      let result;
-
-      if (submitLead && hasLeadSubmissionsAPI) {
-        // Use real API if available
-        result = await submitLead({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          productId: leadMagnet.productId,
-          storeId: storeData.store._id,
-          adminUserId: storeData.store.userId,
-          ipAddress: undefined,
-          userAgent: navigator.userAgent,
-          source: "storefront",
-        });
-      } else {
-        // Fallback simulation (until API is regenerated)
-        result = {
-          submissionId: `lead_${Date.now()}`,
-          hasAccess: true,
-          downloadUrl: leadMagnet?.downloadUrl,
-        };
-      }
+      const result = await submitLead({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        productId: leadMagnet.productId as Id<"digitalProducts">,
+        storeId: storeData.store._id,
+        adminUserId: storeData.store.userId,
+        ipAddress: undefined,
+        userAgent: navigator.userAgent,
+        source: "storefront",
+      });
 
       setSubmissionResult({
         submissionId: result.submissionId,
@@ -101,12 +89,10 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   const handleDownload = async () => {
     if (submissionResult?.downloadUrl && submissionResult?.submissionId) {
       try {
-        // Track download if API is available
-        if (trackDownload && hasLeadSubmissionsAPI) {
-          await trackDownload({
-            submissionId: submissionResult.submissionId,
-          });
-        }
+        // Track download
+        await trackDownload({
+          submissionId: submissionResult.submissionId as Id<"leadSubmissions">,
+        });
 
         // Create a temporary link and trigger download
         const link = document.createElement('a');

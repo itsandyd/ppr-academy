@@ -11,7 +11,7 @@ import { ProductCategory, ProductType, getProductInfo, BaseProductFormData } fro
 import { Package, DollarSign, Sparkles } from 'lucide-react';
 import { useValidStoreId } from '@/hooks/useStoreId';
 import { useToast } from '@/hooks/use-toast';
-import { useDigitalProductById, useCreateUniversalProduct, useUpdateDigitalProduct } from '@/lib/convex-typed-hooks';
+import { useDigitalProductById, useCreateUniversalProduct, useUpdateDigitalProduct, useSaveDraft, usePublishDraft } from '@/lib/convex-typed-hooks';
 import { Id } from '@/convex/_generated/dataModel';
 
 export default function DigitalProductCreator() {
@@ -21,7 +21,9 @@ export default function DigitalProductCreator() {
   const storeId = useValidStoreId();
   const { toast } = useToast();
 
-  // Mutation to create/update the product
+  // Mutations for draft save and publish
+  const saveDraft = useSaveDraft();
+  const publishDraft = usePublishDraft();
   const createProduct = useCreateUniversalProduct();
   const updateProduct = useUpdateDigitalProduct();
 
@@ -142,6 +144,8 @@ export default function DigitalProductCreator() {
   };
 
   const [draftId, setDraftId] = useState<string | null>(productId || null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleSaveDraft = async () => {
     if (!storeId || !user?.id) {
@@ -154,65 +158,60 @@ export default function DigitalProductCreator() {
       return;
     }
 
+    setIsSaving(true);
+
     try {
-      if (isEditing && productId) {
-        // Update existing product as draft
-        const updateData: any = {
-          id: productId,
-          title: formData.title || 'Untitled Product',
-          description: formData.description || '',
-          price: formData.price || 0,
-          imageUrl: formData.imageUrl || undefined,
-          isPublished: false,
-        };
+      // Use the unified saveDraft mutation for both new and existing drafts
+      const draftData: any = {
+        productId: isEditing ? productId : (draftId as any) || undefined,
+        title: formData.title || 'Untitled Product',
+        description: formData.description || '',
+        storeId: storeId,
+        userId: user.id,
+        productType: "digital",
+        productCategory: formData.productCategory || category,
+        pricingModel: formData.pricingModel || 'paid',
+        price: formData.pricingModel === 'free_with_gate' ? 0 : (formData.price || 0),
+        imageUrl: formData.imageUrl || undefined,
+        tags: formData.tags || [],
+      };
 
-        await updateProduct(updateData);
+      // Add follow gate config if free with gate
+      if (formData.pricingModel === 'free_with_gate') {
+        draftData.followGateConfig = {
+          requireEmail: true,
+          requireInstagram: false,
+          requireTiktok: false,
+          requireYoutube: false,
+          requireSpotify: false,
+          minFollowsRequired: 0,
+          socialLinks: {},
+        };
+      }
+
+      const result = await saveDraft(draftData);
+
+      if (result.success) {
+        if (result.productId && !draftId && !isEditing) {
+          setDraftId(result.productId);
+          // Update URL with new product ID so refreshing doesn't lose progress
+          const params = new URLSearchParams();
+          params.set('category', category);
+          params.set('step', step);
+          params.set('productId', result.productId);
+          router.replace(`/dashboard/create/digital?${params.toString()}`);
+        }
 
         toast({
-          title: "Draft saved!",
-          description: "Your changes have been saved.",
-          className: "bg-white dark:bg-black",
-        });
-      } else if (draftId) {
-        // Update existing draft
-        const updateData: any = {
-          id: draftId,
-          title: formData.title || 'Untitled Product',
-          description: formData.description || '',
-          price: formData.price || 0,
-          imageUrl: formData.imageUrl || undefined,
-          isPublished: false,
-        };
-
-        await updateProduct(updateData);
-
-        toast({
-          title: "Draft saved!",
-          description: "Your changes have been saved.",
+          title: draftId || isEditing ? "Draft saved!" : "Draft created!",
+          description: result.message,
           className: "bg-white dark:bg-black",
         });
       } else {
-        // Create new draft
-        const productData: any = {
-          title: formData.title || 'Untitled Product',
-          description: formData.description || '',
-          storeId: storeId,
-          userId: user.id,
-          productType: "digital",
-          productCategory: formData.productCategory || category,
-          pricingModel: formData.pricingModel || 'paid',
-          price: formData.price || 0,
-          imageUrl: formData.imageUrl || undefined,
-          tags: formData.tags || [],
-          isPublished: false,
-        };
-
-        const newProductId = await createProduct(productData);
-        setDraftId(newProductId);
-
         toast({
-          title: "Draft created!",
-          description: "Your product has been saved as a draft.",
+          title: "Error saving draft",
+          description: result.message,
+          variant: "destructive",
           className: "bg-white dark:bg-black",
         });
       }
@@ -224,6 +223,8 @@ export default function DigitalProductCreator() {
         variant: "destructive",
         className: "bg-white dark:bg-black",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 

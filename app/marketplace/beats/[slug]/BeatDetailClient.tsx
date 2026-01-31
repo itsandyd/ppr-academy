@@ -428,7 +428,7 @@ export function BeatDetailClient({
                       beatTitle={product.title}
                       tiers={beatTiers.tiers}
                       storeId={store?.userId || product.storeId}
-                      creatorStripeAccountId={store?.stripeConnectAccountId}
+                      creatorStripeAccountId={creator?.stripeConnectAccountId}
                       userOwnedTiers={userLicenses?.licenses?.map((l: { tierType: string }) => l.tierType) || []}
                       isExclusivelySold={false}
                     />

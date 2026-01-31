@@ -158,9 +158,31 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
           paymentMethod: "free",
           transactionId: `free_${Date.now()}_${user.id}`,
         });
-        
+
+        // Send enrollment confirmation email for free course
+        try {
+          await fetch("/api/courses/send-enrollment-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerEmail: customerData.email,
+              customerName: customerData.name,
+              courseTitle: course.title,
+              courseSlug: course.slug,
+              amount: 0,
+              currency: "USD",
+              creatorName: creatorName,
+              storeName: store?.name,
+            }),
+          });
+          console.log("Free course enrollment email sent");
+        } catch (emailError) {
+          // Don't fail enrollment if email fails - just log the error
+          console.error("Failed to send enrollment email:", emailError);
+        }
+
         setPaymentSuccess(true);
-        
+
         // Redirect to dashboard learn mode with success message
         router.push(`/dashboard?mode=learn&enrollment=success&course=${encodeURIComponent(course.title)}`);
       }

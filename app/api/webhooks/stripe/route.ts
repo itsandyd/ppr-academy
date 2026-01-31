@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
           detailsSubmitted: account.details_submitted,
           chargesEnabled: account.charges_enabled,
           payoutsEnabled: account.payouts_enabled,
+          metadata: account.metadata,
         });
 
         // Update user record with account status in Convex
@@ -41,10 +42,25 @@ export async function POST(request: NextRequest) {
             await import("convex/nextjs");
           const { api: apiAccount } = await import("@/convex/_generated/api");
 
-          // Find user by Stripe account ID
-          const user = await fetchQueryAccount(apiAccount.users.getUserByStripeAccountId, {
+          // First try to find user by Stripe account ID
+          let user = await fetchQueryAccount(apiAccount.users.getUserByStripeAccountId, {
             stripeConnectAccountId: account.id,
           });
+
+          // If not found by stripeConnectAccountId, try to find by userId from metadata
+          // This handles the case where the account was created but stripeConnectAccountId wasn't saved yet
+          if (!user && account.metadata?.userId) {
+            user = await fetchQueryAccount(apiAccount.users.getUserFromClerk, {
+              clerkId: account.metadata.userId,
+            });
+
+            if (user) {
+              serverLogger.payment("Found user by metadata.userId, will save stripeConnectAccountId", {
+                userId: user._id,
+                accountId: account.id,
+              });
+            }
+          }
 
           if (user && user.clerkId) {
             // Determine account status
@@ -55,9 +71,12 @@ export async function POST(request: NextRequest) {
               status = "restricted"; // Submitted but not fully enabled
             }
 
+            // Update user with account ID and status
+            // This ensures stripeConnectAccountId is always saved, even if frontend failed to save it
             await fetchMutationAccount(apiAccount.users.updateUserByClerkId, {
               clerkId: user.clerkId as string,
               updates: {
+                stripeConnectAccountId: account.id,
                 stripeAccountStatus: status,
                 stripeOnboardingComplete: account.details_submitted || false,
               },
@@ -65,11 +84,15 @@ export async function POST(request: NextRequest) {
 
             serverLogger.payment("Updated user Stripe account status", {
               userId: user._id,
+              accountId: account.id,
               status,
               onboardingComplete: account.details_submitted,
             });
           } else {
-            // console.log(...);
+            serverLogger.payment("Could not find user for Stripe account update", {
+              accountId: account.id,
+              metadata: account.metadata,
+            });
           }
         } catch (error) {
           serverLogger.error("Failed to update user Stripe status", error);

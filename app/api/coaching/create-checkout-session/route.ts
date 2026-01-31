@@ -64,8 +64,10 @@ export async function POST(request: NextRequest) {
       metadata: {
         productId,
         productType: "coaching",
+        sessionTitle: productTitle || "Coaching Session",
         scheduledDate: scheduledDate.toString(),
         startTime,
+        duration: `${duration || 60} minutes`,
         customerEmail,
         customerName: customerName || "",
         userId,

@@ -1184,7 +1184,24 @@ export const getCourseForEdit = query({
         .collect();
 
       const courseLessons = [];
-      
+
+      // Helper function to resolve storage ID to URL
+      const resolveStorageUrl = async (url: string | undefined): Promise<string | undefined> => {
+        if (!url) return undefined;
+        // If it's already a full URL (http/https or data URI), return as-is
+        if (url.startsWith("http") || url.startsWith("data:")) {
+          return url;
+        }
+        // Otherwise, try to resolve it as a storage ID
+        try {
+          const resolvedUrl = await ctx.storage.getUrl(url as any);
+          return resolvedUrl || url;
+        } catch {
+          // If resolution fails, return the original value
+          return url;
+        }
+      };
+
       for (const lesson of lessons) {
         // Load chapters for this lesson
         const chapters = await ctx.db
@@ -1193,14 +1210,17 @@ export const getCourseForEdit = query({
           .order("asc")
           .collect();
 
-        const courseChapters = chapters.map(chapter => ({
-          title: chapter.title,
-          content: chapter.description || "",
-          videoUrl: chapter.videoUrl || "",
-          duration: 0, // Default duration
-          orderIndex: chapter.position,
-          generatedAudioData: chapter.generatedAudioUrl || undefined,
-        }));
+        // Resolve storage IDs to URLs for chapter audio
+        const courseChapters = await Promise.all(
+          chapters.map(async (chapter) => ({
+            title: chapter.title,
+            content: chapter.description || "",
+            videoUrl: chapter.videoUrl || "",
+            duration: 0, // Default duration
+            orderIndex: chapter.position,
+            generatedAudioData: await resolveStorageUrl(chapter.generatedAudioUrl),
+          }))
+        );
 
         courseLessons.push({
           title: lesson.title,
@@ -1433,7 +1453,30 @@ export const getChapterById = query({
       return null;
     }
 
-    return chapter;
+    // Helper function to resolve storage ID to URL
+    const resolveStorageUrl = async (url: string | undefined): Promise<string | undefined> => {
+      if (!url) return undefined;
+      // If it's already a full URL (http/https or data URI), return as-is
+      if (url.startsWith("http") || url.startsWith("data:")) {
+        return url;
+      }
+      // Otherwise, try to resolve it as a storage ID
+      try {
+        const resolvedUrl = await ctx.storage.getUrl(url as any);
+        return resolvedUrl || url;
+      } catch {
+        // If resolution fails, return the original value
+        return url;
+      }
+    };
+
+    // Return chapter with resolved storage URLs
+    return {
+      ...chapter,
+      audioUrl: await resolveStorageUrl(chapter.audioUrl),
+      generatedAudioUrl: await resolveStorageUrl(chapter.generatedAudioUrl),
+      generatedVideoUrl: await resolveStorageUrl(chapter.generatedVideoUrl),
+    };
   },
 });
 
@@ -1877,6 +1920,7 @@ export const getChaptersForLeadMagnet = internalQuery({
 /**
  * Get all chapters for a course (public query)
  * Used by social content creation flow to select chapter content
+ * Resolves storage IDs to URLs for audio/video fields
  */
 export const getCourseChapters = query({
   args: { courseId: v.id("courses") },
@@ -1918,10 +1962,39 @@ export const getCourseChapters = query({
     })
   ),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const chapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .collect();
+
+    // Helper function to resolve storage ID to URL
+    const resolveStorageUrl = async (url: string | undefined): Promise<string | undefined> => {
+      if (!url) return undefined;
+      // If it's already a full URL (http/https or data URI), return as-is
+      if (url.startsWith("http") || url.startsWith("data:")) {
+        return url;
+      }
+      // Otherwise, try to resolve it as a storage ID
+      try {
+        const resolvedUrl = await ctx.storage.getUrl(url as any);
+        return resolvedUrl || url;
+      } catch {
+        // If resolution fails, return the original value
+        return url;
+      }
+    };
+
+    // Resolve storage IDs to URLs for each chapter
+    const resolvedChapters = await Promise.all(
+      chapters.map(async (chapter) => ({
+        ...chapter,
+        audioUrl: await resolveStorageUrl(chapter.audioUrl),
+        generatedAudioUrl: await resolveStorageUrl(chapter.generatedAudioUrl),
+        generatedVideoUrl: await resolveStorageUrl(chapter.generatedVideoUrl),
+      }))
+    );
+
+    return resolvedChapters;
   },
 });
 

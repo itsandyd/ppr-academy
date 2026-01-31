@@ -9,12 +9,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(request: NextRequest) {
   try {
     // ✅ SECURITY: Require authentication
-    await requireAuth();
-    
+    const user = await requireAuth();
+
     const { paymentIntentId } = await request.json();
 
     if (!paymentIntentId) {
       return NextResponse.json({ error: "Payment Intent ID is required" }, { status: 400 });
+    }
+
+    // ✅ SECURITY: Validate paymentIntentId format to prevent injection
+    if (typeof paymentIntentId !== "string" || !paymentIntentId.startsWith("pi_")) {
+      return NextResponse.json({ error: "Invalid Payment Intent ID format" }, { status: 400 });
     }
 
     // Verify payment with Stripe
@@ -22,6 +27,19 @@ export async function POST(request: NextRequest) {
 
     if (paymentIntent.status === "succeeded") {
       const metadata = paymentIntent.metadata;
+
+      // ✅ SECURITY: Verify the authenticated user owns this payment
+      if (metadata.userId && metadata.userId !== user.id) {
+        console.warn("Payment success verification attempted by non-owner:", {
+          paymentIntentId,
+          paymentUserId: metadata.userId,
+          requestingUserId: user.id,
+        });
+        return NextResponse.json(
+          { error: "Unauthorized: You can only verify your own payments" },
+          { status: 403 }
+        );
+      }
       
       console.log("✅ Payment succeeded:", {
         paymentId: paymentIntent.id,

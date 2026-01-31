@@ -19486,6 +19486,95 @@ export declare const api: {
       { publishedOnly?: boolean; storeId: string },
       Array<any>
     >;
+    publishDraft: FunctionReference<
+      "mutation",
+      "public",
+      { productId: Id<"digitalProducts"> },
+      { message: string; success: boolean }
+    >;
+    saveDraft: FunctionReference<
+      "mutation",
+      "public",
+      {
+        abletonVersion?: string;
+        complexity?: "beginner" | "intermediate" | "advanced";
+        cpuLoad?: "low" | "medium" | "high";
+        dawType?:
+          | "ableton"
+          | "fl-studio"
+          | "logic"
+          | "bitwig"
+          | "studio-one"
+          | "reason"
+          | "cubase"
+          | "multi-daw";
+        dawVersion?: string;
+        description?: string;
+        downloadUrl?: string;
+        duration?: number;
+        effectTypes?: Array<string>;
+        followGateConfig?: {
+          customMessage?: string;
+          minFollowsRequired: number;
+          requireEmail: boolean;
+          requireInstagram: boolean;
+          requireSpotify: boolean;
+          requireTiktok: boolean;
+          requireYoutube: boolean;
+          socialLinks: {
+            instagram?: string;
+            spotify?: string;
+            tiktok?: string;
+            youtube?: string;
+          };
+        };
+        imageUrl?: string;
+        price?: number;
+        pricingModel?: "free_with_gate" | "paid";
+        productCategory?:
+          | "sample-pack"
+          | "preset-pack"
+          | "midi-pack"
+          | "bundle"
+          | "effect-chain"
+          | "ableton-rack"
+          | "beat-lease"
+          | "project-files"
+          | "mixing-template"
+          | "coaching"
+          | "mixing-service"
+          | "mastering-service"
+          | "playlist-curation"
+          | "course"
+          | "workshop"
+          | "masterclass"
+          | "pdf"
+          | "pdf-guide"
+          | "cheat-sheet"
+          | "template"
+          | "blog-post"
+          | "community"
+          | "tip-jar"
+          | "donation";
+        productId?: Id<"digitalProducts">;
+        productType?:
+          | "digital"
+          | "playlistCuration"
+          | "effectChain"
+          | "abletonRack"
+          | "abletonPreset"
+          | "coaching"
+          | "urlMedia";
+        rackType?: "audioEffect" | "instrument" | "midiEffect" | "drumRack";
+        sessionType?: string;
+        storeId?: string;
+        tags?: Array<string>;
+        thirdPartyPlugins?: Array<string>;
+        title?: string;
+        userId?: string;
+      },
+      { message: string; productId?: Id<"digitalProducts">; success: boolean }
+    >;
     updateUniversalProduct: FunctionReference<
       "mutation",
       "public",

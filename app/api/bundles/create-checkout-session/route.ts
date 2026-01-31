@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
       customer_email: customerEmail,
       metadata: {
         bundleId,
+        bundleTitle: bundleName || "",
+        itemCount: ((courseIds?.length || 0) + (productIds?.length || 0)).toString(),
         customerEmail,
         customerName,
         userId,
