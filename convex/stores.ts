@@ -216,7 +216,7 @@ export const createStore = mutation({
       counter++;
     }
     
-    return await ctx.db.insert("stores", {
+    const storeId = await ctx.db.insert("stores", {
       name: args.name,
       slug,
       userId: args.userId,
@@ -226,6 +226,17 @@ export const createStore = mutation({
       isPublishedProfile: true, // Published by default
       subscriptionStatus: "active",
     });
+
+    // Track creator_started event for analytics
+    await ctx.db.insert("analyticsEvents", {
+      userId: args.userId,
+      storeId,
+      eventType: "creator_started",
+      timestamp: Date.now(),
+      metadata: {},
+    });
+
+    return storeId;
   },
 });
 

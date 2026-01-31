@@ -348,6 +348,14 @@ export const createUserInternal = internalMutation({
       admin: false,
     });
 
+    // Track signup event for analytics
+    await ctx.db.insert("analyticsEvents", {
+      userId: args.clerkId,
+      eventType: "signup",
+      timestamp: Date.now(),
+      metadata: {},
+    });
+
     console.log(`✅ Created user: ${userId} (${args.email})`);
     return userId;
   },

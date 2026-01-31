@@ -859,6 +859,31 @@ export const createCourseEnrollment = mutation({
       lastAccessedAt: Date.now(),
     });
 
+    // Track purchase and enrollment events for analytics
+    const storeIdForAnalytics = course.storeId || course.userId;
+    await ctx.db.insert("analyticsEvents", {
+      userId: args.userId,
+      storeId: storeIdForAnalytics,
+      eventType: "purchase",
+      resourceId: args.courseId,
+      resourceType: "course",
+      timestamp: Date.now(),
+      metadata: {
+        value: args.amount,
+        currency: args.currency || "USD",
+      },
+    });
+
+    await ctx.db.insert("analyticsEvents", {
+      userId: args.userId,
+      storeId: storeIdForAnalytics,
+      eventType: "enrollment",
+      resourceId: args.courseId,
+      resourceType: "course",
+      timestamp: Date.now(),
+      metadata: {},
+    });
+
     // Create enrollment record for backward compatibility
     const existingEnrollment = await ctx.db
       .query("enrollments")

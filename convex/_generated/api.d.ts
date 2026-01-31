@@ -20687,6 +20687,94 @@ export declare const internal: {
       { created: number }
     >;
   };
+  analytics: {
+    backfill: {
+      backfillAll: FunctionReference<"mutation", "internal", {}, any>;
+      backfillCreatorPublished: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any
+      >;
+      backfillCreatorStarted: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        any
+      >;
+      backfillEnrollments: FunctionReference<"mutation", "internal", {}, any>;
+      backfillPurchases: FunctionReference<"mutation", "internal", {}, any>;
+      backfillSignups: FunctionReference<
+        "mutation",
+        "internal",
+        { cursor?: string },
+        any
+      >;
+      clearAllEvents: FunctionReference<
+        "mutation",
+        "internal",
+        { confirm: "DELETE_ALL_ANALYTICS_EVENTS" },
+        any
+      >;
+      getEventCounts: FunctionReference<"mutation", "internal", {}, any>;
+    };
+    tracking: {
+      trackCreatorPublished: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          resourceId: string;
+          resourceType: "course" | "digitalProduct";
+          storeId: string;
+          userId: string;
+        },
+        any
+      >;
+      trackCreatorStarted: FunctionReference<
+        "mutation",
+        "internal",
+        { storeId: string; userId: string },
+        any
+      >;
+      trackEnrollment: FunctionReference<
+        "mutation",
+        "internal",
+        { courseId: string; storeId?: string; userId: string },
+        any
+      >;
+      trackPageView: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          page: string;
+          referrer?: string;
+          source?: string;
+          storeId?: string;
+          userId?: string;
+        },
+        any
+      >;
+      trackPurchase: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          amount: number;
+          currency?: string;
+          resourceId: string;
+          resourceType: "course" | "digitalProduct";
+          storeId?: string;
+          userId: string;
+        },
+        any
+      >;
+      trackSignup: FunctionReference<
+        "mutation",
+        "internal",
+        { userId: string },
+        any
+      >;
+    };
+  };
   audioGeneration: {
     createSampleRecord: FunctionReference<
       "mutation",
