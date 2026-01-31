@@ -57,9 +57,6 @@ export function PlatformKPIsOverview() {
     // No storeId = platform-wide
   });
 
-  // Debug: log what we're getting
-  console.log("KPIs Query Result:", kpisResult, "Time range:", { start, end });
-
   // Default values if query fails or returns no data
   const kpis = kpisResult ?? {
     newSignups: 0,
