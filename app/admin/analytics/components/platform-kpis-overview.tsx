@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "convex/react";
@@ -35,7 +35,8 @@ export function PlatformKPIsOverview() {
     return () => clearTimeout(timer);
   }, []);
 
-  const getTimeRange = () => {
+  // Memoize time range to prevent infinite re-renders
+  const { start, end } = useMemo(() => {
     const now = Date.now();
     switch (timeWindow) {
       case "today":
@@ -45,11 +46,9 @@ export function PlatformKPIsOverview() {
       case "28d":
         return { start: now - 28 * 24 * 60 * 60 * 1000, end: now };
       case "all":
-        return { start: 0, end: now }; // All time
+        return { start: 0, end: now };
     }
-  };
-
-  const { start, end } = getTimeRange();
+  }, [timeWindow]);
 
   // Platform-wide KPIs (no storeId = all creators)
   const kpisResult = useQuery(api.analytics.kpis.getKPIs, {
