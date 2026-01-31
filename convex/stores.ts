@@ -236,6 +236,22 @@ export const createStore = mutation({
       metadata: {},
     });
 
+    // Mark user as a creator (explicit role)
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (user && !user.isCreator) {
+      await ctx.db.patch(user._id, {
+        isCreator: true,
+        creatorSince: Date.now(),
+        creatorLevel: 1,
+        creatorXP: 0,
+        creatorBadges: ["first_store"], // Award first store badge
+      });
+    }
+
     return storeId;
   },
 });
@@ -317,9 +333,23 @@ export const updateStore = mutation({
 
 // Delete store
 export const deleteStore = mutation({
-  args: { id: v.id("stores") },
+  args: {
+    id: v.id("stores"),
+    userId: v.string(), // Required for authorization
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Get the store to verify ownership
+    const store = await ctx.db.get(args.id);
+    if (!store) {
+      throw new Error("Store not found");
+    }
+
+    // Authorization check: only store owner can delete
+    if (store.userId !== args.userId) {
+      throw new Error("Unauthorized: You can only delete your own stores");
+    }
+
     await ctx.db.delete(args.id);
     return null;
   },
@@ -418,6 +448,7 @@ export const updateStoreProfile = mutation({
 export const updateEmailConfig = mutation({
   args: {
     storeId: v.id("stores"),
+    userId: v.string(), // Required for authorization
     fromEmail: v.string(),
     fromName: v.optional(v.string()),
     replyToEmail: v.optional(v.string()),
@@ -431,6 +462,11 @@ export const updateEmailConfig = mutation({
       const store = await ctx.db.get(args.storeId);
       if (!store) {
         return { success: false, message: "Store not found" };
+      }
+
+      // Authorization check: only store owner can update email config
+      if (store.userId !== args.userId) {
+        return { success: false, message: "Unauthorized: You can only update your own store's email configuration" };
       }
 
       // Update the store with email sender config
@@ -457,6 +493,7 @@ export const updateEmailConfig = mutation({
 export const updateAdminNotificationSettings = mutation({
   args: {
     storeId: v.id("stores"),
+    userId: v.string(), // Required for authorization
     enabled: v.optional(v.boolean()),
     emailOnNewLead: v.optional(v.boolean()),
     emailOnReturningUser: v.optional(v.boolean()),
@@ -481,8 +518,13 @@ export const updateAdminNotificationSettings = mutation({
         return { success: false, message: "Store not found" };
       }
 
-      const { storeId, ...notificationSettings } = args;
-      
+      // Authorization check: only store owner can update notification settings
+      if (store.userId !== args.userId) {
+        return { success: false, message: "Unauthorized: You can only update your own store's notification settings" };
+      }
+
+      const { storeId, userId, ...notificationSettings } = args;
+
       // Update the store with admin notification settings, preserving existing config
       const existingConfig = store.emailConfig;
       await ctx.db.patch(args.storeId, {
@@ -500,15 +542,15 @@ export const updateAdminNotificationSettings = mutation({
         },
       });
 
-      return { 
-        success: true, 
-        message: "Admin notification settings updated successfully" 
+      return {
+        success: true,
+        message: "Admin notification settings updated successfully"
       };
     } catch (error) {
       console.error("Admin notification settings update error:", error);
-      return { 
-        success: false, 
-        message: "Failed to update admin notification settings" 
+      return {
+        success: false,
+        message: "Failed to update admin notification settings"
       };
     }
   },
@@ -564,6 +606,7 @@ export const getStoreEmailConfigInternal = query({
 export const updateNotificationIntegrations = mutation({
   args: {
     storeId: v.id("stores"),
+    userId: v.string(), // Required for authorization
     notificationIntegrations: v.object({
       slackWebhookUrl: v.optional(v.string()),
       slackEnabled: v.optional(v.boolean()),
@@ -580,6 +623,11 @@ export const updateNotificationIntegrations = mutation({
       const store = await ctx.db.get(args.storeId);
       if (!store) {
         return { success: false, message: "Store not found" };
+      }
+
+      // Authorization check: only store owner can update notification integrations
+      if (store.userId !== args.userId) {
+        return { success: false, message: "Unauthorized: You can only update your own store's notification integrations" };
       }
 
       await ctx.db.patch(args.storeId, {

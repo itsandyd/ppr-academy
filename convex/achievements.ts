@@ -338,3 +338,177 @@ export const checkAndAwardAchievement = internalMutation({
   },
 });
 
+// ============================================================================
+// CREATOR XP SYSTEM
+// ============================================================================
+
+/**
+ * XP rewards for creator actions
+ */
+const CREATOR_XP_REWARDS: Record<string, number> = {
+  "first_store": 50,           // Creating first store
+  "product_created": 25,       // Creating a product
+  "product_published": 50,     // Publishing a product
+  "course_created": 75,        // Creating a course
+  "course_published": 100,     // Publishing a course
+  "first_sale": 150,           // First sale ever
+  "sale_completed": 10,        // Each sale
+  "review_received": 25,       // Receiving a review
+  "five_star_review": 50,      // 5-star review
+  "student_enrolled": 15,      // Student enrolling
+  "chapter_completed": 5,      // Student completes chapter
+  "course_completed": 30,      // Student completes entire course
+  "revenue_milestone_100": 200,  // $100 revenue
+  "revenue_milestone_1000": 500, // $1000 revenue
+  "revenue_milestone_10000": 1000, // $10000 revenue
+  "ten_products": 150,         // 10 products created
+  "hundred_students": 300,     // 100 total students
+};
+
+/**
+ * Calculate creator level from XP
+ */
+function calculateCreatorLevel(xp: number): number {
+  // Level formula: sqrt(xp / 100) + 1, capped at 100
+  return Math.min(Math.floor(Math.sqrt(xp / 100)) + 1, 100);
+}
+
+/**
+ * Get creator XP and level for a user
+ */
+export const getCreatorXP = query({
+  args: { userId: v.string() },
+  returns: v.object({
+    creatorXP: v.number(),
+    creatorLevel: v.number(),
+    xpToNextLevel: v.number(),
+    isCreator: v.boolean(),
+    creatorSince: v.optional(v.number()),
+    creatorBadges: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      return {
+        creatorXP: 0,
+        creatorLevel: 0,
+        xpToNextLevel: 100,
+        isCreator: false,
+        creatorSince: undefined,
+        creatorBadges: [],
+      };
+    }
+
+    const xp = user.creatorXP || 0;
+    const level = calculateCreatorLevel(xp);
+    const currentLevelXP = Math.pow(level - 1, 2) * 100;
+    const nextLevelXP = Math.pow(level, 2) * 100;
+    const xpToNextLevel = nextLevelXP - xp;
+
+    return {
+      creatorXP: xp,
+      creatorLevel: user.creatorLevel || level,
+      xpToNextLevel: Math.max(0, xpToNextLevel),
+      isCreator: user.isCreator || false,
+      creatorSince: user.creatorSince,
+      creatorBadges: user.creatorBadges || [],
+    };
+  },
+});
+
+/**
+ * Award creator XP for an action (internal mutation)
+ */
+export const awardCreatorXP = internalMutation({
+  args: {
+    userId: v.string(),
+    action: v.string(), // Key from CREATOR_XP_REWARDS
+    customXP: v.optional(v.number()), // Override default XP
+  },
+  returns: v.object({
+    xpAwarded: v.number(),
+    newTotal: v.number(),
+    newLevel: v.number(),
+    leveledUp: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const xpToAward = args.customXP ?? CREATOR_XP_REWARDS[args.action] ?? 10;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      return { xpAwarded: 0, newTotal: 0, newLevel: 0, leveledUp: false };
+    }
+
+    const currentXP = user.creatorXP || 0;
+    const currentLevel = user.creatorLevel || 1;
+    const newTotal = currentXP + xpToAward;
+    const newLevel = calculateCreatorLevel(newTotal);
+    const leveledUp = newLevel > currentLevel;
+
+    await ctx.db.patch(user._id, {
+      creatorXP: newTotal,
+      creatorLevel: newLevel,
+      isCreator: true, // Ensure creator flag is set
+    });
+
+    // Track XP gain event for analytics
+    await ctx.db.insert("analyticsEvents", {
+      userId: args.userId,
+      eventType: "creator_xp_earned",
+      timestamp: Date.now(),
+      metadata: {
+        action: args.action,
+        xpAwarded: xpToAward,
+        newTotal,
+        newLevel,
+        leveledUp,
+      },
+    });
+
+    return {
+      xpAwarded: xpToAward,
+      newTotal,
+      newLevel,
+      leveledUp,
+    };
+  },
+});
+
+/**
+ * Award a creator badge
+ */
+export const awardCreatorBadge = internalMutation({
+  args: {
+    userId: v.string(),
+    badge: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) return false;
+
+    const currentBadges = user.creatorBadges || [];
+    if (currentBadges.includes(args.badge)) {
+      return false; // Already has badge
+    }
+
+    await ctx.db.patch(user._id, {
+      creatorBadges: [...currentBadges, args.badge],
+    });
+
+    return true;
+  },
+});
+

@@ -219,6 +219,19 @@ export declare const api: {
     >;
   };
   achievements: {
+    getCreatorXP: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      {
+        creatorBadges: Array<string>;
+        creatorLevel: number;
+        creatorSince?: number;
+        creatorXP: number;
+        isCreator: boolean;
+        xpToNextLevel: number;
+      }
+    >;
     getUserAchievements: FunctionReference<
       "query",
       "public",
@@ -8040,7 +8053,7 @@ export declare const api: {
     deleteProduct: FunctionReference<
       "mutation",
       "public",
-      { id: Id<"digitalProducts"> },
+      { id: Id<"digitalProducts">; userId: string },
       null
     >;
     getAllProducts: FunctionReference<"query", "public", {}, Array<any>>;
@@ -9552,6 +9565,7 @@ export declare const api: {
         sourceProductId?: Id<"digitalProducts">;
         storeId: string;
         tagIds?: Array<Id<"emailTags">>;
+        userId: string;
       },
       Id<"emailContacts">
     >;
@@ -9564,7 +9578,7 @@ export declare const api: {
     deleteContact: FunctionReference<
       "mutation",
       "public",
-      { contactId: Id<"emailContacts"> },
+      { contactId: Id<"emailContacts">; userId: string },
       null
     >;
     findDuplicateContacts: FunctionReference<
@@ -9703,6 +9717,7 @@ export declare const api: {
         firstName?: string;
         lastName?: string;
         status?: "subscribed" | "unsubscribed" | "bounced" | "complained";
+        userId: string;
       },
       null
     >;
@@ -18224,7 +18239,7 @@ export declare const api: {
     deleteStore: FunctionReference<
       "mutation",
       "public",
-      { id: Id<"stores"> },
+      { id: Id<"stores">; userId: string },
       null
     >;
     getAllStores: FunctionReference<
@@ -18722,6 +18737,7 @@ export declare const api: {
         notificationEmail?: string;
         sendDigestInsteadOfInstant?: boolean;
         storeId: Id<"stores">;
+        userId: string;
       },
       { message: string; success: boolean }
     >;
@@ -18733,6 +18749,7 @@ export declare const api: {
         fromName?: string;
         replyToEmail?: string;
         storeId: Id<"stores">;
+        userId: string;
       },
       { message: string; success: boolean }
     >;
@@ -18753,6 +18770,7 @@ export declare const api: {
           slackWebhookUrl?: string;
         };
         storeId: Id<"stores">;
+        userId: string;
       },
       { message: string; success: boolean }
     >;
@@ -19489,7 +19507,7 @@ export declare const api: {
     publishDraft: FunctionReference<
       "mutation",
       "public",
-      { productId: Id<"digitalProducts"> },
+      { productId: Id<"digitalProducts">; userId: string },
       { message: string; success: boolean }
     >;
     saveDraft: FunctionReference<
@@ -20158,6 +20176,23 @@ export declare const internal: {
     >;
   };
   achievements: {
+    awardCreatorBadge: FunctionReference<
+      "mutation",
+      "internal",
+      { badge: string; userId: string },
+      boolean
+    >;
+    awardCreatorXP: FunctionReference<
+      "mutation",
+      "internal",
+      { action: string; customXP?: number; userId: string },
+      {
+        leveledUp: boolean;
+        newLevel: number;
+        newTotal: number;
+        xpAwarded: number;
+      }
+    >;
     checkAndAwardAchievement: FunctionReference<
       "mutation",
       "internal",

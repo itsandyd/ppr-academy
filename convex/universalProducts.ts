@@ -229,6 +229,25 @@ export const createUniversalProduct = mutation({
   returns: v.union(v.id("digitalProducts"), v.id("courses")),
   handler: async (ctx, args) => {
     // ========================================================================
+    // AUTHORIZATION
+    // ========================================================================
+
+    // Get the store to verify ownership
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("_id"), args.storeId as any))
+      .first();
+
+    if (!store) {
+      throw new Error("Store not found");
+    }
+
+    // Authorization check: verify userId matches the store owner
+    if (store.userId !== args.userId) {
+      throw new Error("Unauthorized: You can only create products in your own store");
+    }
+
+    // ========================================================================
     // VALIDATION
     // ========================================================================
 
@@ -254,16 +273,6 @@ export const createUniversalProduct = mutation({
     // ========================================================================
     // PLAN LIMIT ENFORCEMENT
     // ========================================================================
-
-    // Get the store to check plan limits
-    const store = await ctx.db
-      .query("stores")
-      .filter((q) => q.eq(q.field("_id"), args.storeId as any))
-      .first();
-
-    if (!store) {
-      throw new Error("Store not found");
-    }
 
     // Check if user is an admin - admins bypass ALL plan limits
     const storeUser = await ctx.db
@@ -1081,6 +1090,14 @@ export const saveDraft = mutation({
         };
       }
 
+      // Authorization check: verify userId matches product owner
+      if (data.userId && existingProduct.userId !== data.userId) {
+        return {
+          success: false,
+          message: "Unauthorized: You can only update your own products",
+        };
+      }
+
       // Build update object, only including provided fields
       const updates: Record<string, unknown> = {};
 
@@ -1155,7 +1172,7 @@ export const saveDraft = mutation({
       };
     }
 
-    // Get the store to check plan limits
+    // Get the store to check plan limits and authorization
     const store = await ctx.db
       .query("stores")
       .filter((q) => q.eq(q.field("_id"), data.storeId as any))
@@ -1165,6 +1182,14 @@ export const saveDraft = mutation({
       return {
         success: false,
         message: "Store not found",
+      };
+    }
+
+    // Authorization check: verify userId matches the store owner
+    if (store.userId !== data.userId) {
+      return {
+        success: false,
+        message: "Unauthorized: You can only create drafts in your own store",
       };
     }
 
@@ -1307,6 +1332,7 @@ export const saveDraft = mutation({
 export const publishDraft = mutation({
   args: {
     productId: v.id("digitalProducts"),
+    userId: v.string(), // Required for authorization
   },
   returns: v.object({
     success: v.boolean(),
@@ -1316,6 +1342,11 @@ export const publishDraft = mutation({
     const product = await ctx.db.get(args.productId);
     if (!product) {
       return { success: false, message: "Product not found" };
+    }
+
+    // Authorization check: verify userId matches the product owner
+    if (product.userId !== args.userId) {
+      return { success: false, message: "Unauthorized: You can only publish your own products" };
     }
 
     // Validate required fields

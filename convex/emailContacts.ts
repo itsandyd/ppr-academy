@@ -6,6 +6,7 @@ import { Id } from "./_generated/dataModel";
 export const createContact = mutation({
   args: {
     storeId: v.string(),
+    userId: v.string(), // Required for authorization
     email: v.string(),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
@@ -17,6 +18,16 @@ export const createContact = mutation({
   },
   returns: v.id("emailContacts"),
   handler: async (ctx, args) => {
+    // Authorization check: verify user owns the store
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!store || store._id.toString() !== args.storeId) {
+      throw new Error("Unauthorized: You can only add contacts to your own store");
+    }
+
     const existing = await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId_and_email", (q) =>
@@ -62,6 +73,7 @@ export const createContact = mutation({
 export const updateContact = mutation({
   args: {
     contactId: v.id("emailContacts"),
+    userId: v.string(), // Required for authorization
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
     status: v.optional(
@@ -76,9 +88,19 @@ export const updateContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { contactId, ...updates } = args;
+    const { contactId, userId, ...updates } = args;
     const contact = await ctx.db.get(contactId);
     if (!contact) throw new Error("Contact not found");
+
+    // Authorization check: verify user owns the store that owns this contact
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!store || store._id.toString() !== contact.storeId) {
+      throw new Error("Unauthorized: You can only update contacts in your own store");
+    }
 
     const filteredUpdates: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updates)) {
@@ -98,11 +120,24 @@ export const updateContact = mutation({
 });
 
 export const deleteContact = mutation({
-  args: { contactId: v.id("emailContacts") },
+  args: {
+    contactId: v.id("emailContacts"),
+    userId: v.string(), // Required for authorization
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const contact = await ctx.db.get(args.contactId);
     if (!contact) throw new Error("Contact not found");
+
+    // Authorization check: verify user owns the store that owns this contact
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!store || store._id.toString() !== contact.storeId) {
+      throw new Error("Unauthorized: You can only delete contacts from your own store");
+    }
 
     for (const tagId of contact.tagIds) {
       const tag = await ctx.db.get(tagId);

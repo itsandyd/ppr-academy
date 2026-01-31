@@ -453,6 +453,40 @@ export const checkAndIssueCertificate = internalMutation({
       verificationCode,
     });
 
+    // Track creator nudge opportunity (for users who aren't creators yet)
+    if (!user.isCreator) {
+      await ctx.db.insert("analyticsEvents", {
+        userId: args.userId,
+        eventType: "creator_nudge_triggered",
+        timestamp: now,
+        metadata: {
+          nudgeContext: "course_completed",
+          courseName: course.title,
+          courseId: args.courseId,
+        },
+      });
+
+      // Store the nudge for the user to see on their dashboard
+      const existingNudge = await ctx.db
+        .query("userNudges" as any)
+        .withIndex("by_userId" as any, (q: any) => q.eq("userId", args.userId))
+        .first();
+
+      if (!existingNudge) {
+        await ctx.db.insert("userNudges" as any, {
+          userId: args.userId,
+          nudgeType: "become_creator",
+          nudgeContext: "course_completed",
+          contextData: {
+            courseName: course.title,
+            courseId: args.courseId,
+          },
+          dismissed: false,
+          createdAt: now,
+        });
+      }
+    }
+
     return {
       success: true,
       certificateId,

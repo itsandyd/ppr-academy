@@ -47,10 +47,17 @@ export default defineSchema({
     website: v.optional(v.string()),
     // Dashboard preference for unified dashboard
     dashboardPreference: v.optional(v.union(v.literal("learn"), v.literal("create"))),
+    // Creator role fields
+    isCreator: v.optional(v.boolean()), // Explicit creator flag (set when user creates store)
+    creatorSince: v.optional(v.number()), // Timestamp when user became a creator
+    creatorLevel: v.optional(v.number()), // Creator level (1-10+)
+    creatorXP: v.optional(v.number()), // XP earned from creating content
+    creatorBadges: v.optional(v.array(v.string())), // Creator-specific badges
   })
     .index("by_email", ["email"])
     .index("by_clerkId", ["clerkId"])
-    .index("by_discordId", ["discordId"]),
+    .index("by_discordId", ["discordId"])
+    .index("by_isCreator", ["isCreator"]),
 
   // Learner Preferences (for onboarding and personalization)
   learnerPreferences: defineTable({
@@ -2220,7 +2227,10 @@ export default defineSchema({
       v.literal("campaign_view"),
       // NEW: System events
       v.literal("error"),
-      v.literal("webhook_failed")
+      v.literal("webhook_failed"),
+      // Creator XP & nudge events
+      v.literal("creator_xp_earned"),
+      v.literal("creator_nudge_triggered")
     ),
     resourceId: v.optional(v.string()), // courseId, productId, etc.
     resourceType: v.optional(
@@ -2265,6 +2275,15 @@ export default defineSchema({
         // NEW: Error tracking
         error_code: v.optional(v.string()),
         error_message: v.optional(v.string()),
+        // Creator XP & nudge tracking
+        action: v.optional(v.string()), // XP action type
+        xpAwarded: v.optional(v.number()),
+        newTotal: v.optional(v.number()),
+        newLevel: v.optional(v.number()),
+        leveledUp: v.optional(v.boolean()),
+        nudgeContext: v.optional(v.string()),
+        courseName: v.optional(v.string()),
+        courseId: v.optional(v.string()),
       })
     ),
     sessionId: v.optional(v.string()),
@@ -4318,6 +4337,39 @@ export default defineSchema({
     totalXP: v.number(),
     lastXPGain: v.optional(v.number()), // Timestamp of last XP gain
   }).index("by_userId", ["userId"]),
+
+  // User Nudges - Contextual prompts for user actions (e.g., becoming a creator)
+  userNudges: defineTable({
+    userId: v.string(), // Clerk ID
+    nudgeType: v.union(
+      v.literal("become_creator"),
+      v.literal("upgrade_plan"),
+      v.literal("complete_profile"),
+      v.literal("first_product"),
+      v.literal("first_sale")
+    ),
+    nudgeContext: v.union(
+      v.literal("course_completed"),
+      v.literal("milestone_xp"),
+      v.literal("quiz_passed"),
+      v.literal("certificate_earned"),
+      v.literal("enrollment_count"),
+      v.literal("first_login"),
+      v.literal("returning_learner"),
+      v.literal("default")
+    ),
+    contextData: v.optional(v.any()), // Course name, XP milestone, etc.
+    dismissed: v.boolean(),
+    dismissedAt: v.optional(v.number()),
+    shown: v.optional(v.boolean()), // Whether nudge has been shown
+    shownAt: v.optional(v.number()),
+    converted: v.optional(v.boolean()), // Whether user took the action
+    convertedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_type", ["userId", "nudgeType"])
+    .index("by_userId_and_dismissed", ["userId", "dismissed"]),
 
   // Music Sharing - User Uploaded Tracks
   userTracks: defineTable({

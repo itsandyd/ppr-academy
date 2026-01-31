@@ -825,15 +825,20 @@ export type DataModel = {
         | "cta_clicked"
         | "campaign_view"
         | "error"
-        | "webhook_failed";
+        | "webhook_failed"
+        | "creator_xp_earned"
+        | "creator_nudge_triggered";
       ipAddress?: string;
       metadata?: {
+        action?: string;
         amount_cents?: number;
         audience_size?: number;
         browser?: string;
         campaign_id?: string;
         city?: string;
         country?: string;
+        courseId?: string;
+        courseName?: string;
         currency?: string;
         daw?: string;
         device?: string;
@@ -841,6 +846,10 @@ export type DataModel = {
         error_code?: string;
         error_message?: string;
         experiment_id?: string;
+        leveledUp?: boolean;
+        newLevel?: number;
+        newTotal?: number;
+        nudgeContext?: string;
         os?: string;
         page?: string;
         product_id?: string;
@@ -853,6 +862,7 @@ export type DataModel = {
         utm_source?: string;
         value?: number;
         variant?: string;
+        xpAwarded?: number;
       };
       resourceId?: string;
       resourceType?:
@@ -875,12 +885,15 @@ export type DataModel = {
       | "eventType"
       | "ipAddress"
       | "metadata"
+      | "metadata.action"
       | "metadata.amount_cents"
       | "metadata.audience_size"
       | "metadata.browser"
       | "metadata.campaign_id"
       | "metadata.city"
       | "metadata.country"
+      | "metadata.courseId"
+      | "metadata.courseName"
       | "metadata.currency"
       | "metadata.daw"
       | "metadata.device"
@@ -888,6 +901,10 @@ export type DataModel = {
       | "metadata.error_code"
       | "metadata.error_message"
       | "metadata.experiment_id"
+      | "metadata.leveledUp"
+      | "metadata.newLevel"
+      | "metadata.newTotal"
+      | "metadata.nudgeContext"
       | "metadata.os"
       | "metadata.page"
       | "metadata.product_id"
@@ -900,6 +917,7 @@ export type DataModel = {
       | "metadata.utm_source"
       | "metadata.value"
       | "metadata.variant"
+      | "metadata.xpAwarded"
       | "resourceId"
       | "resourceType"
       | "sessionId"
@@ -11062,6 +11080,59 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  userNudges: {
+    document: {
+      contextData?: any;
+      converted?: boolean;
+      convertedAt?: number;
+      createdAt: number;
+      dismissed: boolean;
+      dismissedAt?: number;
+      nudgeContext:
+        | "course_completed"
+        | "milestone_xp"
+        | "quiz_passed"
+        | "certificate_earned"
+        | "enrollment_count"
+        | "first_login"
+        | "returning_learner"
+        | "default";
+      nudgeType:
+        | "become_creator"
+        | "upgrade_plan"
+        | "complete_profile"
+        | "first_product"
+        | "first_sale";
+      shown?: boolean;
+      shownAt?: number;
+      userId: string;
+      _id: Id<"userNudges">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "contextData"
+      | "converted"
+      | "convertedAt"
+      | "createdAt"
+      | "dismissed"
+      | "dismissedAt"
+      | "nudgeContext"
+      | "nudgeType"
+      | "shown"
+      | "shownAt"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+      by_userId_and_dismissed: ["userId", "dismissed", "_creationTime"];
+      by_userId_and_type: ["userId", "nudgeType", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   userProgress: {
     document: {
       chapterId: string;
@@ -11119,6 +11190,10 @@ export type DataModel = {
       avatarUrl?: string;
       bio?: string;
       clerkId?: string;
+      creatorBadges?: Array<string>;
+      creatorLevel?: number;
+      creatorSince?: number;
+      creatorXP?: number;
       dashboardPreference?: "learn" | "create";
       discordId?: string;
       discordUsername?: string;
@@ -11130,6 +11205,7 @@ export type DataModel = {
       image?: string;
       imageUrl?: string;
       instagram?: string;
+      isCreator?: boolean;
       lastName?: string;
       name?: string;
       role?:
@@ -11157,6 +11233,10 @@ export type DataModel = {
       | "avatarUrl"
       | "bio"
       | "clerkId"
+      | "creatorBadges"
+      | "creatorLevel"
+      | "creatorSince"
+      | "creatorXP"
       | "dashboardPreference"
       | "discordId"
       | "discordUsername"
@@ -11168,6 +11248,7 @@ export type DataModel = {
       | "image"
       | "imageUrl"
       | "instagram"
+      | "isCreator"
       | "lastName"
       | "name"
       | "role"
@@ -11186,6 +11267,7 @@ export type DataModel = {
       by_clerkId: ["clerkId", "_creationTime"];
       by_discordId: ["discordId", "_creationTime"];
       by_email: ["email", "_creationTime"];
+      by_isCreator: ["isCreator", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

@@ -1435,9 +1435,23 @@ export const updateEmailConfirmation = mutation({
 
 // Delete digital product
 export const deleteProduct = mutation({
-  args: { id: v.id("digitalProducts") },
+  args: {
+    id: v.id("digitalProducts"),
+    userId: v.string(), // Required for authorization
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Get the product to verify ownership
+    const product = await ctx.db.get(args.id);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Authorization check: only product owner can delete
+    if (product.userId !== args.userId) {
+      throw new Error("Unauthorized: You can only delete your own products");
+    }
+
     await ctx.db.delete(args.id);
     return null;
   },
