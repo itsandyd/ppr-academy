@@ -1035,21 +1035,63 @@ export const togglePublished = mutation({
   handler: async (ctx, args) => {
     try {
       const course = await ctx.db.get(args.courseId);
-      
+
       if (!course) {
         return { success: false };
       }
-      
+
       // Check if user owns the course
       if (course.userId !== args.userId) {
         return { success: false };
       }
-      
+
       const newPublishedStatus = !course.isPublished;
-      await ctx.db.patch(args.courseId, {
+      const wasPublished = course.isPublished;
+
+      // Update course with publishedAt timestamp if first time publishing
+      const updateData: { isPublished: boolean; publishedAt?: number } = {
         isPublished: newPublishedStatus,
-      });
-      
+      };
+      if (newPublishedStatus && !wasPublished) {
+        updateData.publishedAt = Date.now();
+      }
+
+      await ctx.db.patch(args.courseId, updateData);
+
+      // Track creator_published event when publishing for the first time
+      if (newPublishedStatus && !wasPublished) {
+        // Get store for this creator
+        const store = await ctx.db
+          .query("stores")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .first();
+
+        // Check if this is creator's first published item
+        const otherPublishedCourses = await ctx.db
+          .query("courses")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("isPublished"), true),
+              q.neq(q.field("_id"), args.courseId)
+            )
+          )
+          .first();
+
+        // Only track if this is their first publish
+        if (!otherPublishedCourses) {
+          await ctx.db.insert("analyticsEvents", {
+            userId: args.userId,
+            storeId: store?._id,
+            eventType: "creator_published",
+            resourceId: args.courseId,
+            resourceType: "course",
+            timestamp: Date.now(),
+            metadata: {},
+          });
+        }
+      }
+
       return {
         success: true,
         isPublished: newPublishedStatus,

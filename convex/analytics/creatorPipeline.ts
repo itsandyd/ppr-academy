@@ -9,6 +9,7 @@ import { Id } from "../_generated/dataModel";
 
 /**
  * Get creators by pipeline stage
+ * Derives stage from actual data: stores, courses, products, purchases
  */
 export const getCreatorsByStage = query({
   args: {
@@ -27,7 +28,8 @@ export const getCreatorsByStage = query({
   },
   returns: v.array(
     v.object({
-      _id: v.id("creatorPipeline"),
+      _id: v.optional(v.id("creatorPipeline")),
+      storeId: v.optional(v.id("stores")),
       userId: v.string(),
       userName: v.optional(v.string()),
       userEmail: v.optional(v.string()),
@@ -48,55 +50,142 @@ export const getCreatorsByStage = query({
     })
   ),
   handler: async (ctx, { stage }) => {
-    let creators;
-    
-    if (stage) {
-      creators = await ctx.db
+    // For prospect/invited stages, use creatorPipeline table (manual entries)
+    if (stage === "prospect" || stage === "invited") {
+      const pipelineCreators = await ctx.db
         .query("creatorPipeline")
-        .withIndex("by_stage_and_updatedAt", (q) =>
-          q.eq("stage", stage)
-        )
+        .withIndex("by_stage_and_updatedAt", (q) => q.eq("stage", stage))
         .collect();
-    } else {
-      creators = await ctx.db.query("creatorPipeline").collect();
+
+      return Promise.all(
+        pipelineCreators.map(async (creator) => {
+          const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", creator.userId))
+            .first();
+
+          const daysSinceLastTouch = creator.lastTouchAt
+            ? Math.floor((Date.now() - creator.lastTouchAt) / (24 * 60 * 60 * 1000))
+            : undefined;
+
+          return {
+            _id: creator._id,
+            storeId: creator.storeId,
+            userId: creator.userId,
+            userName: user?.name || user?.firstName || "Unknown",
+            userEmail: user?.email,
+            userAvatar: user?.imageUrl,
+            stage: creator.stage,
+            daw: creator.daw,
+            instagramHandle: creator.instagramHandle,
+            tiktokHandle: creator.tiktokHandle,
+            audienceSize: creator.audienceSize,
+            niche: creator.niche,
+            totalRevenue: creator.totalRevenue,
+            productCount: creator.productCount,
+            lastTouchAt: creator.lastTouchAt,
+            lastTouchType: creator.lastTouchType,
+            nextStepNote: creator.nextStepNote,
+            assignedTo: creator.assignedTo,
+            daysSinceLastTouch,
+          };
+        })
+      );
     }
-    
-    // Enrich with user data
-    const enriched = await Promise.all(
-      creators.map(async (creator) => {
-        const user = await ctx.db
-          .query("users")
-          .withIndex("by_clerkId", (q) => q.eq("clerkId", creator.userId))
-          .first();
-        
-        const daysSinceLastTouch = creator.lastTouchAt
-          ? Math.floor((Date.now() - creator.lastTouchAt) / (24 * 60 * 60 * 1000))
-          : undefined;
-        
-        return {
-          _id: creator._id,
-          userId: creator.userId,
-          userName: user?.name || user?.firstName || "Unknown",
-          userEmail: user?.email,
-          userAvatar: user?.imageUrl,
-          stage: creator.stage,
-          daw: creator.daw,
-          instagramHandle: creator.instagramHandle,
-          tiktokHandle: creator.tiktokHandle,
-          audienceSize: creator.audienceSize,
-          niche: creator.niche,
-          totalRevenue: creator.totalRevenue,
-          productCount: creator.productCount,
-          lastTouchAt: creator.lastTouchAt,
-          lastTouchType: creator.lastTouchType,
-          nextStepNote: creator.nextStepNote,
-          assignedTo: creator.assignedTo,
-          daysSinceLastTouch,
-        };
-      })
-    );
-    
-    return enriched;
+
+    // For other stages, derive from actual data
+    const stores = await ctx.db.query("stores").collect();
+    const courses = await ctx.db.query("courses").collect();
+    const products = await ctx.db.query("digitalProducts").collect();
+    const purchases = await ctx.db.query("purchases").collect();
+
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+
+    const results = [];
+
+    for (const store of stores) {
+      const creatorCourses = courses.filter((c) => c.userId === store.userId);
+      const creatorProducts = products.filter((p) => p.storeId === store._id);
+      const creatorPurchases = purchases.filter(
+        (p) => p.status === "completed" && p.storeId === store._id
+      );
+
+      const hasPublished =
+        creatorCourses.some((c) => c.isPublished) ||
+        creatorProducts.some((p) => p.isPublished);
+      const hasSales = creatorPurchases.length > 0;
+      const hasRecentSales = creatorPurchases.some(
+        (p) => p._creationTime > thirtyDaysAgo
+      );
+      const lastSale = creatorPurchases.sort(
+        (a, b) => b._creationTime - a._creationTime
+      )[0];
+      const isChurnRisk =
+        hasSales && lastSale && lastSale._creationTime < sixtyDaysAgo;
+
+      // Determine stage
+      let derivedStage: string;
+      if (isChurnRisk) {
+        derivedStage = "churn_risk";
+      } else if (hasRecentSales) {
+        derivedStage = "active";
+      } else if (hasSales) {
+        derivedStage = "first_sale";
+      } else if (hasPublished) {
+        derivedStage = "published";
+      } else if (creatorCourses.length > 0 || creatorProducts.length > 0) {
+        derivedStage = "drafting";
+      } else {
+        derivedStage = "signed_up";
+      }
+
+      // Skip if not matching requested stage
+      if (stage && derivedStage !== stage) continue;
+
+      // Get user and pipeline entry
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", store.userId))
+        .first();
+
+      const pipelineEntry = await ctx.db
+        .query("creatorPipeline")
+        .withIndex("by_userId", (q) => q.eq("userId", store.userId))
+        .first();
+
+      const totalRevenue =
+        creatorPurchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+      const daysSinceLastTouch = pipelineEntry?.lastTouchAt
+        ? Math.floor((now - pipelineEntry.lastTouchAt) / (24 * 60 * 60 * 1000))
+        : undefined;
+
+      results.push({
+        _id: pipelineEntry?._id,
+        storeId: store._id,
+        userId: store.userId,
+        userName: user?.name || user?.firstName || "Unknown",
+        userEmail: user?.email,
+        userAvatar: user?.imageUrl,
+        stage: derivedStage,
+        daw: pipelineEntry?.daw,
+        instagramHandle: pipelineEntry?.instagramHandle,
+        tiktokHandle: pipelineEntry?.tiktokHandle,
+        audienceSize: pipelineEntry?.audienceSize,
+        niche: pipelineEntry?.niche,
+        totalRevenue,
+        productCount: creatorCourses.length + creatorProducts.length,
+        lastTouchAt: pipelineEntry?.lastTouchAt,
+        lastTouchType: pipelineEntry?.lastTouchType,
+        nextStepNote: pipelineEntry?.nextStepNote,
+        assignedTo: pipelineEntry?.assignedTo,
+        daysSinceLastTouch,
+      });
+    }
+
+    return results;
   },
 });
 
@@ -814,6 +903,7 @@ export const getCreatorsForBulkEmail = query({
 
 /**
  * Get pipeline stats (counts by stage)
+ * Derives stage from actual data: stores, courses, products, purchases
  */
 export const getPipelineStats = query({
   args: {},
@@ -828,8 +918,16 @@ export const getPipelineStats = query({
     churn_risk: v.number(),
   }),
   handler: async (ctx) => {
-    const allCreators = await ctx.db.query("creatorPipeline").collect();
-    
+    // Get all relevant data
+    const stores = await ctx.db.query("stores").collect();
+    const courses = await ctx.db.query("courses").collect();
+    const products = await ctx.db.query("digitalProducts").collect();
+    const purchases = await ctx.db.query("purchases").collect();
+
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+
     const stats = {
       prospect: 0,
       invited: 0,
@@ -840,11 +938,51 @@ export const getPipelineStats = query({
       active: 0,
       churn_risk: 0,
     };
-    
-    for (const creator of allCreators) {
-      stats[creator.stage]++;
+
+    // Determine stage for each creator (store)
+    for (const store of stores) {
+      const creatorCourses = courses.filter((c) => c.userId === store.userId);
+      const creatorProducts = products.filter((p) => p.storeId === store._id);
+      const creatorPurchases = purchases.filter(
+        (p) => p.status === "completed" && p.storeId === store._id
+      );
+
+      const hasPublished =
+        creatorCourses.some((c) => c.isPublished) ||
+        creatorProducts.some((p) => p.isPublished);
+      const hasSales = creatorPurchases.length > 0;
+      const hasRecentSales = creatorPurchases.some(
+        (p) => p._creationTime > thirtyDaysAgo
+      );
+      const lastSale = creatorPurchases.sort(
+        (a, b) => b._creationTime - a._creationTime
+      )[0];
+      const isChurnRisk =
+        hasSales && lastSale && lastSale._creationTime < sixtyDaysAgo;
+
+      // Determine stage based on journey
+      if (isChurnRisk) {
+        stats.churn_risk++;
+      } else if (hasRecentSales) {
+        stats.active++;
+      } else if (hasSales) {
+        stats.first_sale++;
+      } else if (hasPublished) {
+        stats.published++;
+      } else if (creatorCourses.length > 0 || creatorProducts.length > 0) {
+        stats.drafting++;
+      } else {
+        stats.signed_up++;
+      }
     }
-    
+
+    // Prospect and invited are manual stages (from creatorPipeline table if exists)
+    const pipelineEntries = await ctx.db.query("creatorPipeline").collect();
+    for (const entry of pipelineEntries) {
+      if (entry.stage === "prospect") stats.prospect++;
+      if (entry.stage === "invited") stats.invited++;
+    }
+
     return stats;
   },
 });

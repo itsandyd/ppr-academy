@@ -3464,7 +3464,7 @@ export declare const api: {
             | "churn_risk";
         },
         Array<{
-          _id: Id<"creatorPipeline">;
+          _id?: Id<"creatorPipeline">;
           assignedTo?: string;
           audienceSize?: number;
           daw?: string;
@@ -3476,6 +3476,7 @@ export declare const api: {
           niche?: string;
           productCount?: number;
           stage: string;
+          storeId?: Id<"stores">;
           tiktokHandle?: string;
           totalRevenue?: number;
           userAvatar?: string;

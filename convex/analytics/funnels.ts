@@ -69,15 +69,14 @@ export const getLearnerFunnel = query({
     
     const signupUserIds = new Set(signups.map((s) => s.userId));
     
-    // Step 3: Enrollments
-    // Note: userEvents doesn't have by_timestamp index, using filter instead
+    // Step 3: Enrollments (from analyticsEvents table with "enrollment" event type)
     const allEnrollments = await ctx.db
-      .query("userEvents")
+      .query("analyticsEvents")
       .filter((q) =>
         q.and(
           q.gte(q.field("timestamp"), startTime),
           q.lte(q.field("timestamp"), endTime),
-          q.eq(q.field("eventType"), "course_enrolled")
+          q.eq(q.field("eventType"), "enrollment")
         )
       )
       .collect();
@@ -90,18 +89,18 @@ export const getLearnerFunnel = query({
         .query("stores")
         .filter((q) => q.eq(q.field("_id"), storeId))
         .first();
-      
+
       if (store) {
         const storeCourses = await ctx.db
           .query("courses")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
           .collect();
-        
+
         const storeCourseIds = new Set(storeCourses.map((c) => c._id));
-        
+
         enrolledUsers = new Set(
           allEnrollments
-            .filter((e) => e.courseId && storeCourseIds.has(e.courseId) && signupUserIds.has(e.userId))
+            .filter((e) => e.resourceId && storeCourseIds.has(e.resourceId as any) && signupUserIds.has(e.userId))
             .map((e) => e.userId)
         );
       } else {
