@@ -513,13 +513,24 @@ export const getEventCounts = internalMutation({
     const events = await ctx.db.query("analyticsEvents").collect();
 
     const counts: Record<string, number> = {};
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const twentyEightDaysAgo = now - 28 * 24 * 60 * 60 * 1000;
+
+    let last7d = 0;
+    let last28d = 0;
+
     for (const event of events) {
       counts[event.eventType] = (counts[event.eventType] || 0) + 1;
+      if (event.timestamp >= sevenDaysAgo) last7d++;
+      if (event.timestamp >= twentyEightDaysAgo) last28d++;
     }
 
     return {
       total: events.length,
       byType: counts,
+      last7d,
+      last28d,
     };
   },
 });

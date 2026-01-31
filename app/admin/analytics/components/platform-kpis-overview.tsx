@@ -23,10 +23,10 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type TimeWindow = "today" | "7d" | "28d";
+type TimeWindow = "today" | "7d" | "28d" | "all";
 
 export function PlatformKPIsOverview() {
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>("all");
   const [timedOut, setTimedOut] = useState(false);
 
   // Timeout after 5 seconds to prevent infinite skeleton
@@ -44,6 +44,8 @@ export function PlatformKPIsOverview() {
         return { start: now - 7 * 24 * 60 * 60 * 1000, end: now };
       case "28d":
         return { start: now - 28 * 24 * 60 * 60 * 1000, end: now };
+      case "all":
+        return { start: 0, end: now }; // All time
     }
   };
 
@@ -55,6 +57,9 @@ export function PlatformKPIsOverview() {
     endTime: end,
     // No storeId = platform-wide
   });
+
+  // Debug: log what we're getting
+  console.log("KPIs Query Result:", kpisResult, "Time range:", { start, end });
 
   // Default values if query fails or returns no data
   const kpis = kpisResult ?? {
@@ -76,6 +81,7 @@ export function PlatformKPIsOverview() {
     today: "Today",
     "7d": "Last 7 Days",
     "28d": "Last 28 Days",
+    "all": "All Time",
   };
 
   return (
@@ -89,7 +95,7 @@ export function PlatformKPIsOverview() {
           </p>
         </div>
         <div className="flex gap-2">
-          {(["today", "7d", "28d"] as TimeWindow[]).map((window) => (
+          {(["today", "7d", "28d", "all"] as TimeWindow[]).map((window) => (
             <Button
               key={window}
               variant={timeWindow === window ? "default" : "outline"}

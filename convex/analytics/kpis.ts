@@ -37,70 +37,32 @@ export const getKPIs = query({
     }),
   }),
   handler: async (ctx, { startTime, endTime, storeId }) => {
-    // Query all analytics events in time range
-    // Note: Using filter instead of withIndex due to TypeScript limitations with timestamp index
+    // Query analytics events using index for efficiency
     const allEvents = await ctx.db
       .query("analyticsEvents")
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("timestamp"), startTime),
-          q.lte(q.field("timestamp"), endTime)
-        )
+      .withIndex("by_timestamp", (q) =>
+        q.gte("timestamp", startTime).lte("timestamp", endTime)
       )
       .collect();
-    
+
     // Filter by storeId if provided (creator scope)
     const events = storeId
       ? allEvents.filter((e) => e.storeId === storeId)
       : allEvents;
-    
+
     // 1. New signups
     const signups = events.filter((e) => e.eventType === "signup");
-    
+
     // 2. New creator signups
     const creatorSignups = events.filter((e) => e.eventType === "creator_started");
+
+    // 3. Learner activation rate - use analyticsEvents enrollment events instead of userEvents
+    const enrollmentEvents = events.filter((e) => e.eventType === "enrollment");
+    const enrolledUserIds = new Set(enrollmentEvents.map((e) => e.userId));
     
-    // 3. Learner activation rate
-    // Query userEvents for enrollments
-    // Note: userEvents doesn't have by_timestamp index, using filter instead
-    const allUserEvents = await ctx.db
-      .query("userEvents")
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("timestamp"), startTime),
-          q.lte(q.field("timestamp"), endTime)
-        )
-      )
-      .collect();
-    
-    const enrollments = allUserEvents.filter((e) => e.eventType === "course_enrolled");
-    
-    // Get unique users who enrolled
-    const enrolledUserIds = new Set(enrollments.map((e) => e.userId));
-    
-    // If storeId provided, filter enrollments by store's courses
-    let filteredEnrollments = enrolledUserIds.size;
-    if (storeId) {
-      // Get store's courses
-      const store = await ctx.db
-        .query("stores")
-        .filter((q) => q.eq(q.field("_id"), storeId))
-        .first();
-      
-      if (store) {
-        const storeCourses = await ctx.db
-          .query("courses")
-          .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect();
-        
-        const storeCourseIds = new Set(storeCourses.map((c) => c._id));
-        
-        filteredEnrollments = enrollments.filter((e) =>
-          e.courseId && storeCourseIds.has(e.courseId)
-        ).length;
-      }
-    }
-    
+    // Calculate learner activation rate
+    const filteredEnrollments = enrolledUserIds.size;
+
     const learnerActivationRate = signups.length > 0
       ? (filteredEnrollments / signups.length) * 100
       : 0;
