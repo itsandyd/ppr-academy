@@ -63,7 +63,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
   // Handle store deletion
   const handleDeleteStore = async (storeId: string, name: string) => {
     try {
-      await deleteStore({ id: storeId as any });
+      await deleteStore({ id: storeId as any, userId });
 
       toast({
         title: "Store deleted",

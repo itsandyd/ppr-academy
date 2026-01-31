@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 /**
  * Get all achievements for a user
@@ -122,6 +123,8 @@ export const unlockAchievement = mutation({
       .unique();
 
     const newXP = (xpRecord?.totalXP || 0) + args.xpReward;
+    const newLevel = Math.floor(newXP / 100) + 1;
+    const oldLevel = Math.floor((xpRecord?.totalXP || 0) / 100) + 1;
 
     if (xpRecord) {
       await ctx.db.patch(xpRecord._id, {
@@ -133,6 +136,15 @@ export const unlockAchievement = mutation({
         userId: args.userId,
         totalXP: newXP,
         lastXPGain: Date.now()
+      });
+    }
+
+    // Trigger expert level nudge if just reached level 8+
+    if (newLevel >= 8 && oldLevel < 8) {
+      await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerExpertLevel, {
+        userId: args.userId,
+        level: newLevel,
+        totalXP: newXP,
       });
     }
 

@@ -30,6 +30,12 @@ type NudgeContext =
   | "enrollment_count"      // After enrolling in X courses
   | "first_login"           // First time user
   | "returning_learner"     // User with activity but no store
+  | "first_enrollment"      // First course enrolled
+  | "lessons_milestone"     // 5+ lessons completed
+  | "share_progress"        // Share your progress prompt
+  | "expert_level"          // Expert level (L8+)
+  | "creator_profile_views" // Viewed 3+ creator profiles
+  | "leaderboard_visit"     // Visited leaderboard page
   | "default";              // Default nudge
 
 interface BecomeCreatorCardProps {
@@ -41,6 +47,13 @@ interface BecomeCreatorCardProps {
     xpMilestone?: number;
     quizName?: string;
     enrollmentCount?: number;
+    lessonCount?: number;
+    level?: number;
+    expertTitle?: string;
+    progressPercentage?: number;
+    totalCertificates?: number;
+    viewCount?: number;
+    userLevel?: number;
   };
 }
 
@@ -67,9 +80,13 @@ const getNudgeMessage = (context: NudgeContext, contextData?: BecomeCreatorCardP
       };
     case "certificate_earned":
       return {
-        title: "Certified & Ready to Teach!",
-        subtitle: "Your certificate proves your skills. Now monetize them!",
-        cta: "Become a Creator",
+        title: contextData?.totalCertificates && contextData.totalCertificates > 1
+          ? `${contextData.totalCertificates} Certificates! Showcase Your Credentials`
+          : "Certified & Ready to Teach!",
+        subtitle: contextData?.totalCertificates && contextData.totalCertificates > 1
+          ? "Your credentials prove your expertise. Build a store to showcase them!"
+          : "Your certificate proves your skills. Now monetize them!",
+        cta: "Showcase Your Credentials",
       };
     case "enrollment_count":
       return {
@@ -82,6 +99,42 @@ const getNudgeMessage = (context: NudgeContext, contextData?: BecomeCreatorCardP
         title: "Welcome Back, Expert!",
         subtitle: "Your learning journey shows dedication. Share what you know!",
         cta: "Become a Creator",
+      };
+    case "first_enrollment":
+      return {
+        title: "Great Choice! You Could Teach This",
+        subtitle: `Learning ${contextData?.courseName || "this topic"}? Share your own unique perspective with others.`,
+        cta: "Explore Creating",
+      };
+    case "lessons_milestone":
+      return {
+        title: `${contextData?.lessonCount || 5}+ Lessons! You're On a Roll`,
+        subtitle: "Your dedication shows. Others want to learn from committed learners like you!",
+        cta: "Share Your Progress",
+      };
+    case "share_progress":
+      return {
+        title: `${contextData?.progressPercentage || 50}% Complete! Share Your Journey`,
+        subtitle: `You're making great progress on ${contextData?.courseName || "this course"}. Inspire others!`,
+        cta: "Share Your Progress",
+      };
+    case "expert_level":
+      return {
+        title: `${contextData?.expertTitle || "Expert"} Level ${contextData?.level || 8}! Your Expertise is Valuable`,
+        subtitle: "You've proven your dedication. Now turn that expertise into income!",
+        cta: "Monetize Your Skills",
+      };
+    case "creator_profile_views":
+      return {
+        title: "Exploring Creators? Start Your Own Store!",
+        subtitle: `You've viewed ${contextData?.viewCount || 3}+ creator profiles. Why not create your own?`,
+        cta: "Start Your Store",
+      };
+    case "leaderboard_visit":
+      return {
+        title: `Level ${contextData?.userLevel || 1} Learner! Join Top Creators`,
+        subtitle: "You're already on the leaderboard. Take it further by creating and earning!",
+        cta: "Join Top Creators",
       };
     default:
       return {

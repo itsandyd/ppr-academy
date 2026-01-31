@@ -978,6 +978,12 @@ export const createCourseEnrollment = mutation({
       });
     }
 
+    // Trigger first enrollment conversion nudge
+    await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerFirstEnrollment, {
+      userId: args.userId,
+      courseId: args.courseId,
+    });
+
     return purchaseId;
   },
 });

@@ -827,7 +827,11 @@ export type DataModel = {
         | "error"
         | "webhook_failed"
         | "creator_xp_earned"
-        | "creator_nudge_triggered";
+        | "creator_nudge_triggered"
+        | "conversion_nudge_triggered"
+        | "nudge_shown"
+        | "nudge_dismissed"
+        | "nudge_converted";
       ipAddress?: string;
       metadata?: {
         action?: string;
@@ -835,6 +839,7 @@ export type DataModel = {
         audience_size?: number;
         browser?: string;
         campaign_id?: string;
+        certificateCount?: number;
         city?: string;
         country?: string;
         courseId?: string;
@@ -846,10 +851,15 @@ export type DataModel = {
         error_code?: string;
         error_message?: string;
         experiment_id?: string;
+        lastNudgeContext?: string;
+        leaderboardType?: string;
+        lessonCount?: number;
+        level?: number;
         leveledUp?: boolean;
         newLevel?: number;
         newTotal?: number;
         nudgeContext?: string;
+        nudgeType?: string;
         os?: string;
         page?: string;
         product_id?: string;
@@ -862,6 +872,7 @@ export type DataModel = {
         utm_source?: string;
         value?: number;
         variant?: string;
+        viewCount?: number;
         xpAwarded?: number;
       };
       resourceId?: string;
@@ -890,6 +901,7 @@ export type DataModel = {
       | "metadata.audience_size"
       | "metadata.browser"
       | "metadata.campaign_id"
+      | "metadata.certificateCount"
       | "metadata.city"
       | "metadata.country"
       | "metadata.courseId"
@@ -901,10 +913,15 @@ export type DataModel = {
       | "metadata.error_code"
       | "metadata.error_message"
       | "metadata.experiment_id"
+      | "metadata.lastNudgeContext"
+      | "metadata.leaderboardType"
+      | "metadata.lessonCount"
+      | "metadata.level"
       | "metadata.leveledUp"
       | "metadata.newLevel"
       | "metadata.newTotal"
       | "metadata.nudgeContext"
+      | "metadata.nudgeType"
       | "metadata.os"
       | "metadata.page"
       | "metadata.product_id"
@@ -917,6 +934,7 @@ export type DataModel = {
       | "metadata.utm_source"
       | "metadata.value"
       | "metadata.variant"
+      | "metadata.viewCount"
       | "metadata.xpAwarded"
       | "resourceId"
       | "resourceType"
@@ -11096,6 +11114,12 @@ export type DataModel = {
         | "enrollment_count"
         | "first_login"
         | "returning_learner"
+        | "first_enrollment"
+        | "lessons_milestone"
+        | "share_progress"
+        | "expert_level"
+        | "creator_profile_views"
+        | "leaderboard_visit"
         | "default";
       nudgeType:
         | "become_creator"

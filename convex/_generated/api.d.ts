@@ -5861,6 +5861,56 @@ export declare const api: {
       }
     >;
   };
+  conversionNudges: {
+    dismissNudge: FunctionReference<
+      "mutation",
+      "public",
+      { nudgeId: Id<"userNudges">; userId: string },
+      any
+    >;
+    getActiveNudges: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    getCreatorProfileViewNudge: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    getPriorityNudge: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    markNudgeConverted: FunctionReference<
+      "mutation",
+      "public",
+      { nudgeContext: string; userId: string },
+      any
+    >;
+    markNudgeShown: FunctionReference<
+      "mutation",
+      "public",
+      { nudgeId: Id<"userNudges">; userId: string },
+      any
+    >;
+    trackCreatorProfileView: FunctionReference<
+      "mutation",
+      "public",
+      { creatorId: string; storeId?: Id<"stores">; userId: string },
+      any
+    >;
+    trackLeaderboardVisit: FunctionReference<
+      "mutation",
+      "public",
+      { leaderboardType?: string; userId: string },
+      any
+    >;
+  };
   copyright: {
     getCopyrightReports: FunctionReference<
       "query",
@@ -21606,6 +21656,44 @@ export declare const internal: {
         sessionId: Id<"coachingSessions">;
       },
       null
+    >;
+  };
+  conversionNudges: {
+    checkConversionTriggers: FunctionReference<
+      "mutation",
+      "internal",
+      { activityType: string; metadata?: any; userId: string },
+      any
+    >;
+    triggerCertificateShowcase: FunctionReference<
+      "mutation",
+      "internal",
+      { certificateId: string; courseName: string; userId: string },
+      any
+    >;
+    triggerExpertLevel: FunctionReference<
+      "mutation",
+      "internal",
+      { level: number; totalXP: number; userId: string },
+      any
+    >;
+    triggerFirstEnrollment: FunctionReference<
+      "mutation",
+      "internal",
+      { courseId: Id<"courses">; userId: string },
+      any
+    >;
+    triggerLessonsMilestone: FunctionReference<
+      "mutation",
+      "internal",
+      { lessonCount: number; userId: string },
+      any
+    >;
+    triggerShareProgress: FunctionReference<
+      "mutation",
+      "internal",
+      { courseId: Id<"courses">; progressPercentage: number; userId: string },
+      any
     >;
   };
   copyrightEmails: {

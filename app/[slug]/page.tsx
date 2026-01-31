@@ -35,6 +35,7 @@ import { ArtistShowcase } from "@/components/music/artist-showcase";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { useCreatorProfileViewTracking } from "@/hooks/useConversionTracking";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -430,6 +431,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { userId: store.userId } : "skip"
   );
 
+  // Track creator profile view for conversion nudges
+  useCreatorProfileViewTracking(store?.userId, store?._id);
 
   // Combine all product types into unified list with BaseProduct shape
   const allProducts: BaseProduct[] = useMemo(

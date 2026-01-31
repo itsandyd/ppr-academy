@@ -299,6 +299,31 @@ export const markChapterComplete = mutation({
       certificateIssued = true;
     }
 
+    // Trigger lesson milestone conversion nudge if not already complete
+    if (!wasAlreadyComplete) {
+      // Get total completed lessons across all courses for this user
+      const allCompletedLessons = await ctx.db
+        .query("userProgress")
+        .withIndex("by_user_completed", (q: any) =>
+          q.eq("userId", args.userId).eq("isCompleted", true)
+        )
+        .collect();
+
+      await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerLessonsMilestone, {
+        userId: args.userId,
+        lessonCount: allCompletedLessons.length,
+      });
+
+      // Trigger share progress nudge at key progress milestones
+      if ([25, 50, 75].includes(progress.completionPercentage)) {
+        await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerShareProgress, {
+          userId: args.userId,
+          courseId: args.courseId,
+          progressPercentage: progress.completionPercentage,
+        });
+      }
+    }
+
     return {
       progressId,
       courseComplete: progress.completionPercentage === 100,
@@ -485,6 +510,13 @@ export const checkAndIssueCertificate = internalMutation({
           createdAt: now,
         });
       }
+
+      // Trigger certificate showcase nudge
+      await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerCertificateShowcase, {
+        userId: args.userId,
+        certificateId,
+        courseName: course.title,
+      });
     }
 
     return {

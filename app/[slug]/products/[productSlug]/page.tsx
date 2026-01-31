@@ -76,7 +76,6 @@ export default function ProductPage({ params }: ProductPageProps) {
   );
 
   // Mutations
-  const createContact = useMutation(api.emailContacts.createContact);
   const submitLead = useMutation(api.leadSubmissions.submitLead);
 
   // Redirect to specialized pages for certain product types
@@ -262,19 +261,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     setIsSubmitting(true);
     try {
-      const nameParts = name.trim().split(" ");
-      const firstName = nameParts[0] || undefined;
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
-
-      await createContact({
-        storeId: store._id,
-        email: emailToUse.toLowerCase(),
-        firstName,
-        lastName,
-        source: "product_page",
-        sourceProductId: product._id,
-      });
-
+      // Submit lead - this handles contact creation via email workflows
       if (isFree) {
         await submitLead({
           name: name.trim() || emailToUse.split("@")[0],
@@ -583,22 +570,15 @@ export default function ProductPage({ params }: ProductPageProps) {
                       className="w-full"
                       size="lg"
                       onClick={() => {
-                        // If email was captured via wizard, submit it
+                        // If email was captured via wizard, submit lead
                         if (capturedEmail && store) {
-                          createContact({
-                            storeId: store._id,
+                          submitLead({
+                            name: capturedEmail.split("@")[0],
                             email: capturedEmail.toLowerCase(),
+                            productId: product._id,
+                            storeId: store._id,
+                            adminUserId: store.userId,
                             source: "product_page",
-                            sourceProductId: product._id,
-                          }).then(() => {
-                            submitLead({
-                              name: capturedEmail.split("@")[0],
-                              email: capturedEmail.toLowerCase(),
-                              productId: product._id,
-                              storeId: store._id,
-                              adminUserId: store.userId,
-                              source: "product_page",
-                            });
                           }).catch(() => {});
                         }
                         setHasSubmittedEmail(true);

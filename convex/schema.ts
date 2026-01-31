@@ -2230,7 +2230,12 @@ export default defineSchema({
       v.literal("webhook_failed"),
       // Creator XP & nudge events
       v.literal("creator_xp_earned"),
-      v.literal("creator_nudge_triggered")
+      v.literal("creator_nudge_triggered"),
+      // Conversion nudge tracking events
+      v.literal("conversion_nudge_triggered"),
+      v.literal("nudge_shown"),
+      v.literal("nudge_dismissed"),
+      v.literal("nudge_converted")
     ),
     resourceId: v.optional(v.string()), // courseId, productId, etc.
     resourceType: v.optional(
@@ -2284,6 +2289,14 @@ export default defineSchema({
         nudgeContext: v.optional(v.string()),
         courseName: v.optional(v.string()),
         courseId: v.optional(v.string()),
+        // Conversion nudge tracking
+        nudgeType: v.optional(v.string()),
+        lessonCount: v.optional(v.number()),
+        certificateCount: v.optional(v.number()),
+        level: v.optional(v.number()),
+        viewCount: v.optional(v.number()),
+        leaderboardType: v.optional(v.string()),
+        lastNudgeContext: v.optional(v.string()),
       })
     ),
     sessionId: v.optional(v.string()),
@@ -4356,6 +4369,12 @@ export default defineSchema({
       v.literal("enrollment_count"),
       v.literal("first_login"),
       v.literal("returning_learner"),
+      v.literal("first_enrollment"),
+      v.literal("lessons_milestone"),
+      v.literal("share_progress"),
+      v.literal("expert_level"),
+      v.literal("creator_profile_views"),
+      v.literal("leaderboard_visit"),
       v.literal("default")
     ),
     contextData: v.optional(v.any()), // Course name, XP milestone, etc.

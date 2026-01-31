@@ -92,7 +92,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
         if (product?.type === 'course') {
           await deleteCourse({ courseId: productId as any, userId: user?.id || '' });
         } else {
-          await deleteProduct({ id: productId as any });
+          await deleteProduct({ id: productId as any, userId: user?.id || '' });
         }
         
         toast.success('Product deleted successfully');

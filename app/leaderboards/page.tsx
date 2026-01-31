@@ -4,25 +4,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  TopCreatorsLeaderboard, 
-  TopStudentsLeaderboard, 
-  ActiveUsersLeaderboard 
+import {
+  TopCreatorsLeaderboard,
+  TopStudentsLeaderboard,
+  ActiveUsersLeaderboard
 } from "@/components/gamification/leaderboard";
-import { 
-  Trophy, 
-  Crown, 
-  Star, 
-  Flame, 
+import {
+  Trophy,
+  Crown,
+  Star,
+  Flame,
   TrendingUp,
   Award,
   Users,
-  Sparkles
+  Sparkles,
+  DollarSign,
+  ArrowRight
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useLeaderboardVisitTracking, usePriorityNudge } from "@/hooks/useConversionTracking";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/nextjs";
 
 export default function LeaderboardsPage() {
+  // Track leaderboard visit for conversion nudges
+  useLeaderboardVisitTracking("all");
+
+  const { userId } = useAuth();
+  const user = useQuery(api.users.getUserFromClerk, userId ? { clerkId: userId } : "skip");
+  const nudge = usePriorityNudge();
+
+  // Check if user is already a creator
+  const isCreator = user?.isCreator;
   return (
     <div className="container max-w-6xl mx-auto py-8 space-y-8">
       {/* Hero Section */}
@@ -190,43 +205,77 @@ export default function LeaderboardsPage() {
         </Tabs>
       </motion.div>
 
-      {/* CTA Section */}
+      {/* CTA Section - Personalized based on user status */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0">
-          <CardContent className="p-8 text-center">
-            <Trophy className="w-16 h-16 mx-auto mb-4 opacity-90" />
-            <h3 className="text-2xl font-bold mb-2">Want to See Your Name Here?</h3>
-            <p className="text-white/90 mb-6 max-w-md mx-auto">
-              Start creating amazing content, engage with the community, and climb your way to the top!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button 
-                size="lg" 
-                variant="secondary"
-                className="bg-white text-purple-600 hover:bg-white/90"
-                asChild
-              >
-                <Link href="/home">
-                  Create Your First Product
-                </Link>
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="border-white text-white hover:bg-white/10"
-                asChild
-              >
-                <Link href="/library">
-                  Start Learning
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {!isCreator ? (
+          <Card className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white border-0 overflow-hidden relative">
+            <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            <CardContent className="p-8 text-center relative z-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full mb-4">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium">Join Top Creators</span>
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Ready to Climb the Creator Leaderboard?</h3>
+              <p className="text-white/90 mb-6 max-w-lg mx-auto">
+                Turn your skills into income! Create courses, sample packs, and presets. Earn 90% on every sale and compete with the best.
+              </p>
+              <div className="flex items-center justify-center gap-6 mb-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  <span className="font-medium">90% Revenue</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  <span className="font-medium">Climb Rankings</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  <span className="font-medium">Built-in Audience</span>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  size="lg"
+                  className="bg-white text-purple-600 hover:bg-white/90"
+                  asChild
+                >
+                  <Link href="/dashboard?mode=create">
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Become a Creator
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0">
+            <CardContent className="p-8 text-center">
+              <Trophy className="w-16 h-16 mx-auto mb-4 opacity-90" />
+              <h3 className="text-2xl font-bold mb-2">Keep Climbing!</h3>
+              <p className="text-white/90 mb-6 max-w-md mx-auto">
+                Create more products, engage with your community, and climb your way to the top!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="bg-white text-purple-600 hover:bg-white/90"
+                  asChild
+                >
+                  <Link href="/dashboard?mode=create">
+                    Create More Products
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </motion.div>
     </div>
   );

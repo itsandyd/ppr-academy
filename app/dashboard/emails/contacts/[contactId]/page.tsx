@@ -103,6 +103,7 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
   const handleSaveEdit = async () => {
     try {
       await updateContact({
+        userId: user?.id || "",
         contactId: contactId as Id<"emailContacts">,
         firstName: editForm.firstName || undefined,
         lastName: editForm.lastName || undefined,
@@ -119,6 +120,7 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
 
     try {
       await updateContact({
+        userId: user?.id || "",
         contactId: contactId as Id<"emailContacts">,
         status: "unsubscribed",
       });
@@ -131,6 +133,7 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
   const handleResubscribe = async () => {
     try {
       await updateContact({
+        userId: user?.id || "",
         contactId: contactId as Id<"emailContacts">,
         status: "subscribed",
       });
@@ -144,7 +147,7 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
     if (!confirm("Delete this contact and all their activity history?")) return;
 
     try {
-      await deleteContact({ contactId: contactId as Id<"emailContacts"> });
+      await deleteContact({ userId: user?.id || "", contactId: contactId as Id<"emailContacts"> });
       toast({ title: "Contact deleted" });
       router.push("/dashboard/emails?mode=create");
     } catch {

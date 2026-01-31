@@ -129,6 +129,7 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
     try {
       await createContact({
         storeId,
+        userId: user?.id || '',
         email: newContact.email,
         firstName: newContact.firstName || undefined,
         lastName: newContact.lastName || undefined,
@@ -502,7 +503,7 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
                     contact={contact}
                     onDelete={async () => {
                       try {
-                        await deleteContact({ contactId: contact._id });
+                        await deleteContact({ userId: user?.id || '', contactId: contact._id });
                         toast({ title: 'Contact deleted' });
                       } catch (error: any) {
                         toast({ title: 'Failed to delete', variant: 'destructive' });
