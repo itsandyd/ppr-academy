@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import {
   Sparkles,
   ChevronRight,
   Globe,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -287,6 +288,8 @@ function SequenceCard({
 }
 
 export function AdminEmailFunnelOverview() {
+  const router = useRouter();
+
   // Get admin workflows to check which sequences are configured
   const adminWorkflows = useQuery(api.emailWorkflows.listAdminWorkflows, {});
 
@@ -300,6 +303,11 @@ export function AdminEmailFunnelOverview() {
 
   const activeCount = platformSequences.filter(n => n.status === "active").length;
   const totalEmails = platformSequences.reduce((acc, n) => acc + n.emailCount, 0);
+
+  // Navigate to workflow editor with sequence type pre-selected
+  const handleSequenceClick = (sequenceId: SequenceType) => {
+    router.push(`/admin/emails?tab=workflows&sequence=${sequenceId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -423,6 +431,7 @@ export function AdminEmailFunnelOverview() {
                 key={node.id}
                 node={node}
                 showArrow={index < mainFlow.length - 1}
+                onClick={() => handleSequenceClick(node.id)}
               />
             ))}
           </div>
@@ -439,6 +448,7 @@ export function AdminEmailFunnelOverview() {
                   key={node.id}
                   node={node}
                   showArrow={false}
+                  onClick={() => handleSequenceClick(node.id)}
                 />
               ))}
             </div>
@@ -463,22 +473,31 @@ export function AdminEmailFunnelOverview() {
               key={node.id}
               node={node}
               showArrow={index < recoveryFlow.length - 1}
+              onClick={() => handleSequenceClick(node.id)}
             />
           ))}
 
-          {/* Documentation Link */}
+          {/* Quick Actions */}
           <Card className="mt-6 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-cyan-200 dark:border-cyan-900">
             <CardContent className="p-4">
-              <h4 className="font-semibold text-sm mb-2">Email Sequence Docs</h4>
+              <h4 className="font-semibold text-sm mb-2">Quick Actions</h4>
               <p className="text-xs text-muted-foreground mb-3">
-                Full documentation for each sequence including email copy templates.
+                Set up automated sequences or create new workflows.
               </p>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/admin/emails/workflows">
-                  <ChevronRight className="h-3 w-3 mr-1" />
-                  View Documentation
-                </Link>
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" size="sm" className="justify-start" asChild>
+                  <Link href="/admin/emails?tab=workflows">
+                    <Settings className="h-3 w-3 mr-2" />
+                    Manage Workflows
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" className="justify-start" asChild>
+                  <Link href="/admin/emails?tab=templates">
+                    <Mail className="h-3 w-3 mr-2" />
+                    Email Templates
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -264,7 +264,7 @@ function SequenceCard({
 }
 
 export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
-  const [selectedSequence, setSelectedSequence] = useState<SequenceType | null>(null);
+  const router = useRouter();
 
   // Get workflows to check which sequences are configured
   const workflows = useQuery(api.emailWorkflows.listWorkflows, { storeId });
@@ -276,6 +276,11 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
   const mainFlow = sequenceNodes.filter(n => n.position === "main");
   const branchFlow = sequenceNodes.filter(n => n.position === "branch");
   const recoveryFlow = sequenceNodes.filter(n => n.position === "recovery");
+
+  // Navigate to workflow editor with sequence type pre-selected
+  const handleSequenceClick = (sequenceId: SequenceType) => {
+    router.push(`/dashboard/emails/sequences?type=${sequenceId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -380,7 +385,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
                 key={node.id}
                 node={node}
                 showArrow={index < mainFlow.length - 1}
-                onClick={() => setSelectedSequence(node.id)}
+                onClick={() => handleSequenceClick(node.id)}
               />
             ))}
           </div>
@@ -397,7 +402,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
                   key={node.id}
                   node={node}
                   showArrow={false}
-                  onClick={() => setSelectedSequence(node.id)}
+                  onClick={() => handleSequenceClick(node.id)}
                 />
               ))}
             </div>
@@ -422,7 +427,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
               key={node.id}
               node={node}
               showArrow={index < recoveryFlow.length - 1}
-              onClick={() => setSelectedSequence(node.id)}
+              onClick={() => handleSequenceClick(node.id)}
             />
           ))}
 
