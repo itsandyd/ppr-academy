@@ -6772,6 +6772,134 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  marketingCampaigns: {
+    document: {
+      analytics?: {
+        conversions?: number;
+        emailClicks?: number;
+        emailOpens?: number;
+        revenue?: number;
+        socialEngagement?: number;
+        socialImpressions?: number;
+      };
+      campaignType:
+        | "product_launch"
+        | "welcome_onboarding"
+        | "flash_sale"
+        | "reengagement"
+        | "course_milestone"
+        | "seasonal_holiday";
+      courseId?: Id<"courses">;
+      createdAt: number;
+      description?: string;
+      emailContent?: {
+        body: string;
+        ctaText?: string;
+        previewText?: string;
+        subject: string;
+      };
+      facebookContent?: { callToAction?: string; post: string };
+      instagramContent?: {
+        caption: string;
+        hashtags: Array<string>;
+        suggestedImageStyle?: string;
+      };
+      linkedinContent?: { hashtags: Array<string>; post: string };
+      name: string;
+      productId?: Id<"digitalProducts">;
+      scheduledPlatforms?: Array<{
+        emailCampaignId?: Id<"emailCampaigns">;
+        enabled: boolean;
+        error?: string;
+        platform:
+          | "email"
+          | "instagram"
+          | "twitter"
+          | "facebook"
+          | "linkedin"
+          | "tiktok";
+        postId?: string;
+        scheduledAt?: number;
+        scheduledPostId?: Id<"scheduledPosts">;
+        status: "pending" | "sent" | "failed" | "skipped";
+      }>;
+      status: "draft" | "scheduled" | "active" | "completed" | "paused";
+      storeId: string;
+      templateId: string;
+      tiktokContent?: {
+        caption: string;
+        hashtags: Array<string>;
+        hookLine?: string;
+      };
+      twitterContent?: {
+        hashtags?: Array<string>;
+        threadPosts?: Array<string>;
+        tweet: string;
+      };
+      updatedAt: number;
+      userId: string;
+      variableValues?: any;
+      _id: Id<"marketingCampaigns">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "analytics"
+      | "analytics.conversions"
+      | "analytics.emailClicks"
+      | "analytics.emailOpens"
+      | "analytics.revenue"
+      | "analytics.socialEngagement"
+      | "analytics.socialImpressions"
+      | "campaignType"
+      | "courseId"
+      | "createdAt"
+      | "description"
+      | "emailContent"
+      | "emailContent.body"
+      | "emailContent.ctaText"
+      | "emailContent.previewText"
+      | "emailContent.subject"
+      | "facebookContent"
+      | "facebookContent.callToAction"
+      | "facebookContent.post"
+      | "instagramContent"
+      | "instagramContent.caption"
+      | "instagramContent.hashtags"
+      | "instagramContent.suggestedImageStyle"
+      | "linkedinContent"
+      | "linkedinContent.hashtags"
+      | "linkedinContent.post"
+      | "name"
+      | "productId"
+      | "scheduledPlatforms"
+      | "status"
+      | "storeId"
+      | "templateId"
+      | "tiktokContent"
+      | "tiktokContent.caption"
+      | "tiktokContent.hashtags"
+      | "tiktokContent.hookLine"
+      | "twitterContent"
+      | "twitterContent.hashtags"
+      | "twitterContent.threadPosts"
+      | "twitterContent.tweet"
+      | "updatedAt"
+      | "userId"
+      | "variableValues";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_campaignType: ["campaignType", "_creationTime"];
+      by_status: ["status", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_store_status: ["storeId", "status", "_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   membershipSubscriptions: {
     document: {
       amountPaid: number;

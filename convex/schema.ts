@@ -1973,6 +1973,104 @@ export default defineSchema({
     .index("by_adminUserId", ["adminUserId"])
     .index("by_category", ["category"]),
 
+  // Marketing Campaigns - Multi-platform campaigns (email + social media)
+  marketingCampaigns: defineTable({
+    storeId: v.string(), // "admin" for admin campaigns
+    userId: v.string(), // Clerk ID
+    templateId: v.string(), // Reference to template
+    name: v.string(),
+    description: v.optional(v.string()),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("active"),
+      v.literal("completed"),
+      v.literal("paused")
+    ),
+    campaignType: v.union(
+      v.literal("product_launch"),
+      v.literal("welcome_onboarding"),
+      v.literal("flash_sale"),
+      v.literal("reengagement"),
+      v.literal("course_milestone"),
+      v.literal("seasonal_holiday")
+    ),
+    // Product reference (if applicable)
+    productId: v.optional(v.id("digitalProducts")),
+    courseId: v.optional(v.id("courses")),
+    // Variable values filled by user (productName, productUrl, etc.)
+    variableValues: v.optional(v.any()),
+    // Customized platform content (overrides template defaults)
+    emailContent: v.optional(v.object({
+      subject: v.string(),
+      previewText: v.optional(v.string()),
+      body: v.string(),
+      ctaText: v.optional(v.string()),
+    })),
+    instagramContent: v.optional(v.object({
+      caption: v.string(),
+      hashtags: v.array(v.string()),
+      suggestedImageStyle: v.optional(v.string()),
+    })),
+    twitterContent: v.optional(v.object({
+      tweet: v.string(),
+      threadPosts: v.optional(v.array(v.string())),
+      hashtags: v.optional(v.array(v.string())),
+    })),
+    facebookContent: v.optional(v.object({
+      post: v.string(),
+      callToAction: v.optional(v.string()),
+    })),
+    linkedinContent: v.optional(v.object({
+      post: v.string(),
+      hashtags: v.array(v.string()),
+    })),
+    tiktokContent: v.optional(v.object({
+      caption: v.string(),
+      hashtags: v.array(v.string()),
+      hookLine: v.optional(v.string()),
+    })),
+    // Platform scheduling
+    scheduledPlatforms: v.optional(v.array(v.object({
+      platform: v.union(
+        v.literal("email"),
+        v.literal("instagram"),
+        v.literal("twitter"),
+        v.literal("facebook"),
+        v.literal("linkedin"),
+        v.literal("tiktok")
+      ),
+      enabled: v.boolean(),
+      scheduledAt: v.optional(v.number()),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("sent"),
+        v.literal("failed"),
+        v.literal("skipped")
+      ),
+      postId: v.optional(v.string()), // Reference to social post or email
+      emailCampaignId: v.optional(v.id("emailCampaigns")),
+      scheduledPostId: v.optional(v.id("scheduledPosts")),
+      error: v.optional(v.string()),
+    }))),
+    // Analytics aggregated
+    analytics: v.optional(v.object({
+      emailOpens: v.optional(v.number()),
+      emailClicks: v.optional(v.number()),
+      socialImpressions: v.optional(v.number()),
+      socialEngagement: v.optional(v.number()),
+      conversions: v.optional(v.number()),
+      revenue: v.optional(v.number()),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_campaignType", ["campaignType"])
+    .index("by_store_status", ["storeId", "status"]),
+
   // RAG System - Vector Embeddings
   embeddings: defineTable({
     content: v.string(),

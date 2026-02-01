@@ -13533,6 +13533,189 @@ export declare const api: {
       any
     >;
   };
+  marketingCampaigns: {
+    createCampaign: FunctionReference<
+      "mutation",
+      "public",
+      {
+        campaignType:
+          | "product_launch"
+          | "welcome_onboarding"
+          | "flash_sale"
+          | "reengagement"
+          | "course_milestone"
+          | "seasonal_holiday";
+        courseId?: Id<"courses">;
+        description?: string;
+        emailContent?: any;
+        facebookContent?: any;
+        instagramContent?: any;
+        linkedinContent?: any;
+        name: string;
+        productId?: Id<"digitalProducts">;
+        storeId: string;
+        templateId: string;
+        tiktokContent?: any;
+        twitterContent?: any;
+        userId: string;
+        variableValues?: any;
+      },
+      Id<"marketingCampaigns">
+    >;
+    deleteCampaign: FunctionReference<
+      "mutation",
+      "public",
+      { campaignId: Id<"marketingCampaigns"> },
+      null
+    >;
+    duplicateCampaign: FunctionReference<
+      "mutation",
+      "public",
+      { campaignId: Id<"marketingCampaigns"> },
+      Id<"marketingCampaigns">
+    >;
+    getCampaign: FunctionReference<
+      "query",
+      "public",
+      { campaignId: Id<"marketingCampaigns"> },
+      any | null
+    >;
+    getCampaignStats: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      {
+        active: number;
+        completed: number;
+        draft: number;
+        paused: number;
+        scheduled: number;
+        total: number;
+      }
+    >;
+    listAdminCampaigns: FunctionReference<
+      "query",
+      "public",
+      {
+        campaignType?:
+          | "product_launch"
+          | "welcome_onboarding"
+          | "flash_sale"
+          | "reengagement"
+          | "course_milestone"
+          | "seasonal_holiday";
+        limit?: number;
+        status?: "draft" | "scheduled" | "active" | "completed" | "paused";
+      },
+      Array<any>
+    >;
+    listCampaigns: FunctionReference<
+      "query",
+      "public",
+      {
+        campaignType?:
+          | "product_launch"
+          | "welcome_onboarding"
+          | "flash_sale"
+          | "reengagement"
+          | "course_milestone"
+          | "seasonal_holiday";
+        limit?: number;
+        status?: "draft" | "scheduled" | "active" | "completed" | "paused";
+        storeId: string;
+      },
+      Array<any>
+    >;
+    schedulePlatform: FunctionReference<
+      "mutation",
+      "public",
+      {
+        campaignId: Id<"marketingCampaigns">;
+        enabled: boolean;
+        platform:
+          | "email"
+          | "instagram"
+          | "twitter"
+          | "facebook"
+          | "linkedin"
+          | "tiktok";
+        scheduledAt: number;
+      },
+      null
+    >;
+    updateAnalytics: FunctionReference<
+      "mutation",
+      "public",
+      {
+        analytics: {
+          conversions?: number;
+          emailClicks?: number;
+          emailOpens?: number;
+          revenue?: number;
+          socialEngagement?: number;
+          socialImpressions?: number;
+        };
+        campaignId: Id<"marketingCampaigns">;
+      },
+      null
+    >;
+    updateCampaign: FunctionReference<
+      "mutation",
+      "public",
+      {
+        analytics?: any;
+        campaignId: Id<"marketingCampaigns">;
+        description?: string;
+        emailContent?: any;
+        facebookContent?: any;
+        instagramContent?: any;
+        linkedinContent?: any;
+        name?: string;
+        scheduledPlatforms?: any;
+        status?: "draft" | "scheduled" | "active" | "completed" | "paused";
+        tiktokContent?: any;
+        twitterContent?: any;
+        variableValues?: any;
+      },
+      null
+    >;
+    updatePlatformContent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        campaignId: Id<"marketingCampaigns">;
+        content: any;
+        platform:
+          | "email"
+          | "instagram"
+          | "twitter"
+          | "facebook"
+          | "linkedin"
+          | "tiktok";
+      },
+      null
+    >;
+    updatePlatformStatus: FunctionReference<
+      "mutation",
+      "public",
+      {
+        campaignId: Id<"marketingCampaigns">;
+        emailCampaignId?: Id<"emailCampaigns">;
+        error?: string;
+        platform:
+          | "email"
+          | "instagram"
+          | "twitter"
+          | "facebook"
+          | "linkedin"
+          | "tiktok";
+        postId?: string;
+        scheduledPostId?: Id<"scheduledPosts">;
+        status: "pending" | "sent" | "failed" | "skipped";
+      },
+      null
+    >;
+  };
   marketplace: {
     getAllCreators: FunctionReference<
       "query",
