@@ -233,11 +233,17 @@ const sequenceTemplates: Record<string, SequenceTemplate> = {
 <p>Welcome to PPR Academy! We're thrilled to have you join our community of music producers.</p>
 <p>Here's what you can do now:</p>
 <ul>
-<li>Browse our course library</li>
-<li>Check out sample packs from top producers</li>
-<li>Start earning XP and climbing the leaderboard</li>
+<li><strong>Browse courses</strong> – Learn from top producers</li>
+<li><strong>Get sample packs</strong> – Professional sounds for your productions</li>
+<li><strong>Earn XP</strong> – Level up and climb the leaderboard</li>
 </ul>
-<p>Let's make some music!</p>
+<p style="margin-top: 24px;">
+<a href="{{platformUrl}}/courses" style="display: inline-block; background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Explore Courses →</a>
+</p>
+<p style="margin-top: 16px;">
+<a href="{{platformUrl}}/sample-packs" style="color: #7c3aed; text-decoration: underline;">Browse Sample Packs</a> · <a href="{{platformUrl}}/leaderboard" style="color: #7c3aed; text-decoration: underline;">View Leaderboard</a>
+</p>
+<p style="margin-top: 24px;">Let's make some music!</p>
 <p>– The PPR Team</p>`,
         },
       },
@@ -257,12 +263,22 @@ const sequenceTemplates: Record<string, SequenceTemplate> = {
           body: `<h2>Ready to level up?</h2>
 <p>Hey {{firstName}},</p>
 <p>Now that you've had a chance to look around, here are some tips to get the most out of PPR Academy:</p>
-<ol>
-<li><strong>Take a free course</strong> – Start with our beginner-friendly content</li>
-<li><strong>Download samples</strong> – Check out our free sample packs</li>
-<li><strong>Join the community</strong> – Connect with other producers</li>
-</ol>
-<p>Your current level: L{{level}} with {{xp}} XP</p>
+<div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 20px 0;">
+<p style="margin: 0 0 12px 0;"><strong>1. Take a free course</strong></p>
+<p style="margin: 0 0 8px 0; color: #6b7280;">Start with beginner-friendly content to build your foundation.</p>
+<a href="{{platformUrl}}/courses?filter=free" style="color: #7c3aed; text-decoration: underline;">Browse free courses →</a>
+</div>
+<div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 20px 0;">
+<p style="margin: 0 0 12px 0;"><strong>2. Download sample packs</strong></p>
+<p style="margin: 0 0 8px 0; color: #6b7280;">Get professional sounds to use in your productions.</p>
+<a href="{{platformUrl}}/sample-packs" style="color: #7c3aed; text-decoration: underline;">Explore sample packs →</a>
+</div>
+<div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin: 20px 0;">
+<p style="margin: 0 0 12px 0;"><strong>3. Check your dashboard</strong></p>
+<p style="margin: 0 0 8px 0; color: #6b7280;">Track your progress and see your XP grow.</p>
+<a href="{{platformUrl}}/dashboard" style="color: #7c3aed; text-decoration: underline;">Go to dashboard →</a>
+</div>
+<p>Your current level: <strong>L{{level}}</strong> with <strong>{{xp}} XP</strong></p>
 <p>Keep learning!</p>`,
         },
       },
@@ -278,15 +294,19 @@ const sequenceTemplates: Record<string, SequenceTemplate> = {
         position: { x: 250, y: 600 },
         data: {
           label: "Explore More",
-          subject: "Discover what's possible on PPR Academy",
+          subject: "Discover what's popular on PPR Academy this week",
           body: `<h2>You're doing great, {{firstName}}!</h2>
-<p>It's been almost a week since you joined. Here's what other producers are loving:</p>
-<ul>
-<li>Our most popular courses</li>
-<li>Top-rated sample packs</li>
-<li>Creator success stories</li>
-</ul>
-<p>Have questions? Just reply to this email – we're here to help.</p>
+<p>It's been almost a week since you joined. Here's what's trending on PPR Academy:</p>
+<div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0;">
+<p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280; text-transform: uppercase;">🔥 Trending This Week</p>
+<p style="margin: 0 0 4px 0;"><strong>{{topCourseThisWeek}}</strong></p>
+<a href="{{platformUrl}}/courses" style="color: #7c3aed; text-decoration: underline; font-size: 14px;">View all courses →</a>
+</div>
+<p><strong>{{newSamplePacksCount}} new sample packs</strong> were added this week. Don't miss out!</p>
+<p style="margin-top: 24px;">
+<a href="{{platformUrl}}/sample-packs?sort=newest" style="display: inline-block; background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">See New Sample Packs →</a>
+</p>
+<p style="margin-top: 24px; color: #6b7280;">Have questions? Just reply to this email – we read every message.</p>
 <p>Keep creating!</p>`,
         },
       },
@@ -720,13 +740,18 @@ const sequenceTemplates: Record<string, SequenceTemplate> = {
           subject: "{{firstName}}, we miss you at PPR Academy!",
           body: `<h2>Hey {{firstName}}, where'd you go?</h2>
 <p>We noticed you haven't been around lately. Everything okay?</p>
-<p>There's been some cool new stuff since you last visited:</p>
+<p>Since you've been away, here's what's new on PPR Academy:</p>
 <ul>
-<li>New courses added</li>
-<li>Fresh sample packs</li>
-<li>Community updates</li>
+<li><strong>{{newCoursesCount}} new courses</strong> added{{#if latestCourseName}} – including "{{latestCourseName}}"{{/if}}</li>
+<li><strong>{{newSamplePacksCount}} fresh sample packs</strong> from creators you might like</li>
+<li><strong>{{newCreatorsCount}} new creators</strong> have joined the community</li>
 </ul>
-<p>Come back and check it out!</p>`,
+<p style="margin-top: 24px;">
+<a href="{{platformUrl}}/courses" style="display: inline-block; background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Browse New Courses →</a>
+</p>
+<p style="margin-top: 16px;">
+<a href="{{platformUrl}}/sample-packs" style="color: #7c3aed; text-decoration: underline;">Check out new sample packs</a>
+</p>`,
         },
       },
       {
@@ -740,13 +765,32 @@ const sequenceTemplates: Record<string, SequenceTemplate> = {
         type: "email",
         position: { x: 250, y: 360 },
         data: {
-          label: "What You're Missing",
-          subject: "Here's what you're missing on PPR",
-          body: `<h2>Quick update for you</h2>
-<p>{{firstName}}, just wanted to share what's new:</p>
-<p>Your stats: Level {{level}} with {{xp}} XP</p>
+          label: "Your Progress",
+          subject: "Your PPR Academy progress (don't lose it!)",
+          body: `<h2>Your progress is waiting, {{firstName}}</h2>
+<p>Here's where you left off:</p>
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+<tr style="background: #f3f4f6;">
+<td style="padding: 12px; border-radius: 6px 0 0 6px;"><strong>Your Level</strong></td>
+<td style="padding: 12px;">L{{level}}</td>
+</tr>
+<tr>
+<td style="padding: 12px;"><strong>Total XP</strong></td>
+<td style="padding: 12px;">{{xp}} XP</td>
+</tr>
+<tr style="background: #f3f4f6;">
+<td style="padding: 12px;"><strong>Courses Enrolled</strong></td>
+<td style="padding: 12px;">{{coursesEnrolled}}</td>
+</tr>
+<tr>
+<td style="padding: 12px; border-radius: 0 0 0 6px;"><strong>Lessons Completed</strong></td>
+<td style="padding: 12px; border-radius: 0 0 6px 0;">{{lessonsCompleted}}</td>
+</tr>
+</table>
 <p>You were making great progress. Don't let that momentum slip away!</p>
-<p>Even 10 minutes today would keep you moving forward.</p>`,
+<p style="margin-top: 24px;">
+<a href="{{platformUrl}}/dashboard" style="display: inline-block; background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Continue Learning →</a>
+</p>`,
         },
       },
       {
@@ -761,11 +805,19 @@ const sequenceTemplates: Record<string, SequenceTemplate> = {
         position: { x: 250, y: 600 },
         data: {
           label: "Special Offer",
-          subject: "A little something to bring you back",
-          body: `<h2>We want you back</h2>
-<p>{{firstName}}, we really miss having you in the community.</p>
-<p>Here's a special offer just for you – come back and keep learning.</p>
-<p>Your music production journey is worth continuing.</p>`,
+          subject: "{{firstName}}, here's 20% off to come back",
+          body: `<h2>We want you back, {{firstName}}</h2>
+<p>It's been a few weeks since you logged in. We get it – life gets busy.</p>
+<p>To make coming back easier, here's a <strong>20% discount</strong> on any course or sample pack:</p>
+<div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+<p style="color: white; font-size: 14px; margin: 0;">Your exclusive code:</p>
+<p style="color: white; font-size: 28px; font-weight: bold; margin: 8px 0; letter-spacing: 2px;">COMEBACK20</p>
+<p style="color: rgba(255,255,255,0.8); font-size: 12px; margin: 0;">Valid for 7 days</p>
+</div>
+<p style="margin-top: 24px;">
+<a href="{{platformUrl}}/courses?discount=COMEBACK20" style="display: inline-block; background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Shop with 20% Off →</a>
+</p>
+<p style="color: #6b7280; font-size: 14px; margin-top: 24px;">Your music production journey is worth continuing. We're here when you're ready.</p>`,
         },
       },
     ],
@@ -1642,9 +1694,13 @@ export default function AdminWorkflowBuilderPage() {
 
                     {/* Personalization Variables */}
                     <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                      <p className="font-medium">Available Variables:</p>
+                      <p className="font-medium">User Variables:</p>
                       <p className="mt-1 text-xs">
-                        {"{{firstName}}, {{name}}, {{email}}, {{level}}, {{xp}}, {{coursesEnrolled}}, {{coursesCompleted}}, {{storeName}}, {{memberSince}}, {{daysSinceJoined}}, {{totalSpent}}"}
+                        {"{{firstName}}, {{name}}, {{email}}, {{level}}, {{xp}}, {{coursesEnrolled}}, {{lessonsCompleted}}, {{storeName}}, {{memberSince}}, {{daysSinceJoined}}, {{totalSpent}}"}
+                      </p>
+                      <p className="font-medium mt-2">Platform Variables:</p>
+                      <p className="mt-1 text-xs">
+                        {"{{platformUrl}}, {{newCoursesCount}}, {{latestCourseName}}, {{newSamplePacksCount}}, {{newCreatorsCount}}, {{topCourseThisWeek}}"}
                       </p>
                     </div>
 
