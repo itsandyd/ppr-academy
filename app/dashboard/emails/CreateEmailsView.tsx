@@ -81,6 +81,8 @@ import {
   Link2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { EmailFunnelOverview } from '@/components/emails/EmailFunnelOverview';
+import { LayoutDashboard } from 'lucide-react';
 
 interface CreateEmailsViewProps {
   convexUser: any;
@@ -92,7 +94,7 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
   const { toast } = useToast();
   const storeId = user?.id ?? '';
 
-  const [activeTab, setActiveTab] = useState('broadcast');
+  const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -327,6 +329,18 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
       <TooltipProvider>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-start overflow-x-auto bg-muted/50">
+            <TabsTrigger value="overview" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="hidden md:inline">Overview</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Email automation funnel overview</TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
+
             <TabsTrigger value="broadcast" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -378,6 +392,11 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
               </Tooltip>
             </TabsTrigger>
           </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-4 mt-6">
+            <EmailFunnelOverview storeId={storeId} />
+          </TabsContent>
 
           {/* Broadcast Tab */}
           <TabsContent value="broadcast" className="space-y-4 mt-6">

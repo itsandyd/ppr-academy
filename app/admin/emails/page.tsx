@@ -70,6 +70,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { AdminEmailFunnelOverview } from "@/components/emails/AdminEmailFunnelOverview";
+import { LayoutDashboard } from "lucide-react";
 
 // Admin Workflows Tab Component
 function AdminWorkflowsTab() {
@@ -712,8 +714,12 @@ export default function AdminEmailsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="creators" className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-5">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-6">
+            <TabsTrigger value="overview" className="text-base">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Overview
+            </TabsTrigger>
             <TabsTrigger value="creators" className="text-base">
               <Store className="mr-2 h-4 w-4" />
               Creators
@@ -735,6 +741,11 @@ export default function AdminEmailsPage() {
               Workflows
             </TabsTrigger>
           </TabsList>
+
+          {/* Overview Tab - Platform Email Funnel */}
+          <TabsContent value="overview" className="space-y-6">
+            <AdminEmailFunnelOverview />
+          </TabsContent>
 
           {/* Creators Tab - Broadcast to Creators */}
           <TabsContent value="creators" className="space-y-6">
