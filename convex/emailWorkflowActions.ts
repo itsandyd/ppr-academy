@@ -440,7 +440,7 @@ export const sendCustomWorkflowEmail = internalAction({
         .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
         .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
         // Clean up any Handlebars conditionals (basic support)
-        .replace(/\{\{#if\s+\w+\}\}(.*?)\{\{\/if\}\}/gs, "$1");
+        .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
     };
 
     const htmlContent = replaceAllVariables(args.content);
