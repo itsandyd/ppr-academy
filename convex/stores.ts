@@ -188,6 +188,124 @@ const generateSlug = (name: string): string => {
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 };
 
+// Create store from user profile (zero-friction auto-creation)
+// Uses user's existing profile data for instant store setup
+export const createStoreFromProfile = mutation({
+  args: {
+    userId: v.string(),
+    // Optional override - if not provided, pulls from user profile
+    name: v.optional(v.string()),
+  },
+  returns: v.object({
+    storeId: v.id("stores"),
+    storeName: v.string(),
+    storeSlug: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Check if user already has a store
+    const existingStore = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (existingStore) {
+      return {
+        storeId: existingStore._id,
+        storeName: existingStore.name,
+        storeSlug: existingStore.slug,
+      };
+    }
+
+    // Get user profile to pull name and avatar
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    // Determine store name: provided > firstName + lastName > name > email prefix > "My Store"
+    let storeName = args.name?.trim();
+    if (!storeName && user) {
+      if (user.firstName && user.lastName) {
+        storeName = `${user.firstName} ${user.lastName}`;
+      } else if (user.firstName) {
+        storeName = user.firstName;
+      } else if (user.name) {
+        storeName = user.name;
+      } else if (user.email) {
+        // Use email prefix as fallback
+        storeName = user.email.split("@")[0];
+      }
+    }
+    storeName = storeName || "My Store";
+
+    // Generate unique slug
+    let slug = generateSlug(storeName);
+    let counter = 1;
+    let originalSlug = slug;
+
+    while (true) {
+      const existingSlug = await ctx.db
+        .query("stores")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+
+      if (!existingSlug) break;
+
+      slug = `${originalSlug}-${counter}`;
+      counter++;
+    }
+
+    // Create store with user's profile data
+    const storeId = await ctx.db.insert("stores", {
+      name: storeName,
+      slug,
+      userId: args.userId,
+      avatar: user?.imageUrl || user?.avatarUrl,
+      bio: user?.bio,
+      socialLinks: user ? {
+        website: user.website,
+        twitter: user.twitter,
+        instagram: user.instagram,
+        youtube: user.youtube,
+        tiktok: user.tiktok,
+      } : undefined,
+      plan: "free",
+      planStartedAt: Date.now(),
+      isPublic: true,
+      isPublishedProfile: true,
+      subscriptionStatus: "active",
+    });
+
+    // Track creator_started event for analytics
+    await ctx.db.insert("analyticsEvents", {
+      userId: args.userId,
+      storeId,
+      eventType: "creator_started",
+      timestamp: Date.now(),
+      metadata: {
+        action: "auto_creation",
+      },
+    });
+
+    // Mark user as a creator
+    if (user && !user.isCreator) {
+      await ctx.db.patch(user._id, {
+        isCreator: true,
+        creatorSince: Date.now(),
+        creatorLevel: 1,
+        creatorXP: 0,
+        creatorBadges: ["first_store"],
+      });
+    }
+
+    return {
+      storeId,
+      storeName,
+      storeSlug: slug,
+    };
+  },
+});
+
 // Create a new store
 export const createStore = mutation({
   args: {

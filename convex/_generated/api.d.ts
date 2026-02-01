@@ -18286,6 +18286,12 @@ export declare const api: {
       { name: string; slug?: string; userId: string },
       Id<"stores">
     >;
+    createStoreFromProfile: FunctionReference<
+      "mutation",
+      "public",
+      { name?: string; userId: string },
+      { storeId: Id<"stores">; storeName: string; storeSlug: string }
+    >;
     deleteStore: FunctionReference<
       "mutation",
       "public",

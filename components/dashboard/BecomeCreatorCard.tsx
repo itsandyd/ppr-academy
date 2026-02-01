@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { OneClickCreatorSetup } from "./one-click-creator-setup";
 
 // Nudge contexts for different touchpoints
 type NudgeContext =
@@ -152,200 +154,231 @@ export function BecomeCreatorCard({
   contextData,
 }: BecomeCreatorCardProps) {
   const router = useRouter();
+  const [showSetup, setShowSetup] = useState(false);
   const message = getNudgeMessage(nudgeContext, contextData);
 
   const handleBecomeCreator = () => {
-    router.push("/dashboard?mode=create");
+    // Open the one-click creator setup dialog instead of navigating
+    setShowSetup(true);
   };
+
+  const handleSetupComplete = (storeSlug: string) => {
+    // The OneClickCreatorSetup handles navigation to create mode
+    onDismiss?.();
+  };
+
+  // Shared dialog component for all variants
+  const setupDialog = (
+    <OneClickCreatorSetup
+      open={showSetup}
+      onOpenChange={setShowSetup}
+      onComplete={handleSetupComplete}
+      nudgeContext={nudgeContext}
+      contextData={contextData}
+    />
+  );
 
   // Celebration variant - for major milestones
   if (variant === "celebration") {
     return (
-      <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        >
+      <>
+        <AnimatePresence>
           <motion.div
-            initial={{ y: 20 }}
-            animate={{ y: 0 }}
-            className="relative mx-4 max-w-md overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-1"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
           >
-            <div className="relative rounded-xl bg-white p-6 dark:bg-gray-900">
-              {onDismiss && (
-                <button
-                  onClick={onDismiss}
-                  className="absolute right-3 top-3 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+            <motion.div
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              className="relative mx-4 max-w-md overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-1"
+            >
+              <div className="relative rounded-xl bg-white p-6 dark:bg-gray-900">
+                {onDismiss && (
+                  <button
+                    onClick={onDismiss}
+                    className="absolute right-3 top-3 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+
+                <div className="mb-4 flex justify-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
+                    <Trophy className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+
+                <h2 className="mb-2 text-center text-2xl font-bold">{message.title}</h2>
+                <p className="mb-6 text-center text-gray-600 dark:text-gray-400">
+                  {message.subtitle}
+                </p>
+
+                <div className="mb-4 flex items-center justify-center gap-6 text-sm">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                    <span className="font-medium">90% Revenue</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-blue-500" />
+                    <span className="font-medium">Free to Start</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleBecomeCreator}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-6 text-lg hover:from-purple-700 hover:to-pink-700"
                 >
-                  <X className="h-5 w-5" />
-                </button>
-              )}
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  {message.cta}
+                </Button>
 
-              <div className="mb-4 flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
-                  <Trophy className="h-8 w-8 text-white" />
-                </div>
+                {onDismiss && (
+                  <button
+                    onClick={onDismiss}
+                    className="mt-3 w-full text-center text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Maybe later
+                  </button>
+                )}
               </div>
-
-              <h2 className="mb-2 text-center text-2xl font-bold">{message.title}</h2>
-              <p className="mb-6 text-center text-gray-600 dark:text-gray-400">
-                {message.subtitle}
-              </p>
-
-              <div className="mb-4 flex items-center justify-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-green-500" />
-                  <span className="font-medium">90% Revenue</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-blue-500" />
-                  <span className="font-medium">Free to Start</span>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleBecomeCreator}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-6 text-lg hover:from-purple-700 hover:to-pink-700"
-              >
-                <Sparkles className="mr-2 h-5 w-5" />
-                {message.cta}
-              </Button>
-
-              {onDismiss && (
-                <button
-                  onClick={onDismiss}
-                  className="mt-3 w-full text-center text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Maybe later
-                </button>
-              )}
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
+        {setupDialog}
+      </>
     );
   }
 
   // Milestone variant - inline celebratory card
   if (variant === "milestone") {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 p-4 dark:border-purple-800 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20"
-      >
-        {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="absolute right-2 top-2 rounded-full p-1 text-gray-400 hover:bg-white/50 hover:text-gray-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
-            <GraduationCap className="h-6 w-6 text-white" />
-          </div>
-          <div className="flex-1">
-            <Badge className="mb-2 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
-              Milestone Unlocked
-            </Badge>
-            <h3 className="font-bold text-purple-900 dark:text-purple-100">
-              {message.title}
-            </h3>
-            <p className="mt-1 text-sm text-purple-700 dark:text-purple-300">
-              {message.subtitle}
-            </p>
-            <Button
-              size="sm"
-              onClick={handleBecomeCreator}
-              className="mt-3 bg-purple-600 hover:bg-purple-700"
+      <>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 p-4 dark:border-purple-800 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20"
+        >
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              className="absolute right-2 top-2 rounded-full p-1 text-gray-400 hover:bg-white/50 hover:text-gray-600"
             >
-              {message.cta}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
+              <GraduationCap className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <Badge className="mb-2 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                Milestone Unlocked
+              </Badge>
+              <h3 className="font-bold text-purple-900 dark:text-purple-100">
+                {message.title}
+              </h3>
+              <p className="mt-1 text-sm text-purple-700 dark:text-purple-300">
+                {message.subtitle}
+              </p>
+              <Button
+                size="sm"
+                onClick={handleBecomeCreator}
+                className="mt-3 bg-purple-600 hover:bg-purple-700"
+              >
+                {message.cta}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+        {setupDialog}
+      </>
     );
   }
 
   if (variant === "banner") {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-6 text-white"
-      >
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+      <>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-6 text-white"
+        >
+          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
 
-        {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="absolute right-3 top-3 rounded-full p-1 text-white/60 hover:bg-white/20 hover:text-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              className="absolute right-3 top-3 rounded-full p-1 text-white/60 hover:bg-white/20 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
 
-        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-              <Sparkles className="h-6 w-6" />
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">{message.title}</h3>
+                <p className="text-sm text-white/80">{message.subtitle}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold">{message.title}</h3>
-              <p className="text-sm text-white/80">{message.subtitle}</p>
-            </div>
+            <Button
+              onClick={handleBecomeCreator}
+              className="bg-white text-purple-600 hover:bg-white/90"
+            >
+              {message.cta}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            onClick={handleBecomeCreator}
-            className="bg-white text-purple-600 hover:bg-white/90"
-          >
-            {message.cta}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </motion.div>
+        </motion.div>
+        {setupDialog}
+      </>
     );
   }
 
   if (variant === "compact") {
     return (
-      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-900/20 dark:to-pink-900/20">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-500">
-              <Sparkles className="h-5 w-5 text-white" />
+      <>
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-900/20 dark:to-pink-900/20">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-500">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100">
+                  Become a Creator
+                </h4>
+                <p className="mt-1 text-xs text-purple-700 dark:text-purple-300">
+                  Share your skills & earn 90% revenue
+                </p>
+                <Button
+                  size="sm"
+                  onClick={handleBecomeCreator}
+                  className="mt-3 w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  Get Started
+                  <ArrowRight className="ml-2 h-3 w-3" />
+                </Button>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="font-semibold text-purple-900 dark:text-purple-100">
-                Become a Creator
-              </h4>
-              <p className="mt-1 text-xs text-purple-700 dark:text-purple-300">
-                Share your skills & earn 90% revenue
-              </p>
-              <Button
-                size="sm"
-                onClick={handleBecomeCreator}
-                className="mt-3 w-full bg-purple-600 hover:bg-purple-700"
-              >
-                Get Started
-                <ArrowRight className="ml-2 h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        {setupDialog}
+      </>
     );
   }
 
   // Default full variant
   return (
+    <>
     <Card className="overflow-hidden border-purple-200 dark:border-purple-800">
       <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-4">
         <div className="flex items-center gap-3 text-white">
@@ -424,5 +457,7 @@ export function BecomeCreatorCard({
         </p>
       </CardContent>
     </Card>
+    {setupDialog}
+    </>
   );
 }
