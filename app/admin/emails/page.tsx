@@ -72,7 +72,8 @@ import {
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { AdminEmailFunnelOverview } from "@/components/emails/AdminEmailFunnelOverview";
-import { LayoutDashboard } from "lucide-react";
+import { WorkflowOrchestrationMap } from "@/components/emails/WorkflowOrchestrationMap";
+import { LayoutDashboard, Map } from "lucide-react";
 
 // Admin Workflows Tab Component
 function AdminWorkflowsTab({ sequenceType }: { sequenceType?: string | null }) {
@@ -769,10 +770,14 @@ export default function AdminEmailsPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-7">
             <TabsTrigger value="overview" className="text-base">
               <LayoutDashboard className="mr-2 h-4 w-4" />
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="orchestration" className="text-base">
+              <Map className="mr-2 h-4 w-4" />
+              Flow Map
             </TabsTrigger>
             <TabsTrigger value="creators" className="text-base">
               <Store className="mr-2 h-4 w-4" />
@@ -799,6 +804,11 @@ export default function AdminEmailsPage() {
           {/* Overview Tab - Platform Email Funnel */}
           <TabsContent value="overview" className="space-y-6">
             <AdminEmailFunnelOverview />
+          </TabsContent>
+
+          {/* Orchestration Tab - Workflow Flow Map */}
+          <TabsContent value="orchestration" className="space-y-6">
+            <WorkflowOrchestrationMap />
           </TabsContent>
 
           {/* Creators Tab - Broadcast to Creators */}
