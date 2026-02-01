@@ -304,9 +304,9 @@ export function AdminEmailFunnelOverview() {
   const activeCount = platformSequences.filter(n => n.status === "active").length;
   const totalEmails = platformSequences.reduce((acc, n) => acc + n.emailCount, 0);
 
-  // Navigate to workflow editor with sequence type pre-selected
+  // Navigate directly to workflow builder with sequence template loaded
   const handleSequenceClick = (sequenceId: SequenceType) => {
-    router.push(`/admin/emails?tab=workflows&sequence=${sequenceId}`);
+    router.push(`/admin/emails/workflows?sequence=${sequenceId}`);
   };
 
   return (

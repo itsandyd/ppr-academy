@@ -202,17 +202,750 @@ function validateWorkflow(nodes: Node[], edges: Edge[]): ValidationError[] {
   return errors;
 }
 
-// Sequence type to workflow configuration mapping
-const sequenceConfigs: Record<string, { name: string; triggerType: AdminTriggerType; description: string }> = {
-  welcome: { name: "Platform Welcome", triggerType: "new_signup", description: "Welcome new users to PPR Academy" },
-  new_learner: { name: "New Learner Journey", triggerType: "new_signup", description: "Onboard new course enrollees" },
-  course_progress: { name: "Course Progress", triggerType: "any_course_complete", description: "Celebrate milestones" },
-  course_complete: { name: "Course Completion", triggerType: "any_course_complete", description: "Celebrate completion" },
-  learner_to_creator: { name: "Learner to Creator", triggerType: "all_learners", description: "Convert learners into creators" },
-  new_creator: { name: "New Creator Onboarding", triggerType: "all_creators", description: "Help new creators succeed" },
-  creator_success: { name: "Creator Success", triggerType: "any_purchase", description: "Celebrate sales" },
-  platform_reengagement: { name: "Platform Re-engagement", triggerType: "user_inactivity", description: "Bring back inactive users" },
-  platform_winback: { name: "Platform Win-back", triggerType: "user_inactivity", description: "Last attempt for churned users" },
+// Full sequence templates with all nodes pre-configured
+interface SequenceTemplate {
+  name: string;
+  triggerType: AdminTriggerType;
+  triggerConfig?: Record<string, unknown>;
+  nodes: Node[];
+  edges: Edge[];
+}
+
+const sequenceTemplates: Record<string, SequenceTemplate> = {
+  welcome: {
+    name: "Platform Welcome",
+    triggerType: "new_signup",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "new_signup", label: "New User Signup" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "Welcome Email",
+          subject: "Welcome to PPR Academy, {{firstName}}! 🎵",
+          body: `<h2>Hey {{firstName}},</h2>
+<p>Welcome to PPR Academy! We're thrilled to have you join our community of music producers.</p>
+<p>Here's what you can do now:</p>
+<ul>
+<li>Browse our course library</li>
+<li>Check out sample packs from top producers</li>
+<li>Start earning XP and climbing the leaderboard</li>
+</ul>
+<p>Let's make some music!</p>
+<p>– The PPR Team</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 2, delayUnit: "days", label: "Wait 2 days" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "Getting Started",
+          subject: "{{firstName}}, here's how to get the most out of PPR Academy",
+          body: `<h2>Ready to level up?</h2>
+<p>Hey {{firstName}},</p>
+<p>Now that you've had a chance to look around, here are some tips to get the most out of PPR Academy:</p>
+<ol>
+<li><strong>Take a free course</strong> – Start with our beginner-friendly content</li>
+<li><strong>Download samples</strong> – Check out our free sample packs</li>
+<li><strong>Join the community</strong> – Connect with other producers</li>
+</ol>
+<p>Your current level: L{{level}} with {{xp}} XP</p>
+<p>Keep learning!</p>`,
+        },
+      },
+      {
+        id: "delay-2",
+        type: "delay",
+        position: { x: 250, y: 480 },
+        data: { delayValue: 3, delayUnit: "days", label: "Wait 3 days" },
+      },
+      {
+        id: "email-3",
+        type: "email",
+        position: { x: 250, y: 600 },
+        data: {
+          label: "Explore More",
+          subject: "Discover what's possible on PPR Academy",
+          body: `<h2>You're doing great, {{firstName}}!</h2>
+<p>It's been almost a week since you joined. Here's what other producers are loving:</p>
+<ul>
+<li>Our most popular courses</li>
+<li>Top-rated sample packs</li>
+<li>Creator success stories</li>
+</ul>
+<p>Have questions? Just reply to this email – we're here to help.</p>
+<p>Keep creating!</p>`,
+        },
+      },
+      {
+        id: "action-1",
+        type: "action",
+        position: { x: 250, y: 720 },
+        data: { actionType: "add_to_segment", segmentName: "Onboarded", label: "Tag: Onboarded" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+      { id: "e4", source: "email-2", target: "delay-2" },
+      { id: "e5", source: "delay-2", target: "email-3" },
+      { id: "e6", source: "email-3", target: "action-1" },
+    ],
+  },
+  new_learner: {
+    name: "New Learner Journey",
+    triggerType: "new_signup",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "new_signup", label: "First Course Enrollment" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "Course Welcome",
+          subject: "You're enrolled! Let's start learning 🎓",
+          body: `<h2>Congrats on enrolling, {{firstName}}!</h2>
+<p>You've taken the first step. Now let's make sure you succeed.</p>
+<p><strong>Quick tips:</strong></p>
+<ul>
+<li>Set aside 15-30 minutes daily</li>
+<li>Complete lessons in order</li>
+<li>Practice what you learn</li>
+</ul>
+<p>You've got this!</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 1, delayUnit: "days", label: "Wait 1 day" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "Progress Check",
+          subject: "How's your learning going, {{firstName}}?",
+          body: `<h2>Just checking in!</h2>
+<p>Hey {{firstName}}, how's the course going?</p>
+<p>You've completed {{lessonsCompleted}} lessons so far. Keep up the momentum!</p>
+<p>Remember: consistency beats intensity. Even 10 minutes today moves you forward.</p>`,
+        },
+      },
+      {
+        id: "delay-2",
+        type: "delay",
+        position: { x: 250, y: 480 },
+        data: { delayValue: 3, delayUnit: "days", label: "Wait 3 days" },
+      },
+      {
+        id: "email-3",
+        type: "email",
+        position: { x: 250, y: 600 },
+        data: {
+          label: "Motivation Boost",
+          subject: "Keep going – you're making progress!",
+          body: `<h2>You're doing amazing!</h2>
+<p>{{firstName}}, you're already at Level {{level}} with {{xp}} XP!</p>
+<p>The producers who succeed are the ones who keep showing up. You're one of them.</p>
+<p>What will you learn today?</p>`,
+        },
+      },
+      {
+        id: "delay-3",
+        type: "delay",
+        position: { x: 250, y: 720 },
+        data: { delayValue: 4, delayUnit: "days", label: "Wait 4 days" },
+      },
+      {
+        id: "email-4",
+        type: "email",
+        position: { x: 250, y: 840 },
+        data: {
+          label: "Halfway Check",
+          subject: "You're making real progress 🔥",
+          body: `<h2>Look how far you've come!</h2>
+<p>{{firstName}}, you've completed {{lessonsCompleted}} lessons. That's real progress!</p>
+<p>Most people give up before they get this far. You're different.</p>
+<p>Keep pushing – the finish line is closer than you think.</p>`,
+        },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+      { id: "e4", source: "email-2", target: "delay-2" },
+      { id: "e5", source: "delay-2", target: "email-3" },
+      { id: "e6", source: "email-3", target: "delay-3" },
+      { id: "e7", source: "delay-3", target: "email-4" },
+    ],
+  },
+  course_complete: {
+    name: "Course Completion",
+    triggerType: "any_course_complete",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "any_course_complete", label: "Course Completed" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "Celebration",
+          subject: "🎉 You did it, {{firstName}}! Course complete!",
+          body: `<h2>CONGRATULATIONS! 🎉</h2>
+<p>{{firstName}}, you've completed the course!</p>
+<p>This is a huge accomplishment. Most people start but never finish. You're in the top tier now.</p>
+<p>Your certificate is ready to download in your dashboard.</p>
+<p>Celebrate this win – you earned it!</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 2, delayUnit: "days", label: "Wait 2 days" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "What's Next",
+          subject: "What's next for you, {{firstName}}?",
+          body: `<h2>Ready for your next challenge?</h2>
+<p>Now that you've mastered that course, here are some paths forward:</p>
+<ul>
+<li>Take an advanced course</li>
+<li>Apply what you learned to your own productions</li>
+<li>Share your new skills with the community</li>
+</ul>
+<p>The learning never stops!</p>`,
+        },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+    ],
+  },
+  learner_to_creator: {
+    name: "Learner to Creator",
+    triggerType: "all_learners",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "all_learners", label: "Qualified Learner" },
+      },
+      {
+        id: "condition-1",
+        type: "condition",
+        position: { x: 250, y: 120 },
+        data: { conditionType: "level_reached", levelThreshold: 5, label: "Level 5+?" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 260 },
+        data: {
+          label: "Creator Invite",
+          subject: "{{firstName}}, have you thought about creating?",
+          body: `<h2>You've got skills worth sharing</h2>
+<p>Hey {{firstName}},</p>
+<p>You're at Level {{level}} now. That means you've learned a lot.</p>
+<p>Have you ever thought about sharing your knowledge? Creating your own samples? Teaching what you know?</p>
+<p>PPR Academy makes it easy to become a creator. Set up your store in minutes and start earning.</p>
+<p>No pressure – just something to think about.</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 380 },
+        data: { delayValue: 3, delayUnit: "days", label: "Wait 3 days" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 500 },
+        data: {
+          label: "Why Create",
+          subject: "Why producers are becoming creators on PPR",
+          body: `<h2>The creator opportunity</h2>
+<p>{{firstName}}, here's why producers like you are becoming creators:</p>
+<ul>
+<li>Share your unique sounds with the world</li>
+<li>Build passive income from your productions</li>
+<li>Grow your reputation in the community</li>
+</ul>
+<p>You already have what it takes. The question is: will you take the leap?</p>`,
+        },
+      },
+      {
+        id: "delay-2",
+        type: "delay",
+        position: { x: 250, y: 620 },
+        data: { delayValue: 4, delayUnit: "days", label: "Wait 4 days" },
+      },
+      {
+        id: "email-3",
+        type: "email",
+        position: { x: 250, y: 740 },
+        data: {
+          label: "Getting Started",
+          subject: "How to start your creator journey (it's easier than you think)",
+          body: `<h2>Start small, dream big</h2>
+<p>{{firstName}}, becoming a creator is simpler than you might think:</p>
+<ol>
+<li>Create your store (takes 2 minutes)</li>
+<li>Upload your first sample pack or preset</li>
+<li>Share it with the community</li>
+</ol>
+<p>You don't need to be perfect. You just need to start.</p>
+<p>Ready to try it? Click below to create your store.</p>`,
+        },
+      },
+      {
+        id: "delay-3",
+        type: "delay",
+        position: { x: 250, y: 860 },
+        data: { delayValue: 5, delayUnit: "days", label: "Wait 5 days" },
+      },
+      {
+        id: "email-4",
+        type: "email",
+        position: { x: 250, y: 980 },
+        data: {
+          label: "Final Nudge",
+          subject: "Last thought on becoming a creator...",
+          body: `<h2>One last thing</h2>
+<p>{{firstName}}, I won't keep bugging you about this.</p>
+<p>But I genuinely believe you have something valuable to share. Your unique perspective, your sounds, your knowledge.</p>
+<p>The world needs more creators. Maybe you're one of them.</p>
+<p>No matter what you decide, keep making music. That's what matters most.</p>`,
+        },
+      },
+      {
+        id: "action-1",
+        type: "action",
+        position: { x: 250, y: 1100 },
+        data: { actionType: "add_to_segment", segmentName: "Creator Sequence Completed", label: "Tag: Sequence Complete" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "condition-1" },
+      { id: "e2", source: "condition-1", target: "email-1", sourceHandle: "yes" },
+      { id: "e3", source: "email-1", target: "delay-1" },
+      { id: "e4", source: "delay-1", target: "email-2" },
+      { id: "e5", source: "email-2", target: "delay-2" },
+      { id: "e6", source: "delay-2", target: "email-3" },
+      { id: "e7", source: "email-3", target: "delay-3" },
+      { id: "e8", source: "delay-3", target: "email-4" },
+      { id: "e9", source: "email-4", target: "action-1" },
+    ],
+  },
+  new_creator: {
+    name: "New Creator Onboarding",
+    triggerType: "all_creators",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "all_creators", label: "Store Created" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "Welcome Creator",
+          subject: "Welcome to the creator side, {{firstName}}! 🚀",
+          body: `<h2>You're officially a creator!</h2>
+<p>{{firstName}}, congrats on setting up your store!</p>
+<p>This is the start of something exciting. Here's what to do next:</p>
+<ol>
+<li>Complete your store profile</li>
+<li>Upload your first product</li>
+<li>Share your store link</li>
+</ol>
+<p>We're here to help you succeed.</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 1, delayUnit: "days", label: "Wait 1 day" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "First Product",
+          subject: "Tips for your first product",
+          body: `<h2>Creating your first product</h2>
+<p>{{firstName}}, here are tips for a successful first product:</p>
+<ul>
+<li>Start with what you know best</li>
+<li>Quality over quantity</li>
+<li>Write a compelling description</li>
+<li>Use eye-catching artwork</li>
+</ul>
+<p>Your first product doesn't need to be perfect. It just needs to exist.</p>`,
+        },
+      },
+      {
+        id: "delay-2",
+        type: "delay",
+        position: { x: 250, y: 480 },
+        data: { delayValue: 2, delayUnit: "days", label: "Wait 2 days" },
+      },
+      {
+        id: "email-3",
+        type: "email",
+        position: { x: 250, y: 600 },
+        data: {
+          label: "Promotion Tips",
+          subject: "How to get your first sale",
+          body: `<h2>Getting your first sale</h2>
+<p>{{firstName}}, here's how creators get their first sale:</p>
+<ol>
+<li>Share on social media</li>
+<li>Engage with the PPR community</li>
+<li>Offer a launch discount</li>
+<li>Ask friends to check it out</li>
+</ol>
+<p>The first sale is the hardest. After that, it gets easier.</p>`,
+        },
+      },
+      {
+        id: "delay-3",
+        type: "delay",
+        position: { x: 250, y: 720 },
+        data: { delayValue: 4, delayUnit: "days", label: "Wait 4 days" },
+      },
+      {
+        id: "email-4",
+        type: "email",
+        position: { x: 250, y: 840 },
+        data: {
+          label: "Keep Going",
+          subject: "The creator journey – keep going!",
+          body: `<h2>You're on your way</h2>
+<p>{{firstName}}, how's the creator journey going?</p>
+<p>Remember: every successful creator started exactly where you are now.</p>
+<p>Keep creating, keep sharing, keep improving. The results will come.</p>`,
+        },
+      },
+      {
+        id: "delay-4",
+        type: "delay",
+        position: { x: 250, y: 960 },
+        data: { delayValue: 7, delayUnit: "days", label: "Wait 7 days" },
+      },
+      {
+        id: "email-5",
+        type: "email",
+        position: { x: 250, y: 1080 },
+        data: {
+          label: "Check In",
+          subject: "How can we help you succeed?",
+          body: `<h2>We're here to help</h2>
+<p>{{firstName}}, you've been a creator for a couple weeks now.</p>
+<p>How's it going? Is there anything we can help with?</p>
+<p>Reply to this email with any questions – we read and respond to every message.</p>`,
+        },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+      { id: "e4", source: "email-2", target: "delay-2" },
+      { id: "e5", source: "delay-2", target: "email-3" },
+      { id: "e6", source: "email-3", target: "delay-3" },
+      { id: "e7", source: "delay-3", target: "email-4" },
+      { id: "e8", source: "email-4", target: "delay-4" },
+      { id: "e9", source: "delay-4", target: "email-5" },
+    ],
+  },
+  platform_reengagement: {
+    name: "Platform Re-engagement",
+    triggerType: "user_inactivity",
+    triggerConfig: { inactivityDays: 14 },
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "user_inactivity", inactivityDays: 14, label: "14 Days Inactive" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "We Miss You",
+          subject: "{{firstName}}, we miss you at PPR Academy!",
+          body: `<h2>Hey {{firstName}}, where'd you go?</h2>
+<p>We noticed you haven't been around lately. Everything okay?</p>
+<p>There's been some cool new stuff since you last visited:</p>
+<ul>
+<li>New courses added</li>
+<li>Fresh sample packs</li>
+<li>Community updates</li>
+</ul>
+<p>Come back and check it out!</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 3, delayUnit: "days", label: "Wait 3 days" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "What You're Missing",
+          subject: "Here's what you're missing on PPR",
+          body: `<h2>Quick update for you</h2>
+<p>{{firstName}}, just wanted to share what's new:</p>
+<p>Your stats: Level {{level}} with {{xp}} XP</p>
+<p>You were making great progress. Don't let that momentum slip away!</p>
+<p>Even 10 minutes today would keep you moving forward.</p>`,
+        },
+      },
+      {
+        id: "delay-2",
+        type: "delay",
+        position: { x: 250, y: 480 },
+        data: { delayValue: 5, delayUnit: "days", label: "Wait 5 days" },
+      },
+      {
+        id: "email-3",
+        type: "email",
+        position: { x: 250, y: 600 },
+        data: {
+          label: "Special Offer",
+          subject: "A little something to bring you back",
+          body: `<h2>We want you back</h2>
+<p>{{firstName}}, we really miss having you in the community.</p>
+<p>Here's a special offer just for you – come back and keep learning.</p>
+<p>Your music production journey is worth continuing.</p>`,
+        },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+      { id: "e4", source: "email-2", target: "delay-2" },
+      { id: "e5", source: "delay-2", target: "email-3" },
+    ],
+  },
+  platform_winback: {
+    name: "Platform Win-back",
+    triggerType: "user_inactivity",
+    triggerConfig: { inactivityDays: 60 },
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "user_inactivity", inactivityDays: 60, label: "60 Days Inactive" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "Been a While",
+          subject: "It's been a while, {{firstName}}",
+          body: `<h2>Hey {{firstName}}</h2>
+<p>It's been about 2 months since we've seen you. Life gets busy – we get it.</p>
+<p>But your music production journey doesn't have to stop.</p>
+<p>We're still here, and so is everything you started.</p>
+<p>Ready to pick up where you left off?</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 5, delayUnit: "days", label: "Wait 5 days" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "Last Chance",
+          subject: "One last message from PPR Academy",
+          body: `<h2>This is our last email</h2>
+<p>{{firstName}}, we don't want to keep bothering you if you're not interested.</p>
+<p>But before we stop emailing, we wanted to say: your spot is still here.</p>
+<p>Your progress, your level, your community – all waiting for you.</p>
+<p>If you ever want to come back, we'd love to have you.</p>
+<p>Until then, keep making music. 🎵</p>`,
+        },
+      },
+      {
+        id: "action-1",
+        type: "action",
+        position: { x: 250, y: 480 },
+        data: { actionType: "add_to_segment", segmentName: "Churned", label: "Tag: Churned" },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+      { id: "e4", source: "email-2", target: "action-1" },
+    ],
+  },
+  course_progress: {
+    name: "Course Progress",
+    triggerType: "any_course_complete",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "any_course_complete", label: "Module Completed" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "Progress Update",
+          subject: "Nice work on your progress, {{firstName}}! 🎯",
+          body: `<h2>You're making progress!</h2>
+<p>{{firstName}}, you just completed another module. That's awesome!</p>
+<p>Current stats: Level {{level}} | {{xp}} XP | {{lessonsCompleted}} lessons completed</p>
+<p>Keep up the great work!</p>`,
+        },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+    ],
+  },
+  creator_success: {
+    name: "Creator Success",
+    triggerType: "any_purchase",
+    nodes: [
+      {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 0 },
+        data: { triggerType: "any_purchase", label: "First Sale Made" },
+      },
+      {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 120 },
+        data: {
+          label: "First Sale",
+          subject: "🎉 You made your first sale!",
+          body: `<h2>CONGRATULATIONS!</h2>
+<p>{{firstName}}, you just made your first sale! This is HUGE!</p>
+<p>Most creators never get this far. You did it.</p>
+<p>This is proof that people value what you create. Now imagine what happens when you keep going.</p>
+<p>Celebrate this win – you earned it!</p>`,
+        },
+      },
+      {
+        id: "delay-1",
+        type: "delay",
+        position: { x: 250, y: 240 },
+        data: { delayValue: 2, delayUnit: "days", label: "Wait 2 days" },
+      },
+      {
+        id: "email-2",
+        type: "email",
+        position: { x: 250, y: 360 },
+        data: {
+          label: "Keep Momentum",
+          subject: "Keep the momentum going!",
+          body: `<h2>What's next?</h2>
+<p>{{firstName}}, now that you've proven your work sells, here's how to keep growing:</p>
+<ul>
+<li>Create more products</li>
+<li>Engage with your buyers</li>
+<li>Share your success story</li>
+</ul>
+<p>You're a real creator now. Act like it!</p>`,
+        },
+      },
+      {
+        id: "delay-2",
+        type: "delay",
+        position: { x: 250, y: 480 },
+        data: { delayValue: 5, delayUnit: "days", label: "Wait 5 days" },
+      },
+      {
+        id: "email-3",
+        type: "email",
+        position: { x: 250, y: 600 },
+        data: {
+          label: "Growth Tips",
+          subject: "Tips from top creators",
+          body: `<h2>Level up your creator game</h2>
+<p>{{firstName}}, here's what successful creators do:</p>
+<ol>
+<li>Release consistently</li>
+<li>Listen to customer feedback</li>
+<li>Build an email list</li>
+<li>Cross-promote with other creators</li>
+</ol>
+<p>Total earnings so far: {{totalEarnings}}</p>
+<p>Let's grow that number!</p>`,
+        },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "trigger-1", target: "email-1" },
+      { id: "e2", source: "email-1", target: "delay-1" },
+      { id: "e3", source: "delay-1", target: "email-2" },
+      { id: "e4", source: "email-2", target: "delay-2" },
+      { id: "e5", source: "delay-2", target: "email-3" },
+    ],
+  },
 };
 
 export default function AdminWorkflowBuilderPage() {
@@ -223,10 +956,10 @@ export default function AdminWorkflowBuilderPage() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  // Get sequence config if creating from overview
-  const sequenceConfig = sequenceType ? sequenceConfigs[sequenceType] : null;
+  // Get sequence template if creating from overview
+  const sequenceTemplate = sequenceType ? sequenceTemplates[sequenceType] : null;
 
-  const [workflowName, setWorkflowName] = useState(sequenceConfig?.name || "New Admin Workflow");
+  const [workflowName, setWorkflowName] = useState(sequenceTemplate?.name || "New Admin Workflow");
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -283,52 +1016,25 @@ export default function AdminWorkflowBuilderPage() {
     }
   }, [existingWorkflow]);
 
-  // Initialize from sequence type (only for new workflows)
+  // Initialize from sequence type (only for new workflows) - use full template
   useEffect(() => {
-    if (!workflowId && sequenceConfig && !initialized) {
-      setWorkflowName(sequenceConfig.name);
+    if (!workflowId && sequenceType && sequenceTemplates[sequenceType] && !initialized) {
+      const template = sequenceTemplates[sequenceType];
 
-      // Create initial trigger node with the appropriate trigger type
-      const triggerNode: Node = {
-        id: "trigger-1",
-        type: "trigger",
-        position: { x: 250, y: 50 },
-        data: {
-          triggerType: sequenceConfig.triggerType,
-          label: "Trigger",
-          inactivityDays: sequenceConfig.triggerType === "user_inactivity" ? (sequenceType === "platform_winback" ? 60 : 14) : undefined,
-        },
-      };
-
-      // Create initial email node
-      const emailNode: Node = {
-        id: "email-1",
-        type: "email",
-        position: { x: 250, y: 200 },
-        data: {
-          label: "Email",
-          subject: "",
-          body: "",
-        },
-      };
-
-      // Connect them
-      const edge: Edge = {
-        id: "edge-trigger-email",
-        source: "trigger-1",
-        target: "email-1",
-      };
-
-      setNodes([triggerNode, emailNode]);
-      setEdges([edge]);
+      setWorkflowName(template.name);
+      setNodes(template.nodes);
+      setEdges(template.edges);
       setInitialized(true);
 
+      const emailCount = template.nodes.filter(n => n.type === "email").length;
+      const delayCount = template.nodes.filter(n => n.type === "delay").length;
+
       toast({
-        title: `Creating ${sequenceConfig.name}`,
-        description: "Workflow pre-configured. Add emails and customize the flow.",
+        title: `${template.name} loaded`,
+        description: `Complete sequence with ${emailCount} emails, ${delayCount} delays. Review and save when ready.`,
       });
     }
-  }, [workflowId, sequenceConfig, initialized, sequenceType, toast]);
+  }, [workflowId, sequenceType, initialized, toast]);
 
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);
