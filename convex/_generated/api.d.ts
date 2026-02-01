@@ -23005,11 +23005,18 @@ export declare const internal: {
     >;
   };
   emailUserStats: {
+    getPlatformStatsForEmail: FunctionReference<"query", "internal", {}, any>;
     getUserStatsBatch: FunctionReference<
       "query",
       "internal",
       { userIds: Array<string> },
       any
+    >;
+    getUserStatsForEmailByEmail: FunctionReference<
+      "query",
+      "internal",
+      { email: string },
+      null | any
     >;
     internalGetUserStatsForEmail: FunctionReference<
       "query",
