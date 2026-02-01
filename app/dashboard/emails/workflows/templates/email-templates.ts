@@ -2,7 +2,7 @@ export type EmailTemplate = {
   id: string;
   name: string;
   subject: string;
-  category: "welcome" | "sales" | "engagement" | "education" | "transactional" | "admin";
+  category: "welcome" | "sales" | "engagement" | "education" | "transactional" | "services" | "admin";
   description: string;
   body: string;
 };
@@ -489,6 +489,640 @@ Stuck on something? Just reply to this email.</p>
 <p>{{creatorName}}</p>`,
   },
 
+  // ============================================================================
+  // SERVICES TEMPLATES - Coaching, Mixing, Mastering, Playlist Curation
+  // ============================================================================
+
+  // COACHING SERVICES
+  {
+    id: "coaching-booking-confirm",
+    name: "Coaching Session Booked",
+    subject: "Your coaching session is confirmed!",
+    category: "services",
+    description: "Confirm a coaching session booking with details",
+    body: `<p>Hey {{firstName}},</p>
+
+<p><strong>Your coaching session is booked!</strong></p>
+
+<p>Here are the details:</p>
+<ul>
+  <li><strong>Date:</strong> {{sessionDate}}</li>
+  <li><strong>Time:</strong> {{sessionTime}}</li>
+  <li><strong>Duration:</strong> {{sessionDuration}}</li>
+  <li><strong>Meeting Link:</strong> {{meetingLink}}</li>
+</ul>
+
+<p><strong>Before our session:</strong></p>
+<ol>
+  <li>Send me your current project or mix (if applicable)</li>
+  <li>List 2-3 specific things you want to work on</li>
+  <li>Have your DAW open and ready</li>
+</ol>
+
+<p>If you need to reschedule, just reply to this email at least 24 hours before our session.</p>
+
+<p>Looking forward to working with you!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "coaching-session-reminder",
+    name: "Coaching Session Reminder",
+    subject: "Reminder: Your coaching session is tomorrow",
+    category: "services",
+    description: "Remind about upcoming coaching session",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Just a quick reminder - we have our coaching session <strong>tomorrow</strong>!</p>
+
+<p><strong>Session Details:</strong></p>
+<ul>
+  <li><strong>Date:</strong> {{sessionDate}}</li>
+  <li><strong>Time:</strong> {{sessionTime}}</li>
+  <li><strong>Meeting Link:</strong> {{meetingLink}}</li>
+</ul>
+
+<p><strong>Quick checklist:</strong></p>
+<ul>
+  <li>Did you send me your project files?</li>
+  <li>Do you have specific questions ready?</li>
+  <li>Is your audio/video setup tested?</li>
+</ul>
+
+<p>If you can't make it, please let me know ASAP so we can reschedule.</p>
+
+<p>See you tomorrow!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "coaching-session-followup",
+    name: "Coaching Session Follow-Up",
+    subject: "Great session! Here's what we covered",
+    category: "services",
+    description: "Follow up after a coaching session with notes and next steps",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thanks for the session today! I loved working through {{sessionTopic}} with you.</p>
+
+<p><strong>Key takeaways from our session:</strong></p>
+<ul>
+  <li>{{takeaway1}}</li>
+  <li>{{takeaway2}}</li>
+  <li>{{takeaway3}}</li>
+</ul>
+
+<p><strong>Your homework:</strong></p>
+<ol>
+  <li>{{homework1}}</li>
+  <li>{{homework2}}</li>
+</ol>
+
+<p>If you have any questions as you work through this, just hit reply.</p>
+
+<p><strong>Ready for another session?</strong> Book your next one here:</p>
+
+<p><a href="{{bookingUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Book Next Session</a></p>
+
+<p>Keep crushing it!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "coaching-package-offer",
+    name: "Coaching Package Offer",
+    subject: "Save on coaching with a package deal",
+    category: "services",
+    description: "Offer a multi-session coaching package",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>I noticed you've booked a few coaching sessions - thank you for trusting me with your production journey!</p>
+
+<p>I wanted to let you know about my <strong>coaching package</strong> that could save you money:</p>
+
+<p style="background-color: #f3f4f6; padding: 16px; border-radius: 8px;">
+<strong>{{packageName}}</strong><br>
+{{packageSessions}} sessions for \${{packagePrice}}<br>
+<span style="color: #16a34a; font-weight: bold;">Save {{savingsPercent}}% vs. individual sessions</span>
+</p>
+
+<p>This is perfect if you want to:</p>
+<ul>
+  <li>Work through a complete project together</li>
+  <li>Learn a full workflow from start to finish</li>
+  <li>Get consistent guidance over a few weeks</li>
+</ul>
+
+<p><a href="{{packageUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Get the Package</a></p>
+
+<p>Let me know if you have any questions!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // MIXING & MASTERING SERVICES
+  {
+    id: "mixing-inquiry-response",
+    name: "Mixing Service Inquiry Response",
+    subject: "Re: Mixing inquiry - let's make your track shine",
+    category: "services",
+    description: "Respond to a mixing service inquiry",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thanks for reaching out about mixing! I'd love to work on your track.</p>
+
+<p><strong>Here's how my mixing service works:</strong></p>
+
+<p><strong>What I Need From You:</strong></p>
+<ul>
+  <li>All stems/tracks bounced individually (WAV, 24-bit preferred)</li>
+  <li>Reference tracks (2-3 songs with the vibe you're going for)</li>
+  <li>Any notes on what you're looking for</li>
+  <li>BPM and key of the track</li>
+</ul>
+
+<p><strong>What You Get:</strong></p>
+<ul>
+  <li>Professional mix of your track</li>
+  <li>{{revisionCount}} rounds of revisions</li>
+  <li>Stems + final master-ready mix</li>
+  <li>Turnaround: {{turnaroundDays}} days</li>
+</ul>
+
+<p><strong>Pricing:</strong> \${{mixingPrice}} per track</p>
+
+<p>Ready to get started? Send over your stems and let's go!</p>
+
+<p><a href="{{uploadUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Upload Your Stems</a></p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "mixing-files-received",
+    name: "Mixing Files Received",
+    subject: "Got your stems! Starting your mix",
+    category: "services",
+    description: "Confirm receipt of stems and set expectations",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Got your stems! Everything looks good and I'm excited to work on "{{trackName}}".</p>
+
+<p><strong>What happens next:</strong></p>
+<ol>
+  <li>I'll start working on your mix today</li>
+  <li>First draft ready in {{turnaroundDays}} days</li>
+  <li>You'll get a private link to review</li>
+  <li>Send me your revision notes</li>
+  <li>Final delivery after revisions</li>
+</ol>
+
+<p>I'll reach out if I have any questions about your reference tracks or notes.</p>
+
+<p>Talk soon!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "mixing-first-draft",
+    name: "Mixing First Draft Ready",
+    subject: "Your mix is ready for review!",
+    category: "services",
+    description: "Deliver first mix draft for client review",
+    body: `<p>Hey {{firstName}},</p>
+
+<p><strong>Your first mix is ready!</strong></p>
+
+<p>Listen here:</p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{previewUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Listen to Mix</a>
+</p>
+
+<p><strong>Feedback tips:</strong></p>
+<ul>
+  <li>Listen on multiple systems (headphones, speakers, car)</li>
+  <li>Be specific (e.g., "vocals too loud in chorus" vs. "something feels off")</li>
+  <li>Reference your original vision and reference tracks</li>
+  <li>Don't rush - take a day to sit with it</li>
+</ul>
+
+<p>You have <strong>{{revisionsRemaining}} revisions remaining</strong>. Send me your notes when you're ready!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "mixing-final-delivery",
+    name: "Mixing Final Delivery",
+    subject: "Your final mix is here!",
+    category: "services",
+    description: "Deliver final mixed track with files",
+    body: `<p>Hey {{firstName}},</p>
+
+<p><strong>Your mix is complete!</strong></p>
+
+<p>Download your files here:</p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{downloadUrl}}" style="display: inline-block; background-color: #16a34a; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Download Final Mix</a>
+</p>
+
+<p><strong>What's included:</strong></p>
+<ul>
+  <li>Final mix (WAV, 24-bit)</li>
+  <li>Final mix (MP3, 320kbps)</li>
+  <li>Stem bounces (if requested)</li>
+</ul>
+
+<p>It was great working on "{{trackName}}" with you! If you're happy with the results, I'd really appreciate:</p>
+<ul>
+  <li>A review on my profile</li>
+  <li>A shoutout when you release the track</li>
+  <li>Tagging me so I can share it too!</li>
+</ul>
+
+<p><strong>Need mastering?</strong> I also offer mastering services:</p>
+
+<p><a href="{{masteringUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Get It Mastered</a></p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // PLAYLIST CURATION SERVICES
+  {
+    id: "playlist-submission-received",
+    name: "Playlist Submission Received",
+    subject: "Got your submission! Here's what happens next",
+    category: "services",
+    description: "Confirm receipt of playlist submission",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thanks for submitting "{{trackName}}" to my playlist!</p>
+
+<p><strong>What happens now:</strong></p>
+<ol>
+  <li>I listen to every submission personally</li>
+  <li>Review takes {{reviewDays}} days</li>
+  <li>You'll hear back either way</li>
+</ol>
+
+<p><strong>Tips to increase your chances:</strong></p>
+<ul>
+  <li>Make sure your track fits the playlist vibe</li>
+  <li>Professional mix and master quality</li>
+  <li>Complete metadata (artwork, credits)</li>
+  <li>Track should be on Spotify</li>
+</ul>
+
+<p>I'll be in touch soon!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "playlist-accepted",
+    name: "Track Accepted to Playlist",
+    subject: "Congrats! Your track is on the playlist!",
+    category: "services",
+    description: "Notify artist their track was added to playlist",
+    body: `<p>Hey {{firstName}},</p>
+
+<p><strong>Great news - "{{trackName}}" is now on {{playlistName}}!</strong></p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{playlistUrl}}" style="display: inline-block; background-color: #16a34a; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">View Playlist</a>
+</p>
+
+<p><strong>To maximize your placement:</strong></p>
+<ul>
+  <li>Share the playlist on your socials</li>
+  <li>Add it to your Spotify profile</li>
+  <li>Tell your fans to follow the playlist</li>
+  <li>Engage with other artists on the playlist</li>
+</ul>
+
+<p><strong>Placement Details:</strong></p>
+<ul>
+  <li>Position: {{playlistPosition}}</li>
+  <li>Duration: {{placementDuration}}</li>
+  <li>Playlist followers: {{followerCount}}</li>
+</ul>
+
+<p>Congrats again! Keep making fire music.</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // BEAT LEASE TEMPLATES
+  {
+    id: "beat-lease-delivery",
+    name: "Beat Lease Delivery",
+    subject: "Your beat is ready to download!",
+    category: "sales",
+    description: "Deliver purchased beat with license terms",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thanks for copping "{{beatName}}"! Here's your download:</p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{downloadUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Download Beat</a>
+</p>
+
+<p><strong>Your License: {{licenseName}}</strong></p>
+<ul>
+  <li>Streams: {{streamLimit}}</li>
+  <li>Music videos: {{videoLimit}}</li>
+  <li>Radio broadcasts: {{radioLimit}}</li>
+  <li>Credit: "Prod. by {{creatorName}}"</li>
+</ul>
+
+<p><strong>Files included:</strong></p>
+<ul>
+  <li>{{fileList}}</li>
+</ul>
+
+<p><strong>Important:</strong> Please read the license agreement included in your download. It contains all the terms for using this beat.</p>
+
+<p>Can't wait to hear what you do with it! Tag me when you drop.</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "beat-exclusive-offer",
+    name: "Beat Exclusive Rights Offer",
+    subject: "Own this beat outright - exclusive rights available",
+    category: "sales",
+    description: "Offer exclusive rights to a beat a customer leased",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>I noticed you leased "{{beatName}}" recently. Wanted to give you first dibs on something:</p>
+
+<p><strong>The exclusive rights are still available.</strong></p>
+
+<p>What does exclusive mean?</p>
+<ul>
+  <li>You OWN the beat - no one else can use it</li>
+  <li>Unlimited streams, sales, and radio play</li>
+  <li>Full trackouts and stems included</li>
+  <li>I remove it from my catalog permanently</li>
+</ul>
+
+<p>Since you already have a lease, I'm offering you a special deal:</p>
+
+<p style="background-color: #fef3c7; padding: 16px; border-radius: 8px; text-align: center;">
+<strong>Exclusive Rights: \${{exclusivePrice}}</strong><br>
+<span style="text-decoration: line-through; color: #9ca3af;">Regular: \${{regularPrice}}</span><br>
+<span style="color: #d97706; font-weight: bold;">Your Lease Credit Applied</span>
+</p>
+
+<p>This offer is valid for {{offerDays}} days. After that, it goes back to full price (or someone else might grab it).</p>
+
+<p><a href="{{exclusiveUrl}}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Lock In Exclusive Rights</a></p>
+
+<p>Let me know if you have any questions!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // PRESET & MIDI PACK TEMPLATES
+  {
+    id: "preset-pack-launch",
+    name: "Preset Pack Launch",
+    subject: "NEW: {{packName}} presets just dropped",
+    category: "sales",
+    description: "Announce a new preset pack release",
+    body: `<p>Hey {{firstName}},</p>
+
+<p><strong>It's finally here!</strong></p>
+
+<p>After months of work, I'm dropping my brand new preset pack:</p>
+
+<p style="text-align: center; font-size: 24px; font-weight: bold; margin: 24px 0;">{{packName}}</p>
+
+<p><strong>What's inside:</strong></p>
+<ul>
+  <li>{{presetCount}} presets for {{dawName}}</li>
+  <li>{{categoryBreakdown}}</li>
+  <li>Bonus: {{bonusContent}}</li>
+</ul>
+
+<p><strong>These presets are perfect for:</strong></p>
+<ul>
+  <li>{{useCase1}}</li>
+  <li>{{useCase2}}</li>
+  <li>{{useCase3}}</li>
+</ul>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{productUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Get {{packName}} - \${{price}}</a>
+</p>
+
+<p><strong>Launch Special:</strong> Use code {{discountCode}} for {{discountPercent}}% off (expires {{expiryDate}})</p>
+
+<p>Let's make some heat!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "preset-installation-guide",
+    name: "Preset Installation Guide",
+    subject: "How to install your new presets",
+    category: "transactional",
+    description: "Help customers install their purchased presets",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thanks for grabbing {{packName}}! Here's how to install your presets:</p>
+
+<p><strong>For {{dawName}}:</strong></p>
+<ol>
+  <li>{{step1}}</li>
+  <li>{{step2}}</li>
+  <li>{{step3}}</li>
+  <li>{{step4}}</li>
+</ol>
+
+<p><strong>Video walkthrough:</strong></p>
+<p><a href="{{tutorialUrl}}">Watch Installation Tutorial</a></p>
+
+<p><strong>Common issues:</strong></p>
+<ul>
+  <li><strong>Presets not showing up?</strong> Restart your DAW after installation</li>
+  <li><strong>Wrong file format?</strong> Make sure you're using {{dawName}} version {{minVersion}} or higher</li>
+  <li><strong>Missing sounds?</strong> Some presets require {{requirements}}</li>
+</ul>
+
+<p>Still stuck? Just reply to this email and I'll help you out.</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "midi-pack-tips",
+    name: "MIDI Pack Usage Tips",
+    subject: "3 ways to use your new MIDI files",
+    category: "education",
+    description: "Help customers get value from MIDI packs",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Now that you have {{packName}}, here are 3 ways to get the most out of it:</p>
+
+<p><strong>1. Use as-is for quick starts</strong></p>
+<p>Drag a MIDI file into your project and layer your own sounds. Instant inspiration without starting from scratch.</p>
+
+<p><strong>2. Chop and rearrange</strong></p>
+<p>Cut sections, flip the order, combine multiple files. These are building blocks - make them yours.</p>
+
+<p><strong>3. Learn from the patterns</strong></p>
+<p>Study the note placements, velocities, and rhythms. Understanding WHY something sounds good is how you level up.</p>
+
+<p><strong>Bonus tip:</strong> Try transposing melodies to different keys. Same notes, completely different vibe.</p>
+
+<p>What are you going to make with these? Hit reply and let me know!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // PROJECT FILE TEMPLATES
+  {
+    id: "project-file-delivery",
+    name: "Project File Delivery",
+    subject: "Your project file is ready to explore",
+    category: "transactional",
+    description: "Deliver purchased project file with instructions",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Your project file for "{{projectName}}" is ready!</p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{downloadUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Download Project</a>
+</p>
+
+<p><strong>Requirements:</strong></p>
+<ul>
+  <li>DAW: {{dawName}} {{minVersion}} or higher</li>
+  <li>Plugins: {{requiredPlugins}}</li>
+  <li>Samples included: {{samplesIncluded}}</li>
+</ul>
+
+<p><strong>How to get the most out of this:</strong></p>
+<ol>
+  <li>Open and listen through the full arrangement</li>
+  <li>Solo tracks to hear individual elements</li>
+  <li>Study the mixer settings and effects chains</li>
+  <li>Experiment with changing elements</li>
+</ol>
+
+<p>This is a learning tool - don't just copy, understand WHY I made each decision.</p>
+
+<p>Questions? Just reply!</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // BUNDLE TEMPLATES
+  {
+    id: "bundle-launch",
+    name: "Bundle Launch Announcement",
+    subject: "The ultimate bundle just dropped: {{bundleName}}",
+    category: "sales",
+    description: "Announce a new product bundle",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>I've been putting something together for a while now, and it's finally ready:</p>
+
+<p style="text-align: center; font-size: 24px; font-weight: bold; margin: 24px 0;">{{bundleName}}</p>
+
+<p><strong>Everything included:</strong></p>
+<ul>
+  <li>{{bundleItem1}} (Value: \${{bundleItem1Value}})</li>
+  <li>{{bundleItem2}} (Value: \${{bundleItem2Value}})</li>
+  <li>{{bundleItem3}} (Value: \${{bundleItem3Value}})</li>
+</ul>
+
+<p style="background-color: #f0fdf4; padding: 16px; border-radius: 8px;">
+<strong>Total Value: \${{totalValue}}</strong><br>
+<strong>Bundle Price: \${{bundlePrice}}</strong><br>
+<span style="color: #16a34a; font-weight: bold;">You Save: \${{savings}} ({{savingsPercent}}% off)</span>
+</p>
+
+<p>This is the most complete package I've ever put together. Everything you need to {{bundleBenefit}}.</p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{bundleUrl}}" style="display: inline-block; background-color: #16a34a; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Get the Bundle</a>
+</p>
+
+<p>{{creatorName}}</p>`,
+  },
+  {
+    id: "bundle-upsell",
+    name: "Bundle Upsell After Purchase",
+    subject: "Complete your collection with the full bundle",
+    category: "sales",
+    description: "Offer bundle to someone who bought individual products",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thanks for grabbing {{purchasedProduct}}!</p>
+
+<p>Quick question - did you know this is part of my {{bundleName}} bundle?</p>
+
+<p>Since you already own {{purchasedProduct}}, I want to offer you a special deal:</p>
+
+<p style="background-color: #fef3c7; padding: 16px; border-radius: 8px;">
+<strong>Complete the Bundle</strong><br>
+Get everything else in {{bundleName}} for just \${{upgradePrice}}<br>
+<span style="color: #d97706; font-weight: bold;">(Regular bundle: \${{fullBundlePrice}})</span>
+</p>
+
+<p><strong>What you'd be adding:</strong></p>
+<ul>
+  <li>{{remainingItem1}}</li>
+  <li>{{remainingItem2}}</li>
+  <li>{{remainingItem3}}</li>
+</ul>
+
+<p><a href="{{upgradeUrl}}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Complete My Bundle</a></p>
+
+<p>This offer is only valid for {{offerDays}} days.</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
+  // SAMPLE PACK ADDITIONAL TEMPLATES
+  {
+    id: "sample-pack-genre-launch",
+    name: "Genre-Specific Sample Pack Launch",
+    subject: "[{{genre}}] New sounds just dropped",
+    category: "sales",
+    description: "Launch a genre-specific sample pack",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>If you make <strong>{{genre}}</strong>, this one's for you.</p>
+
+<p>I just dropped <strong>{{packName}}</strong> - {{sampleCount}} sounds designed specifically for {{genre}} producers.</p>
+
+<p><strong>What's inside:</strong></p>
+<ul>
+  <li>{{drumCount}} drum one-shots</li>
+  <li>{{loopCount}} loops</li>
+  <li>{{fxCount}} FX and risers</li>
+  <li>{{bonusContent}}</li>
+</ul>
+
+<p><strong>These sounds are:</strong></p>
+<ul>
+  <li>100% royalty-free</li>
+  <li>Key and BPM labeled</li>
+  <li>Professionally processed</li>
+  <li>Ready to drag and drop</li>
+</ul>
+
+<p><strong>Audio previews:</strong></p>
+<p><a href="{{previewUrl}}">Listen to demo tracks</a></p>
+
+<p style="text-align: center; margin: 24px 0;">
+<a href="{{productUrl}}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">Get {{packName}} - \${{price}}</a>
+</p>
+
+<p>{{creatorName}}</p>`,
+  },
+
   // ADMIN / LEARNER-TO-CREATOR TEMPLATES
   {
     id: "l2c-welcome-platform",
@@ -785,6 +1419,7 @@ export const emailTemplateCategories = [
   { id: "all", label: "All Templates" },
   { id: "welcome", label: "Welcome & Onboarding" },
   { id: "sales", label: "Sales & Launches" },
+  { id: "services", label: "Services" },
   { id: "engagement", label: "Engagement" },
   { id: "education", label: "Courses" },
   { id: "transactional", label: "Transactional" },
