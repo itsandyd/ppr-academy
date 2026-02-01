@@ -11447,6 +11447,17 @@ export declare const api: {
       { contactId: Id<"emailContacts">; workflowId: Id<"emailWorkflows"> },
       Id<"workflowExecutions">
     >;
+    enrollUserInAdminWorkflow: FunctionReference<
+      "mutation",
+      "public",
+      {
+        userEmail: string;
+        userId: string;
+        userName?: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      Id<"workflowExecutions">
+    >;
     getContactsAtNode: FunctionReference<
       "query",
       "public",
@@ -23033,6 +23044,42 @@ export declare const internal: {
         nodeId: string;
         variant: "A" | "B";
         workflowId: Id<"emailWorkflows">;
+      },
+      null
+    >;
+    triggerAdminCourseCompleteWorkflows: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        courseId: string;
+        courseName?: string;
+        instructorId?: string;
+        userEmail: string;
+        userId: string;
+        userName?: string;
+      },
+      null
+    >;
+    triggerAdminNewSignupWorkflows: FunctionReference<
+      "mutation",
+      "internal",
+      { userEmail: string; userId: string; userName?: string },
+      null
+    >;
+    triggerAdminPurchaseWorkflows: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        amount?: number;
+        courseId?: string;
+        courseName?: string;
+        creatorStoreId?: string;
+        productId?: string;
+        productName?: string;
+        productType?: string;
+        userEmail: string;
+        userId: string;
+        userName?: string;
       },
       null
     >;

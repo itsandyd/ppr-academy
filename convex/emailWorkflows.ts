@@ -768,6 +768,308 @@ export const triggerTagAddedWorkflows = internalMutation({
   },
 });
 
+/**
+ * Trigger admin workflows when a new user signs up (platform-wide)
+ */
+export const triggerAdminNewSignupWorkflows = internalMutation({
+  args: {
+    userId: v.string(),
+    userEmail: v.string(),
+    userName: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Get all active admin workflows with new_signup trigger
+    const adminWorkflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const newSignupWorkflows = adminWorkflows.filter((w) => w.trigger.type === "new_signup");
+
+    if (newSignupWorkflows.length === 0) {
+      console.log(`[AdminWorkflows] No active new_signup workflows`);
+      return null;
+    }
+
+    const now = Date.now();
+
+    for (const workflow of newSignupWorkflows) {
+      // Check if user is already in this workflow
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.userEmail.toLowerCase()),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: workflow._id,
+        storeId: "admin",
+        customerEmail: args.userEmail.toLowerCase(),
+        status: "pending",
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+        scheduledFor: now,
+        executionData: {
+          triggerType: "new_signup",
+          userId: args.userId,
+          userName: args.userName,
+        },
+      });
+
+      await ctx.db.patch(workflow._id, {
+        totalExecutions: (workflow.totalExecutions || 0) + 1,
+        lastExecuted: now,
+      });
+
+      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in admin workflow "${workflow.name}"`);
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Trigger admin workflows when any purchase happens (platform-wide)
+ */
+export const triggerAdminPurchaseWorkflows = internalMutation({
+  args: {
+    userId: v.string(),
+    userEmail: v.string(),
+    userName: v.optional(v.string()),
+    productId: v.optional(v.string()),
+    productName: v.optional(v.string()),
+    productType: v.optional(v.string()),
+    courseId: v.optional(v.string()),
+    courseName: v.optional(v.string()),
+    amount: v.optional(v.number()),
+    creatorStoreId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Get all active admin workflows with any_purchase trigger
+    const adminWorkflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const purchaseWorkflows = adminWorkflows.filter((w) => w.trigger.type === "any_purchase");
+
+    if (purchaseWorkflows.length === 0) {
+      console.log(`[AdminWorkflows] No active any_purchase workflows`);
+      return null;
+    }
+
+    const now = Date.now();
+
+    for (const workflow of purchaseWorkflows) {
+      // Check if user is already in this workflow for this purchase type
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.userEmail.toLowerCase()),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: workflow._id,
+        storeId: "admin",
+        customerEmail: args.userEmail.toLowerCase(),
+        status: "pending",
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+        scheduledFor: now,
+        executionData: {
+          triggerType: "any_purchase",
+          userId: args.userId,
+          userName: args.userName,
+          productId: args.productId,
+          productName: args.productName,
+          productType: args.productType,
+          courseId: args.courseId,
+          courseName: args.courseName,
+          amount: args.amount,
+          creatorStoreId: args.creatorStoreId,
+        },
+      });
+
+      await ctx.db.patch(workflow._id, {
+        totalExecutions: (workflow.totalExecutions || 0) + 1,
+        lastExecuted: now,
+      });
+
+      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in admin workflow "${workflow.name}" (purchase trigger)`);
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Trigger admin workflows when any course is completed (platform-wide)
+ */
+export const triggerAdminCourseCompleteWorkflows = internalMutation({
+  args: {
+    userId: v.string(),
+    userEmail: v.string(),
+    userName: v.optional(v.string()),
+    courseId: v.string(),
+    courseName: v.optional(v.string()),
+    instructorId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Get all active admin workflows with any_course_complete trigger
+    const adminWorkflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const courseCompleteWorkflows = adminWorkflows.filter((w) => w.trigger.type === "any_course_complete");
+
+    if (courseCompleteWorkflows.length === 0) {
+      console.log(`[AdminWorkflows] No active any_course_complete workflows`);
+      return null;
+    }
+
+    const now = Date.now();
+
+    for (const workflow of courseCompleteWorkflows) {
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.userEmail.toLowerCase()),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: workflow._id,
+        storeId: "admin",
+        customerEmail: args.userEmail.toLowerCase(),
+        status: "pending",
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+        scheduledFor: now,
+        executionData: {
+          triggerType: "any_course_complete",
+          userId: args.userId,
+          userName: args.userName,
+          courseId: args.courseId,
+          courseName: args.courseName,
+          instructorId: args.instructorId,
+        },
+      });
+
+      await ctx.db.patch(workflow._id, {
+        totalExecutions: (workflow.totalExecutions || 0) + 1,
+        lastExecuted: now,
+      });
+
+      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in admin workflow "${workflow.name}" (course complete trigger)`);
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Enroll a user in an admin workflow (for manual triggers)
+ * This works with user ID instead of contact ID since admin workflows target platform users
+ */
+export const enrollUserInAdminWorkflow = mutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    userId: v.string(),
+    userEmail: v.string(),
+    userName: v.optional(v.string()),
+  },
+  returns: v.id("workflowExecutions"),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) throw new Error("Workflow not found");
+    if (!workflow.isAdminWorkflow) throw new Error("Not an admin workflow");
+
+    // Check if user is already in this workflow
+    const existingExecution = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("customerEmail"), args.userEmail.toLowerCase()),
+          q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+        )
+      )
+      .first();
+
+    if (existingExecution) {
+      throw new Error("User is already enrolled in this workflow");
+    }
+
+    const now = Date.now();
+    const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+    const executionId = await ctx.db.insert("workflowExecutions", {
+      workflowId: args.workflowId,
+      storeId: "admin",
+      customerEmail: args.userEmail.toLowerCase(),
+      status: "pending",
+      currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+      scheduledFor: now,
+      executionData: {
+        enrolledManually: true,
+        userId: args.userId,
+        userName: args.userName,
+      },
+    });
+
+    // Trigger immediate execution
+    await ctx.scheduler.runAfter(0, internal.emailWorkflowActions.executeWorkflowNode, {
+      executionId,
+    });
+
+    await ctx.db.patch(args.workflowId, {
+      totalExecutions: (workflow.totalExecutions || 0) + 1,
+      lastExecuted: now,
+    });
+
+    return executionId;
+  },
+});
+
 export const enrollContactInWorkflow = mutation({
   args: {
     workflowId: v.id("emailWorkflows"),

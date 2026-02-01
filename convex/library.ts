@@ -970,6 +970,18 @@ export const createCourseEnrollment = mutation({
         amount: args.amount,
       });
 
+      // Trigger admin workflows for any_purchase
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerAdminPurchaseWorkflows, {
+        userId: args.userId,
+        userEmail: user.email,
+        userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        courseId: args.courseId,
+        courseName: course.title,
+        productType: "course",
+        amount: args.amount,
+        creatorStoreId: course.storeId || course.userId,
+      });
+
       await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromEnrollment, {
         storeId: course.storeId || course.userId,
         email: user.email,
@@ -1097,7 +1109,18 @@ export const createDigitalProductPurchase = mutation({
         orderId: purchaseId,
         amount: args.amount,
       });
-      // Note: syncContactFromEnrollment is for courses only, not applicable to product purchases
+
+      // Trigger admin workflows for any_purchase
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerAdminPurchaseWorkflows, {
+        userId: args.userId,
+        userEmail: user.email,
+        userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        productId: args.productId,
+        productName: product.title,
+        productType: "digitalProduct",
+        amount: args.amount,
+        creatorStoreId: product.storeId,
+      });
     }
 
     return purchaseId;

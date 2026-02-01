@@ -297,6 +297,24 @@ export const markChapterComplete = mutation({
         totalTimeSpent: progress.totalTimeSpent || 0,
       });
       certificateIssued = true;
+
+      // Trigger admin workflows for any_course_complete
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .unique();
+      const course = await ctx.db.get(args.courseId);
+
+      if (user?.email && course) {
+        await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerAdminCourseCompleteWorkflows, {
+          userId: args.userId,
+          userEmail: user.email,
+          userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+          courseId: args.courseId,
+          courseName: course.title,
+          instructorId: course.storeId || course.userId,
+        });
+      }
     }
 
     // Trigger lesson milestone conversion nudge if not already complete

@@ -356,6 +356,15 @@ export const createUserInternal = internalMutation({
       metadata: {},
     });
 
+    // Trigger admin workflows for new signups
+    if (args.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerAdminNewSignupWorkflows, {
+        userId: args.clerkId,
+        userEmail: args.email,
+        userName: name,
+      });
+    }
+
     console.log(`✅ Created user: ${userId} (${args.email})`);
     return userId;
   },
