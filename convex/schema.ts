@@ -554,7 +554,12 @@ export default defineSchema({
           v.literal("webhook"),
           v.literal("split"),
           v.literal("notify"),
-          v.literal("goal")
+          v.literal("goal"),
+          // Course Cycle nodes (perpetual nurture system)
+          v.literal("courseCycle"),
+          v.literal("courseEmail"),
+          v.literal("purchaseCheck"),
+          v.literal("cycleLoop")
         ),
         position: v.object({
           x: v.number(),
@@ -728,6 +733,63 @@ export default defineSchema({
   })
     .index("by_storeId", ["storeId"])
     .index("by_name", ["storeId", "name"]),
+
+  // Course Cycle Configs (perpetual nurture/pitch automation)
+  courseCycleConfigs: defineTable({
+    storeId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    // Ordered list of courses to cycle through
+    courseIds: v.array(v.id("courses")),
+    // Per-course timing configuration
+    courseTimings: v.array(
+      v.object({
+        courseId: v.id("courses"),
+        timingMode: v.union(v.literal("fixed"), v.literal("engagement")),
+        // Fixed timing settings
+        nurtureEmailCount: v.number(),
+        nurtureDelayDays: v.number(),
+        pitchEmailCount: v.number(),
+        pitchDelayDays: v.number(),
+        purchaseCheckDelayDays: v.number(),
+        // Engagement-based timing settings
+        engagementWaitDays: v.optional(v.number()),
+        minEngagementActions: v.optional(v.number()),
+      })
+    ),
+    // Cycle behavior
+    loopOnCompletion: v.boolean(),
+    differentContentOnSecondCycle: v.boolean(),
+    // Status
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_active", ["storeId", "isActive"]),
+
+  // Course Cycle Emails (AI-generated nurture/pitch content)
+  courseCycleEmails: defineTable({
+    courseCycleConfigId: v.id("courseCycleConfigs"),
+    courseId: v.id("courses"),
+    emailType: v.union(v.literal("nurture"), v.literal("pitch")),
+    emailIndex: v.number(), // 1, 2, 3... for ordering
+    cycleNumber: v.number(), // 1 = first cycle, 2 = alternate content
+    // Email content
+    subject: v.string(),
+    htmlContent: v.string(),
+    textContent: v.optional(v.string()),
+    // Source tracking
+    generatedFromLesson: v.optional(v.string()),
+    generatedAt: v.number(),
+    // Performance tracking
+    sentCount: v.number(),
+    openedCount: v.number(),
+    clickedCount: v.number(),
+  })
+    .index("by_courseCycleConfigId", ["courseCycleConfigId"])
+    .index("by_courseId_type", ["courseId", "emailType"])
+    .index("by_courseId_type_cycle", ["courseId", "emailType", "cycleNumber"]),
 
   // Email Deliverability Events (bounces, complaints, blocks)
   emailDeliverabilityEvents: defineTable({

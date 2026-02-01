@@ -13,6 +13,10 @@ import {
   Split,
   Bell,
   Target,
+  RotateCcw,
+  BookOpen,
+  ShoppingCart,
+  ArrowRight,
 } from "lucide-react";
 
 const nodeTypes = [
@@ -105,6 +109,43 @@ const nodeTypes = [
     bgColor: "bg-red-500/10",
     borderColor: "border-red-500/30",
     description: "End workflow",
+  },
+  // Course Cycle nodes (perpetual nurture system)
+  {
+    type: "courseCycle",
+    label: "Course Cycle",
+    icon: RotateCcw,
+    color: "text-violet-500",
+    bgColor: "bg-violet-500/10",
+    borderColor: "border-violet-500/30",
+    description: "Perpetual course rotation",
+  },
+  {
+    type: "courseEmail",
+    label: "Course Email",
+    icon: BookOpen,
+    color: "text-sky-500",
+    bgColor: "bg-sky-500/10",
+    borderColor: "border-sky-500/30",
+    description: "Nurture/pitch for course",
+  },
+  {
+    type: "purchaseCheck",
+    label: "Purchase Check",
+    icon: ShoppingCart,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-500/10",
+    borderColor: "border-emerald-500/30",
+    description: "Check if purchased",
+  },
+  {
+    type: "cycleLoop",
+    label: "Next Course",
+    icon: ArrowRight,
+    color: "text-amber-500",
+    bgColor: "bg-amber-500/10",
+    borderColor: "border-amber-500/30",
+    description: "Move to next course",
   },
 ];
 

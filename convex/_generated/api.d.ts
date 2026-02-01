@@ -6182,6 +6182,134 @@ export declare const api: {
       }
     >;
   };
+  courseCycleAI: {
+    generateAllCycleEmails: FunctionReference<
+      "action",
+      "public",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        generateSecondCycle?: boolean;
+      },
+      { coursesProcessed: number; emailsGenerated: number; success: boolean }
+    >;
+    regenerateCourseEmails: FunctionReference<
+      "action",
+      "public",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+        cycleNumber?: number;
+      },
+      boolean
+    >;
+  };
+  courseCycles: {
+    createCourseCycleConfig: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseIds: Array<Id<"courses">>;
+        courseTimings: Array<{
+          courseId: Id<"courses">;
+          engagementWaitDays?: number;
+          minEngagementActions?: number;
+          nurtureDelayDays: number;
+          nurtureEmailCount: number;
+          pitchDelayDays: number;
+          pitchEmailCount: number;
+          purchaseCheckDelayDays: number;
+          timingMode: "fixed" | "engagement";
+        }>;
+        description?: string;
+        differentContentOnSecondCycle: boolean;
+        loopOnCompletion: boolean;
+        name: string;
+        storeId: string;
+      },
+      Id<"courseCycleConfigs">
+    >;
+    deleteCourseCycleConfig: FunctionReference<
+      "mutation",
+      "public",
+      { configId: Id<"courseCycleConfigs"> },
+      null
+    >;
+    deleteCourseEmails: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+      },
+      number
+    >;
+    getAvailableCoursesForCycle: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<any>
+    >;
+    getCourseCycleConfig: FunctionReference<
+      "query",
+      "public",
+      { configId: Id<"courseCycleConfigs"> },
+      any
+    >;
+    listCourseCycleConfigs: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<any>
+    >;
+    listCycleEmails: FunctionReference<
+      "query",
+      "public",
+      { courseCycleConfigId: Id<"courseCycleConfigs"> },
+      Array<any>
+    >;
+    toggleCourseCycleActive: FunctionReference<
+      "mutation",
+      "public",
+      { configId: Id<"courseCycleConfigs"> },
+      boolean
+    >;
+    updateCourseCycleConfig: FunctionReference<
+      "mutation",
+      "public",
+      {
+        configId: Id<"courseCycleConfigs">;
+        courseIds?: Array<Id<"courses">>;
+        courseTimings?: Array<{
+          courseId: Id<"courses">;
+          engagementWaitDays?: number;
+          minEngagementActions?: number;
+          nurtureDelayDays: number;
+          nurtureEmailCount: number;
+          pitchDelayDays: number;
+          pitchEmailCount: number;
+          purchaseCheckDelayDays: number;
+          timingMode: "fixed" | "engagement";
+        }>;
+        description?: string;
+        differentContentOnSecondCycle?: boolean;
+        isActive?: boolean;
+        loopOnCompletion?: boolean;
+        name?: string;
+      },
+      null
+    >;
+    updateCycleEmail: FunctionReference<
+      "mutation",
+      "public",
+      {
+        emailId: Id<"courseCycleEmails">;
+        htmlContent?: string;
+        subject?: string;
+        textContent?: string;
+      },
+      null
+    >;
+  };
   courseDrip: {
     getCourseDripSettings: FunctionReference<
       "query",
@@ -22039,6 +22167,113 @@ export declare const internal: {
       any
     >;
   };
+  courseCycleAI: {
+    generateNurtureEmails: FunctionReference<
+      "action",
+      "internal",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+        cycleNumber: number;
+        emailCount: number;
+      },
+      boolean
+    >;
+    generatePitchEmails: FunctionReference<
+      "action",
+      "internal",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+        cycleNumber: number;
+        discountPercent?: number;
+        emailCount: number;
+      },
+      boolean
+    >;
+  };
+  courseCycles: {
+    checkCoursePurchase: FunctionReference<
+      "query",
+      "internal",
+      { courseId: Id<"courses">; customerEmail: string },
+      boolean
+    >;
+    deleteEmailsForCycle: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+        cycleNumber: number;
+      },
+      number
+    >;
+    getConfig: FunctionReference<
+      "query",
+      "internal",
+      { configId: Id<"courseCycleConfigs"> },
+      any
+    >;
+    getCourseContentForAI: FunctionReference<
+      "query",
+      "internal",
+      { courseId: Id<"courses"> },
+      any
+    >;
+    getCycleEmail: FunctionReference<
+      "query",
+      "internal",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+        cycleNumber: number;
+        emailIndex: number;
+        emailType: "nurture" | "pitch";
+      },
+      any
+    >;
+    getUserPurchasedCourses: FunctionReference<
+      "query",
+      "internal",
+      { courseIds: Array<Id<"courses">>; customerEmail: string },
+      Array<string>
+    >;
+    saveCycleEmail: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        courseCycleConfigId: Id<"courseCycleConfigs">;
+        courseId: Id<"courses">;
+        cycleNumber: number;
+        emailIndex: number;
+        emailType: "nurture" | "pitch";
+        generatedFromLesson?: string;
+        htmlContent: string;
+        subject: string;
+        textContent?: string;
+      },
+      Id<"courseCycleEmails">
+    >;
+    trackEmailClicked: FunctionReference<
+      "mutation",
+      "internal",
+      { emailId: Id<"courseCycleEmails"> },
+      null
+    >;
+    trackEmailOpened: FunctionReference<
+      "mutation",
+      "internal",
+      { emailId: Id<"courseCycleEmails"> },
+      null
+    >;
+    trackEmailSent: FunctionReference<
+      "mutation",
+      "internal",
+      { emailId: Id<"courseCycleEmails"> },
+      null
+    >;
+  };
   courseDrip: {
     getPendingDripUnlocks: FunctionReference<
       "query",
@@ -23085,6 +23320,12 @@ export declare const internal: {
     >;
   };
   emailWorkflows: {
+    addTagByName: FunctionReference<
+      "mutation",
+      "internal",
+      { contactId: Id<"emailContacts">; storeId: string; tagName: string },
+      null
+    >;
     addTagToContactInternal: FunctionReference<
       "mutation",
       "internal",
@@ -23312,6 +23553,12 @@ export declare const internal: {
         tagId: Id<"emailTags">;
         tagName: string;
       },
+      null
+    >;
+    updateExecutionData: FunctionReference<
+      "mutation",
+      "internal",
+      { executionData: any; executionId: Id<"workflowExecutions"> },
       null
     >;
     updateWorkflowStats: FunctionReference<

@@ -2,7 +2,7 @@ export type EmailTemplate = {
   id: string;
   name: string;
   subject: string;
-  category: "welcome" | "sales" | "engagement" | "education" | "transactional";
+  category: "welcome" | "sales" | "engagement" | "education" | "transactional" | "admin";
   description: string;
   body: string;
 };
@@ -488,6 +488,297 @@ Stuck on something? Just reply to this email.</p>
 
 <p>{{creatorName}}</p>`,
   },
+
+  // ADMIN / LEARNER-TO-CREATOR TEMPLATES
+  {
+    id: "l2c-welcome-platform",
+    name: "Platform Welcome",
+    subject: "Welcome to PPR Academy - Your music production journey starts here",
+    category: "admin",
+    description: "Welcome new users to the platform and introduce what's possible",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Welcome to PPR Academy! You've just joined a community of music producers who are serious about leveling up their skills.</p>
+
+<p>Here's what you can do on PPR Academy:</p>
+<ul>
+  <li><strong>Learn</strong> - Access courses from top producers</li>
+  <li><strong>Download</strong> - Get samples, presets, and project files</li>
+  <li><strong>Connect</strong> - Join a community of fellow producers</li>
+  <li><strong>Earn</strong> - Share your own knowledge and get paid</li>
+</ul>
+
+<p>Start exploring and find the content that speaks to your style.</p>
+
+<p>Got questions? Just reply to this email - we're here to help.</p>
+
+<p>Let's make some noise,<br>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-discover-creators",
+    name: "Discover Creator Benefits",
+    subject: "Did you know? You can earn money on PPR Academy",
+    category: "admin",
+    description: "Introduce the creator side of the platform to learners",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>We noticed you've been crushing it on PPR Academy - love to see it!</p>
+
+<p>Quick question: <strong>Have you ever thought about sharing what you know?</strong></p>
+
+<p>PPR Academy isn't just for learning - it's also a place where producers like you can:</p>
+<ul>
+  <li>Sell your sample packs and presets</li>
+  <li>Create and sell courses</li>
+  <li>Offer mixing/mastering services</li>
+  <li>Build a recurring income from your knowledge</li>
+</ul>
+
+<p>Some of our creators are making thousands every month just by sharing their production knowledge.</p>
+
+<p>Curious? Here's how to get started:</p>
+<ol>
+  <li>Click "Create" in your dashboard</li>
+  <li>Set up your creator profile</li>
+  <li>Upload your first product</li>
+</ol>
+
+<p><a href="{{createStoreUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Start Creating</a></p>
+
+<p>What do you think?<br>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-creator-success-story",
+    name: "Creator Success Story",
+    subject: "How {{creatorName}} made $X in their first month",
+    category: "admin",
+    description: "Share a success story to inspire learners to become creators",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>I wanted to share a quick story that might inspire you.</p>
+
+<p>{{creatorName}} was in your exact position a few months ago - a producer learning new skills on PPR Academy.</p>
+
+<p>Then they decided to try something different. They packaged up some of their drum samples and listed them for sale.</p>
+
+<p><strong>The result?</strong> They made {{earnings}} in their first month, and it's been growing ever since.</p>
+
+<p>Here's what {{creatorName}} said:</p>
+<blockquote style="border-left: 4px solid #8b5cf6; padding-left: 16px; margin: 16px 0; color: #64748b;">
+"I didn't think anyone would want my stuff. Turns out, the unique sounds I was making were exactly what other producers were looking for."
+</blockquote>
+
+<p>You have unique sounds and techniques too. Why not share them?</p>
+
+<p><a href="{{createStoreUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Start Your Creator Journey</a></p>
+
+<p>Rooting for you,<br>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-first-product-idea",
+    name: "Your First Product Idea",
+    subject: "The easiest way to start earning on PPR Academy",
+    category: "admin",
+    description: "Give learners a concrete idea for their first product",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Thinking about creating but not sure where to start?</p>
+
+<p>Here's the <strong>easiest first product</strong> most successful creators recommend:</p>
+
+<p><strong>A Sample Pack</strong></p>
+
+<p>You probably have folders full of one-shots, loops, and sounds you've made. Package 50-100 of your best ones, and you've got a product.</p>
+
+<p>Here's a simple formula:</p>
+<ol>
+  <li>Pick your best 50-100 samples</li>
+  <li>Organize them into folders (kicks, snares, hi-hats, etc.)</li>
+  <li>Create a simple cover image</li>
+  <li>Write a short description</li>
+  <li>Price it at $15-25</li>
+</ol>
+
+<p>That's it. You could have your first product live in an hour.</p>
+
+<p>The key is to <strong>start simple</strong>. Your first product doesn't need to be perfect - it just needs to exist.</p>
+
+<p><a href="{{createProductUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Create Your First Product</a></p>
+
+<p>What sounds do you have that others might want?<br>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-creator-features",
+    name: "Creator Tools Overview",
+    subject: "Everything you get as a PPR Academy creator",
+    category: "admin",
+    description: "Showcase the tools and features available to creators",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Here's everything you unlock when you become a creator on PPR Academy:</p>
+
+<p><strong>Sell Products</strong></p>
+<ul>
+  <li>Sample packs & presets</li>
+  <li>Project files & templates</li>
+  <li>Video courses</li>
+  <li>1-on-1 coaching sessions</li>
+  <li>Mixing/mastering services</li>
+</ul>
+
+<p><strong>Marketing Tools</strong></p>
+<ul>
+  <li>Email automation to nurture your audience</li>
+  <li>Discount codes & promotions</li>
+  <li>Lead magnets (free downloads)</li>
+  <li>Analytics & insights</li>
+</ul>
+
+<p><strong>Get Paid</strong></p>
+<ul>
+  <li>Direct payments via Stripe</li>
+  <li>Keep 90% of your sales</li>
+  <li>No monthly fees</li>
+</ul>
+
+<p><strong>Grow Your Brand</strong></p>
+<ul>
+  <li>Customizable creator profile</li>
+  <li>Product reviews & ratings</li>
+  <li>Appear in marketplace search</li>
+</ul>
+
+<p><a href="{{createStoreUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Become a Creator</a></p>
+
+<p>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-overcome-doubt",
+    name: "Overcome Creator Doubt",
+    subject: "You're more ready than you think",
+    category: "admin",
+    description: "Address common objections and fears about becoming a creator",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>Can I be real with you for a second?</p>
+
+<p>A lot of producers think they're "not ready" to sell their stuff. Maybe you've thought:</p>
+<ul>
+  <li>"My sounds aren't good enough"</li>
+  <li>"Nobody would pay for what I make"</li>
+  <li>"I'm not a professional"</li>
+  <li>"I don't know how to market myself"</li>
+</ul>
+
+<p><strong>Here's the truth:</strong> You don't need to be a chart-topping producer to create value for others.</p>
+
+<p>There are producers right now who would LOVE your workflow, your sound design, your mixing techniques - because you're a few steps ahead of them.</p>
+
+<p>You know that thing you figured out last month? That's valuable to someone who's stuck on it right now.</p>
+
+<p>The creators who succeed aren't the "best" - they're the ones who started.</p>
+
+<p>What's one thing you know that could help another producer?</p>
+
+<p><a href="{{createStoreUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Start Sharing Your Knowledge</a></p>
+
+<p>Believe in yourself,<br>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-course-creation",
+    name: "Create Your First Course",
+    subject: "Turn your production skills into a course",
+    category: "admin",
+    description: "Encourage learners to create their first course",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>You've been learning on PPR Academy. Now it's time to <strong>teach</strong>.</p>
+
+<p>Creating a course is easier than you think. Here's a simple framework:</p>
+
+<p><strong>Step 1: Pick ONE specific topic</strong><br>
+Don't try to teach "music production." Teach "How to Make Hard-Hitting 808 Patterns" or "Mixing Vocals in FL Studio."</p>
+
+<p><strong>Step 2: Break it into 5-10 lessons</strong><br>
+Each lesson should be 5-15 minutes. Teach one concept per video.</p>
+
+<p><strong>Step 3: Record with what you have</strong><br>
+Screen recording + your voice is enough. You don't need fancy equipment.</p>
+
+<p><strong>Step 4: Upload and publish</strong><br>
+Our course builder makes it easy to organize and sell your content.</p>
+
+<p><strong>Pricing tip:</strong> Start at $29-49 for a focused mini-course. You can always create bigger courses later.</p>
+
+<p>What could you teach in 10 short videos?</p>
+
+<p><a href="{{createCourseUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Create Your Course</a></p>
+
+<p>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-final-nudge",
+    name: "Final Creator Nudge",
+    subject: "Last chance to unlock creator mode",
+    category: "admin",
+    description: "Final push for learners who haven't converted to creators",
+    body: `<p>Hey {{firstName}},</p>
+
+<p>I've sent you a few emails about becoming a creator on PPR Academy.</p>
+
+<p>I'm not going to keep bugging you about it - but before I stop, I want to share one last thought:</p>
+
+<p><strong>The best time to start was yesterday. The second best time is now.</strong></p>
+
+<p>A year from now, you could:</p>
+<ul>
+  <li>Have a catalog of products earning passive income</li>
+  <li>Be known as a go-to source for {{yourNiche}}</li>
+  <li>Have students thanking you for helping them level up</li>
+</ul>
+
+<p>Or you could be in the same place, still thinking about "someday."</p>
+
+<p>The creators who succeed aren't special. They just started.</p>
+
+<p>Will you?</p>
+
+<p><a href="{{createStoreUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Start Now</a></p>
+
+<p>Whatever you decide, keep making music.<br>The PPR Academy Team</p>`,
+  },
+  {
+    id: "l2c-welcome-new-creator",
+    name: "Welcome New Creator",
+    subject: "You did it! Welcome to the creator side",
+    category: "admin",
+    description: "Congratulate and onboard new creators",
+    body: `<p>Hey {{firstName}},</p>
+
+<p><strong>Congrats - you're officially a PPR Academy creator!</strong></p>
+
+<p>This is a big step. You're no longer just consuming - you're creating. And that's where the magic happens.</p>
+
+<p>Here's your creator onboarding checklist:</p>
+<ol>
+  <li><strong>Complete your profile</strong> - Add a photo, bio, and social links</li>
+  <li><strong>Create your first product</strong> - Start simple (sample pack or preset)</li>
+  <li><strong>Set up payouts</strong> - Connect Stripe to get paid</li>
+  <li><strong>Share your store</strong> - Let your network know you're selling</li>
+</ol>
+
+<p>Over the next few days, I'll send you tips to help you:</p>
+<ul>
+  <li>Create products that sell</li>
+  <li>Price your content right</li>
+  <li>Build an email list</li>
+  <li>Promote without feeling salesy</li>
+</ul>
+
+<p><a href="{{creatorDashboardUrl}}" style="display: inline-block; background-color: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Go to Creator Dashboard</a></p>
+
+<p>Excited to see what you create!<br>The PPR Academy Team</p>`,
+  },
 ];
 
 export const emailTemplateCategories = [
@@ -497,4 +788,5 @@ export const emailTemplateCategories = [
   { id: "engagement", label: "Engagement" },
   { id: "education", label: "Courses" },
   { id: "transactional", label: "Transactional" },
+  { id: "admin", label: "Learner to Creator" },
 ];

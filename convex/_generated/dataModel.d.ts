@@ -2490,6 +2490,102 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  courseCycleConfigs: {
+    document: {
+      courseIds: Array<Id<"courses">>;
+      courseTimings: Array<{
+        courseId: Id<"courses">;
+        engagementWaitDays?: number;
+        minEngagementActions?: number;
+        nurtureDelayDays: number;
+        nurtureEmailCount: number;
+        pitchDelayDays: number;
+        pitchEmailCount: number;
+        purchaseCheckDelayDays: number;
+        timingMode: "fixed" | "engagement";
+      }>;
+      createdAt: number;
+      description?: string;
+      differentContentOnSecondCycle: boolean;
+      isActive: boolean;
+      loopOnCompletion: boolean;
+      name: string;
+      storeId: string;
+      updatedAt: number;
+      _id: Id<"courseCycleConfigs">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "courseIds"
+      | "courseTimings"
+      | "createdAt"
+      | "description"
+      | "differentContentOnSecondCycle"
+      | "isActive"
+      | "loopOnCompletion"
+      | "name"
+      | "storeId"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_active: ["storeId", "isActive", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  courseCycleEmails: {
+    document: {
+      clickedCount: number;
+      courseCycleConfigId: Id<"courseCycleConfigs">;
+      courseId: Id<"courses">;
+      cycleNumber: number;
+      emailIndex: number;
+      emailType: "nurture" | "pitch";
+      generatedAt: number;
+      generatedFromLesson?: string;
+      htmlContent: string;
+      openedCount: number;
+      sentCount: number;
+      subject: string;
+      textContent?: string;
+      _id: Id<"courseCycleEmails">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "clickedCount"
+      | "courseCycleConfigId"
+      | "courseId"
+      | "cycleNumber"
+      | "emailIndex"
+      | "emailType"
+      | "generatedAt"
+      | "generatedFromLesson"
+      | "htmlContent"
+      | "openedCount"
+      | "sentCount"
+      | "subject"
+      | "textContent";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_courseCycleConfigId: ["courseCycleConfigId", "_creationTime"];
+      by_courseId_type: ["courseId", "emailType", "_creationTime"];
+      by_courseId_type_cycle: [
+        "courseId",
+        "emailType",
+        "cycleNumber",
+        "_creationTime",
+      ];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   courseDripAccess: {
     document: {
       courseId: Id<"courses">;
@@ -5392,7 +5488,11 @@ export type DataModel = {
           | "webhook"
           | "split"
           | "notify"
-          | "goal";
+          | "goal"
+          | "courseCycle"
+          | "courseEmail"
+          | "purchaseCheck"
+          | "cycleLoop";
       }>;
       storeId: string;
       totalExecutions?: number;

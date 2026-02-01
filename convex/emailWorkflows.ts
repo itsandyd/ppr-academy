@@ -2156,6 +2156,23 @@ export const advanceExecution = internalMutation({
 });
 
 /**
+ * Update execution data (for course cycle state tracking)
+ */
+export const updateExecutionData = internalMutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+    executionData: v.any(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.executionId, {
+      executionData: args.executionData,
+    });
+    return null;
+  },
+});
+
+/**
  * Internal mutation to add a tag to a contact (for workflow actions)
  */
 export const addTagToContactInternal = internalMutation({
@@ -2183,6 +2200,68 @@ export const addTagToContactInternal = internalMutation({
         tagIds: [...existingTagIds, args.tagId],
       });
       console.log(`[EmailWorkflows] Added tag "${tag.name}" to contact ${contact.email}`);
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Add a tag to a contact by name, creating the tag if it doesn't exist
+ */
+export const addTagByName = internalMutation({
+  args: {
+    contactId: v.id("emailContacts"),
+    storeId: v.string(),
+    tagName: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) {
+      console.log(`[EmailWorkflows] Contact ${args.contactId} not found for tag add`);
+      return null;
+    }
+
+    // Find or create the tag
+    let tag = await ctx.db
+      .query("emailTags")
+      .withIndex("by_storeId_and_name", (q) =>
+        q.eq("storeId", args.storeId).eq("name", args.tagName)
+      )
+      .first();
+
+    if (!tag) {
+      // Create the tag
+      const tagId = await ctx.db.insert("emailTags", {
+        storeId: args.storeId,
+        name: args.tagName,
+        color: "#6366f1", // Default purple
+        description: `Auto-created for course cycle`,
+        contactCount: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      tag = await ctx.db.get(tagId);
+    }
+
+    if (!tag) {
+      console.log(`[EmailWorkflows] Failed to create tag "${args.tagName}"`);
+      return null;
+    }
+
+    // Add tag to contact if not already present
+    const existingTagIds = contact.tagIds || [];
+    if (!existingTagIds.includes(tag._id)) {
+      await ctx.db.patch(args.contactId, {
+        tagIds: [...existingTagIds, tag._id],
+      });
+      // Update tag count
+      await ctx.db.patch(tag._id, {
+        contactCount: (tag.contactCount || 0) + 1,
+        updatedAt: Date.now(),
+      });
+      console.log(`[EmailWorkflows] Added tag "${args.tagName}" to contact ${contact.email}`);
     }
 
     return null;

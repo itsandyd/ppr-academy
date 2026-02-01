@@ -30,6 +30,11 @@ import WebhookNode from "./nodes/WebhookNode";
 import SplitNode from "./nodes/SplitNode";
 import NotifyNode from "./nodes/NotifyNode";
 import GoalNode from "./nodes/GoalNode";
+// Course Cycle nodes (perpetual nurture system)
+import CourseCycleNode from "./nodes/CourseCycleNode";
+import CourseEmailNode from "./nodes/CourseEmailNode";
+import PurchaseCheckNode from "./nodes/PurchaseCheckNode";
+import CycleLoopNode from "./nodes/CycleLoopNode";
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -42,6 +47,11 @@ const nodeTypes = {
   split: SplitNode,
   notify: NotifyNode,
   goal: GoalNode,
+  // Course Cycle nodes
+  courseCycle: CourseCycleNode,
+  courseEmail: CourseEmailNode,
+  purchaseCheck: PurchaseCheckNode,
+  cycleLoop: CycleLoopNode,
 };
 
 const defaultNodeData: Record<string, object> = {
@@ -55,6 +65,11 @@ const defaultNodeData: Record<string, object> = {
   split: { splitPercentage: 50 },
   notify: { notifyMethod: "email", message: "" },
   goal: { goalType: "purchase" },
+  // Course Cycle nodes
+  courseCycle: { courseCycleConfigId: null, configName: "Course Cycle", courseCount: 0 },
+  courseEmail: { emailPhase: "nurture" },
+  purchaseCheck: { purchaseTagPrefix: "purchased_course_" },
+  cycleLoop: {},
 };
 
 interface WorkflowCanvasProps {

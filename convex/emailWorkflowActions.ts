@@ -255,6 +255,316 @@ export const executeWorkflowNode = internalAction({
     } else if (currentNode.type === "trigger") {
       // Trigger nodes don't need processing, just continue to next node
       console.log(`[EmailWorkflows] Skipping trigger node, moving to next`);
+    } else if (currentNode.type === "courseCycle") {
+      // Course Cycle node - select next unpurchased course and initialize cycle state
+      console.log(`[EmailWorkflows] Processing courseCycle node for ${execution.customerEmail}`);
+
+      const configId = currentNode.data?.courseCycleConfigId;
+      if (!configId) {
+        console.error(`[EmailWorkflows] No courseCycleConfigId configured`);
+        await ctx.runMutation(internal.emailWorkflows.markExecutionFailed, {
+          executionId: args.executionId,
+          error: "No course cycle config ID configured",
+        });
+        return null;
+      }
+
+      // Get cycle config
+      const config = await ctx.runQuery(internal.courseCycles.getConfig, {
+        configId,
+      });
+
+      if (!config) {
+        console.error(`[EmailWorkflows] Course cycle config not found`);
+        await ctx.runMutation(internal.emailWorkflows.markExecutionFailed, {
+          executionId: args.executionId,
+          error: "Course cycle config not found",
+        });
+        return null;
+      }
+
+      // Get user's purchased courses
+      const purchasedCourseIds = await ctx.runQuery(
+        internal.courseCycles.getUserPurchasedCourses,
+        {
+          customerEmail: execution.customerEmail,
+          courseIds: config.courseIds,
+        }
+      );
+
+      // Get current cycle state from execution data
+      const cycleData = execution.executionData || {};
+      const currentIndex = cycleData.currentCourseIndex ?? 0;
+      const cycleNumber = cycleData.currentCycleNumber ?? 1;
+
+      // Find next unpurchased course
+      let nextCourseIndex = -1;
+      let loopedBack = false;
+
+      for (let i = 0; i < config.courseIds.length; i++) {
+        const checkIndex = (currentIndex + i) % config.courseIds.length;
+        if (checkIndex < currentIndex && i > 0) {
+          loopedBack = true;
+        }
+        if (!purchasedCourseIds.includes(config.courseIds[checkIndex])) {
+          nextCourseIndex = checkIndex;
+          break;
+        }
+      }
+
+      if (nextCourseIndex === -1) {
+        // All courses purchased - complete the cycle
+        console.log(`[EmailWorkflows] All courses purchased, completing cycle for ${execution.customerEmail}`);
+        await ctx.runMutation(internal.emailWorkflows.completeExecution, {
+          executionId: args.executionId,
+        });
+        return null;
+      }
+
+      // Update execution data with cycle state
+      const newCycleNumber = loopedBack ? cycleNumber + 1 : cycleNumber;
+      await ctx.runMutation(internal.emailWorkflows.updateExecutionData, {
+        executionId: args.executionId,
+        executionData: {
+          ...cycleData,
+          courseCycleConfigId: configId,
+          currentCourseIndex: nextCourseIndex,
+          currentCycleNumber: newCycleNumber,
+          currentPhase: "nurture",
+          currentEmailIndex: 0,
+          purchasedCourseIds,
+        },
+      });
+
+      console.log(`[EmailWorkflows] Cycle state: course ${nextCourseIndex + 1}/${config.courseIds.length}, cycle #${newCycleNumber}`);
+    } else if (currentNode.type === "courseEmail") {
+      // Course Email node - send nurture or pitch email for current course
+      console.log(`[EmailWorkflows] Processing courseEmail node for ${execution.customerEmail}`);
+
+      const cycleData = execution.executionData || {};
+      const configId = cycleData.courseCycleConfigId;
+      const courseIndex = cycleData.currentCourseIndex ?? 0;
+      const cycleNumber = cycleData.currentCycleNumber ?? 1;
+      const emailIndex = cycleData.currentEmailIndex ?? 0;
+      const emailPhase = currentNode.data?.emailPhase || "nurture";
+
+      if (!configId) {
+        console.error(`[EmailWorkflows] No course cycle config in execution data`);
+        await ctx.runMutation(internal.emailWorkflows.markExecutionFailed, {
+          executionId: args.executionId,
+          error: "No course cycle config in execution data",
+        });
+        return null;
+      }
+
+      // Get config to get courseId
+      const config = await ctx.runQuery(internal.courseCycles.getConfig, {
+        configId,
+      });
+
+      if (!config || !config.courseIds[courseIndex]) {
+        console.error(`[EmailWorkflows] Invalid course index`);
+        return null;
+      }
+
+      const courseId = config.courseIds[courseIndex];
+
+      // Determine which cycle content to use
+      const contentCycleNumber = config.differentContentOnSecondCycle && cycleNumber > 1 ? 2 : 1;
+
+      // Get the email content
+      const email = await ctx.runQuery(internal.courseCycles.getCycleEmail, {
+        courseCycleConfigId: configId,
+        courseId,
+        emailType: emailPhase,
+        emailIndex,
+        cycleNumber: contentCycleNumber,
+      });
+
+      if (email) {
+        // Send the email
+        await ctx.runAction(internal.emailWorkflowActions.sendCustomWorkflowEmail, {
+          contactId: execution.contactId,
+          subject: email.subject,
+          content: email.htmlContent,
+          storeId: execution.storeId,
+          customerEmail: execution.customerEmail,
+        });
+
+        // Track email sent
+        await ctx.runMutation(internal.courseCycles.trackEmailSent, {
+          emailId: email._id,
+        });
+
+        console.log(`[EmailWorkflows] Sent ${emailPhase} email #${emailIndex + 1} for course ${courseIndex + 1}`);
+      } else {
+        console.log(`[EmailWorkflows] No email found for ${emailPhase} #${emailIndex}, course ${courseIndex}`);
+      }
+
+      // Increment email index
+      await ctx.runMutation(internal.emailWorkflows.updateExecutionData, {
+        executionId: args.executionId,
+        executionData: {
+          ...cycleData,
+          currentEmailIndex: emailIndex + 1,
+          currentPhase: emailPhase,
+        },
+      });
+    } else if (currentNode.type === "purchaseCheck") {
+      // Purchase Check node - check if user purchased current course and branch
+      console.log(`[EmailWorkflows] Processing purchaseCheck node for ${execution.customerEmail}`);
+
+      const cycleData = execution.executionData || {};
+      const configId = cycleData.courseCycleConfigId;
+      const courseIndex = cycleData.currentCourseIndex ?? 0;
+
+      if (!configId) {
+        console.error(`[EmailWorkflows] No course cycle config in execution data`);
+        return null;
+      }
+
+      // Get config to get courseId
+      const config = await ctx.runQuery(internal.courseCycles.getConfig, {
+        configId,
+      });
+
+      if (!config || !config.courseIds[courseIndex]) {
+        return null;
+      }
+
+      const courseId = config.courseIds[courseIndex];
+
+      // Check if purchased
+      const hasPurchased = await ctx.runQuery(internal.courseCycles.checkCoursePurchase, {
+        customerEmail: execution.customerEmail,
+        courseId,
+      });
+
+      // Find the appropriate branch edge
+      const sourceHandle = hasPurchased ? "purchased" : "not_purchased";
+      const branchEdge = workflow.edges?.find(
+        (e: any) => e.source === currentNode.id && e.sourceHandle === sourceHandle
+      );
+
+      if (hasPurchased) {
+        console.log(`[EmailWorkflows] User purchased course ${courseIndex + 1}`);
+
+        // Add tag if configured
+        const tagPrefix = currentNode.data?.purchaseTagPrefix || "purchased_course_";
+        if (execution.contactId) {
+          // Get course title for tag
+          const course = await ctx.runQuery(internal.courses.getCourseById, {
+            courseId,
+          });
+          const tagName = `${tagPrefix}${course?.title || courseId}`;
+
+          try {
+            await ctx.runMutation(internal.emailWorkflows.addTagByName, {
+              contactId: execution.contactId,
+              storeId: execution.storeId,
+              tagName,
+            });
+          } catch (e) {
+            console.log(`[EmailWorkflows] Could not add tag: ${e}`);
+          }
+        }
+
+        // Update purchased list
+        const updatedPurchased = [...(cycleData.purchasedCourseIds || []), courseId];
+        await ctx.runMutation(internal.emailWorkflows.updateExecutionData, {
+          executionId: args.executionId,
+          executionData: {
+            ...cycleData,
+            purchasedCourseIds: updatedPurchased,
+          },
+        });
+      } else {
+        console.log(`[EmailWorkflows] User has NOT purchased course ${courseIndex + 1}`);
+      }
+
+      // Branch to appropriate path
+      if (branchEdge) {
+        const nextNode = workflow.nodes.find((n: any) => n.id === branchEdge.target);
+        if (nextNode) {
+          await ctx.runMutation(internal.emailWorkflows.advanceExecution, {
+            executionId: args.executionId,
+            nextNodeId: nextNode.id,
+            scheduledFor: Date.now(),
+          });
+          return null; // Skip the normal "find next node" logic
+        }
+      }
+    } else if (currentNode.type === "cycleLoop") {
+      // Cycle Loop node - advance to next course or loop back
+      console.log(`[EmailWorkflows] Processing cycleLoop node for ${execution.customerEmail}`);
+
+      const cycleData = execution.executionData || {};
+      const configId = cycleData.courseCycleConfigId;
+      const currentIndex = cycleData.currentCourseIndex ?? 0;
+      const cycleNumber = cycleData.currentCycleNumber ?? 1;
+      const purchasedCourseIds = cycleData.purchasedCourseIds || [];
+
+      if (!configId) {
+        return null;
+      }
+
+      // Get config
+      const config = await ctx.runQuery(internal.courseCycles.getConfig, {
+        configId,
+      });
+
+      if (!config) {
+        return null;
+      }
+
+      // Find next unpurchased course (starting from next index)
+      const startIndex = (currentIndex + 1) % config.courseIds.length;
+      let nextCourseIndex = -1;
+      let loopedBack = false;
+
+      for (let i = 0; i < config.courseIds.length; i++) {
+        const checkIndex = (startIndex + i) % config.courseIds.length;
+        if (checkIndex <= currentIndex && i > 0) {
+          loopedBack = true;
+        }
+        if (!purchasedCourseIds.includes(config.courseIds[checkIndex])) {
+          nextCourseIndex = checkIndex;
+          break;
+        }
+      }
+
+      if (nextCourseIndex === -1) {
+        // All courses purchased - complete
+        console.log(`[EmailWorkflows] All courses in cycle purchased, completing`);
+        await ctx.runMutation(internal.emailWorkflows.completeExecution, {
+          executionId: args.executionId,
+        });
+        return null;
+      }
+
+      // Check if we should loop
+      if (loopedBack && !config.loopOnCompletion) {
+        console.log(`[EmailWorkflows] Reached end of cycle, looping disabled`);
+        await ctx.runMutation(internal.emailWorkflows.completeExecution, {
+          executionId: args.executionId,
+        });
+        return null;
+      }
+
+      // Update to next course
+      const newCycleNumber = loopedBack ? cycleNumber + 1 : cycleNumber;
+      await ctx.runMutation(internal.emailWorkflows.updateExecutionData, {
+        executionId: args.executionId,
+        executionData: {
+          ...cycleData,
+          currentCourseIndex: nextCourseIndex,
+          currentCycleNumber: newCycleNumber,
+          currentPhase: "nurture",
+          currentEmailIndex: 0,
+        },
+      });
+
+      console.log(`[EmailWorkflows] Moving to course ${nextCourseIndex + 1}, cycle #${newCycleNumber}`);
     } else {
       console.log(`[EmailWorkflows] Unknown node type: ${currentNode.type}`);
     }

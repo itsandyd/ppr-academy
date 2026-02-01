@@ -54,6 +54,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
+import CourseCycleConfig from "./components/CourseCycleConfig";
 import {
   prebuiltEmailTemplates,
   emailTemplateCategories,
@@ -290,6 +291,7 @@ export default function WorkflowBuilderPage() {
   const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
   const [isTemplateBrowserOpen, setIsTemplateBrowserOpen] = useState(false);
   const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string | null>(null);
+  const [isCourseCycleConfigOpen, setIsCourseCycleConfigOpen] = useState(false);
 
   // A/B Testing State
   const [abTestEnabled, setAbTestEnabled] = useState(false);
@@ -1456,6 +1458,135 @@ export default function WorkflowBuilderPage() {
                   </p>
                 )}
 
+                {/* Course Cycle Nodes */}
+                {selectedNode.type === "courseCycle" && (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-900 dark:bg-violet-950/30">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="h-5 w-5 text-violet-600" />
+                        <div>
+                          <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
+                            Perpetual Course Cycle
+                          </p>
+                          <p className="text-xs text-violet-600 dark:text-violet-400">
+                            Rotate through courses with AI-generated emails
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedNode.data.courseCycleConfigId ? (
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
+                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                          Linked to: {selectedNode.data.configName || "Course Cycle"}
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          {selectedNode.data.courseCount || 0} courses in rotation
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => setIsCourseCycleConfigOpen(true)}
+                        >
+                          Change Configuration
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        onClick={() => setIsCourseCycleConfigOpen(true)}
+                      >
+                        Configure Course Cycle
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {selectedNode.type === "courseEmail" && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Email Phase</Label>
+                      <Select
+                        value={selectedNode.data.emailPhase || "nurture"}
+                        onValueChange={(v) =>
+                          updateNodeData(selectedNode.id, { emailPhase: v as "nurture" | "pitch" })
+                        }
+                      >
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          <SelectItem value="nurture">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-blue-500" />
+                              Nurture Email (value/tips)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="pitch">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-orange-500" />
+                              Pitch Email (sales)
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedNode.data.emailPhase === "pitch"
+                        ? "Sales-focused emails with CTAs to purchase the current course"
+                        : "Value-focused emails with tips and insights from the course"}
+                    </p>
+                  </div>
+                )}
+
+                {selectedNode.type === "purchaseCheck" && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Checks if the user has purchased the current course in the cycle.
+                      Routes to different paths based on purchase status.
+                    </p>
+                    <div className="space-y-2">
+                      <Label>Purchase Tag Prefix</Label>
+                      <Input
+                        value={selectedNode.data.purchaseTagPrefix || "purchased_course_"}
+                        onChange={(e) =>
+                          updateNodeData(selectedNode.id, { purchaseTagPrefix: e.target.value })
+                        }
+                        placeholder="purchased_course_"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Tag added when user purchases (prefix + course ID)
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded border border-green-200 bg-green-50 p-2 dark:border-green-900 dark:bg-green-950/30">
+                        <p className="font-medium text-green-700 dark:text-green-300">Purchased Path</p>
+                        <p className="text-green-600 dark:text-green-400">User bought the course</p>
+                      </div>
+                      <div className="rounded border border-red-200 bg-red-50 p-2 dark:border-red-900 dark:bg-red-950/30">
+                        <p className="font-medium text-red-700 dark:text-red-300">Not Purchased Path</p>
+                        <p className="text-red-600 dark:text-red-400">User hasn&apos;t bought yet</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedNode.type === "cycleLoop" && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Advances to the next unpurchased course in the cycle.
+                      If all courses are purchased, exits the loop.
+                    </p>
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        <strong>Tip:</strong> Connect the output back to the Course Cycle node
+                        to create a perpetual loop.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
                   <Button
                     variant="destructive"
@@ -2190,6 +2321,44 @@ export default function WorkflowBuilderPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsTemplateBrowserOpen(false)}>
                 Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Course Cycle Configuration Dialog */}
+        <Dialog open={isCourseCycleConfigOpen} onOpenChange={setIsCourseCycleConfigOpen}>
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5 text-violet-500" />
+                Course Cycle Configuration
+              </DialogTitle>
+              <DialogDescription>
+                Set up a perpetual course rotation with AI-generated nurture and pitch emails
+              </DialogDescription>
+            </DialogHeader>
+
+            <CourseCycleConfig
+              storeId={storeId}
+              selectedConfigId={selectedNode?.data.courseCycleConfigId || null}
+              onConfigSelect={(configId, configName, courseCount) => {
+                if (selectedNode && selectedNode.type === "courseCycle") {
+                  updateNodeData(selectedNode.id, {
+                    courseCycleConfigId: configId,
+                    configName: configName || "Course Cycle",
+                    courseCount: courseCount || 0,
+                  });
+                }
+                if (configId) {
+                  setIsCourseCycleConfigOpen(false);
+                }
+              }}
+            />
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCourseCycleConfigOpen(false)}>
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
