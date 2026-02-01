@@ -11293,6 +11293,67 @@ export declare const api: {
       { executionId: Id<"workflowExecutions"> },
       null
     >;
+    createAdminWorkflow: FunctionReference<
+      "mutation",
+      "public",
+      {
+        description?: string;
+        edges: Array<{
+          id: string;
+          source: string;
+          sourceHandle?: string;
+          target: string;
+          targetHandle?: string;
+        }>;
+        name: string;
+        nodes: Array<{
+          data: any;
+          id: string;
+          position: { x: number; y: number };
+          type:
+            | "trigger"
+            | "email"
+            | "delay"
+            | "condition"
+            | "action"
+            | "stop"
+            | "webhook"
+            | "split"
+            | "notify"
+            | "goal";
+        }>;
+        trigger: {
+          config: any;
+          type:
+            | "lead_signup"
+            | "product_purchase"
+            | "tag_added"
+            | "segment_member"
+            | "manual"
+            | "time_delay"
+            | "date_time"
+            | "customer_action"
+            | "webhook"
+            | "page_visit"
+            | "cart_abandon"
+            | "birthday"
+            | "anniversary"
+            | "custom_event"
+            | "api_call"
+            | "form_submit"
+            | "email_reply"
+            | "all_users"
+            | "all_creators"
+            | "all_learners"
+            | "new_signup"
+            | "user_inactivity"
+            | "any_purchase"
+            | "any_course_complete";
+        };
+        userId: string;
+      },
+      Id<"emailWorkflows">
+    >;
     createEmailTemplate: FunctionReference<
       "mutation",
       "public",
@@ -11355,7 +11416,14 @@ export declare const api: {
             | "custom_event"
             | "api_call"
             | "form_submit"
-            | "email_reply";
+            | "email_reply"
+            | "all_users"
+            | "all_creators"
+            | "all_learners"
+            | "new_signup"
+            | "user_inactivity"
+            | "any_purchase"
+            | "any_course_complete";
         };
         userId: string;
       },
@@ -11416,6 +11484,7 @@ export declare const api: {
       { workflowId: Id<"emailWorkflows"> },
       any
     >;
+    listAdminWorkflows: FunctionReference<"query", "public", {}, Array<any>>;
     listEmailTemplates: FunctionReference<
       "query",
       "public",
@@ -11488,7 +11557,14 @@ export declare const api: {
             | "custom_event"
             | "api_call"
             | "form_submit"
-            | "email_reply";
+            | "email_reply"
+            | "all_users"
+            | "all_creators"
+            | "all_learners"
+            | "new_signup"
+            | "user_inactivity"
+            | "any_purchase"
+            | "any_course_complete";
         };
         workflowId: Id<"emailWorkflows">;
       },

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,9 +66,93 @@ import {
   User,
   AtSign,
   Link2,
+  GitBranch,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+
+// Admin Workflows Tab Component
+function AdminWorkflowsTab() {
+  const adminWorkflows = useQuery(api.emailWorkflows.listAdminWorkflows, {});
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Email Workflows</h2>
+          <p className="text-muted-foreground">
+            Create complex automated email sequences with visual workflow builder
+          </p>
+        </div>
+        <Link href="/admin/emails/workflows">
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Workflow
+          </Button>
+        </Link>
+      </div>
+
+      {/* Workflows Grid */}
+      {adminWorkflows && adminWorkflows.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {adminWorkflows.map((workflow: any) => (
+            <Link key={workflow._id} href={`/admin/emails/workflows?id=${workflow._id}`}>
+              <Card className="cursor-pointer border-2 transition-all hover:border-primary hover:shadow-md">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{workflow.name}</CardTitle>
+                    <Badge variant={workflow.isActive ? "default" : "secondary"}>
+                      {workflow.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  {workflow.description && (
+                    <CardDescription className="line-clamp-2">
+                      {workflow.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <GitBranch className="h-4 w-4" />
+                      <span>{workflow.nodes?.length || 0} nodes</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      <span>{workflow.totalExecutions || 0} runs</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <Card className="border-2 border-dashed">
+          <CardContent className="p-16 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <GitBranch className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="mb-2 text-lg font-semibold">No workflows yet</h3>
+            <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
+              Create advanced visual email workflows with triggers, conditions, delays, and actions
+              to automate your platform communications.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Link href="/admin/emails/workflows">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Workflow
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
 
 export default function AdminEmailsPage() {
   const { user } = useUser();
@@ -628,7 +713,7 @@ export default function AdminEmailsPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="creators" className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-5">
             <TabsTrigger value="creators" className="text-base">
               <Store className="mr-2 h-4 w-4" />
               Creators
@@ -644,6 +729,10 @@ export default function AdminEmailsPage() {
             <TabsTrigger value="automations" className="text-base">
               <Zap className="mr-2 h-4 w-4" />
               Automations
+            </TabsTrigger>
+            <TabsTrigger value="workflows" className="text-base">
+              <GitBranch className="mr-2 h-4 w-4" />
+              Workflows
             </TabsTrigger>
           </TabsList>
 
@@ -2031,6 +2120,11 @@ export default function AdminEmailsPage() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Workflows Tab - Advanced Visual Workflow Builder */}
+          <TabsContent value="workflows" className="space-y-6">
+            <AdminWorkflowsTab />
           </TabsContent>
         </Tabs>
       </>

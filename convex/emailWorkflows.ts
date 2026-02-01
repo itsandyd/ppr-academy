@@ -117,7 +117,15 @@ const triggerValidator = v.object({
     v.literal("custom_event"),
     v.literal("api_call"),
     v.literal("form_submit"),
-    v.literal("email_reply")
+    v.literal("email_reply"),
+    // Admin-specific triggers (platform-wide)
+    v.literal("all_users"),
+    v.literal("all_creators"),
+    v.literal("all_learners"),
+    v.literal("new_signup"),
+    v.literal("user_inactivity"),
+    v.literal("any_purchase"),
+    v.literal("any_course_complete")
   ),
   config: v.any(),
 });
@@ -385,6 +393,52 @@ export const listWorkflows = query({
   },
 });
 
+/**
+ * List admin workflows (platform-wide email automations)
+ */
+export const listAdminWorkflows = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    const workflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
+      .order("desc")
+      .collect();
+
+    return workflows;
+  },
+});
+
+/**
+ * Create an admin workflow (platform-wide targeting)
+ */
+export const createAdminWorkflow = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    userId: v.string(),
+    trigger: triggerValidator,
+    nodes: v.array(nodeValidator),
+    edges: v.array(edgeValidator),
+  },
+  returns: v.id("emailWorkflows"),
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("emailWorkflows", {
+      name: args.name,
+      description: args.description,
+      storeId: "admin", // Special marker for admin workflows
+      userId: args.userId,
+      isActive: false,
+      isAdminWorkflow: true,
+      trigger: args.trigger,
+      nodes: args.nodes,
+      edges: args.edges,
+      totalExecutions: 0,
+    });
+  },
+});
+
 export const toggleWorkflowActive = mutation({
   args: {
     workflowId: v.id("emailWorkflows"),
@@ -410,6 +464,7 @@ export const duplicateWorkflow = mutation({
       storeId: workflow.storeId,
       userId: workflow.userId,
       isActive: false,
+      isAdminWorkflow: workflow.isAdminWorkflow,
       trigger: workflow.trigger,
       nodes: workflow.nodes,
       edges: workflow.edges,

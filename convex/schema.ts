@@ -508,6 +508,8 @@ export default defineSchema({
     storeId: v.string(),
     userId: v.string(),
     isActive: v.optional(v.boolean()),
+    // Admin workflow flag - when true, targets platform-wide users
+    isAdminWorkflow: v.optional(v.boolean()),
     trigger: v.object({
       type: v.union(
         v.literal("lead_signup"),
@@ -527,7 +529,15 @@ export default defineSchema({
         v.literal("custom_event"),
         v.literal("api_call"),
         v.literal("form_submit"),
-        v.literal("email_reply")
+        v.literal("email_reply"),
+        // Admin-specific triggers (platform-wide)
+        v.literal("all_users"),
+        v.literal("all_creators"),
+        v.literal("all_learners"),
+        v.literal("new_signup"),
+        v.literal("user_inactivity"),
+        v.literal("any_purchase"),
+        v.literal("any_course_complete")
       ),
       config: v.any(), // Flexible config for different trigger types
     }),
@@ -571,7 +581,8 @@ export default defineSchema({
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
-    .index("by_active", ["isActive"]),
+    .index("by_active", ["isActive"])
+    .index("by_isAdminWorkflow", ["isAdminWorkflow"]),
 
   // Workflow Templates (pre-built workflow templates)
   workflowTemplates: defineTable({

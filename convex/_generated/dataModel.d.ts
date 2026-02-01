@@ -5375,6 +5375,7 @@ export type DataModel = {
         targetHandle?: string;
       }>;
       isActive?: boolean;
+      isAdminWorkflow?: boolean;
       lastExecuted?: number;
       name: string;
       nodes: Array<{
@@ -5414,7 +5415,14 @@ export type DataModel = {
           | "custom_event"
           | "api_call"
           | "form_submit"
-          | "email_reply";
+          | "email_reply"
+          | "all_users"
+          | "all_creators"
+          | "all_learners"
+          | "new_signup"
+          | "user_inactivity"
+          | "any_purchase"
+          | "any_course_complete";
       };
       userId: string;
       _id: Id<"emailWorkflows">;
@@ -5428,6 +5436,7 @@ export type DataModel = {
       | "description"
       | "edges"
       | "isActive"
+      | "isAdminWorkflow"
       | "lastExecuted"
       | "name"
       | "nodes"
@@ -5441,6 +5450,7 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_active: ["isActive", "_creationTime"];
+      by_isAdminWorkflow: ["isAdminWorkflow", "_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
     };
