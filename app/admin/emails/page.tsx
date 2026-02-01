@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,11 +75,44 @@ import { AdminEmailFunnelOverview } from "@/components/emails/AdminEmailFunnelOv
 import { LayoutDashboard } from "lucide-react";
 
 // Admin Workflows Tab Component
-function AdminWorkflowsTab() {
+function AdminWorkflowsTab({ sequenceType }: { sequenceType?: string | null }) {
   const adminWorkflows = useQuery(api.emailWorkflows.listAdminWorkflows, {});
+
+  // Sequence type display names
+  const sequenceNames: Record<string, string> = {
+    welcome: "Platform Welcome",
+    new_learner: "New Learner Journey",
+    course_progress: "Course Progress",
+    course_complete: "Course Completion",
+    learner_to_creator: "Learner → Creator",
+    new_creator: "New Creator Onboarding",
+    creator_success: "Creator Success",
+    platform_reengagement: "Platform Re-engagement",
+    platform_winback: "Platform Win-back",
+  };
 
   return (
     <div className="space-y-6">
+      {/* Sequence-specific header if coming from overview */}
+      {sequenceType && sequenceNames[sequenceType] && (
+        <Card className="border-2 border-primary/50 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Configure Sequence</p>
+                <h3 className="text-lg font-semibold">{sequenceNames[sequenceType]}</h3>
+              </div>
+              <Link href="/admin/emails/workflows">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create {sequenceNames[sequenceType]} Workflow
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -87,12 +121,14 @@ function AdminWorkflowsTab() {
             Create complex automated email sequences with visual workflow builder
           </p>
         </div>
-        <Link href="/admin/emails/workflows">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Workflow
-          </Button>
-        </Link>
+        {!sequenceType && (
+          <Link href="/admin/emails/workflows">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Workflow
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Workflows Grid */}
@@ -159,6 +195,24 @@ function AdminWorkflowsTab() {
 export default function AdminEmailsPage() {
   const { user } = useUser();
   const convex = useConvex();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read tab from URL, default to "overview"
+  const activeTab = searchParams.get("tab") || "overview";
+  const sequenceType = searchParams.get("sequence");
+
+  // Handle tab change - update URL
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    // Clear sequence param when switching tabs (unless going to workflows)
+    if (value !== "workflows") {
+      params.delete("sequence");
+    }
+    router.push(`/admin/emails?${params.toString()}`);
+  };
+
   const [isImporting, setIsImporting] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<{
@@ -714,7 +768,7 @@ export default function AdminEmailsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-6">
             <TabsTrigger value="overview" className="text-base">
               <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -2145,7 +2199,7 @@ export default function AdminEmailsPage() {
 
           {/* Workflows Tab - Advanced Visual Workflow Builder */}
           <TabsContent value="workflows" className="space-y-6">
-            <AdminWorkflowsTab />
+            <AdminWorkflowsTab sequenceType={sequenceType} />
           </TabsContent>
         </Tabs>
       </>
