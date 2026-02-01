@@ -42,14 +42,14 @@ interface EmailFunnelOverviewProps {
   storeId: string;
 }
 
-// Sequence types for the funnel
+// Sequence types for the funnel - Creator-focused (for THEIR audience)
 type SequenceType =
   | "welcome"
   | "buyer"
-  | "learner"
-  | "learner_to_creator"
-  | "creator_onboarding"
-  | "creator_growth"
+  | "course_student"
+  | "lead_nurture"
+  | "product_launch"
+  | "coaching_client"
   | "reengagement"
   | "winback";
 
@@ -68,100 +68,100 @@ interface SequenceNode {
   position: "main" | "branch" | "recovery";
 }
 
-// Define the funnel structure
+// Define the funnel structure - Creator-focused (for THEIR customers/audience)
 const sequenceNodes: SequenceNode[] = [
   {
     id: "welcome",
     name: "Welcome Sequence",
-    description: "New user onboarding",
+    description: "New subscriber onboarding",
     icon: UserPlus,
     color: "text-blue-600",
     bgColor: "bg-blue-50 dark:bg-blue-950/30",
-    triggerDescription: "User signs up",
+    triggerDescription: "New subscriber joins your list",
     emailCount: 3,
     status: "not_configured",
     enrolledCount: 0,
-    nextSequences: ["buyer", "learner", "creator_onboarding", "reengagement"],
+    nextSequences: ["lead_nurture", "product_launch"],
     position: "main",
   },
   {
     id: "buyer",
-    name: "Buyer Sequence",
+    name: "Purchase Thank You",
     description: "Post-purchase follow-up",
     icon: ShoppingCart,
     color: "text-green-600",
     bgColor: "bg-green-50 dark:bg-green-950/30",
-    triggerDescription: "Makes first purchase",
-    emailCount: 2,
+    triggerDescription: "Customer makes a purchase",
+    emailCount: 3,
     status: "not_configured",
     enrolledCount: 0,
-    nextSequences: ["learner_to_creator"],
-    position: "branch",
+    nextSequences: ["course_student", "coaching_client"],
+    position: "main",
   },
   {
-    id: "learner",
-    name: "Learner Sequence",
-    description: "Course progress & milestones",
+    id: "course_student",
+    name: "Course Student",
+    description: "Guide students through your course",
     icon: GraduationCap,
     color: "text-purple-600",
     bgColor: "bg-purple-50 dark:bg-purple-950/30",
-    triggerDescription: "Enrolls in a course",
+    triggerDescription: "Student enrolls in your course",
     emailCount: 5,
     status: "not_configured",
     enrolledCount: 0,
-    nextSequences: ["learner_to_creator"],
+    nextSequences: ["product_launch"],
     position: "branch",
   },
   {
-    id: "learner_to_creator",
-    name: "Learner → Creator",
-    description: "Convert learners to creators",
-    icon: Sparkles,
-    color: "text-amber-600",
-    bgColor: "bg-amber-50 dark:bg-amber-950/30",
-    triggerDescription: "Completes course + no store",
-    emailCount: 5,
-    status: "not_configured",
-    enrolledCount: 0,
-    nextSequences: ["creator_onboarding"],
-    position: "main",
-  },
-  {
-    id: "creator_onboarding",
-    name: "Creator Onboarding",
-    description: "Help creators succeed",
-    icon: Store,
+    id: "coaching_client",
+    name: "Coaching Client",
+    description: "Onboard & follow up with clients",
+    icon: Users,
     color: "text-cyan-600",
     bgColor: "bg-cyan-50 dark:bg-cyan-950/30",
-    triggerDescription: "Creates a store",
-    emailCount: 5,
-    status: "not_configured",
-    enrolledCount: 0,
-    nextSequences: ["creator_growth"],
-    position: "main",
-  },
-  {
-    id: "creator_growth",
-    name: "Creator Growth",
-    description: "Ongoing creator tips & features",
-    icon: TrendingUp,
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
-    triggerDescription: "Makes first sale",
-    emailCount: 0,
+    triggerDescription: "Client books coaching session",
+    emailCount: 4,
     status: "not_configured",
     enrolledCount: 0,
     nextSequences: [],
+    position: "branch",
+  },
+  {
+    id: "lead_nurture",
+    name: "Lead Nurture",
+    description: "Build trust with value content",
+    icon: Sparkles,
+    color: "text-amber-600",
+    bgColor: "bg-amber-50 dark:bg-amber-950/30",
+    triggerDescription: "Subscriber hasn't purchased yet",
+    emailCount: 5,
+    status: "not_configured",
+    enrolledCount: 0,
+    nextSequences: ["product_launch"],
+    position: "main",
+  },
+  {
+    id: "product_launch",
+    name: "Product Launch",
+    description: "Announce & sell new products",
+    icon: TrendingUp,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
+    triggerDescription: "You launch a new product",
+    emailCount: 4,
+    status: "not_configured",
+    enrolledCount: 0,
+    nextSequences: ["buyer"],
     position: "main",
   },
   {
     id: "reengagement",
     name: "Re-engagement",
-    description: "Bring back inactive users",
+    description: "Bring back inactive subscribers",
     icon: Clock,
     color: "text-orange-600",
     bgColor: "bg-orange-50 dark:bg-orange-950/30",
-    triggerDescription: "14+ days inactive",
+    triggerDescription: "Subscriber inactive 14+ days",
     emailCount: 3,
     status: "not_configured",
     enrolledCount: 0,
@@ -171,11 +171,11 @@ const sequenceNodes: SequenceNode[] = [
   {
     id: "winback",
     name: "Win-back",
-    description: "Last attempt for churned users",
+    description: "Last attempt for churned subscribers",
     icon: UserX,
     color: "text-red-600",
     bgColor: "bg-red-50 dark:bg-red-950/30",
-    triggerDescription: "60+ days inactive",
+    triggerDescription: "Subscriber inactive 60+ days",
     emailCount: 3,
     status: "not_configured",
     enrolledCount: 0,
