@@ -287,6 +287,19 @@ function SequenceCard({
   );
 }
 
+// Map sequence types to workflow name patterns for matching
+const sequenceNamePatterns: Record<SequenceType, string[]> = {
+  welcome: ["platform welcome", "welcome"],
+  new_learner: ["new learner", "learner journey"],
+  course_progress: ["course progress"],
+  course_complete: ["course completion", "course complete"],
+  learner_to_creator: ["learner to creator", "learner → creator"],
+  new_creator: ["new creator", "creator onboarding"],
+  creator_success: ["creator success"],
+  platform_reengagement: ["re-engagement", "reengagement"],
+  platform_winback: ["win-back", "winback"],
+};
+
 export function AdminEmailFunnelOverview() {
   const router = useRouter();
 
@@ -296,17 +309,50 @@ export function AdminEmailFunnelOverview() {
   // Get platform-wide stats
   const platformOverview = useQuery(api.adminEmailMonitoring.getPlatformOverview, {});
 
+  // Match saved workflows to sequence types
+  const getWorkflowForSequence = (sequenceId: SequenceType) => {
+    if (!adminWorkflows) return null;
+    const patterns = sequenceNamePatterns[sequenceId];
+    return adminWorkflows.find((workflow: any) => {
+      const name = workflow.name?.toLowerCase() || "";
+      return patterns.some(pattern => name.includes(pattern));
+    });
+  };
+
+  // Merge saved workflow data with sequence definitions
+  const sequencesWithStatus = platformSequences.map(seq => {
+    const savedWorkflow = getWorkflowForSequence(seq.id);
+    if (savedWorkflow) {
+      const emailNodes = savedWorkflow.nodes?.filter((n: any) => n.type === "email") || [];
+      return {
+        ...seq,
+        status: savedWorkflow.isActive ? "active" as const : "paused" as const,
+        emailCount: emailNodes.length || seq.emailCount,
+        workflowId: savedWorkflow._id,
+      };
+    }
+    return seq;
+  });
+
   // Separate sequences by position
-  const mainFlow = platformSequences.filter(n => n.position === "main");
-  const branchFlow = platformSequences.filter(n => n.position === "branch");
-  const recoveryFlow = platformSequences.filter(n => n.position === "recovery");
+  const mainFlow = sequencesWithStatus.filter(n => n.position === "main");
+  const branchFlow = sequencesWithStatus.filter(n => n.position === "branch");
+  const recoveryFlow = sequencesWithStatus.filter(n => n.position === "recovery");
 
-  const activeCount = platformSequences.filter(n => n.status === "active").length;
-  const totalEmails = platformSequences.reduce((acc, n) => acc + n.emailCount, 0);
+  const activeCount = sequencesWithStatus.filter(n => n.status === "active").length;
+  const configuredCount = sequencesWithStatus.filter(n => n.status !== "not_configured").length;
+  const totalEmails = sequencesWithStatus.reduce((acc, n) => acc + n.emailCount, 0);
 
-  // Navigate directly to workflow builder with sequence template loaded
+  // Navigate to workflow builder - edit existing or create new
   const handleSequenceClick = (sequenceId: SequenceType) => {
-    router.push(`/admin/emails/workflows?sequence=${sequenceId}`);
+    const existingWorkflow = getWorkflowForSequence(sequenceId);
+    if (existingWorkflow) {
+      // Edit existing workflow
+      router.push(`/admin/emails/workflows?id=${existingWorkflow._id}`);
+    } else {
+      // Create new from template
+      router.push(`/admin/emails/workflows?sequence=${sequenceId}`);
+    }
   };
 
   return (
@@ -339,8 +385,8 @@ export function AdminEmailFunnelOverview() {
                 <Workflow className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{activeCount}/{platformSequences.length}</p>
-                <p className="text-xs text-muted-foreground">Sequences Active</p>
+                <p className="text-2xl font-bold">{configuredCount}/{sequencesWithStatus.length}</p>
+                <p className="text-xs text-muted-foreground">Sequences Configured</p>
               </div>
             </div>
           </CardContent>
