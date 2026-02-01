@@ -202,14 +202,31 @@ function validateWorkflow(nodes: Node[], edges: Edge[]): ValidationError[] {
   return errors;
 }
 
+// Sequence type to workflow configuration mapping
+const sequenceConfigs: Record<string, { name: string; triggerType: AdminTriggerType; description: string }> = {
+  welcome: { name: "Platform Welcome", triggerType: "new_signup", description: "Welcome new users to PPR Academy" },
+  new_learner: { name: "New Learner Journey", triggerType: "new_signup", description: "Onboard new course enrollees" },
+  course_progress: { name: "Course Progress", triggerType: "any_course_complete", description: "Celebrate milestones" },
+  course_complete: { name: "Course Completion", triggerType: "any_course_complete", description: "Celebrate completion" },
+  learner_to_creator: { name: "Learner to Creator", triggerType: "all_learners", description: "Convert learners into creators" },
+  new_creator: { name: "New Creator Onboarding", triggerType: "all_creators", description: "Help new creators succeed" },
+  creator_success: { name: "Creator Success", triggerType: "any_purchase", description: "Celebrate sales" },
+  platform_reengagement: { name: "Platform Re-engagement", triggerType: "user_inactivity", description: "Bring back inactive users" },
+  platform_winback: { name: "Platform Win-back", triggerType: "user_inactivity", description: "Last attempt for churned users" },
+};
+
 export default function AdminWorkflowBuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workflowId = searchParams.get("id");
+  const sequenceType = searchParams.get("sequence");
   const { user } = useUser();
   const { toast } = useToast();
 
-  const [workflowName, setWorkflowName] = useState("New Admin Workflow");
+  // Get sequence config if creating from overview
+  const sequenceConfig = sequenceType ? sequenceConfigs[sequenceType] : null;
+
+  const [workflowName, setWorkflowName] = useState(sequenceConfig?.name || "New Admin Workflow");
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -217,6 +234,7 @@ export default function AdminWorkflowBuilderPage() {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [addNodeFn, setAddNodeFn] = useState<((type: string) => void) | null>(null);
   const [isActive, setIsActive] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   // Email editor dialog state
   const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
@@ -250,6 +268,7 @@ export default function AdminWorkflowBuilderPage() {
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
 
+  // Initialize from existing workflow
   useEffect(() => {
     if (existingWorkflow) {
       setWorkflowName(existingWorkflow.name || "New Admin Workflow");
@@ -260,8 +279,56 @@ export default function AdminWorkflowBuilderPage() {
       if (existingWorkflow.edges) {
         setEdges(existingWorkflow.edges);
       }
+      setInitialized(true);
     }
   }, [existingWorkflow]);
+
+  // Initialize from sequence type (only for new workflows)
+  useEffect(() => {
+    if (!workflowId && sequenceConfig && !initialized) {
+      setWorkflowName(sequenceConfig.name);
+
+      // Create initial trigger node with the appropriate trigger type
+      const triggerNode: Node = {
+        id: "trigger-1",
+        type: "trigger",
+        position: { x: 250, y: 50 },
+        data: {
+          triggerType: sequenceConfig.triggerType,
+          label: "Trigger",
+          inactivityDays: sequenceConfig.triggerType === "user_inactivity" ? (sequenceType === "platform_winback" ? 60 : 14) : undefined,
+        },
+      };
+
+      // Create initial email node
+      const emailNode: Node = {
+        id: "email-1",
+        type: "email",
+        position: { x: 250, y: 200 },
+        data: {
+          label: "Email",
+          subject: "",
+          body: "",
+        },
+      };
+
+      // Connect them
+      const edge: Edge = {
+        id: "edge-trigger-email",
+        source: "trigger-1",
+        target: "email-1",
+      };
+
+      setNodes([triggerNode, emailNode]);
+      setEdges([edge]);
+      setInitialized(true);
+
+      toast({
+        title: `Creating ${sequenceConfig.name}`,
+        description: "Workflow pre-configured. Add emails and customize the flow.",
+      });
+    }
+  }, [workflowId, sequenceConfig, initialized, sequenceType, toast]);
 
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);

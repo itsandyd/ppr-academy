@@ -102,7 +102,7 @@ function AdminWorkflowsTab({ sequenceType }: { sequenceType?: string | null }) {
                 <p className="text-sm text-muted-foreground">Configure Sequence</p>
                 <h3 className="text-lg font-semibold">{sequenceNames[sequenceType]}</h3>
               </div>
-              <Link href="/admin/emails/workflows">
+              <Link href={`/admin/emails/workflows?sequence=${sequenceType}`}>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
                   Create {sequenceNames[sequenceType]} Workflow
