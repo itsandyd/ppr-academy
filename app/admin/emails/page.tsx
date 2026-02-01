@@ -1741,33 +1741,43 @@ export default function AdminEmailsPage() {
 
                         <div className="space-y-2">
                           <Label htmlFor="template-html" className="text-base font-medium">
-                            HTML Content <span className="text-red-500">*</span>
+                            Email Content <span className="text-red-500">*</span>
                           </Label>
-                          <Textarea
-                            id="template-html"
-                            placeholder="<div style='font-family: sans-serif;'>&#10;  <h1 style='color: #333;'>Welcome!</h1>&#10;  <p>Thanks for joining us...</p>&#10;</div>"
-                            className="min-h-[250px] bg-muted/30 font-mono text-sm"
-                            value={templateForm.htmlContent}
-                            onChange={(e) =>
-                              setTemplateForm({ ...templateForm, htmlContent: e.target.value })
+                          <WysiwygEditor
+                            content={templateForm.htmlContent}
+                            onChange={(html) =>
+                              setTemplateForm({ ...templateForm, htmlContent: html })
                             }
+                            placeholder="Write your email content here..."
+                            className="min-h-[300px]"
                           />
                           <div className="flex items-start gap-2 rounded-md border border-blue-500/20 bg-blue-500/10 p-3">
-                            <Sparkles className="mt-0.5 h-4 w-4 text-blue-600" />
+                            <Braces className="mt-0.5 h-4 w-4 text-blue-600" />
                             <p className="text-xs text-blue-600 dark:text-blue-400">
-                              <strong>Pro tip:</strong> Use variables like{" "}
+                              <strong>Personalization Variables:</strong>{" "}
                               <code className="rounded bg-blue-500/20 px-1.5 py-0.5">
-                                {"{"}name{"}"}
+                                {"{{"}firstName{"}}"}
                               </code>
                               ,{" "}
                               <code className="rounded bg-blue-500/20 px-1.5 py-0.5">
-                                {"{"}email{"}"}
+                                {"{{"}name{"}}"}
                               </code>
                               ,{" "}
                               <code className="rounded bg-blue-500/20 px-1.5 py-0.5">
-                                {"{"}courseName{"}"}
-                              </code>{" "}
-                              for personalization
+                                {"{{"}email{"}}"}
+                              </code>
+                              ,{" "}
+                              <code className="rounded bg-blue-500/20 px-1.5 py-0.5">
+                                {"{{"}level{"}}"}
+                              </code>
+                              ,{" "}
+                              <code className="rounded bg-blue-500/20 px-1.5 py-0.5">
+                                {"{{"}xp{"}}"}
+                              </code>
+                              ,{" "}
+                              <code className="rounded bg-blue-500/20 px-1.5 py-0.5">
+                                {"{{"}coursesEnrolled{"}}"}
+                              </code>
                             </p>
                           </div>
                         </div>
