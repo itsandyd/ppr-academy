@@ -2,7 +2,5 @@
   "codegen": {
     "staticApi": true,
     "staticDataModel": true
-  },
-  "skipFunctionsTypecheck": true,
-  "staticCodegen": true
+  }
 }
