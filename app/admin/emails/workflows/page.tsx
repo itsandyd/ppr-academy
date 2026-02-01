@@ -10,6 +10,9 @@ import { Node, Edge } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -21,6 +24,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -38,8 +42,21 @@ import {
   ShoppingCart,
   GraduationCap,
   UserX,
+  Search,
+  Check,
+  FlaskConical,
+  Plus,
+  X,
+  Mail,
+  Filter,
+  FileText,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  prebuiltEmailTemplates,
+  emailTemplateCategories,
+  type EmailTemplate,
+} from "@/app/dashboard/emails/workflows/templates/email-templates";
 import NodeSidebar from "@/app/dashboard/emails/workflows/components/NodeSidebar";
 import WorkflowCanvas from "@/app/dashboard/emails/workflows/components/WorkflowCanvas";
 
@@ -201,6 +218,14 @@ export default function AdminWorkflowBuilderPage() {
   const [addNodeFn, setAddNodeFn] = useState<((type: string) => void) | null>(null);
   const [isActive, setIsActive] = useState(false);
 
+  // Email editor dialog state
+  const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
+  const [isTemplateBrowserOpen, setIsTemplateBrowserOpen] = useState(false);
+  const [templateSearchQuery, setTemplateSearchQuery] = useState("");
+  const [templateCategory, setTemplateCategory] = useState<string>("all");
+  const [templateName, setTemplateName] = useState("");
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+
   // Get existing workflow if editing
   const existingWorkflow = useQuery(
     api.emailWorkflows.getWorkflow,
@@ -223,6 +248,7 @@ export default function AdminWorkflowBuilderPage() {
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
+  const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
 
   useEffect(() => {
     if (existingWorkflow) {
@@ -266,6 +292,44 @@ export default function AdminWorkflowBuilderPage() {
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     setSelectedNode(null);
   }, []);
+
+  // Handle saving email as template
+  const handleSaveAsTemplate = async () => {
+    if (!selectedNode || !templateName.trim() || !selectedNode.data.subject) {
+      toast({
+        title: "Cannot save template",
+        description: "Please provide a template name and subject line",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingTemplate(true);
+    try {
+      await createEmailTemplate({
+        storeId: "admin",
+        name: templateName,
+        subject: selectedNode.data.subject,
+        content: selectedNode.data.body || "",
+      });
+      toast({ title: "Template saved!", description: `"${templateName}" has been saved for reuse.` });
+      setTemplateName("");
+    } catch (error: any) {
+      toast({ title: "Failed to save template", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  // Filter prebuilt templates
+  const filteredTemplates = prebuiltEmailTemplates.filter((template) => {
+    const matchesSearch =
+      !templateSearchQuery ||
+      template.name.toLowerCase().includes(templateSearchQuery.toLowerCase()) ||
+      template.description?.toLowerCase().includes(templateSearchQuery.toLowerCase());
+    const matchesCategory = templateCategory === "all" || template.category === templateCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleSave = async () => {
     if (!user?.id) {
@@ -511,34 +575,34 @@ export default function AdminWorkflowBuilderPage() {
                   </div>
                 )}
 
-                {/* Email Node Configuration */}
+                {/* Email Node Configuration - Preview & Edit Button */}
                 {selectedNode.type === "email" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Subject</Label>
-                      <Input
-                        value={selectedNode.data.subject || ""}
-                        onChange={(e) => updateNodeData(selectedNode.id, { subject: e.target.value })}
-                        placeholder="Email subject line..."
-                        className="bg-white dark:bg-black"
-                      />
+                  <>
+                    {/* Email Preview */}
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                      {selectedNode.data.subject ? (
+                        <>
+                          <p className="text-xs text-zinc-500">Subject:</p>
+                          <p className="text-sm font-medium">{selectedNode.data.subject}</p>
+                          {selectedNode.data.templateName && (
+                            <p className="mt-1 text-xs text-zinc-500">
+                              Template: {selectedNode.data.templateName}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No email configured</p>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label>Email Body</Label>
-                      <WysiwygEditor
-                        content={selectedNode.data.body || ""}
-                        onChange={(content) => updateNodeData(selectedNode.id, { body: content })}
-                        placeholder="Write your email content..."
-                        className="min-h-[200px]"
-                      />
-                    </div>
-                    <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                      <p className="font-medium">Available Variables:</p>
-                      <p className="mt-1 text-xs">
-                        {"{{firstName}}, {{name}}, {{email}}, {{level}}, {{xp}}, {{coursesEnrolled}}, {{coursesCompleted}}, {{storeName}}, {{memberSince}}"}
-                      </p>
-                    </div>
-                  </div>
+
+                    <Button
+                      className="w-full gap-2"
+                      onClick={() => setIsEmailEditorOpen(true)}
+                    >
+                      <Mail className="h-4 w-4" />
+                      {selectedNode.data.subject ? "Edit Email" : "Configure Email"}
+                    </Button>
+                  </>
                 )}
 
                 {/* Delay Node Configuration */}
@@ -697,6 +761,374 @@ export default function AdminWorkflowBuilderPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Email Editor Dialog */}
+        <Dialog open={isEmailEditorOpen} onOpenChange={setIsEmailEditorOpen}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle>Configure Email</DialogTitle>
+              <DialogDescription>
+                Create your email content or select from a saved template
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedNode?.type === "email" && (
+              <div className="space-y-6 py-4">
+                <Tabs
+                  value={selectedNode.data.mode || "custom"}
+                  onValueChange={(v) =>
+                    updateNodeData(selectedNode.id, { mode: v as "template" | "custom" | "abtest" })
+                  }
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="template">Template</TabsTrigger>
+                    <TabsTrigger value="custom">Custom</TabsTrigger>
+                    <TabsTrigger value="abtest" className="gap-1">
+                      <FlaskConical className="h-3 w-3" />
+                      A/B Test
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="template" className="mt-4 space-y-4">
+                    {/* Quick start - browse templates */}
+                    <div className="space-y-4">
+                      <Button
+                        onClick={() => setIsTemplateBrowserOpen(true)}
+                        className="w-full gap-2"
+                        size="lg"
+                      >
+                        <Search className="h-4 w-4" />
+                        Browse Email Templates
+                      </Button>
+
+                      {/* Selected Template Preview */}
+                      {(selectedNode.data.templateId ||
+                        selectedNode.data.prebuiltTemplateId ||
+                        selectedNode.data.subject) && (
+                        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                Template loaded: {selectedNode.data.templateName || "Custom"}
+                              </p>
+                              <p className="mt-0.5 truncate text-sm text-green-600 dark:text-green-400">
+                                Subject: {selectedNode.data.subject}
+                              </p>
+                              <p className="mt-2 text-xs text-green-600 dark:text-green-400">
+                                Switch to &quot;Custom&quot; tab to edit the content
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-center text-xs text-zinc-500">
+                        Choose from {prebuiltEmailTemplates.length} pre-built templates
+                      </p>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="custom" className="mt-4 space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Subject Line *</Label>
+                        <Input
+                          value={selectedNode.data.subject || ""}
+                          onChange={(e) =>
+                            updateNodeData(selectedNode.id, { subject: e.target.value })
+                          }
+                          placeholder="Email subject line"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Preview Text</Label>
+                        <Input
+                          value={selectedNode.data.previewText || ""}
+                          onChange={(e) =>
+                            updateNodeData(selectedNode.id, { previewText: e.target.value })
+                          }
+                          placeholder="Shows in inbox preview"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email Body</Label>
+                      <WysiwygEditor
+                        content={selectedNode.data.body || ""}
+                        onChange={(html) => updateNodeData(selectedNode.id, { body: html })}
+                        placeholder="Write your email content here..."
+                        className="min-h-[350px]"
+                      />
+                    </div>
+
+                    {/* Personalization Variables */}
+                    <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                      <p className="font-medium">Available Variables:</p>
+                      <p className="mt-1 text-xs">
+                        {"{{firstName}}, {{name}}, {{email}}, {{level}}, {{xp}}, {{coursesEnrolled}}, {{coursesCompleted}}, {{storeName}}, {{memberSince}}, {{daysSinceJoined}}, {{totalSpent}}"}
+                      </p>
+                    </div>
+
+                    {/* Save as Template */}
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                      <Label className="text-sm font-medium">Save for Reuse</Label>
+                      <p className="mb-3 text-xs text-zinc-500">
+                        Save this email as a template to use in other workflows
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Template name..."
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={handleSaveAsTemplate}
+                          disabled={isSavingTemplate || !selectedNode.data.subject}
+                        >
+                          {isSavingTemplate ? "Saving..." : "Save as Template"}
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* A/B Test Tab */}
+                  <TabsContent value="abtest" className="mt-4 space-y-4">
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 dark:border-purple-900 dark:bg-purple-950/30">
+                      <div className="flex items-center gap-2">
+                        <FlaskConical className="h-5 w-5 text-purple-600" />
+                        <div>
+                          <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                            A/B Test Your Emails
+                          </p>
+                          <p className="text-xs text-purple-600 dark:text-purple-400">
+                            Test different subject lines to see which performs better
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enable A/B Testing Toggle */}
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <Label className="font-medium">Enable A/B Testing</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Split test subject lines with your users
+                        </p>
+                      </div>
+                      <Switch
+                        checked={selectedNode.data.abTestEnabled || false}
+                        onCheckedChange={(checked) => {
+                          updateNodeData(selectedNode.id, { abTestEnabled: checked });
+                          if (checked && (!selectedNode.data.abVariants || selectedNode.data.abVariants.length < 2)) {
+                            const variants = [
+                              { id: "variant_a", name: "Variant A", subject: selectedNode.data.subject || "", percentage: 50 },
+                              { id: "variant_b", name: "Variant B", subject: "", percentage: 50 },
+                            ];
+                            updateNodeData(selectedNode.id, { abVariants: variants });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {selectedNode.data.abTestEnabled && (
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="font-medium">Subject Line Variants</Label>
+                            {(selectedNode.data.abVariants?.length || 0) < 3 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const variants = selectedNode.data.abVariants || [];
+                                  const newPercentage = Math.floor(100 / (variants.length + 1));
+                                  const updatedVariants = variants.map((v: any) => ({
+                                    ...v,
+                                    percentage: newPercentage,
+                                  }));
+                                  updatedVariants.push({
+                                    id: `variant_${String.fromCharCode(97 + variants.length)}`,
+                                    name: `Variant ${String.fromCharCode(65 + variants.length)}`,
+                                    subject: "",
+                                    percentage: 100 - (newPercentage * variants.length),
+                                  });
+                                  updateNodeData(selectedNode.id, { abVariants: updatedVariants });
+                                }}
+                                className="gap-1"
+                              >
+                                <Plus className="h-3 w-3" />
+                                Add Variant
+                              </Button>
+                            )}
+                          </div>
+
+                          {(selectedNode.data.abVariants || []).map((variant: any, idx: number) => (
+                            <div
+                              key={variant.id}
+                              className="rounded-lg border bg-white p-4 dark:bg-zinc-900"
+                            >
+                              <div className="mb-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                                    {String.fromCharCode(65 + idx)}
+                                  </span>
+                                  <span className="text-sm font-medium">{variant.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">{variant.percentage}%</span>
+                                  {(selectedNode.data.abVariants?.length || 0) > 2 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => {
+                                        const variants = selectedNode.data.abVariants.filter(
+                                          (_: any, i: number) => i !== idx
+                                        );
+                                        const perEach = Math.floor(100 / variants.length);
+                                        const redistributed = variants.map((v: any, i: number) => ({
+                                          ...v,
+                                          percentage: i === variants.length - 1 ? 100 - perEach * (variants.length - 1) : perEach,
+                                        }));
+                                        updateNodeData(selectedNode.id, { abVariants: redistributed });
+                                      }}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <Input
+                                value={variant.subject}
+                                onChange={(e) => {
+                                  const variants = [...(selectedNode.data.abVariants || [])];
+                                  variants[idx] = { ...variants[idx], subject: e.target.value };
+                                  updateNodeData(selectedNode.id, { abVariants: variants });
+                                }}
+                                placeholder="Subject line for this variant..."
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEmailEditorOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setIsEmailEditorOpen(false)}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Template Browser Dialog */}
+        <Dialog open={isTemplateBrowserOpen} onOpenChange={setIsTemplateBrowserOpen}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Email Template Library
+              </DialogTitle>
+              <DialogDescription>
+                Choose a pre-built template to get started quickly
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Search and Filter */}
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search templates..."
+                    value={templateSearchQuery}
+                    onChange={(e) => setTemplateSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={templateCategory} onValueChange={setTemplateCategory}>
+                  <SelectTrigger className="w-[180px]">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-black">
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {emailTemplateCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Template Grid */}
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {filteredTemplates.map((template) => (
+                    <div
+                      key={template.id}
+                      className="group cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary hover:bg-primary/5"
+                      onClick={() => {
+                        if (selectedNode) {
+                          updateNodeData(selectedNode.id, {
+                            prebuiltTemplateId: template.id,
+                            templateName: template.name,
+                            subject: template.subject,
+                            body: template.body,
+                            mode: "template",
+                          });
+                          setIsTemplateBrowserOpen(false);
+                          toast({
+                            title: "Template loaded",
+                            description: `"${template.name}" has been applied to your email.`,
+                          });
+                        }
+                      }}
+                    >
+                      <div className="mb-2 flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium">{template.name}</h4>
+                          <Badge variant="secondary" className="mt-1">
+                            {emailTemplateCategories.find((c) => c.id === template.category)?.label || template.category}
+                          </Badge>
+                        </div>
+                      </div>
+                      {template.description && (
+                        <p className="mb-2 text-sm text-muted-foreground line-clamp-2">
+                          {template.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-zinc-500">
+                        Subject: {template.subject}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {filteredTemplates.length === 0 && (
+                  <div className="py-12 text-center">
+                    <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <p className="mt-4 text-muted-foreground">No templates match your search</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
