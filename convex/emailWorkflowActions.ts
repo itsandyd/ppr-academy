@@ -348,27 +348,103 @@ export const sendCustomWorkflowEmail = internalAction({
       }
     }
 
+    // Get user stats for personalization (level, XP, courses, etc.)
+    let userStats = {
+      level: "1",
+      xp: "0",
+      coursesEnrolled: "0",
+      lessonsCompleted: "0",
+      storeName: "",
+      memberSince: "",
+      daysSinceJoined: "0",
+      totalSpent: "$0",
+    };
+
+    try {
+      const stats = await ctx.runQuery(internal.emailUserStats.getUserStatsForEmailByEmail, {
+        email: args.customerEmail,
+      });
+      if (stats) {
+        userStats = {
+          level: String(stats.level || 1),
+          xp: String(stats.xp || 0),
+          coursesEnrolled: String(stats.coursesEnrolled || 0),
+          lessonsCompleted: String(stats.lessonsCompleted || 0),
+          storeName: stats.storeName || "",
+          memberSince: stats.memberSince || "",
+          daysSinceJoined: String(stats.daysSinceJoined || 0),
+          totalSpent: `$${stats.totalSpent || 0}`,
+        };
+      }
+    } catch (e) {
+      console.log(`[WorkflowEmail] Could not fetch user stats for ${args.customerEmail}:`, e);
+    }
+
+    // Get platform stats for dynamic content
+    let platformStats = {
+      newCoursesCount: "0",
+      latestCourseName: "",
+      newSamplePacksCount: "0",
+      newCreatorsCount: "0",
+      topCourseThisWeek: "Production Essentials",
+    };
+
+    try {
+      const pStats = await ctx.runQuery(internal.emailUserStats.getPlatformStatsForEmail, {});
+      if (pStats) {
+        platformStats = {
+          newCoursesCount: String(pStats.newCoursesCount || 0),
+          latestCourseName: pStats.latestCourseName || "",
+          newSamplePacksCount: String(pStats.newSamplePacksCount || 0),
+          newCreatorsCount: String(pStats.newCreatorsCount || 0),
+          topCourseThisWeek: pStats.topCourseThisWeek || "Production Essentials",
+        };
+      }
+    } catch (e) {
+      console.log(`[WorkflowEmail] Could not fetch platform stats:`, e);
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
     // Generate unsubscribe URL
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
     const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com"}/unsubscribe/${emailBase64}.${signature}`;
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${emailBase64}.${signature}`;
 
-    // Personalize content
-    const htmlContent = args.content
-      .replace(/\{\{firstName\}\}/g, firstName)
-      .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, name || "there")
-      .replace(/\{\{email\}\}/g, args.customerEmail)
-      .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
-      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
+    // Replace all template variables
+    const replaceAllVariables = (text: string): string => {
+      return text
+        // User variables
+        .replace(/\{\{firstName\}\}/g, firstName)
+        .replace(/\{\{first_name\}\}/g, firstName)
+        .replace(/\{\{name\}\}/g, name || "there")
+        .replace(/\{\{email\}\}/g, args.customerEmail)
+        .replace(/\{\{level\}\}/g, userStats.level)
+        .replace(/\{\{xp\}\}/g, userStats.xp)
+        .replace(/\{\{coursesEnrolled\}\}/g, userStats.coursesEnrolled)
+        .replace(/\{\{lessonsCompleted\}\}/g, userStats.lessonsCompleted)
+        .replace(/\{\{storeName\}\}/g, userStats.storeName)
+        .replace(/\{\{memberSince\}\}/g, userStats.memberSince)
+        .replace(/\{\{daysSinceJoined\}\}/g, userStats.daysSinceJoined)
+        .replace(/\{\{totalSpent\}\}/g, userStats.totalSpent)
+        // Platform variables
+        .replace(/\{\{platformUrl\}\}/g, platformUrl)
+        .replace(/\{\{newCoursesCount\}\}/g, platformStats.newCoursesCount)
+        .replace(/\{\{latestCourseName\}\}/g, platformStats.latestCourseName)
+        .replace(/\{\{newSamplePacksCount\}\}/g, platformStats.newSamplePacksCount)
+        .replace(/\{\{newCreatorsCount\}\}/g, platformStats.newCreatorsCount)
+        .replace(/\{\{topCourseThisWeek\}\}/g, platformStats.topCourseThisWeek)
+        // Links
+        .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
+        .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
+        // Clean up any Handlebars conditionals (basic support)
+        .replace(/\{\{#if\s+\w+\}\}(.*?)\{\{\/if\}\}/gs, "$1");
+    };
 
-    const subject = args.subject
-      .replace(/\{\{firstName\}\}/g, firstName)
-      .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, name || "there");
+    const htmlContent = replaceAllVariables(args.content);
+    const finalSubject = replaceAllVariables(args.subject);
 
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "PPR Academy";
@@ -377,11 +453,11 @@ export const sendCustomWorkflowEmail = internalAction({
       await resend.emails.send({
         from: `${fromName} <${fromEmail}>`,
         to: args.customerEmail,
-        subject,
+        subject: finalSubject,
         html: htmlContent,
       });
 
-      console.log(`[WorkflowEmail] Sent custom email to ${args.customerEmail}: ${subject}`);
+      console.log(`[WorkflowEmail] Sent custom email to ${args.customerEmail}: ${finalSubject}`);
     } catch (error) {
       console.error(`[WorkflowEmail] Failed to send custom email:`, error);
       throw error;
