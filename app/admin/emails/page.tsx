@@ -149,27 +149,153 @@ export default function AdminEmailsPage() {
   const [isSendingCreatorBroadcast, setIsSendingCreatorBroadcast] = useState(false);
   const editorRef = useRef<WysiwygEditorRef>(null);
 
-  // Available personalization variables
+  // Available personalization variables - organized by category
   const personalizationVariables = [
+    // Basic Info
     {
       label: "First Name",
       variable: "{{firstName}}",
       icon: User,
-      description: "Creator's first name",
+      description: "User's first name",
+      category: "basic",
     },
-    { label: "Full Name", variable: "{{name}}", icon: User, description: "Creator's full name" },
-    { label: "Email", variable: "{{email}}", icon: AtSign, description: "Creator's email address" },
+    {
+      label: "Full Name",
+      variable: "{{name}}",
+      icon: User,
+      description: "User's full name",
+      category: "basic",
+    },
+    {
+      label: "Email",
+      variable: "{{email}}",
+      icon: AtSign,
+      description: "User's email address",
+      category: "basic",
+    },
+    // Learning Stats
+    {
+      label: "Courses Enrolled",
+      variable: "{{coursesEnrolled}}",
+      icon: Activity,
+      description: "Number of courses enrolled in",
+      category: "learning",
+    },
+    {
+      label: "Courses Completed",
+      variable: "{{coursesCompleted}}",
+      icon: CheckCircle,
+      description: "Number of courses completed",
+      category: "learning",
+    },
+    {
+      label: "Lessons Completed",
+      variable: "{{lessonsCompleted}}",
+      icon: CheckCircle,
+      description: "Total lessons completed",
+      category: "learning",
+    },
+    // Engagement Stats
+    {
+      label: "Level",
+      variable: "{{level}}",
+      icon: TrendingUp,
+      description: "User's current level",
+      category: "engagement",
+    },
+    {
+      label: "XP",
+      variable: "{{xp}}",
+      icon: Sparkles,
+      description: "Total XP earned",
+      category: "engagement",
+    },
+    {
+      label: "Streak",
+      variable: "{{streak}}",
+      icon: Zap,
+      description: "Current learning streak (days)",
+      category: "engagement",
+    },
+    // Purchase Stats
+    {
+      label: "Purchase Count",
+      variable: "{{purchaseCount}}",
+      icon: Store,
+      description: "Number of purchases made",
+      category: "purchases",
+    },
+    {
+      label: "Total Spent",
+      variable: "{{totalSpent}}",
+      icon: Store,
+      description: "Total amount spent (formatted)",
+      category: "purchases",
+    },
+    // Creator Stats
     {
       label: "Store Name",
       variable: "{{storeName}}",
       icon: Store,
       description: "Creator's store display name",
+      category: "creator",
     },
     {
       label: "Store URL Slug",
       variable: "{{storeSlug}}",
       icon: Link2,
       description: "For links: pauseplayrepeat.com/{{storeSlug}}",
+      category: "creator",
+    },
+    {
+      label: "Products Created",
+      variable: "{{productsCreated}}",
+      icon: Store,
+      description: "Number of products created",
+      category: "creator",
+    },
+    {
+      label: "Courses Created",
+      variable: "{{coursesCreated}}",
+      icon: Store,
+      description: "Number of courses created",
+      category: "creator",
+    },
+    {
+      label: "Total Earnings",
+      variable: "{{totalEarnings}}",
+      icon: Store,
+      description: "Total earnings (formatted)",
+      category: "creator",
+    },
+    // Date Stats
+    {
+      label: "Member Since",
+      variable: "{{memberSince}}",
+      icon: Calendar,
+      description: "Date user joined (formatted)",
+      category: "dates",
+    },
+    {
+      label: "Days Since Joined",
+      variable: "{{daysSinceJoined}}",
+      icon: Calendar,
+      description: "Number of days since signup",
+      category: "dates",
+    },
+    {
+      label: "Last Active Date",
+      variable: "{{lastActiveDate}}",
+      icon: Clock,
+      description: "Last activity date (formatted)",
+      category: "dates",
+    },
+    {
+      label: "Days Since Active",
+      variable: "{{daysSinceLastActive}}",
+      icon: Clock,
+      description: "Days since last activity",
+      category: "dates",
     },
   ];
 
@@ -614,10 +740,89 @@ export default function AdminEmailsPage() {
                             Insert Variable
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-64 bg-white dark:bg-black">
-                          <DropdownMenuLabel>Personalization Variables</DropdownMenuLabel>
+                        <DropdownMenuContent align="end" className="max-h-[400px] w-72 overflow-y-auto bg-white dark:bg-black">
+                          <DropdownMenuLabel>Basic Info</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === "basic").map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable)}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              <v.icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{v.label}</div>
+                                <div className="text-xs text-muted-foreground">{v.description}</div>
+                              </div>
+                              <code className="text-xs text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
                           <DropdownMenuSeparator />
-                          {personalizationVariables.map((v) => (
+                          <DropdownMenuLabel>Learning Stats</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === "learning").map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable)}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              <v.icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{v.label}</div>
+                                <div className="text-xs text-muted-foreground">{v.description}</div>
+                              </div>
+                              <code className="text-xs text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Engagement</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === "engagement").map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable)}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              <v.icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{v.label}</div>
+                                <div className="text-xs text-muted-foreground">{v.description}</div>
+                              </div>
+                              <code className="text-xs text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Purchases</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === "purchases").map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable)}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              <v.icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{v.label}</div>
+                                <div className="text-xs text-muted-foreground">{v.description}</div>
+                              </div>
+                              <code className="text-xs text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Creator Stats</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === "creator").map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable)}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              <v.icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{v.label}</div>
+                                <div className="text-xs text-muted-foreground">{v.description}</div>
+                              </div>
+                              <code className="text-xs text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Dates</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === "dates").map((v) => (
                             <DropdownMenuItem
                               key={v.variable}
                               onClick={() => insertVariable(v.variable)}

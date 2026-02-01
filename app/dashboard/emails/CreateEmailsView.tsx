@@ -34,6 +34,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -67,6 +68,17 @@ import {
   CheckCircle2,
   Power,
   Pencil,
+  Braces,
+  User,
+  AtSign,
+  Activity,
+  CheckCircle,
+  Sparkles,
+  Zap,
+  Calendar,
+  Clock,
+  Store,
+  Link2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -83,6 +95,41 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
   const [activeTab, setActiveTab] = useState('broadcast');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Personalization variables available for email templates
+  const personalizationVariables = [
+    // Basic Info
+    { label: 'First Name', variable: '{{firstName}}', icon: User, category: 'basic' },
+    { label: 'Full Name', variable: '{{name}}', icon: User, category: 'basic' },
+    { label: 'Email', variable: '{{email}}', icon: AtSign, category: 'basic' },
+    // Learning Stats
+    { label: 'Courses Enrolled', variable: '{{coursesEnrolled}}', icon: Activity, category: 'learning' },
+    { label: 'Courses Completed', variable: '{{coursesCompleted}}', icon: CheckCircle, category: 'learning' },
+    { label: 'Lessons Completed', variable: '{{lessonsCompleted}}', icon: CheckCircle, category: 'learning' },
+    // Engagement
+    { label: 'Level', variable: '{{level}}', icon: TrendingUp, category: 'engagement' },
+    { label: 'XP', variable: '{{xp}}', icon: Sparkles, category: 'engagement' },
+    { label: 'Streak', variable: '{{streak}}', icon: Zap, category: 'engagement' },
+    // Purchases
+    { label: 'Purchase Count', variable: '{{purchaseCount}}', icon: Store, category: 'purchases' },
+    { label: 'Total Spent', variable: '{{totalSpent}}', icon: Store, category: 'purchases' },
+    // Creator
+    { label: 'Store Name', variable: '{{storeName}}', icon: Store, category: 'creator' },
+    { label: 'Store URL Slug', variable: '{{storeSlug}}', icon: Link2, category: 'creator' },
+    // Dates
+    { label: 'Member Since', variable: '{{memberSince}}', icon: Calendar, category: 'dates' },
+    { label: 'Days Since Joined', variable: '{{daysSinceJoined}}', icon: Calendar, category: 'dates' },
+    { label: 'Last Active Date', variable: '{{lastActiveDate}}', icon: Clock, category: 'dates' },
+    { label: 'Days Since Active', variable: '{{daysSinceLastActive}}', icon: Clock, category: 'dates' },
+  ];
+
+  const insertVariable = (variable: string, target: 'subject' | 'content') => {
+    if (target === 'subject') {
+      setBroadcastSubject(prev => prev + variable);
+    } else {
+      setBroadcastContent(prev => prev + variable);
+    }
+  };
 
   // Broadcast state
   const [broadcastSubject, setBroadcastSubject] = useState('');
@@ -349,7 +396,30 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject Line</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="subject">Subject Line</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+                            <Braces className="h-3 w-3" />
+                            Insert Variable
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="max-h-[300px] w-64 overflow-y-auto">
+                          {personalizationVariables.slice(0, 3).map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'subject')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     <Input
                       id="subject"
                       placeholder="Hey {{firstName}}, check this out..."
@@ -359,7 +429,96 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="content">Email Content</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="content">Email Content</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+                            <Braces className="h-3 w-3" />
+                            Insert Variable
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="max-h-[400px] w-72 overflow-y-auto">
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Basic Info</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === 'basic').map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'content')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Learning Stats</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === 'learning').map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'content')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Engagement</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === 'engagement').map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'content')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Purchases</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === 'purchases').map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'content')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Creator Stats</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === 'creator').map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'content')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Dates</DropdownMenuLabel>
+                          {personalizationVariables.filter(v => v.category === 'dates').map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable, 'content')}
+                              className="flex items-center gap-2"
+                            >
+                              <v.icon className="h-3 w-3 text-muted-foreground" />
+                              <span>{v.label}</span>
+                              <code className="ml-auto text-[10px] text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     <Textarea
                       id="content"
                       placeholder="Write your message here..."

@@ -11156,6 +11156,14 @@ export declare const api: {
       { message: string; success: boolean }
     >;
   };
+  emailUserStats: {
+    getUserStatsForEmail: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      null | any
+    >;
+  };
   emailWorkflowABTesting: {
     assignVariant: FunctionReference<
       "query",
@@ -22724,6 +22732,20 @@ export declare const internal: {
       "internal",
       { email: string },
       null
+    >;
+  };
+  emailUserStats: {
+    getUserStatsBatch: FunctionReference<
+      "query",
+      "internal",
+      { userIds: Array<string> },
+      any
+    >;
+    internalGetUserStatsForEmail: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
+      null | any
     >;
   };
   emailWorkflowABTesting: {

@@ -138,6 +138,10 @@ function getListUnsubscribeHeaders(email: string): Record<string, string> {
   };
 }
 
+/**
+ * Email personalization with user stats
+ * Supports all basic fields plus learning/engagement/creator stats
+ */
 function personalizeContent(
   content: string,
   recipient: {
@@ -152,12 +156,33 @@ function personalizeContent(
     storeName?: string;
     storeSlug?: string;
     unsubscribeUrl?: string;
+    // NEW: User stats for personalization
+    userStats?: {
+      coursesEnrolled?: number;
+      coursesCompleted?: number;
+      lessonsCompleted?: number;
+      level?: number;
+      xp?: number;
+      streak?: number;
+      purchaseCount?: number;
+      totalSpent?: number;
+      isCreator?: boolean;
+      productsCreated?: number;
+      coursesCreated?: number;
+      totalEarnings?: number;
+      memberSince?: string;
+      daysSinceJoined?: number;
+      lastActiveDate?: string;
+      daysSinceLastActive?: number;
+    };
   }
 ): string {
   const firstName = recipient.name.split(" ")[0] || recipient.name;
   const unsubscribeUrl = recipient.unsubscribeUrl || generateUnsubscribeUrl(recipient.email);
+  const stats = recipient.userStats || {};
 
   return content
+    // Basic info
     .replace(/\{\{firstName\}\}/g, firstName)
     .replace(/\{\{first_name\}\}/g, firstName)
     .replace(/\{\{name\}\}/g, recipient.name)
@@ -177,7 +202,40 @@ function personalizeContent(
     .replace(/\{\{customer\.name\}\}/g, recipient.name)
     .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
-    .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
+    .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl)
+    // Learning stats
+    .replace(/\{\{coursesEnrolled\}\}/g, String(stats.coursesEnrolled ?? 0))
+    .replace(/\{\{courses_enrolled\}\}/g, String(stats.coursesEnrolled ?? 0))
+    .replace(/\{\{coursesCompleted\}\}/g, String(stats.coursesCompleted ?? 0))
+    .replace(/\{\{courses_completed\}\}/g, String(stats.coursesCompleted ?? 0))
+    .replace(/\{\{lessonsCompleted\}\}/g, String(stats.lessonsCompleted ?? 0))
+    .replace(/\{\{lessons_completed\}\}/g, String(stats.lessonsCompleted ?? 0))
+    // Engagement stats
+    .replace(/\{\{level\}\}/g, String(stats.level ?? 1))
+    .replace(/\{\{xp\}\}/g, String(stats.xp ?? 0))
+    .replace(/\{\{streak\}\}/g, String(stats.streak ?? 0))
+    // Purchase stats
+    .replace(/\{\{purchaseCount\}\}/g, String(stats.purchaseCount ?? 0))
+    .replace(/\{\{purchase_count\}\}/g, String(stats.purchaseCount ?? 0))
+    .replace(/\{\{totalSpent\}\}/g, `$${(stats.totalSpent ?? 0).toFixed(2)}`)
+    .replace(/\{\{total_spent\}\}/g, `$${(stats.totalSpent ?? 0).toFixed(2)}`)
+    // Creator stats
+    .replace(/\{\{isCreator\}\}/g, stats.isCreator ? "Yes" : "No")
+    .replace(/\{\{productsCreated\}\}/g, String(stats.productsCreated ?? 0))
+    .replace(/\{\{products_created\}\}/g, String(stats.productsCreated ?? 0))
+    .replace(/\{\{coursesCreated\}\}/g, String(stats.coursesCreated ?? 0))
+    .replace(/\{\{courses_created\}\}/g, String(stats.coursesCreated ?? 0))
+    .replace(/\{\{totalEarnings\}\}/g, `$${(stats.totalEarnings ?? 0).toFixed(2)}`)
+    .replace(/\{\{total_earnings\}\}/g, `$${(stats.totalEarnings ?? 0).toFixed(2)}`)
+    // Date stats
+    .replace(/\{\{memberSince\}\}/g, stats.memberSince || "")
+    .replace(/\{\{member_since\}\}/g, stats.memberSince || "")
+    .replace(/\{\{daysSinceJoined\}\}/g, String(stats.daysSinceJoined ?? 0))
+    .replace(/\{\{days_since_joined\}\}/g, String(stats.daysSinceJoined ?? 0))
+    .replace(/\{\{lastActiveDate\}\}/g, stats.lastActiveDate || "")
+    .replace(/\{\{last_active_date\}\}/g, stats.lastActiveDate || "")
+    .replace(/\{\{daysSinceLastActive\}\}/g, String(stats.daysSinceLastActive ?? 0))
+    .replace(/\{\{days_since_last_active\}\}/g, String(stats.daysSinceLastActive ?? 0));
 }
 
 // ============================================================================
@@ -371,6 +429,22 @@ export const sendCampaignBatch = internalAction({
       suppressionResults.map((r) => [r.email.toLowerCase(), r])
     );
 
+    // Fetch user stats for all recipients that have userId
+    const userIds = args.recipients
+      .filter((r: any) => r.userId)
+      .map((r: any) => r.userId);
+
+    let userStatsMap: any = {};
+    if (userIds.length > 0) {
+      try {
+        userStatsMap = await ctx.runQuery(internal.emailUserStats.getUserStatsBatch, {
+          userIds,
+        });
+      } catch (e) {
+        console.warn("Failed to fetch user stats, continuing without them:", e);
+      }
+    }
+
     for (const recipient of args.recipients) {
       try {
         const suppression = suppressionMap.get(recipient.email.toLowerCase());
@@ -383,6 +457,9 @@ export const sendCampaignBatch = internalAction({
         const unsubscribeUrl = generateUnsubscribeUrl(recipient.email);
         const listUnsubscribeHeaders = getListUnsubscribeHeaders(recipient.email);
 
+        // Get user stats if available
+        const userStats = recipient.userId ? userStatsMap.get?.(recipient.userId) : undefined;
+
         const personalizedHtml = personalizeContent(htmlContent, {
           name: recipient.name || "there",
           email: recipient.email,
@@ -392,9 +469,10 @@ export const sendCampaignBatch = internalAction({
           city: recipient.city,
           state: recipient.state,
           country: recipient.country,
-          storeName: recipient.storeName,
-          storeSlug: recipient.storeSlug,
+          storeName: userStats?.storeName || recipient.storeName,
+          storeSlug: userStats?.storeSlug || recipient.storeSlug,
           unsubscribeUrl,
+          userStats,
         });
 
         const personalizedSubject = personalizeContent(campaign.subject, {
@@ -406,8 +484,9 @@ export const sendCampaignBatch = internalAction({
           city: recipient.city,
           state: recipient.state,
           country: recipient.country,
-          storeName: recipient.storeName,
-          storeSlug: recipient.storeSlug,
+          storeName: userStats?.storeName || recipient.storeName,
+          storeSlug: userStats?.storeSlug || recipient.storeSlug,
+          userStats,
         });
 
         await resend.emails.send({
