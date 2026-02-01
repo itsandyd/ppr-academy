@@ -2209,9 +2209,11 @@ export default function WorkflowBuilderPage() {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              {/* Category Filter */}
+              {/* Category Filter - exclude "admin" category for creators */}
               <div className="flex flex-wrap gap-2">
-                {emailTemplateCategories.map((cat) => (
+                {emailTemplateCategories
+                  .filter((cat) => cat.id !== "admin")
+                  .map((cat) => (
                   <Button
                     key={cat.id}
                     variant={
@@ -2228,11 +2230,11 @@ export default function WorkflowBuilderPage() {
                 ))}
               </div>
 
-              {/* Templates Grid */}
+              {/* Templates Grid - exclude "admin" category for creators */}
               <div className="max-h-[55vh] overflow-y-auto pr-2">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {prebuiltEmailTemplates
-                    .filter((t) => !templateCategoryFilter || t.category === templateCategoryFilter)
+                    .filter((t) => t.category !== "admin" && (!templateCategoryFilter || t.category === templateCategoryFilter))
                     .map((template) => (
                       <div
                         key={template.id}
@@ -2276,7 +2278,7 @@ export default function WorkflowBuilderPage() {
                 </div>
 
                 {prebuiltEmailTemplates.filter(
-                  (t) => !templateCategoryFilter || t.category === templateCategoryFilter
+                  (t) => t.category !== "admin" && (!templateCategoryFilter || t.category === templateCategoryFilter)
                 ).length === 0 && (
                   <div className="py-8 text-center text-sm text-zinc-500">
                     No templates in this category

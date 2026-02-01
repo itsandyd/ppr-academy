@@ -57,14 +57,14 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Sequence type definitions
+// Sequence type definitions - Creator-focused (for nurturing THEIR audience)
 const sequenceTypes = [
   { id: "welcome", name: "Welcome Sequence", icon: UserPlus, color: "text-blue-600", bgColor: "bg-blue-50" },
-  { id: "buyer", name: "Buyer Sequence", icon: ShoppingCart, color: "text-green-600", bgColor: "bg-green-50" },
-  { id: "learner", name: "Learner Sequence", icon: GraduationCap, color: "text-purple-600", bgColor: "bg-purple-50" },
-  { id: "learner_to_creator", name: "Learner → Creator", icon: Sparkles, color: "text-amber-600", bgColor: "bg-amber-50" },
-  { id: "creator_onboarding", name: "Creator Onboarding", icon: Store, color: "text-cyan-600", bgColor: "bg-cyan-50" },
-  { id: "creator_growth", name: "Creator Growth", icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-50" },
+  { id: "buyer", name: "Purchase Thank You", icon: ShoppingCart, color: "text-green-600", bgColor: "bg-green-50" },
+  { id: "course_student", name: "Course Student", icon: GraduationCap, color: "text-purple-600", bgColor: "bg-purple-50" },
+  { id: "product_launch", name: "Product Launch", icon: Sparkles, color: "text-amber-600", bgColor: "bg-amber-50" },
+  { id: "coaching", name: "Coaching Client", icon: Users, color: "text-cyan-600", bgColor: "bg-cyan-50" },
+  { id: "lead_nurture", name: "Lead Nurture", icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-50" },
   { id: "reengagement", name: "Re-engagement", icon: Clock, color: "text-orange-600", bgColor: "bg-orange-50" },
   { id: "winback", name: "Win-back", icon: UserX, color: "text-red-600", bgColor: "bg-red-50" },
   { id: "custom", name: "Custom Sequence", icon: Workflow, color: "text-gray-600", bgColor: "bg-gray-50" },
@@ -117,10 +117,11 @@ export default function SequencesPage() {
     // Try to match workflow to a sequence type based on name
     const nameLC = workflow.name.toLowerCase();
     if (nameLC.includes("welcome")) return sequenceTypes.find((t) => t.id === "welcome");
-    if (nameLC.includes("buyer") || nameLC.includes("purchase")) return sequenceTypes.find((t) => t.id === "buyer");
-    if (nameLC.includes("learner") || nameLC.includes("course")) return sequenceTypes.find((t) => t.id === "learner");
-    if (nameLC.includes("creator") && nameLC.includes("onboard")) return sequenceTypes.find((t) => t.id === "creator_onboarding");
-    if (nameLC.includes("creator") && nameLC.includes("growth")) return sequenceTypes.find((t) => t.id === "creator_growth");
+    if (nameLC.includes("buyer") || nameLC.includes("purchase") || nameLC.includes("thank you")) return sequenceTypes.find((t) => t.id === "buyer");
+    if (nameLC.includes("course") || nameLC.includes("student") || nameLC.includes("enrollment")) return sequenceTypes.find((t) => t.id === "course_student");
+    if (nameLC.includes("launch") || nameLC.includes("release") || nameLC.includes("new product")) return sequenceTypes.find((t) => t.id === "product_launch");
+    if (nameLC.includes("coaching") || nameLC.includes("session") || nameLC.includes("client")) return sequenceTypes.find((t) => t.id === "coaching");
+    if (nameLC.includes("nurture") || nameLC.includes("lead")) return sequenceTypes.find((t) => t.id === "lead_nurture");
     if (nameLC.includes("reengag") || nameLC.includes("inactive")) return sequenceTypes.find((t) => t.id === "reengagement");
     if (nameLC.includes("winback") || nameLC.includes("win-back")) return sequenceTypes.find((t) => t.id === "winback");
     return sequenceTypes.find((t) => t.id === "custom");
