@@ -510,6 +510,18 @@ export default defineSchema({
     isActive: v.optional(v.boolean()),
     // Admin workflow flag - when true, targets platform-wide users
     isAdminWorkflow: v.optional(v.boolean()),
+    // Sequence type for categorization
+    sequenceType: v.optional(v.union(
+      v.literal("welcome"),
+      v.literal("buyer"),
+      v.literal("course_student"),
+      v.literal("coaching_client"),
+      v.literal("lead_nurture"),
+      v.literal("product_launch"),
+      v.literal("reengagement"),
+      v.literal("winback"),
+      v.literal("custom")
+    )),
     trigger: v.object({
       type: v.union(
         v.literal("lead_signup"),
@@ -587,7 +599,9 @@ export default defineSchema({
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
     .index("by_active", ["isActive"])
-    .index("by_isAdminWorkflow", ["isAdminWorkflow"]),
+    .index("by_isAdminWorkflow", ["isAdminWorkflow"])
+    .index("by_sequenceType", ["sequenceType"])
+    .index("by_storeId_sequenceType", ["storeId", "sequenceType"]),
 
   // Workflow Templates (pre-built workflow templates)
   workflowTemplates: defineTable({

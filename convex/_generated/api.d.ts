@@ -11448,7 +11448,11 @@ export declare const api: {
             | "webhook"
             | "split"
             | "notify"
-            | "goal";
+            | "goal"
+            | "courseCycle"
+            | "courseEmail"
+            | "purchaseCheck"
+            | "cycleLoop";
         }>;
         trigger: {
           config: any;
@@ -11522,8 +11526,22 @@ export declare const api: {
             | "webhook"
             | "split"
             | "notify"
-            | "goal";
+            | "goal"
+            | "courseCycle"
+            | "courseEmail"
+            | "purchaseCheck"
+            | "cycleLoop";
         }>;
+        sequenceType?:
+          | "welcome"
+          | "buyer"
+          | "course_student"
+          | "coaching_client"
+          | "lead_nurture"
+          | "product_launch"
+          | "reengagement"
+          | "winback"
+          | "custom";
         storeId: string;
         trigger: {
           config: any;
@@ -11623,6 +11641,12 @@ export declare const api: {
       { workflowId: Id<"emailWorkflows"> },
       any
     >;
+    getWorkflowCountsByType: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
     listAdminWorkflows: FunctionReference<"query", "public", {}, Array<any>>;
     listEmailTemplates: FunctionReference<
       "query",
@@ -11639,6 +11663,24 @@ export declare const api: {
       "query",
       "public",
       { storeId: string },
+      Array<any>
+    >;
+    listWorkflowsBySequenceType: FunctionReference<
+      "query",
+      "public",
+      {
+        sequenceType?:
+          | "welcome"
+          | "buyer"
+          | "course_student"
+          | "coaching_client"
+          | "lead_nurture"
+          | "product_launch"
+          | "reengagement"
+          | "winback"
+          | "custom";
+        storeId: string;
+      },
       Array<any>
     >;
     toggleWorkflowActive: FunctionReference<
@@ -11675,8 +11717,22 @@ export declare const api: {
             | "webhook"
             | "split"
             | "notify"
-            | "goal";
+            | "goal"
+            | "courseCycle"
+            | "courseEmail"
+            | "purchaseCheck"
+            | "cycleLoop";
         }>;
+        sequenceType?:
+          | "welcome"
+          | "buyer"
+          | "course_student"
+          | "coaching_client"
+          | "lead_nurture"
+          | "product_launch"
+          | "reengagement"
+          | "winback"
+          | "custom";
         trigger?: {
           config: any;
           type:

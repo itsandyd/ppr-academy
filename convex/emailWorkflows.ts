@@ -81,7 +81,12 @@ const nodeValidator = v.object({
     v.literal("webhook"),
     v.literal("split"),
     v.literal("notify"),
-    v.literal("goal")
+    v.literal("goal"),
+    // Course Cycle nodes (perpetual nurture system)
+    v.literal("courseCycle"),
+    v.literal("courseEmail"),
+    v.literal("purchaseCheck"),
+    v.literal("cycleLoop")
   ),
   position: v.object({
     x: v.number(),
@@ -130,6 +135,19 @@ const triggerValidator = v.object({
   config: v.any(),
 });
 
+// Sequence type validator for categorizing workflows
+const sequenceTypeValidator = v.optional(v.union(
+  v.literal("welcome"),
+  v.literal("buyer"),
+  v.literal("course_student"),
+  v.literal("coaching_client"),
+  v.literal("lead_nurture"),
+  v.literal("product_launch"),
+  v.literal("reengagement"),
+  v.literal("winback"),
+  v.literal("custom")
+));
+
 export const createWorkflow = mutation({
   args: {
     name: v.string(),
@@ -139,6 +157,7 @@ export const createWorkflow = mutation({
     trigger: triggerValidator,
     nodes: v.array(nodeValidator),
     edges: v.array(edgeValidator),
+    sequenceType: sequenceTypeValidator,
   },
   returns: v.id("emailWorkflows"),
   handler: async (ctx, args) => {
@@ -151,6 +170,7 @@ export const createWorkflow = mutation({
       trigger: args.trigger,
       nodes: args.nodes,
       edges: args.edges,
+      sequenceType: args.sequenceType,
       totalExecutions: 0,
     });
   },
@@ -165,6 +185,7 @@ export const updateWorkflow = mutation({
     nodes: v.optional(v.array(nodeValidator)),
     edges: v.optional(v.array(edgeValidator)),
     isActive: v.optional(v.boolean()),
+    sequenceType: sequenceTypeValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -390,6 +411,72 @@ export const listWorkflows = query({
     }
 
     return allWorkflows.sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
+/**
+ * List workflows filtered by sequence type
+ */
+export const listWorkflowsBySequenceType = query({
+  args: {
+    storeId: v.string(),
+    sequenceType: sequenceTypeValidator,
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    if (!args.sequenceType) {
+      // If no type specified, return all workflows for this store
+      return await ctx.db
+        .query("emailWorkflows")
+        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+        .order("desc")
+        .collect();
+    }
+
+    // Use compound index to filter by both storeId and sequenceType
+    const workflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_storeId_sequenceType", (q) =>
+        q.eq("storeId", args.storeId).eq("sequenceType", args.sequenceType)
+      )
+      .order("desc")
+      .collect();
+
+    return workflows;
+  },
+});
+
+/**
+ * Get count of workflows by sequence type for a store
+ */
+export const getWorkflowCountsByType = query({
+  args: { storeId: v.string() },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const workflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    const counts: Record<string, number> = {
+      welcome: 0,
+      buyer: 0,
+      course_student: 0,
+      coaching_client: 0,
+      lead_nurture: 0,
+      product_launch: 0,
+      reengagement: 0,
+      winback: 0,
+      custom: 0,
+      unassigned: 0,
+    };
+
+    for (const w of workflows) {
+      const type = w.sequenceType || "unassigned";
+      counts[type] = (counts[type] || 0) + 1;
+    }
+
+    return counts;
   },
 });
 

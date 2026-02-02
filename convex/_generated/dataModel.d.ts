@@ -5494,6 +5494,16 @@ export type DataModel = {
           | "purchaseCheck"
           | "cycleLoop";
       }>;
+      sequenceType?:
+        | "welcome"
+        | "buyer"
+        | "course_student"
+        | "coaching_client"
+        | "lead_nurture"
+        | "product_launch"
+        | "reengagement"
+        | "winback"
+        | "custom";
       storeId: string;
       totalExecutions?: number;
       trigger: {
@@ -5540,6 +5550,7 @@ export type DataModel = {
       | "lastExecuted"
       | "name"
       | "nodes"
+      | "sequenceType"
       | "storeId"
       | "totalExecutions"
       | "trigger"
@@ -5551,7 +5562,9 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_active: ["isActive", "_creationTime"];
       by_isAdminWorkflow: ["isAdminWorkflow", "_creationTime"];
+      by_sequenceType: ["sequenceType", "_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
+      by_storeId_sequenceType: ["storeId", "sequenceType", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
     };
     searchIndexes: {};

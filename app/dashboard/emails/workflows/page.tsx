@@ -257,14 +257,33 @@ function validateWorkflow(nodes: Node[], edges: Edge[]): ValidationError[] {
   return errors;
 }
 
+// Valid sequence types that match the schema
+type SequenceType =
+  | "welcome"
+  | "buyer"
+  | "course_student"
+  | "coaching_client"
+  | "lead_nurture"
+  | "product_launch"
+  | "reengagement"
+  | "winback"
+  | "custom";
+
 export default function WorkflowBuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workflowId = searchParams.get("id");
+  const sequenceTypeParam = searchParams.get("type") as SequenceType | null;
+  const workflowNameParam = searchParams.get("name");
   const { user } = useUser();
   const { toast } = useToast();
 
-  const [workflowName, setWorkflowName] = useState("New Workflow");
+  // Initialize workflow name from URL param or default
+  const [workflowName, setWorkflowName] = useState(workflowNameParam || "New Workflow");
+  // Track the sequence type for this workflow
+  const [sequenceType, setSequenceType] = useState<SequenceType | undefined>(
+    sequenceTypeParam || undefined
+  );
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -394,6 +413,10 @@ export default function WorkflowBuilderPage() {
     if (existingWorkflow) {
       setWorkflowName(existingWorkflow.name || "New Workflow");
       setIsActive(existingWorkflow.isActive || false);
+      // Set sequence type from existing workflow
+      if (existingWorkflow.sequenceType) {
+        setSequenceType(existingWorkflow.sequenceType as SequenceType);
+      }
       if (existingWorkflow.nodes) {
         setNodes(existingWorkflow.nodes);
       }
@@ -495,10 +518,11 @@ export default function WorkflowBuilderPage() {
           trigger: triggerData,
           nodes: nodesData,
           edges: edgesData,
+          sequenceType: sequenceType,
         });
         toast({ title: "Saved", description: "Workflow updated successfully" });
       } else {
-        // Create new workflow - include storeId/userId
+        // Create new workflow - include storeId/userId and sequenceType
         const newId = await createWorkflow({
           name: workflowName,
           storeId,
@@ -506,6 +530,7 @@ export default function WorkflowBuilderPage() {
           trigger: triggerData,
           nodes: nodesData,
           edges: edgesData,
+          sequenceType: sequenceType,
         });
         toast({ title: "Saved", description: "Workflow created successfully" });
         router.push(`/dashboard/emails/workflows?mode=create&id=${newId}`);

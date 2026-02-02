@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,52 +47,83 @@ import {
   UserPlus,
   ShoppingCart,
   GraduationCap,
-  Store,
   Sparkles,
   UserX,
   Loader2,
   Workflow,
+  X,
+  Filter,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // Sequence type definitions - Creator-focused (for nurturing THEIR audience)
+// Note: "coaching" in UI maps to "coaching_client" in schema
 const sequenceTypes = [
-  { id: "welcome", name: "Welcome Sequence", icon: UserPlus, color: "text-blue-600", bgColor: "bg-blue-50" },
-  { id: "buyer", name: "Purchase Thank You", icon: ShoppingCart, color: "text-green-600", bgColor: "bg-green-50" },
-  { id: "course_student", name: "Course Student", icon: GraduationCap, color: "text-purple-600", bgColor: "bg-purple-50" },
-  { id: "product_launch", name: "Product Launch", icon: Sparkles, color: "text-amber-600", bgColor: "bg-amber-50" },
-  { id: "coaching", name: "Coaching Client", icon: Users, color: "text-cyan-600", bgColor: "bg-cyan-50" },
-  { id: "lead_nurture", name: "Lead Nurture", icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-50" },
-  { id: "reengagement", name: "Re-engagement", icon: Clock, color: "text-orange-600", bgColor: "bg-orange-50" },
-  { id: "winback", name: "Win-back", icon: UserX, color: "text-red-600", bgColor: "bg-red-50" },
-  { id: "custom", name: "Custom Sequence", icon: Workflow, color: "text-gray-600", bgColor: "bg-gray-50" },
+  { id: "welcome", schemaId: "welcome", name: "Welcome Sequence", icon: UserPlus, color: "text-blue-600", bgColor: "bg-blue-50" },
+  { id: "buyer", schemaId: "buyer", name: "Purchase Thank You", icon: ShoppingCart, color: "text-green-600", bgColor: "bg-green-50" },
+  { id: "course_student", schemaId: "course_student", name: "Course Student", icon: GraduationCap, color: "text-purple-600", bgColor: "bg-purple-50" },
+  { id: "product_launch", schemaId: "product_launch", name: "Product Launch", icon: Sparkles, color: "text-amber-600", bgColor: "bg-amber-50" },
+  { id: "coaching", schemaId: "coaching_client", name: "Coaching Client", icon: Users, color: "text-cyan-600", bgColor: "bg-cyan-50" },
+  { id: "lead_nurture", schemaId: "lead_nurture", name: "Lead Nurture", icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-50" },
+  { id: "reengagement", schemaId: "reengagement", name: "Re-engagement", icon: Clock, color: "text-orange-600", bgColor: "bg-orange-50" },
+  { id: "winback", schemaId: "winback", name: "Win-back", icon: UserX, color: "text-red-600", bgColor: "bg-red-50" },
+  { id: "custom", schemaId: "custom", name: "Custom Sequence", icon: Workflow, color: "text-gray-600", bgColor: "bg-gray-50" },
 ];
 
 export default function SequencesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const storeId = user?.id ?? "";
 
+  // Get filter type from URL query params
+  const filterTypeFromUrl = searchParams.get("type");
+  const [typeFilter, setTypeFilter] = useState<string | null>(filterTypeFromUrl);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newSequence, setNewSequence] = useState({
     name: "",
     description: "",
-    type: "custom",
+    type: filterTypeFromUrl || "custom",
   });
   const [isCreating, setIsCreating] = useState(false);
 
-  // Queries
-  const workflows = useQuery(api.emailWorkflows.listWorkflows, storeId ? { storeId } : "skip");
+  // Update type filter when URL changes
+  useEffect(() => {
+    setTypeFilter(filterTypeFromUrl);
+    if (filterTypeFromUrl) {
+      // Pre-fill the create dialog with the filtered type
+      const seqType = sequenceTypes.find(t => t.id === filterTypeFromUrl || t.schemaId === filterTypeFromUrl);
+      if (seqType) {
+        setNewSequence(prev => ({ ...prev, type: seqType.id }));
+      }
+    }
+  }, [filterTypeFromUrl]);
 
-  // Filter workflows based on search
-  const filteredWorkflows = workflows?.filter(
-    (w: any) =>
+  // Queries - get all workflows, we'll filter client-side for flexibility
+  const workflows = useQuery(api.emailWorkflows.listWorkflows, storeId ? { storeId } : "skip");
+  const workflowCounts = useQuery(api.emailWorkflows.getWorkflowCountsByType, storeId ? { storeId } : "skip");
+
+  // Get the active filter type details
+  const activeFilterType = typeFilter ? sequenceTypes.find(t => t.id === typeFilter || t.schemaId === typeFilter) : null;
+
+  // Filter workflows based on search and type
+  const filteredWorkflows = workflows?.filter((w: any) => {
+    // Text search filter
+    const matchesSearch = !searchQuery ||
       w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      w.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      w.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Type filter - check both the stored sequenceType and infer from name if not set
+    if (!typeFilter) return matchesSearch;
+
+    const workflowType = getSequenceType(w);
+    const matchesType = workflowType?.id === typeFilter || workflowType?.schemaId === typeFilter;
+
+    return matchesSearch && matchesType;
+  });
 
   const handleCreateSequence = async () => {
     if (!newSequence.name.trim()) {
@@ -102,9 +133,13 @@ export default function SequencesPage() {
 
     setIsCreating(true);
     try {
-      // For now, redirect to the workflow builder with the new sequence info
+      // Map UI type to schema type
+      const seqType = sequenceTypes.find(t => t.id === newSequence.type);
+      const schemaType = seqType?.schemaId || newSequence.type;
+
+      // Redirect to the workflow builder with the new sequence info
       router.push(
-        `/dashboard/emails/workflows?mode=create&name=${encodeURIComponent(newSequence.name)}&type=${newSequence.type}`
+        `/dashboard/emails/workflows?mode=create&name=${encodeURIComponent(newSequence.name)}&type=${schemaType}`
       );
     } catch (error) {
       toast.error("Failed to create sequence");
@@ -113,8 +148,18 @@ export default function SequencesPage() {
     }
   };
 
+  const clearFilter = () => {
+    setTypeFilter(null);
+    router.push("/dashboard/emails/sequences");
+  };
+
   const getSequenceType = (workflow: any) => {
-    // Try to match workflow to a sequence type based on name
+    // First check if the workflow has an explicit sequenceType set
+    if (workflow.sequenceType) {
+      return sequenceTypes.find((t) => t.schemaId === workflow.sequenceType || t.id === workflow.sequenceType);
+    }
+
+    // Fall back to inferring from name for backwards compatibility
     const nameLC = workflow.name.toLowerCase();
     if (nameLC.includes("welcome")) return sequenceTypes.find((t) => t.id === "welcome");
     if (nameLC.includes("buyer") || nameLC.includes("purchase") || nameLC.includes("thank you")) return sequenceTypes.find((t) => t.id === "buyer");
@@ -138,17 +183,45 @@ export default function SequencesPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Email Sequences</h1>
+            <h1 className="text-2xl font-bold">
+              {activeFilterType ? (
+                <span className="flex items-center gap-2">
+                  <activeFilterType.icon className={cn("h-6 w-6", activeFilterType.color)} />
+                  {activeFilterType.name}s
+                </span>
+              ) : (
+                "Email Sequences"
+              )}
+            </h1>
             <p className="text-muted-foreground">
-              Manage your automated email sequences
+              {activeFilterType
+                ? `Manage your ${activeFilterType.name.toLowerCase()} automations`
+                : "Manage your automated email sequences"
+              }
             </p>
           </div>
         </div>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          New Sequence
+          New {activeFilterType ? activeFilterType.name : "Sequence"}
         </Button>
       </div>
+
+      {/* Active Filter Banner */}
+      {activeFilterType && (
+        <div className={cn("flex items-center justify-between p-3 rounded-lg border", activeFilterType.bgColor)}>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">
+              Showing <strong>{activeFilterType.name}</strong> sequences only
+            </span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={clearFilter}>
+            <X className="h-4 w-4 mr-1" />
+            Clear Filter
+          </Button>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex items-center gap-4">
@@ -161,7 +234,44 @@ export default function SequencesPage() {
             className="pl-9"
           />
         </div>
-        <Badge variant="outline">{workflows?.length || 0} sequences</Badge>
+        <Badge variant="outline">
+          {filteredWorkflows?.length || 0} {activeFilterType ? `of ${workflows?.length || 0}` : ""} sequences
+        </Badge>
+
+        {/* Type Filter Dropdown */}
+        {!activeFilterType && (
+          <Select
+            value={typeFilter || "all"}
+            onValueChange={(value) => {
+              if (value === "all") {
+                clearFilter();
+              } else {
+                setTypeFilter(value);
+                router.push(`/dashboard/emails/sequences?type=${value}`);
+              }
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {sequenceTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id}>
+                  <div className="flex items-center gap-2">
+                    <type.icon className={cn("h-4 w-4", type.color)} />
+                    {type.name}
+                    {workflowCounts && (
+                      <span className="text-muted-foreground text-xs ml-1">
+                        ({workflowCounts[type.schemaId] || 0})
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Sequence Cards */}
