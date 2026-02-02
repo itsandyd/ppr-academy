@@ -71,6 +71,10 @@ export interface BaseProduct {
 
   // URL/Media specific
   mediaType?: "youtube" | "spotify" | "link";
+
+  // Bundle specific
+  originalPrice?: number;
+  discountPercentage?: number;
 }
 
 export interface ProductCardProps {

@@ -11,6 +11,7 @@ import { DigitalProductCard } from "./DigitalProductCard";
 import { UrlMediaCard } from "./UrlMediaCard";
 import { CoachingCard } from "./CoachingCard";
 import { ProductCard } from "./ProductCard";
+import { BundleCard } from "./BundleCard";
 
 interface ProductGridProps {
   products: BaseProduct[];
@@ -135,6 +136,18 @@ export function ProductGrid({
     if (type === "coaching" || category === "coaching") {
       return (
         <CoachingCard
+          key={product._id}
+          product={product}
+          onClick={onProductClick}
+          displayName={displayName}
+        />
+      );
+    }
+
+    // Bundles
+    if (type === "bundle" || category === "bundle") {
+      return (
+        <BundleCard
           key={product._id}
           product={product}
           onClick={onProductClick}

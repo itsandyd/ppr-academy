@@ -8,6 +8,7 @@ export { CourseCard } from "./CourseCard";
 export { DigitalProductCard } from "./DigitalProductCard";
 export { UrlMediaCard } from "./UrlMediaCard";
 export { CoachingCard } from "./CoachingCard";
+export { BundleCard } from "./BundleCard";
 export { ProductSection } from "./ProductSection";
 export { ProductGrid } from "./ProductGrid";
 export { categorizeProducts, getProductCounts, getCategoryLabel } from "./utils";

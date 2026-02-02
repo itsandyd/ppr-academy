@@ -431,6 +431,12 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { userId: store.userId } : "skip"
   );
 
+  // Fetch published bundles for this store
+  const bundles = useQuery(
+    api.bundles.getPublishedBundles,
+    store ? { storeId: store._id } : "skip"
+  );
+
   // Track creator profile view for conversion nudges
   useCreatorProfileViewTracking(store?.userId, store?._id);
 
@@ -506,8 +512,31 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         _creationTime: profile._creationTime,
         isPublished: true,
       })),
+
+      // Bundles
+      ...(bundles || []).map((bundle: any): BaseProduct => ({
+        _id: bundle._id,
+        title: bundle.name,
+        description: bundle.description,
+        price: bundle.bundlePrice || 0,
+        imageUrl: bundle.imageUrl,
+        buttonLabel: bundle.bundlePrice === 0 ? "Get Free Bundle" : "Get Bundle",
+        slug: bundle.slug || bundle._id,
+        category: "Bundle",
+        productType: "bundle",
+        productCategory: "bundle",
+        _creationTime: bundle._creationTime,
+        isPublished: bundle.isPublished,
+        // Bundle-specific fields
+        originalPrice: bundle.originalPrice,
+        discountPercentage: bundle.discountPercentage,
+        followGateEnabled: bundle.followGateEnabled,
+        followGateRequirements: bundle.followGateRequirements,
+        followGateSocialLinks: bundle.followGateSocialLinks,
+        followGateMessage: bundle.followGateMessage,
+      })),
     ],
-    [products, courses, coachProfiles]
+    [products, courses, coachProfiles, bundles]
   );
 
   // Enhanced filtering and search logic
@@ -638,6 +667,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         break;
       case "coaching":
         router.push(`/${slug}/coaching/${productSlug}`);
+        break;
+      case "bundle":
+        router.push(`/${slug}/bundles/${productSlug}`);
         break;
       case "urlMedia":
         // URL/Media products open external link directly
