@@ -109,6 +109,26 @@ export default function SequencesPage() {
   // Get the active filter type details
   const activeFilterType = typeFilter ? sequenceTypes.find(t => t.id === typeFilter || t.schemaId === typeFilter) : null;
 
+  // Helper function to get sequence type from workflow - defined before use
+  const getSequenceType = (workflow: any) => {
+    // First check if the workflow has an explicit sequenceType set
+    if (workflow.sequenceType) {
+      return sequenceTypes.find((t) => t.schemaId === workflow.sequenceType || t.id === workflow.sequenceType);
+    }
+
+    // Fall back to inferring from name for backwards compatibility
+    const nameLC = workflow.name.toLowerCase();
+    if (nameLC.includes("welcome")) return sequenceTypes.find((t) => t.id === "welcome");
+    if (nameLC.includes("buyer") || nameLC.includes("purchase") || nameLC.includes("thank you")) return sequenceTypes.find((t) => t.id === "buyer");
+    if (nameLC.includes("course") || nameLC.includes("student") || nameLC.includes("enrollment")) return sequenceTypes.find((t) => t.id === "course_student");
+    if (nameLC.includes("launch") || nameLC.includes("release") || nameLC.includes("new product")) return sequenceTypes.find((t) => t.id === "product_launch");
+    if (nameLC.includes("coaching") || nameLC.includes("session") || nameLC.includes("client")) return sequenceTypes.find((t) => t.id === "coaching");
+    if (nameLC.includes("nurture") || nameLC.includes("lead")) return sequenceTypes.find((t) => t.id === "lead_nurture");
+    if (nameLC.includes("reengag") || nameLC.includes("inactive")) return sequenceTypes.find((t) => t.id === "reengagement");
+    if (nameLC.includes("winback") || nameLC.includes("win-back")) return sequenceTypes.find((t) => t.id === "winback");
+    return sequenceTypes.find((t) => t.id === "custom");
+  };
+
   // Filter workflows based on search and type
   const filteredWorkflows = workflows?.filter((w: any) => {
     // Text search filter
@@ -151,25 +171,6 @@ export default function SequencesPage() {
   const clearFilter = () => {
     setTypeFilter(null);
     router.push("/dashboard/emails/sequences");
-  };
-
-  const getSequenceType = (workflow: any) => {
-    // First check if the workflow has an explicit sequenceType set
-    if (workflow.sequenceType) {
-      return sequenceTypes.find((t) => t.schemaId === workflow.sequenceType || t.id === workflow.sequenceType);
-    }
-
-    // Fall back to inferring from name for backwards compatibility
-    const nameLC = workflow.name.toLowerCase();
-    if (nameLC.includes("welcome")) return sequenceTypes.find((t) => t.id === "welcome");
-    if (nameLC.includes("buyer") || nameLC.includes("purchase") || nameLC.includes("thank you")) return sequenceTypes.find((t) => t.id === "buyer");
-    if (nameLC.includes("course") || nameLC.includes("student") || nameLC.includes("enrollment")) return sequenceTypes.find((t) => t.id === "course_student");
-    if (nameLC.includes("launch") || nameLC.includes("release") || nameLC.includes("new product")) return sequenceTypes.find((t) => t.id === "product_launch");
-    if (nameLC.includes("coaching") || nameLC.includes("session") || nameLC.includes("client")) return sequenceTypes.find((t) => t.id === "coaching");
-    if (nameLC.includes("nurture") || nameLC.includes("lead")) return sequenceTypes.find((t) => t.id === "lead_nurture");
-    if (nameLC.includes("reengag") || nameLC.includes("inactive")) return sequenceTypes.find((t) => t.id === "reengagement");
-    if (nameLC.includes("winback") || nameLC.includes("win-back")) return sequenceTypes.find((t) => t.id === "winback");
-    return sequenceTypes.find((t) => t.id === "custom");
   };
 
   return (
