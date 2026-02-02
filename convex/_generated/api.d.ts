@@ -5121,8 +5121,10 @@ export declare const api: {
         };
         imageUrl?: string;
         isActive?: boolean;
+        isPinned?: boolean;
         maxPurchases?: number;
         name?: string;
+        pinnedAt?: number;
         productIds?: Array<Id<"digitalProducts">>;
       },
       any

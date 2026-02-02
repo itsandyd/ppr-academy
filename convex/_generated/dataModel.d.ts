@@ -1680,10 +1680,12 @@ export type DataModel = {
       };
       imageUrl?: string;
       isActive: boolean;
+      isPinned?: boolean;
       isPublished: boolean;
       maxPurchases?: number;
       name: string;
       originalPrice: number;
+      pinnedAt?: number;
       productIds: Array<Id<"digitalProducts">>;
       savings: number;
       slug?: string;
@@ -1725,10 +1727,12 @@ export type DataModel = {
       | "followGateSocialLinks.youtube"
       | "imageUrl"
       | "isActive"
+      | "isPinned"
       | "isPublished"
       | "maxPurchases"
       | "name"
       | "originalPrice"
+      | "pinnedAt"
       | "productIds"
       | "savings"
       | "slug"

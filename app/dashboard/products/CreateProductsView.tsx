@@ -60,6 +60,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const deleteBundle: any = useMutation(api.bundles.deleteBundle);
   const publishBundle: any = useMutation(api.bundles.publishBundle);
   const unpublishBundle: any = useMutation(api.bundles.unpublishBundle);
+  const updateBundle: any = useMutation(api.bundles.updateBundle);
 
   // Product action handlers
   const handleEditProduct = (productId: string) => {
@@ -146,14 +147,15 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
       // Check if it's a course, bundle, or digital product
       const product = allProducts.find(p => p._id === productId);
 
-      // Bundles don't support pinning yet
-      if (product?.type === 'bundle') {
-        toast.error('Bundles cannot be pinned yet');
-        return;
-      }
       const newPinnedState = !currentState;
 
-      if (product?.type === 'course') {
+      if (product?.type === 'bundle') {
+        await updateBundle({
+          bundleId: productId as any,
+          isPinned: newPinnedState,
+          pinnedAt: newPinnedState ? Date.now() : undefined
+        });
+      } else if (product?.type === 'course') {
         await updateCourse({
           id: productId as any,
           isPinned: newPinnedState,

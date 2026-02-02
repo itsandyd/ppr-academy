@@ -372,6 +372,9 @@ export const updateBundle = mutation({
       })
     ),
     followGateMessage: v.optional(v.string()),
+    // Pinning
+    isPinned: v.optional(v.boolean()),
+    pinnedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { bundleId, ...updates } = args;

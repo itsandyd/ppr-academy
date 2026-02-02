@@ -534,7 +534,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         followGateRequirements: bundle.followGateRequirements,
         followGateSocialLinks: bundle.followGateSocialLinks,
         followGateMessage: bundle.followGateMessage,
-      })),
+        // Pinning
+        isPinned: bundle.isPinned,
+        pinnedAt: bundle.pinnedAt,
+      } as BaseProduct & { isPinned?: boolean; pinnedAt?: number })),
     ],
     [products, courses, coachProfiles, bundles]
   );

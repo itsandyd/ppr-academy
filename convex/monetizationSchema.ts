@@ -353,6 +353,10 @@ export const bundlesTable = defineTable({
   ),
   followGateMessage: v.optional(v.string()), // Custom message to show users
 
+  // Pinned bundle - appears first in storefront
+  isPinned: v.optional(v.boolean()),
+  pinnedAt: v.optional(v.number()), // Timestamp for ordering multiple pinned items
+
   createdAt: v.number(),
   updatedAt: v.number(),
 })
