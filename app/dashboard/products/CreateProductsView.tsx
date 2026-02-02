@@ -38,7 +38,8 @@ import {
   Trash2,
   EyeOff,
   Pin,
-  PinOff
+  PinOff,
+  Layers
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -66,6 +67,8 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     // Check for courses first (by type field)
     if (product.type === 'course') {
       router.push(`/dashboard/create/course?courseId=${productId}&step=course`);
+    } else if (product.type === 'bundle') {
+      router.push(`/dashboard/create/bundle?bundleId=${productId}&step=basics`);
     } else if (product.productCategory === 'sample-pack' || product.productCategory === 'preset-pack' || product.productCategory === 'midi-pack') {
       router.push(`/dashboard/create/pack?type=${product.productCategory}&packId=${productId}`);
     } else if (product.productCategory === 'effect-chain' || product.productCategory === 'ableton-rack') {
@@ -178,10 +181,18 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     storeId ? { storeId } : 'skip'
   );
 
+  // Fetch bundles (using storeId)
+  // @ts-ignore - Type instantiation depth issue
+  const userBundles: any = useQuery(
+    api.bundles.getBundlesByStore as any,
+    storeId ? { storeId, includeUnpublished: true } : 'skip'
+  );
+
   // Combine and categorize
   const allProducts = [
     ...(userCourses?.map((c: any) => ({ ...c, type: 'course' })) || []),
-    ...(digitalProducts?.map((p: any) => ({ ...p, type: 'digital' })) || [])
+    ...(digitalProducts?.map((p: any) => ({ ...p, type: 'digital' })) || []),
+    ...(userBundles?.map((b: any) => ({ ...b, type: 'bundle', title: b.name, productCategory: 'bundle' })) || [])
   ];
 
   const publishedProducts = allProducts.filter((p: any) => p.isPublished);
@@ -213,9 +224,11 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     p.productCategory === 'blog-post'  // Only actual blog posts, not all urlMedia
   ) || [];
   
-  const beats = digitalProducts?.filter((p: any) => 
+  const beats = digitalProducts?.filter((p: any) =>
     p.productCategory === 'beat-lease'
   ) || [];
+
+  const bundles = userBundles || [];
   
   // Count by DAW for filtering
   const dawCounts = effectChains.reduce((acc: any, chain: any) => {
@@ -387,6 +400,20 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                 </TooltipTrigger>
                 <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                   <p>Beat Leases ({beats.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
+
+            <TabsTrigger value="bundles" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <Layers className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Bundles</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Bundles ({bundles.length})</p>
                 </TooltipContent>
               </Tooltip>
             </TabsTrigger>
@@ -632,6 +659,30 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="bundles" className="space-y-4 mt-6">
+          {bundles.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Bundles Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Combine multiple products into discounted bundles
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/create/bundle">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Bundle
+                </Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {bundles.map((bundle: any) => (
+                <BundleCard key={bundle._id} bundle={bundle} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
         </Tabs>
       </TooltipProvider>
     </div>
@@ -700,13 +751,90 @@ function BeatCard({ product }: { product: any }) {
   );
 }
 
+function BundleCard({ bundle }: { bundle: any }) {
+  const router = useRouter();
+  const itemCount = (bundle.courseIds?.length || 0) + (bundle.productIds?.length || 0);
+  const isFree = bundle.bundlePrice === 0;
+
+  return (
+    <Card className="group hover:shadow-lg transition-all overflow-hidden">
+      {bundle.imageUrl ? (
+        <div className="aspect-video w-full overflow-hidden">
+          <img
+            src={bundle.imageUrl}
+            alt={bundle.name}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      ) : (
+        <div className="aspect-video w-full bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 flex items-center justify-center">
+          <Layers className="w-16 h-16 text-orange-400 dark:text-orange-600" />
+        </div>
+      )}
+
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-lg line-clamp-2 flex-1">
+            {bundle.name}
+          </h3>
+          <Badge variant={bundle.isPublished ? 'default' : 'secondary'}>
+            {bundle.isPublished ? 'Live' : 'Draft'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="outline" className="text-xs">
+            Bundle
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {itemCount} items
+          </Badge>
+          {isFree && bundle.followGateEnabled && (
+            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+              Follow Gate
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {bundle.description || 'No description'}
+        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            {isFree ? (
+              <span className="text-lg font-bold text-green-600">Free</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold">${bundle.bundlePrice}</span>
+                {bundle.originalPrice > bundle.bundlePrice && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    ${bundle.originalPrice}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/dashboard/create/bundle?bundleId=${bundle._id}&step=basics`)}
+            >
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function BlogPostCard({ product }: { product: any }) {
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       {product.imageUrl ? (
         <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={product.imageUrl} 
+          <img
+            src={product.imageUrl}
             alt={product.title}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />
@@ -716,7 +844,7 @@ function BlogPostCard({ product }: { product: any }) {
           <PenTool className="w-16 h-16 text-indigo-400 dark:text-indigo-600" />
         </div>
       )}
-      
+
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-semibold text-lg line-clamp-2 flex-1">
@@ -892,7 +1020,9 @@ function ProductCard({ product, onEdit, onDelete, onTogglePublish, onTogglePin }
   onTogglePublish?: (productId: string, currentState: boolean) => void;
   onTogglePin?: (productId: string, currentState: boolean) => void;
 }) {
-  const Icon = product.type === 'course' ? BookOpen : 
+  const Icon = product.type === 'course' ? BookOpen :
+               product.type === 'bundle' ? Layers :
+               product.productCategory === 'bundle' ? Layers :
                product.productCategory === 'sample-pack' ? Music :
                product.productCategory === 'preset-pack' ? Music :
                product.productCategory === 'midi-pack' ? Music :
