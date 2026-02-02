@@ -269,6 +269,159 @@ type SequenceType =
   | "winback"
   | "custom";
 
+// Pre-built workflow templates for each sequence type
+function getSequenceTemplate(sequenceType?: SequenceType): { nodes: Node[]; edges: Edge[] } {
+  const baseY = 50;
+  const nodeSpacing = 150;
+
+  // Helper to create nodes and edges
+  const createWorkflow = (
+    triggerType: TriggerType,
+    triggerDescription: string,
+    emails: Array<{ subject: string; delayDays?: number }>
+  ) => {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    let nodeIndex = 0;
+    let yPos = baseY;
+
+    // Add trigger node
+    nodes.push({
+      id: `node_${nodeIndex}`,
+      type: "trigger",
+      position: { x: 250, y: yPos },
+      data: { triggerType, description: triggerDescription },
+    });
+    const triggerId = `node_${nodeIndex}`;
+    nodeIndex++;
+    yPos += nodeSpacing;
+
+    let prevNodeId = triggerId;
+
+    // Add email and delay nodes
+    emails.forEach((email, i) => {
+      // Add delay before email (except first one)
+      if (email.delayDays && email.delayDays > 0) {
+        const delayId = `node_${nodeIndex}`;
+        nodes.push({
+          id: delayId,
+          type: "delay",
+          position: { x: 250, y: yPos },
+          data: { delayValue: email.delayDays, delayUnit: "days" },
+        });
+        edges.push({
+          id: `edge_${prevNodeId}_${delayId}`,
+          source: prevNodeId,
+          target: delayId,
+        });
+        prevNodeId = delayId;
+        nodeIndex++;
+        yPos += nodeSpacing;
+      }
+
+      // Add email node
+      const emailId = `node_${nodeIndex}`;
+      nodes.push({
+        id: emailId,
+        type: "email",
+        position: { x: 250, y: yPos },
+        data: { subject: email.subject, templateName: "" },
+      });
+      edges.push({
+        id: `edge_${prevNodeId}_${emailId}`,
+        source: prevNodeId,
+        target: emailId,
+      });
+      prevNodeId = emailId;
+      nodeIndex++;
+      yPos += nodeSpacing;
+    });
+
+    return { nodes, edges };
+  };
+
+  switch (sequenceType) {
+    case "welcome":
+      return createWorkflow("lead_signup", "When a new subscriber joins", [
+        { subject: "Welcome! Here's what to expect...", delayDays: 0 },
+        { subject: "Quick tip to get you started", delayDays: 1 },
+        { subject: "Your free resource is inside", delayDays: 2 },
+        { subject: "What our community is saying", delayDays: 3 },
+      ]);
+
+    case "buyer":
+      return createWorkflow("product_purchase", "When a customer makes a purchase", [
+        { subject: "Thank you for your purchase!", delayDays: 0 },
+        { subject: "How to get the most from your purchase", delayDays: 1 },
+        { subject: "Quick check-in: How's it going?", delayDays: 3 },
+        { subject: "You might also like...", delayDays: 7 },
+      ]);
+
+    case "course_student":
+      return createWorkflow("product_purchase", "When a student enrolls in your course", [
+        { subject: "Welcome to the course! Let's get started", delayDays: 0 },
+        { subject: "Day 1: Your first lesson awaits", delayDays: 1 },
+        { subject: "How's your progress? Tips for success", delayDays: 3 },
+        { subject: "Halfway there! Keep up the momentum", delayDays: 7 },
+        { subject: "Final stretch - you've got this!", delayDays: 14 },
+      ]);
+
+    case "coaching_client":
+      return createWorkflow("tag_added", "When a client books a coaching session", [
+        { subject: "Your session is confirmed!", delayDays: 0 },
+        { subject: "Prepare for our session: What to bring", delayDays: 1 },
+        { subject: "Session reminder: See you tomorrow!", delayDays: 0 },
+        { subject: "Follow-up: Action items from our session", delayDays: 1 },
+      ]);
+
+    case "lead_nurture":
+      return createWorkflow("lead_signup", "When a lead needs nurturing", [
+        { subject: "Here's something valuable for you", delayDays: 0 },
+        { subject: "The #1 mistake people make (and how to avoid it)", delayDays: 2 },
+        { subject: "Case study: How {{firstName}} achieved results", delayDays: 4 },
+        { subject: "Quick question for you", delayDays: 7 },
+        { subject: "Ready to take the next step?", delayDays: 10 },
+      ]);
+
+    case "product_launch":
+      return createWorkflow("manual", "When you launch a new product", [
+        { subject: "Big announcement: Something new is here!", delayDays: 0 },
+        { subject: "Why I created this (and who it's for)", delayDays: 1 },
+        { subject: "Early bird special ends soon", delayDays: 2 },
+        { subject: "Last chance: Don't miss out", delayDays: 3 },
+      ]);
+
+    case "reengagement":
+      return createWorkflow("customer_action", "When a subscriber becomes inactive", [
+        { subject: "We miss you! Here's what you've missed", delayDays: 0 },
+        { subject: "A special offer just for you", delayDays: 3 },
+        { subject: "Should we part ways?", delayDays: 7 },
+      ]);
+
+    case "winback":
+      return createWorkflow("customer_action", "When a subscriber is about to churn", [
+        { subject: "We want you back - here's 20% off", delayDays: 0 },
+        { subject: "Last chance to save your spot", delayDays: 3 },
+        { subject: "Goodbye (unless you want to stay)", delayDays: 7 },
+      ]);
+
+    case "custom":
+    default:
+      // Just a trigger node for custom workflows
+      return {
+        nodes: [
+          {
+            id: "node_0",
+            type: "trigger",
+            position: { x: 250, y: baseY },
+            data: { triggerType: "lead_signup", description: "When a new lead signs up" },
+          },
+        ],
+        edges: [],
+      };
+  }
+}
+
 export default function WorkflowBuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -426,24 +579,17 @@ export default function WorkflowBuilderPage() {
     }
   }, [existingWorkflow]);
 
-  // Initialize default trigger node for new workflows
+  // Initialize workflow with template nodes based on sequence type
   const [hasInitialized, setHasInitialized] = useState(false);
   useEffect(() => {
     // Only initialize once for new workflows (no workflowId)
     if (!workflowId && !hasInitialized) {
-      const defaultTriggerNode: Node = {
-        id: "node_0",
-        type: "trigger",
-        position: { x: 250, y: 50 },
-        data: {
-          triggerType: "lead_signup",
-          description: "When a new lead signs up",
-        },
-      };
-      setNodes([defaultTriggerNode]);
+      const { nodes: templateNodes, edges: templateEdges } = getSequenceTemplate(sequenceType);
+      setNodes(templateNodes);
+      setEdges(templateEdges);
       setHasInitialized(true);
     }
-  }, [workflowId, hasInitialized]);
+  }, [workflowId, hasInitialized, sequenceType]);
 
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);
