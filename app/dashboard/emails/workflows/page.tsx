@@ -426,6 +426,25 @@ export default function WorkflowBuilderPage() {
     }
   }, [existingWorkflow]);
 
+  // Initialize default trigger node for new workflows
+  const [hasInitialized, setHasInitialized] = useState(false);
+  useEffect(() => {
+    // Only initialize once for new workflows (no workflowId)
+    if (!workflowId && !hasInitialized) {
+      const defaultTriggerNode: Node = {
+        id: "node_0",
+        type: "trigger",
+        position: { x: 250, y: 50 },
+        data: {
+          triggerType: "lead_signup",
+          description: "When a new lead signs up",
+        },
+      };
+      setNodes([defaultTriggerNode]);
+      setHasInitialized(true);
+    }
+  }, [workflowId, hasInitialized]);
+
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);
   }, []);
