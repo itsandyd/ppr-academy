@@ -23,7 +23,7 @@ import {
   Undo,
   Redo,
 } from "lucide-react";
-import { useCallback, useImperativeHandle, forwardRef } from "react";
+import { useCallback, useImperativeHandle, forwardRef, useEffect } from "react";
 
 interface WysiwygEditorProps {
   content: string;
@@ -67,6 +67,14 @@ export const WysiwygEditor = forwardRef<WysiwygEditorRef, WysiwygEditorProps>(({
       },
     },
   });
+
+  // Update editor content when prop changes from outside (e.g., AI generation)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      // Only update if the content is actually different to avoid cursor jumps
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor]);
 
   // Expose insertText method to parent
   useImperativeHandle(ref, () => ({
