@@ -57,6 +57,9 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const deleteProduct = useMutation(api.digitalProducts.deleteProduct);
   const updateCourse: any = useMutation(api.courses.updateCourse);
   const deleteCourse: any = useMutation(api.courses.deleteCourse);
+  const deleteBundle: any = useMutation(api.bundles.deleteBundle);
+  const publishBundle: any = useMutation(api.bundles.publishBundle);
+  const unpublishBundle: any = useMutation(api.bundles.unpublishBundle);
 
   // Product action handlers
   const handleEditProduct = (productId: string) => {
@@ -89,15 +92,17 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const handleDeleteProduct = async (productId: string) => {
     if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
       try {
-        // Check if it's a course or digital product
+        // Check if it's a course, bundle, or digital product
         const product = allProducts.find(p => p._id === productId);
-        
+
         if (product?.type === 'course') {
           await deleteCourse({ courseId: productId as any, userId: user?.id || '' });
+        } else if (product?.type === 'bundle') {
+          await deleteBundle({ bundleId: productId as any });
         } else {
           await deleteProduct({ id: productId as any, userId: user?.id || '' });
         }
-        
+
         toast.success('Product deleted successfully');
       } catch (error) {
         toast.error('Failed to delete product');
@@ -108,21 +113,27 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
   const handleTogglePublishProduct = async (productId: string, currentState: boolean) => {
     try {
-      // Check if it's a course or digital product
+      // Check if it's a course, bundle, or digital product
       const product = allProducts.find(p => p._id === productId);
-      
+
       if (product?.type === 'course') {
-        await updateCourse({ 
-          id: productId as any, 
-          isPublished: !currentState 
+        await updateCourse({
+          id: productId as any,
+          isPublished: !currentState
         });
+      } else if (product?.type === 'bundle') {
+        if (currentState) {
+          await unpublishBundle({ bundleId: productId as any });
+        } else {
+          await publishBundle({ bundleId: productId as any });
+        }
       } else {
-        await updateProduct({ 
-          id: productId as any, 
-          isPublished: !currentState 
+        await updateProduct({
+          id: productId as any,
+          isPublished: !currentState
         });
       }
-      
+
       toast.success(currentState ? 'Product unpublished' : 'Product published successfully');
     } catch (error) {
       toast.error('Failed to update product');
@@ -132,8 +143,14 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
   const handleTogglePinProduct = async (productId: string, currentState: boolean) => {
     try {
-      // Check if it's a course or digital product
+      // Check if it's a course, bundle, or digital product
       const product = allProducts.find(p => p._id === productId);
+
+      // Bundles don't support pinning yet
+      if (product?.type === 'bundle') {
+        toast.error('Bundles cannot be pinned yet');
+        return;
+      }
       const newPinnedState = !currentState;
 
       if (product?.type === 'course') {
