@@ -212,14 +212,34 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
   }, [state.stepCompletion]);
 
   const createBundle = useCallback(async () => {
-    if (!user?.id || !storeId) return { success: false, error: "Invalid user/store." };
-    if (!canPublish()) return { success: false, error: "Complete all steps." };
+    if (!user?.id || !storeId) {
+      return { success: false, error: "Please set up a store first." };
+    }
+
+    // Check which steps are incomplete
+    const { basics, products, pricing, followGate } = state.stepCompletion;
+    const incompleteSteps: string[] = [];
+    if (!basics) incompleteSteps.push("Bundle Basics");
+    if (!products) incompleteSteps.push("Products");
+    if (!pricing) incompleteSteps.push("Pricing");
+    if (!followGate) incompleteSteps.push("Download Gate");
+
+    if (incompleteSteps.length > 0) {
+      return { success: false, error: `Please complete: ${incompleteSteps.join(", ")}` };
+    }
+
+    if (!state.bundleId) {
+      return { success: false, error: "Bundle not saved yet. Please save first." };
+    }
+
     try {
-      await saveBundle();
-      if (state.bundleId) { await publishBundleMutation({ bundleId: state.bundleId as Id<"bundles"> }); toast({ title: "Bundle Published!" }); return { success: true, bundleId: state.bundleId }; }
-      return { success: false, error: "Bundle ID not found" };
-    } catch { return { success: false, error: "Failed to publish." }; }
-  }, [user?.id, storeId, state.bundleId, canPublish, saveBundle, publishBundleMutation, toast]);
+      await publishBundleMutation({ bundleId: state.bundleId as Id<"bundles"> });
+      return { success: true, bundleId: state.bundleId };
+    } catch (error) {
+      console.error("Publish error:", error);
+      return { success: false, error: "Failed to publish bundle. Please try again." };
+    }
+  }, [user?.id, storeId, state.bundleId, state.stepCompletion, publishBundleMutation]);
 
   return <BundleCreationContext.Provider value={{ state, updateData, saveBundle, validateStep: (s) => validateStep(s, state.data), canPublish, createBundle }}>{children}</BundleCreationContext.Provider>;
 }

@@ -9,11 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, TrendingDown, Sparkles, Package, Gift } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export function BundlePricingForm() {
   const { state, updateData, saveBundle, createBundle, canPublish } = useBundleCreation();
   const router = useRouter();
+  const { toast } = useToast();
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const originalPrice = parseFloat(state.data.originalPrice || "0");
   const bundlePrice = parseFloat(state.data.price || "0");
@@ -43,10 +46,28 @@ export function BundlePricingForm() {
   };
 
   const handlePublish = async () => {
-    await saveBundle();
-    const result = await createBundle();
-    if (result.success) {
-      router.push(`/dashboard?mode=create`);
+    setIsPublishing(true);
+    try {
+      await saveBundle();
+      const result = await createBundle();
+      if (result.success) {
+        toast({ title: "Bundle Published!", description: "Your bundle is now live." });
+        router.push(`/dashboard?mode=create`);
+      } else {
+        toast({
+          title: "Publish Failed",
+          description: result.error || "Something went wrong. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Publish Failed",
+        description: "An unexpected error occurred.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -236,7 +257,7 @@ export function BundlePricingForm() {
         {isFreeBundle ? (
           <Button
             onClick={handleContinueToFollowGate}
-            disabled={!canProceed}
+            disabled={!canProceed || state.isSaving}
             size="lg"
             className="gap-2"
           >
@@ -245,12 +266,12 @@ export function BundlePricingForm() {
         ) : (
           <Button
             onClick={handlePublish}
-            disabled={!canProceed || !canPublish()}
+            disabled={!canProceed || !canPublish() || isPublishing}
             size="lg"
             className="gap-2"
           >
             <Sparkles className="h-4 w-4" />
-            Publish Bundle
+            {isPublishing ? "Publishing..." : "Publish Bundle"}
           </Button>
         )}
       </div>
