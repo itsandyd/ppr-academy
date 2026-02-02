@@ -49,6 +49,12 @@ import {
   Trophy,
   RotateCcw,
   Filter,
+  Sparkles,
+  Loader2,
+  BookOpen,
+  Store,
+  Package,
+  Wand2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -859,6 +865,15 @@ export default function WorkflowBuilderPage() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isEnrollingAll, setIsEnrollingAll] = useState(false);
 
+  // AI Email Generation State
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiContextType, setAiContextType] = useState<"course" | "store" | "product" | "custom">("store");
+  const [aiEmailType, setAiEmailType] = useState<"welcome" | "nurture" | "pitch" | "follow_up" | "thank_you" | "reminder" | "custom">("nurture");
+  const [aiSelectedCourseId, setAiSelectedCourseId] = useState<string>("");
+  const [aiSelectedProductId, setAiSelectedProductId] = useState<string>("");
+  const [aiCustomPrompt, setAiCustomPrompt] = useState("");
+  const [aiTone, setAiTone] = useState<"professional" | "friendly" | "casual" | "urgent" | "educational">("friendly");
+
   // Debounce the search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -922,6 +937,10 @@ export default function WorkflowBuilderPage() {
 
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
 
+  // Queries for AI email generation
+  const userCourses = useQuery(api.courses.getCoursesByUser, user?.id ? { userId: user.id } : "skip");
+  const userProducts = useQuery(api.digitalProducts.getProductsByStore, storeId ? { storeId } : "skip");
+
   // Get contact stats for total count
   const contactStats = useQuery(
     api.emailContacts.getContactStats,
@@ -954,6 +973,7 @@ export default function WorkflowBuilderPage() {
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
   const bulkEnrollAll = useAction(api.emailWorkflows.bulkEnrollAllContactsByFilter);
+  const generateAIEmail = useAction(api.aiEmailGenerator.generateWorkflowEmail);
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
   const saveABTest = useMutation(api.emailWorkflowABTesting.saveNodeABTest);
@@ -1153,6 +1173,46 @@ export default function WorkflowBuilderPage() {
       toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
     } finally {
       setIsSavingTemplate(false);
+    }
+  };
+
+  // AI Email Generation Handler
+  const handleGenerateAIEmail = async () => {
+    if (!selectedNode || !storeId) return;
+
+    setIsGeneratingAI(true);
+    try {
+      const result = await generateAIEmail({
+        storeId,
+        emailType: aiEmailType,
+        contextType: aiContextType,
+        courseId: aiContextType === "course" && aiSelectedCourseId ? aiSelectedCourseId as Id<"courses"> : undefined,
+        productId: aiContextType === "product" && aiSelectedProductId ? aiSelectedProductId as Id<"digitalProducts"> : undefined,
+        customPrompt: aiCustomPrompt || undefined,
+        tone: aiTone,
+      });
+
+      // Update the email node with generated content
+      updateNodeData(selectedNode.id, {
+        subject: result.subject,
+        previewText: result.previewText,
+        body: result.body,
+        mode: "custom",
+      });
+
+      toast({
+        title: "Email Generated!",
+        description: "AI has created your email content. Review and customize as needed.",
+      });
+    } catch (error) {
+      console.error("AI generation error:", error);
+      toast({
+        title: "Generation Failed",
+        description: "Could not generate email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -2419,6 +2479,174 @@ export default function WorkflowBuilderPage() {
                   </TabsContent>
 
                   <TabsContent value="custom" className="mt-4 space-y-4">
+                    {/* AI Email Generation */}
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-4 dark:border-purple-900 dark:from-purple-950/30 dark:to-blue-950/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        <span className="font-semibold text-purple-800 dark:text-purple-200">AI Email Generator</span>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Content Source</Label>
+                          <Select
+                            value={aiContextType}
+                            onValueChange={(v) => setAiContextType(v as typeof aiContextType)}
+                          >
+                            <SelectTrigger className="bg-white dark:bg-black">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-black">
+                              <SelectItem value="store">
+                                <div className="flex items-center gap-2">
+                                  <Store className="h-4 w-4" />
+                                  My Store/Brand
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="course">
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="h-4 w-4" />
+                                  From a Course
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="product">
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4" />
+                                  From a Product
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="custom">
+                                <div className="flex items-center gap-2">
+                                  <Wand2 className="h-4 w-4" />
+                                  Custom Prompt
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Email Type</Label>
+                          <Select
+                            value={aiEmailType}
+                            onValueChange={(v) => setAiEmailType(v as typeof aiEmailType)}
+                          >
+                            <SelectTrigger className="bg-white dark:bg-black">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-black">
+                              <SelectItem value="welcome">Welcome Email</SelectItem>
+                              <SelectItem value="nurture">Nurture / Value</SelectItem>
+                              <SelectItem value="pitch">Sales Pitch</SelectItem>
+                              <SelectItem value="follow_up">Follow-up</SelectItem>
+                              <SelectItem value="thank_you">Thank You</SelectItem>
+                              <SelectItem value="reminder">Reminder</SelectItem>
+                              <SelectItem value="custom">Custom</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {aiContextType === "course" && (
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs">Select Course</Label>
+                            <Select
+                              value={aiSelectedCourseId}
+                              onValueChange={setAiSelectedCourseId}
+                            >
+                              <SelectTrigger className="bg-white dark:bg-black">
+                                <SelectValue placeholder="Choose a course..." />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white dark:bg-black">
+                                {userCourses?.map((course: { _id: string; title: string }) => (
+                                  <SelectItem key={course._id} value={course._id}>
+                                    {course.title}
+                                  </SelectItem>
+                                ))}
+                                {(!userCourses || userCourses.length === 0) && (
+                                  <SelectItem value="" disabled>No courses found</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {aiContextType === "product" && (
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs">Select Product</Label>
+                            <Select
+                              value={aiSelectedProductId}
+                              onValueChange={setAiSelectedProductId}
+                            >
+                              <SelectTrigger className="bg-white dark:bg-black">
+                                <SelectValue placeholder="Choose a product..." />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white dark:bg-black">
+                                {userProducts?.map((product: { _id: string; title: string }) => (
+                                  <SelectItem key={product._id} value={product._id}>
+                                    {product.title}
+                                  </SelectItem>
+                                ))}
+                                {(!userProducts || userProducts.length === 0) && (
+                                  <SelectItem value="" disabled>No products found</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Tone</Label>
+                          <Select
+                            value={aiTone}
+                            onValueChange={(v) => setAiTone(v as typeof aiTone)}
+                          >
+                            <SelectTrigger className="bg-white dark:bg-black">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-black">
+                              <SelectItem value="friendly">Friendly</SelectItem>
+                              <SelectItem value="professional">Professional</SelectItem>
+                              <SelectItem value="casual">Casual</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                              <SelectItem value="educational">Educational</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-end">
+                          <Button
+                            onClick={handleGenerateAIEmail}
+                            disabled={isGeneratingAI || (aiContextType === "course" && !aiSelectedCourseId) || (aiContextType === "product" && !aiSelectedProductId)}
+                            className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+                          >
+                            {isGeneratingAI ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4" />
+                                Generate Email
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {(aiContextType === "custom" || aiEmailType === "custom") && (
+                        <div className="mt-3 space-y-2">
+                          <Label className="text-xs">Custom Instructions (optional)</Label>
+                          <Input
+                            value={aiCustomPrompt}
+                            onChange={(e) => setAiCustomPrompt(e.target.value)}
+                            placeholder="E.g., Mention the 50% discount, include a testimonial..."
+                            className="bg-white dark:bg-black"
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Subject Line *</Label>

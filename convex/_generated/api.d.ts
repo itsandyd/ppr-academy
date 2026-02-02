@@ -3200,6 +3200,32 @@ export declare const api: {
         textContent: string;
       }
     >;
+    generateWorkflowEmail: FunctionReference<
+      "action",
+      "public",
+      {
+        contextType: "course" | "store" | "product" | "custom";
+        courseId?: Id<"courses">;
+        customPrompt?: string;
+        emailType:
+          | "welcome"
+          | "nurture"
+          | "pitch"
+          | "follow_up"
+          | "thank_you"
+          | "reminder"
+          | "custom";
+        productId?: Id<"digitalProducts">;
+        storeId: string;
+        tone?:
+          | "professional"
+          | "friendly"
+          | "casual"
+          | "urgent"
+          | "educational";
+      },
+      { body: string; previewText: string; subject: string }
+    >;
   };
   aiMemories: {
     archiveMemory: FunctionReference<
