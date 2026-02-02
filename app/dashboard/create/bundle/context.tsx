@@ -193,7 +193,7 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
         });
       } else {
         const result = await createBundleMutation({ storeId, creatorId: user.id, name: state.data.title || "Untitled Bundle", description: state.data.description || "", bundleType, courseIds: courseIds.length > 0 ? courseIds : undefined, productIds: productIds.length > 0 ? productIds : undefined, bundlePrice: state.data.price ? parseFloat(state.data.price) : 0, imageUrl: state.data.thumbnail });
-        if (result) { setState(prev => ({ ...prev, bundleId: result as string })); router.replace(`/dashboard/create/bundle?bundleId=${result}&step=${searchParams.get("step") || "basics"}`); }
+        if (result?.bundleId) { setState(prev => ({ ...prev, bundleId: result.bundleId as string })); router.replace(`/dashboard/create/bundle?bundleId=${result.bundleId}&step=${searchParams.get("step") || "basics"}`); }
       }
       setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() }));
       toast({ title: "Bundle Saved", description: "Saved as draft." });

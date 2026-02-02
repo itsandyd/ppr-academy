@@ -292,9 +292,9 @@ export function useToggleCoursePublished(): (args: { courseId: Id<"courses">; us
 /**
  * Create bundle mutation
  */
-export function useCreateBundle(): (args: Record<string, unknown>) => Promise<Id<"bundles">> {
+export function useCreateBundle(): (args: Record<string, unknown>) => Promise<{ success: boolean; bundleId: Id<"bundles"> }> {
   const mutation = useConvexMutation(api.bundles.createBundle);
-  return mutation as unknown as (args: Record<string, unknown>) => Promise<Id<"bundles">>;
+  return mutation as unknown as (args: Record<string, unknown>) => Promise<{ success: boolean; bundleId: Id<"bundles"> }>;
 }
 
 /**
