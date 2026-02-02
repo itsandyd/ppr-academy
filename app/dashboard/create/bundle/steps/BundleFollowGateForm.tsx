@@ -13,10 +13,22 @@ export function BundleFollowGateForm() {
   const { toast } = useToast();
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Initialize Follow Gate as enabled when landing on this step
+  // Initialize Follow Gate with default config (email required) when landing on this step
   useEffect(() => {
-    if (!state.data.followGateEnabled) {
-      updateData("followGate", { followGateEnabled: true });
+    if (!state.data.followGateEnabled || !state.data.followGateConfig) {
+      updateData("followGate", {
+        followGateEnabled: true,
+        followGateConfig: state.data.followGateConfig || {
+          requireEmail: true,
+          requireInstagram: false,
+          requireTiktok: false,
+          requireYoutube: false,
+          requireSpotify: false,
+          minFollowsRequired: 0,
+          socialLinks: {},
+          customMessage: "",
+        },
+      });
     }
   }, []);
 
