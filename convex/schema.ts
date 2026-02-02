@@ -2420,7 +2420,10 @@ export default defineSchema({
       v.literal("conversion_nudge_triggered"),
       v.literal("nudge_shown"),
       v.literal("nudge_dismissed"),
-      v.literal("nudge_converted")
+      v.literal("nudge_converted"),
+      // Follow gate & creator funnel events
+      v.literal("follow_gate_completed"), // Lead completed follow gate
+      v.literal("product_published") // Creator published product
     ),
     resourceId: v.optional(v.string()), // courseId, productId, etc.
     resourceType: v.optional(

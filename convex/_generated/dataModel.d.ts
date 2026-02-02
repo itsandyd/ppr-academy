@@ -831,7 +831,9 @@ export type DataModel = {
         | "conversion_nudge_triggered"
         | "nudge_shown"
         | "nudge_dismissed"
-        | "nudge_converted";
+        | "nudge_converted"
+        | "follow_gate_completed"
+        | "product_published";
       ipAddress?: string;
       metadata?: {
         action?: string;
@@ -1658,6 +1660,24 @@ export type DataModel = {
       creatorId: string;
       description: string;
       discountPercentage: number;
+      followGateEnabled?: boolean;
+      followGateMessage?: string;
+      followGateRequirements?: {
+        minFollowsRequired?: number;
+        requireEmail?: boolean;
+        requireInstagram?: boolean;
+        requireSpotify?: boolean;
+        requireTiktok?: boolean;
+        requireYoutube?: boolean;
+      };
+      followGateSocialLinks?: {
+        instagram?: string;
+        soundcloud?: string;
+        spotify?: string;
+        tiktok?: string;
+        twitter?: string;
+        youtube?: string;
+      };
       imageUrl?: string;
       isActive: boolean;
       isPublished: boolean;
@@ -1687,6 +1707,22 @@ export type DataModel = {
       | "creatorId"
       | "description"
       | "discountPercentage"
+      | "followGateEnabled"
+      | "followGateMessage"
+      | "followGateRequirements"
+      | "followGateRequirements.minFollowsRequired"
+      | "followGateRequirements.requireEmail"
+      | "followGateRequirements.requireInstagram"
+      | "followGateRequirements.requireSpotify"
+      | "followGateRequirements.requireTiktok"
+      | "followGateRequirements.requireYoutube"
+      | "followGateSocialLinks"
+      | "followGateSocialLinks.instagram"
+      | "followGateSocialLinks.soundcloud"
+      | "followGateSocialLinks.spotify"
+      | "followGateSocialLinks.tiktok"
+      | "followGateSocialLinks.twitter"
+      | "followGateSocialLinks.youtube"
       | "imageUrl"
       | "isActive"
       | "isPublished"

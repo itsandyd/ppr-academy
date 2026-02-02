@@ -5101,6 +5101,24 @@ export declare const api: {
         bundlePrice?: number;
         courseIds?: Array<Id<"courses">>;
         description?: string;
+        followGateEnabled?: boolean;
+        followGateMessage?: string;
+        followGateRequirements?: {
+          minFollowsRequired?: number;
+          requireEmail?: boolean;
+          requireInstagram?: boolean;
+          requireSpotify?: boolean;
+          requireTiktok?: boolean;
+          requireYoutube?: boolean;
+        };
+        followGateSocialLinks?: {
+          instagram?: string;
+          soundcloud?: string;
+          spotify?: string;
+          tiktok?: string;
+          twitter?: string;
+          youtube?: string;
+        };
         imageUrl?: string;
         isActive?: boolean;
         maxPurchases?: number;

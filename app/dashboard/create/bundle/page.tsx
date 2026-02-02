@@ -7,6 +7,7 @@ import { useBundleCreation } from "./context";
 import { BundleBasicsForm } from "./steps/BundleBasicsForm";
 import { BundleProductsForm } from "./steps/BundleProductsForm";
 import { BundlePricingForm } from "./steps/BundlePricingForm";
+import { BundleFollowGateForm } from "./steps/BundleFollowGateForm";
 
 function BundleCreateContent() {
   const searchParams = useSearchParams();
@@ -21,6 +22,8 @@ function BundleCreateContent() {
         return <BundleProductsForm />;
       case "pricing":
         return <BundlePricingForm />;
+      case "followGate":
+        return <BundleFollowGateForm />;
       default:
         return <BundleBasicsForm />;
     }

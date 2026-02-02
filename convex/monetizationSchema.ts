@@ -316,7 +316,7 @@ export const bundlesTable = defineTable({
   courseIds: v.array(v.id("courses")),
   productIds: v.array(v.id("digitalProducts")),
   originalPrice: v.number(), // Sum of individual prices
-  bundlePrice: v.number(), // Discounted price
+  bundlePrice: v.number(), // Discounted price (can be 0 for free bundles)
   discountPercentage: v.number(),
   savings: v.number(),
   imageUrl: v.optional(v.string()),
@@ -328,6 +328,31 @@ export const bundlesTable = defineTable({
   availableFrom: v.optional(v.number()),
   availableUntil: v.optional(v.number()),
   maxPurchases: v.optional(v.number()), // Limited quantity
+
+  // Follow Gate Configuration (for free bundles with email capture)
+  followGateEnabled: v.optional(v.boolean()),
+  followGateRequirements: v.optional(
+    v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()), // 0 = all required
+    })
+  ),
+  followGateSocialLinks: v.optional(
+    v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      soundcloud: v.optional(v.string()),
+    })
+  ),
+  followGateMessage: v.optional(v.string()), // Custom message to show users
+
   createdAt: v.number(),
   updatedAt: v.number(),
 })

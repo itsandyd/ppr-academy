@@ -1397,7 +1397,45 @@ export const updateProduct = mutation({
       updates.title = title;
     }
 
+    // Detect product being published (isPublished changing from false to true)
+    const isBeingPublished =
+      updates.isPublished === true && product.isPublished !== true;
+
     await ctx.db.patch(id, updates);
+
+    // Emit product_published event if applicable
+    if (isBeingPublished) {
+      const now = Date.now();
+
+      // Check if this is the creator's first published product
+      const existingPublishedProducts = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_storeId", (q) => q.eq("storeId", product.storeId))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("isPublished"), true),
+            q.neq(q.field("_id"), id) // Exclude current product
+          )
+        )
+        .first();
+
+      const isFirstProduct = !existingPublishedProducts;
+
+      // Emit analytics event
+      await ctx.db.insert("analyticsEvents", {
+        userId: product.userId,
+        storeId: product.storeId,
+        eventType: "product_published",
+        resourceId: id.toString(),
+        resourceType: "digitalProduct",
+        timestamp: now,
+        metadata: {
+          product_id: id.toString(),
+          action: isFirstProduct ? "first_product" : "publish",
+        },
+      });
+    }
+
     return await ctx.db.get(id);
   },
 });

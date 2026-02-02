@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingDown, Sparkles, Package } from "lucide-react";
+import { DollarSign, TrendingDown, Sparkles, Package, Gift } from "lucide-react";
 import { useEffect } from "react";
 
 export function BundlePricingForm() {
@@ -50,7 +50,19 @@ export function BundlePricingForm() {
     }
   };
 
-  const canProceed = bundlePrice > 0 && bundlePrice < originalPrice;
+  const handleContinueToFollowGate = async () => {
+    await saveBundle();
+    router.push(
+      `/dashboard/create/bundle?step=followGate${state.bundleId ? `&bundleId=${state.bundleId}` : ""}`
+    );
+  };
+
+  const makeFree = () => {
+    updateData("pricing", { price: "0" });
+  };
+
+  const isFreeBundle = bundlePrice === 0;
+  const canProceed = isFreeBundle || (bundlePrice > 0 && bundlePrice < originalPrice);
 
   return (
     <div className="space-y-6">
@@ -134,6 +146,15 @@ export function BundlePricingForm() {
                   {percent}% off
                 </Button>
               ))}
+              <Button
+                variant={isFreeBundle ? "default" : "outline"}
+                size="sm"
+                onClick={makeFree}
+                className="gap-1"
+              >
+                <Gift className="h-3 w-3" />
+                Free
+              </Button>
             </div>
           </div>
 
@@ -170,6 +191,21 @@ export function BundlePricingForm() {
               </p>
             </div>
           )}
+
+          {isFreeBundle && (
+            <div className="rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 p-4 dark:from-orange-950/20 dark:to-amber-950/20">
+              <div className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-orange-600" />
+                <span className="font-semibold text-orange-700 dark:text-orange-400">
+                  Free Bundle with Download Gate
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Users will need to enter their email (and optionally follow your social accounts)
+                to download this bundle. Great for building your audience!
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -197,15 +233,26 @@ export function BundlePricingForm() {
         <Button variant="outline" onClick={handleBack}>
           Back
         </Button>
-        <Button
-          onClick={handlePublish}
-          disabled={!canProceed || !canPublish()}
-          size="lg"
-          className="gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          Publish Bundle
-        </Button>
+        {isFreeBundle ? (
+          <Button
+            onClick={handleContinueToFollowGate}
+            disabled={!canProceed}
+            size="lg"
+            className="gap-2"
+          >
+            Configure Download Gate
+          </Button>
+        ) : (
+          <Button
+            onClick={handlePublish}
+            disabled={!canProceed || !canPublish()}
+            size="lg"
+            className="gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Publish Bundle
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { BundleCreationProvider, useBundleCreation } from "./context";
 import { useStoresByUser } from "@/lib/convex-typed-hooks";
-import { Package, Layers, DollarSign } from "lucide-react";
+import { Package, Layers, DollarSign, Lock } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
@@ -19,7 +19,7 @@ interface BundleCreateLayoutProps {
   children: React.ReactNode;
 }
 
-const steps: Step[] = [
+const baseSteps: Step[] = [
   {
     id: "basics",
     label: "Bundle Basics",
@@ -46,6 +46,15 @@ const steps: Step[] = [
   },
 ];
 
+const followGateStep: Step = {
+  id: "followGate",
+  label: "Download Gate",
+  icon: Lock,
+  description: "Require email/social to download",
+  color: "from-orange-500 to-amber-500",
+  estimatedTime: "1-2 min",
+};
+
 function LayoutContentInner({ children }: BundleCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
@@ -53,6 +62,10 @@ function LayoutContentInner({ children }: BundleCreateLayoutProps) {
   const currentStep = searchParams.get("step") || "basics";
 
   const { state, canPublish, createBundle, saveBundle } = useBundleCreation();
+
+  // Determine if bundle is free (show Follow Gate step for free bundles)
+  const isFreeBundle = parseFloat(state.data.price || "0") === 0 && state.data.price !== undefined && state.data.price !== "";
+  const steps = isFreeBundle ? [...baseSteps, followGateStep] : baseSteps;
 
   // Trigger auto-save when data changes
   useAutoSaveOnChange(state.data);

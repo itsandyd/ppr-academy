@@ -349,6 +349,29 @@ export const updateBundle = mutation({
     availableUntil: v.optional(v.number()),
     maxPurchases: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    // Follow Gate settings
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(
+      v.object({
+        requireEmail: v.optional(v.boolean()),
+        requireInstagram: v.optional(v.boolean()),
+        requireTiktok: v.optional(v.boolean()),
+        requireYoutube: v.optional(v.boolean()),
+        requireSpotify: v.optional(v.boolean()),
+        minFollowsRequired: v.optional(v.number()),
+      })
+    ),
+    followGateSocialLinks: v.optional(
+      v.object({
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+        twitter: v.optional(v.string()),
+        soundcloud: v.optional(v.string()),
+      })
+    ),
+    followGateMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { bundleId, ...updates } = args;
