@@ -85,7 +85,9 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
   const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
-  const bundleId = searchParams.get("bundleId") || undefined;
+  // Validate bundleId is a valid Convex ID (not "[object Object]" from a previous bug)
+  const rawBundleId = searchParams.get("bundleId");
+  const bundleId = rawBundleId && !rawBundleId.includes("object") ? rawBundleId : undefined;
 
   const stores = useStoresByUser(user?.id);
   const storeId = stores?.[0]?._id;
@@ -193,7 +195,11 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
         });
       } else {
         const result = await createBundleMutation({ storeId, creatorId: user.id, name: state.data.title || "Untitled Bundle", description: state.data.description || "", bundleType, courseIds: courseIds.length > 0 ? courseIds : undefined, productIds: productIds.length > 0 ? productIds : undefined, bundlePrice: state.data.price ? parseFloat(state.data.price) : 0, imageUrl: state.data.thumbnail });
-        if (result?.bundleId) { setState(prev => ({ ...prev, bundleId: result.bundleId as string })); router.replace(`/dashboard/create/bundle?bundleId=${result.bundleId}&step=${searchParams.get("step") || "basics"}`); }
+        if (result?.bundleId) {
+          const newBundleId = String(result.bundleId);
+          setState(prev => ({ ...prev, bundleId: newBundleId }));
+          router.replace(`/dashboard/create/bundle?bundleId=${newBundleId}&step=${searchParams.get("step") || "basics"}`);
+        }
       }
       setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() }));
       toast({ title: "Bundle Saved", description: "Saved as draft." });
