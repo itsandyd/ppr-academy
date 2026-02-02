@@ -278,7 +278,7 @@ function getSequenceTemplate(sequenceType?: SequenceType): { nodes: Node[]; edge
   const createWorkflow = (
     triggerType: TriggerType,
     triggerDescription: string,
-    emails: Array<{ subject: string; delayDays?: number }>
+    emails: Array<{ subject: string; body: string; previewText?: string; delayDays?: number }>
   ) => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -299,7 +299,7 @@ function getSequenceTemplate(sequenceType?: SequenceType): { nodes: Node[]; edge
     let prevNodeId = triggerId;
 
     // Add email and delay nodes
-    emails.forEach((email, i) => {
+    emails.forEach((email) => {
       // Add delay before email (except first one)
       if (email.delayDays && email.delayDays > 0) {
         const delayId = `node_${nodeIndex}`;
@@ -319,13 +319,19 @@ function getSequenceTemplate(sequenceType?: SequenceType): { nodes: Node[]; edge
         yPos += nodeSpacing;
       }
 
-      // Add email node
+      // Add email node with full content
       const emailId = `node_${nodeIndex}`;
       nodes.push({
         id: emailId,
         type: "email",
         position: { x: 250, y: yPos },
-        data: { subject: email.subject, templateName: "" },
+        data: {
+          subject: email.subject,
+          body: email.body,
+          previewText: email.previewText || "",
+          mode: "custom",
+          templateName: "",
+        },
       });
       edges.push({
         id: `edge_${prevNodeId}_${emailId}`,
@@ -343,66 +349,469 @@ function getSequenceTemplate(sequenceType?: SequenceType): { nodes: Node[]; edge
   switch (sequenceType) {
     case "welcome":
       return createWorkflow("lead_signup", "When a new subscriber joins", [
-        { subject: "Welcome! Here's what to expect...", delayDays: 0 },
-        { subject: "Quick tip to get you started", delayDays: 1 },
-        { subject: "Your free resource is inside", delayDays: 2 },
-        { subject: "What our community is saying", delayDays: 3 },
+        {
+          subject: "Welcome! Here's what to expect...",
+          previewText: "You're in! Here's what happens next",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>Welcome to the community! I'm so glad you're here.</p>
+<p>Over the next few days, I'll be sharing some of my best tips and resources to help you get started.</p>
+<p>Here's what you can expect:</p>
+<ul>
+<li>Actionable tips you can use right away</li>
+<li>Free resources to help you level up</li>
+<li>Behind-the-scenes insights</li>
+</ul>
+<p>In the meantime, feel free to reply to this email and introduce yourself. I'd love to hear about your goals!</p>
+<p>Talk soon,<br/>{{senderName}}</p>`,
+        },
+        {
+          subject: "Quick tip to get you started",
+          previewText: "Here's something that helped me",
+          delayDays: 1,
+          body: `<p>Hey {{firstName}},</p>
+<p>I wanted to share a quick tip that made a huge difference for me when I was starting out.</p>
+<p><strong>The tip:</strong> [Insert your best quick-win tip here]</p>
+<p>This might seem simple, but it's often the simple things that make the biggest impact.</p>
+<p>Try it out today and let me know how it goes!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Your free resource is inside",
+          previewText: "I made this for you",
+          delayDays: 2,
+          body: `<p>Hey {{firstName}},</p>
+<p>As promised, here's a free resource I put together just for you:</p>
+<p><strong>[Insert resource name and link here]</strong></p>
+<p>This covers:</p>
+<ul>
+<li>[Key benefit 1]</li>
+<li>[Key benefit 2]</li>
+<li>[Key benefit 3]</li>
+</ul>
+<p>Download it, save it, use it. It's yours!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "What our community is saying",
+          previewText: "Real results from real people",
+          delayDays: 3,
+          body: `<p>Hey {{firstName}},</p>
+<p>I love hearing from people in our community. Here's what some of them have shared:</p>
+<blockquote>
+<p>"[Insert testimonial 1]" - [Name]</p>
+</blockquote>
+<blockquote>
+<p>"[Insert testimonial 2]" - [Name]</p>
+</blockquote>
+<p>These results are totally achievable for you too.</p>
+<p>Ready to get started? Here's the next step: [Insert CTA]</p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "buyer":
       return createWorkflow("product_purchase", "When a customer makes a purchase", [
-        { subject: "Thank you for your purchase!", delayDays: 0 },
-        { subject: "How to get the most from your purchase", delayDays: 1 },
-        { subject: "Quick check-in: How's it going?", delayDays: 3 },
-        { subject: "You might also like...", delayDays: 7 },
+        {
+          subject: "Thank you for your purchase!",
+          previewText: "Here's how to access your purchase",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>Thank you so much for your purchase! I'm excited to have you.</p>
+<p><strong>Here's how to access what you bought:</strong></p>
+<p>[Insert access instructions or download link]</p>
+<p>If you have any questions, just hit reply and I'll help you out.</p>
+<p>Cheers,<br/>{{senderName}}</p>`,
+        },
+        {
+          subject: "How to get the most from your purchase",
+          previewText: "Quick tips to maximize your results",
+          delayDays: 1,
+          body: `<p>Hey {{firstName}},</p>
+<p>Now that you have [product name], I wanted to share some tips to help you get the most out of it:</p>
+<ol>
+<li><strong>Start here:</strong> [First step recommendation]</li>
+<li><strong>Quick win:</strong> [Something they can do immediately]</li>
+<li><strong>Pro tip:</strong> [Advanced tip for better results]</li>
+</ol>
+<p>Don't try to do everything at once. Pick one thing and run with it!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Quick check-in: How's it going?",
+          previewText: "I'd love to hear from you",
+          delayDays: 3,
+          body: `<p>Hey {{firstName}},</p>
+<p>Just wanted to check in and see how things are going with [product name].</p>
+<p>Have you had a chance to dive in yet?</p>
+<p>If you're stuck or have questions, just reply to this email. I'm here to help!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "You might also like...",
+          previewText: "Based on your purchase",
+          delayDays: 7,
+          body: `<p>Hey {{firstName}},</p>
+<p>Since you got [product name], I thought you might be interested in this:</p>
+<p><strong>[Related product/offer name]</strong></p>
+<p>It's perfect for [who it's for] who want to [benefit].</p>
+<p>[Insert link to learn more]</p>
+<p>No pressure at all - just wanted to let you know it exists!</p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "course_student":
       return createWorkflow("product_purchase", "When a student enrolls in your course", [
-        { subject: "Welcome to the course! Let's get started", delayDays: 0 },
-        { subject: "Day 1: Your first lesson awaits", delayDays: 1 },
-        { subject: "How's your progress? Tips for success", delayDays: 3 },
-        { subject: "Halfway there! Keep up the momentum", delayDays: 7 },
-        { subject: "Final stretch - you've got this!", delayDays: 14 },
+        {
+          subject: "Welcome to the course! Let's get started",
+          previewText: "Your learning journey begins now",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>Welcome to [Course Name]! I'm so excited to have you as a student.</p>
+<p><strong>Here's how to get started:</strong></p>
+<ol>
+<li>Log in to your account: [Login link]</li>
+<li>Start with Lesson 1: [Link to first lesson]</li>
+<li>Join our community: [Community link if applicable]</li>
+</ol>
+<p>Take your time, go at your own pace, and don't hesitate to reach out if you need help.</p>
+<p>Let's do this!<br/>{{senderName}}</p>`,
+        },
+        {
+          subject: "Day 1: Your first lesson awaits",
+          previewText: "Time to dive into the content",
+          delayDays: 1,
+          body: `<p>Hey {{firstName}},</p>
+<p>Ready to dive in? Your first lesson is waiting for you!</p>
+<p><strong>Today's lesson:</strong> [Lesson title]</p>
+<p>In this lesson, you'll learn:</p>
+<ul>
+<li>[Key takeaway 1]</li>
+<li>[Key takeaway 2]</li>
+<li>[Key takeaway 3]</li>
+</ul>
+<p><a href="[lesson link]">Start Lesson 1 →</a></p>
+<p>See you inside!<br/>{{senderName}}</p>`,
+        },
+        {
+          subject: "How's your progress? Tips for success",
+          previewText: "A few things that help students succeed",
+          delayDays: 3,
+          body: `<p>Hey {{firstName}},</p>
+<p>How's the course going so far? I hope you're enjoying it!</p>
+<p>Here are a few tips from students who got the best results:</p>
+<ul>
+<li><strong>Set a schedule:</strong> Block out dedicated learning time</li>
+<li><strong>Take notes:</strong> Write down key insights as you go</li>
+<li><strong>Apply immediately:</strong> Don't just watch - do the exercises!</li>
+</ul>
+<p>If you're stuck, hit reply and let me know. I'm here to help!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Halfway there! Keep up the momentum",
+          previewText: "You're making great progress",
+          delayDays: 7,
+          body: `<p>Hey {{firstName}},</p>
+<p>You're halfway through the course - amazing work!</p>
+<p>By now, you should be seeing some real progress. Keep that momentum going!</p>
+<p><strong>Coming up next:</strong></p>
+<p>[Preview of upcoming modules/lessons]</p>
+<p>The best is yet to come. Keep pushing!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Final stretch - you've got this!",
+          previewText: "Almost at the finish line",
+          delayDays: 14,
+          body: `<p>Hey {{firstName}},</p>
+<p>You're in the home stretch! The finish line is in sight.</p>
+<p>Remember why you started this course. You wanted to [main goal/outcome].</p>
+<p>Now it's time to finish strong and make it happen!</p>
+<p><a href="[course link]">Continue the course →</a></p>
+<p>I believe in you!<br/>{{senderName}}</p>`,
+        },
       ]);
 
     case "coaching_client":
       return createWorkflow("tag_added", "When a client books a coaching session", [
-        { subject: "Your session is confirmed!", delayDays: 0 },
-        { subject: "Prepare for our session: What to bring", delayDays: 1 },
-        { subject: "Session reminder: See you tomorrow!", delayDays: 0 },
-        { subject: "Follow-up: Action items from our session", delayDays: 1 },
+        {
+          subject: "Your session is confirmed!",
+          previewText: "Details for our upcoming session",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>Your coaching session is confirmed! I'm looking forward to working with you.</p>
+<p><strong>Session details:</strong></p>
+<ul>
+<li><strong>Date:</strong> [Date]</li>
+<li><strong>Time:</strong> [Time + timezone]</li>
+<li><strong>Location:</strong> [Zoom link or location]</li>
+</ul>
+<p>If you need to reschedule, please let me know at least 24 hours in advance.</p>
+<p>See you soon!<br/>{{senderName}}</p>`,
+        },
+        {
+          subject: "Prepare for our session: What to bring",
+          previewText: "Get the most out of our time together",
+          delayDays: 1,
+          body: `<p>Hey {{firstName}},</p>
+<p>I'm excited for our session! To make sure we get the most out of our time, here's what I'd like you to prepare:</p>
+<ul>
+<li><strong>Your #1 challenge:</strong> What's the biggest thing you're struggling with?</li>
+<li><strong>Your goal:</strong> What outcome would make this session a success?</li>
+<li><strong>Questions:</strong> Write down any specific questions you have</li>
+</ul>
+<p>Take a few minutes to think through these before we meet.</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Session reminder: See you soon!",
+          previewText: "Your session is coming up",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>Just a quick reminder that our session is coming up!</p>
+<p><strong>Join here:</strong> [Meeting link]</p>
+<p>Make sure you're in a quiet space where you can focus.</p>
+<p>See you soon!<br/>{{senderName}}</p>`,
+        },
+        {
+          subject: "Follow-up: Action items from our session",
+          previewText: "Here's what we covered and your next steps",
+          delayDays: 1,
+          body: `<p>Hey {{firstName}},</p>
+<p>Great session! Here's a summary of what we covered and your action items:</p>
+<p><strong>Key insights:</strong></p>
+<ul>
+<li>[Insight 1]</li>
+<li>[Insight 2]</li>
+</ul>
+<p><strong>Your action items:</strong></p>
+<ol>
+<li>[Action 1]</li>
+<li>[Action 2]</li>
+<li>[Action 3]</li>
+</ol>
+<p>Complete these before our next session. Let me know if you have questions!</p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "lead_nurture":
       return createWorkflow("lead_signup", "When a lead needs nurturing", [
-        { subject: "Here's something valuable for you", delayDays: 0 },
-        { subject: "The #1 mistake people make (and how to avoid it)", delayDays: 2 },
-        { subject: "Case study: How {{firstName}} achieved results", delayDays: 4 },
-        { subject: "Quick question for you", delayDays: 7 },
-        { subject: "Ready to take the next step?", delayDays: 10 },
+        {
+          subject: "Here's something valuable for you",
+          previewText: "A quick win to get you started",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>I wanted to share something that I think you'll find really valuable:</p>
+<p><strong>[Insert tip, insight, or resource]</strong></p>
+<p>This is one of the things that made the biggest difference for me, and I hope it helps you too.</p>
+<p>More good stuff coming your way soon!</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "The #1 mistake people make (and how to avoid it)",
+          previewText: "Don't let this trip you up",
+          delayDays: 2,
+          body: `<p>Hey {{firstName}},</p>
+<p>There's one mistake I see people make over and over again:</p>
+<p><strong>[Describe the common mistake]</strong></p>
+<p>Here's why it's such a problem: [Explain the consequences]</p>
+<p><strong>The fix:</strong> [Provide the solution]</p>
+<p>Avoid this, and you're already ahead of most people.</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "How others are getting results",
+          previewText: "Real stories from real people",
+          delayDays: 4,
+          body: `<p>Hey {{firstName}},</p>
+<p>I love sharing success stories because they show what's possible.</p>
+<p>Here's what one person achieved:</p>
+<blockquote>
+<p>"[Success story or testimonial]"</p>
+</blockquote>
+<p>The best part? This is totally achievable for you too.</p>
+<p>Here's how they did it: [Brief explanation]</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Quick question for you",
+          previewText: "I'd love your input",
+          delayDays: 7,
+          body: `<p>Hey {{firstName}},</p>
+<p>I have a quick question for you:</p>
+<p><strong>What's the biggest challenge you're facing right now with [topic]?</strong></p>
+<p>Just hit reply and let me know. I read every response!</p>
+<p>Your answer helps me create better content for you.</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Ready to take the next step?",
+          previewText: "Here's how I can help",
+          delayDays: 10,
+          body: `<p>Hey {{firstName}},</p>
+<p>Over the past week, I've shared some of my best tips with you.</p>
+<p>If you're ready to take things to the next level, I have something that might help:</p>
+<p><strong>[Your offer/product/service]</strong></p>
+<p>It's perfect for people who want to [desired outcome].</p>
+<p><a href="[link]">Learn more here →</a></p>
+<p>No pressure - just wanted to let you know it exists!</p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "product_launch":
       return createWorkflow("manual", "When you launch a new product", [
-        { subject: "Big announcement: Something new is here!", delayDays: 0 },
-        { subject: "Why I created this (and who it's for)", delayDays: 1 },
-        { subject: "Early bird special ends soon", delayDays: 2 },
-        { subject: "Last chance: Don't miss out", delayDays: 3 },
+        {
+          subject: "Big announcement: Something new is here!",
+          previewText: "I've been working on something special",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>I'm so excited to share this with you...</p>
+<p>After months of work, <strong>[Product Name]</strong> is finally here!</p>
+<p>It's designed to help you [main benefit].</p>
+<p><strong>Here's what's included:</strong></p>
+<ul>
+<li>[Feature/benefit 1]</li>
+<li>[Feature/benefit 2]</li>
+<li>[Feature/benefit 3]</li>
+</ul>
+<p><a href="[link]">Check it out here →</a></p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Why I created this (and who it's for)",
+          previewText: "The story behind the product",
+          delayDays: 1,
+          body: `<p>Hey {{firstName}},</p>
+<p>Yesterday I announced [Product Name]. Today I want to share why I created it.</p>
+<p>[Share the story - what problem did you see? What inspired you?]</p>
+<p><strong>This is perfect for you if:</strong></p>
+<ul>
+<li>You're struggling with [problem 1]</li>
+<li>You want to [desired outcome]</li>
+<li>You're ready to [action they need to take]</li>
+</ul>
+<p><a href="[link]">See if it's right for you →</a></p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Early bird special ends soon",
+          previewText: "Don't miss this",
+          delayDays: 2,
+          body: `<p>Hey {{firstName}},</p>
+<p>Quick reminder: the early bird pricing for [Product Name] ends soon!</p>
+<p><strong>What you get:</strong></p>
+<ul>
+<li>[Benefit 1]</li>
+<li>[Benefit 2]</li>
+<li>[Bonus if applicable]</li>
+</ul>
+<p><strong>Early bird price:</strong> [Price] (Regular: [Higher price])</p>
+<p><a href="[link]">Get it before the price goes up →</a></p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Last chance: Don't miss out",
+          previewText: "Final reminder",
+          delayDays: 3,
+          body: `<p>Hey {{firstName}},</p>
+<p>This is your last chance to get [Product Name] at the launch price.</p>
+<p><strong>After today, the price goes up.</strong></p>
+<p>If you've been on the fence, now's the time to decide.</p>
+<p>Remember, you get:</p>
+<ul>
+<li>[Key benefit 1]</li>
+<li>[Key benefit 2]</li>
+<li>[Guarantee if applicable]</li>
+</ul>
+<p><a href="[link]">Get it now before it's too late →</a></p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "reengagement":
       return createWorkflow("customer_action", "When a subscriber becomes inactive", [
-        { subject: "We miss you! Here's what you've missed", delayDays: 0 },
-        { subject: "A special offer just for you", delayDays: 3 },
-        { subject: "Should we part ways?", delayDays: 7 },
+        {
+          subject: "We miss you! Here's what you've missed",
+          previewText: "It's been a while...",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>I noticed it's been a while since we connected. I hope everything's okay!</p>
+<p>In case you missed it, here's what's been happening:</p>
+<ul>
+<li>[Recent update 1]</li>
+<li>[Recent update 2]</li>
+<li>[Recent update 3]</li>
+</ul>
+<p>Would love to have you back. Is there anything I can help with?</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "A special offer just for you",
+          previewText: "Because we want you back",
+          delayDays: 3,
+          body: `<p>Hey {{firstName}},</p>
+<p>Since we haven't heard from you in a while, I wanted to offer you something special:</p>
+<p><strong>[Special offer details - discount, bonus, etc.]</strong></p>
+<p>This is my way of saying "we miss you and we'd love to have you back!"</p>
+<p><a href="[link]">Claim your offer →</a></p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Should we part ways?",
+          previewText: "It's okay if you want to go",
+          delayDays: 7,
+          body: `<p>Hey {{firstName}},</p>
+<p>I don't want to keep emailing you if you're not interested anymore.</p>
+<p>If you want to stay on my list and keep getting emails from me, just click this link:</p>
+<p><a href="[stay subscribed link]">Yes, I want to stay! →</a></p>
+<p>If I don't hear from you, I'll assume you want to be removed, and that's totally okay.</p>
+<p>No hard feelings either way!</p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "winback":
       return createWorkflow("customer_action", "When a subscriber is about to churn", [
-        { subject: "We want you back - here's 20% off", delayDays: 0 },
-        { subject: "Last chance to save your spot", delayDays: 3 },
-        { subject: "Goodbye (unless you want to stay)", delayDays: 7 },
+        {
+          subject: "We want you back - here's 20% off",
+          previewText: "A special offer just for you",
+          delayDays: 0,
+          body: `<p>Hey {{firstName}},</p>
+<p>It's been a while, and I wanted to reach out personally.</p>
+<p>I'd love to have you back, so here's a special offer:</p>
+<p><strong>20% off [product/service] - just for you</strong></p>
+<p>Use code: <strong>WELCOMEBACK</strong></p>
+<p><a href="[link]">Claim your discount →</a></p>
+<p>This offer expires in 7 days.</p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Last chance to save your spot",
+          previewText: "Your discount expires soon",
+          delayDays: 3,
+          body: `<p>Hey {{firstName}},</p>
+<p>Just a reminder: your 20% discount expires in a few days.</p>
+<p>If there's something holding you back, just reply and let me know. Maybe I can help!</p>
+<p>Otherwise, here's the link to claim your discount:</p>
+<p><a href="[link]">Use code WELCOMEBACK →</a></p>
+<p>{{senderName}}</p>`,
+        },
+        {
+          subject: "Goodbye (unless you want to stay)",
+          previewText: "This is my last email",
+          delayDays: 7,
+          body: `<p>Hey {{firstName}},</p>
+<p>This is my last email to you (unless you tell me otherwise).</p>
+<p>I don't want to clutter your inbox if you're not interested.</p>
+<p>But if you DO want to stay connected, just click here:</p>
+<p><a href="[stay link]">Yes, keep me on the list! →</a></p>
+<p>Either way, I wish you all the best!</p>
+<p>{{senderName}}</p>`,
+        },
       ]);
 
     case "custom":
