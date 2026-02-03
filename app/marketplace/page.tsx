@@ -27,6 +27,7 @@ import {
   Grid3x3,
   List,
   Plug,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceGrid } from "@/app/_components/marketplace-grid";
@@ -43,7 +44,7 @@ export default function MarketplacePage() {
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [contentType, setContentType] = useState<
-    "all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks"
+    "all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks" | "bundles"
   >("all");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
@@ -277,6 +278,12 @@ export default function MarketplacePage() {
                           <Music className="mr-1 h-3 w-3" />
                           Samples
                         </Link>
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsList className="mt-2 grid w-full grid-cols-1 bg-white dark:bg-black">
+                      <TabsTrigger value="bundles" className="text-xs">
+                        <Layers className="mr-1 h-3 w-3" />
+                        Bundles
                       </TabsTrigger>
                     </TabsList>
                     <TabsList className="mt-2 grid w-full bg-white dark:bg-black">

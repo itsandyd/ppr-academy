@@ -20,11 +20,11 @@ import { NoProductsEmptyState } from "@/components/ui/empty-state-enhanced";
 import { OnboardingHints, creatorOnboardingHints } from "@/components/onboarding/onboarding-hints";
 import { MetricCardEnhanced } from "@/components/ui/metric-card-enhanced";
 import { AchievementCard, creatorAchievements } from "@/components/gamification/achievement-system";
-import { 
-  Music, 
-  TrendingUp, 
-  Download, 
-  DollarSign, 
+import {
+  Music,
+  TrendingUp,
+  Download,
+  DollarSign,
   Star,
   Plus,
   BarChart3,
@@ -34,7 +34,8 @@ import {
   Play,
   Eye,
   Edit,
-  MoreVertical
+  MoreVertical,
+  Layers
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -74,11 +75,18 @@ export function CreatorDashboardContent() {
     convexUserId ? { userId: convexUserId } : "skip"
   );
 
+  // Fetch user's bundles
+  const userBundles = useQuery(
+    api.bundles.getBundlesByStore,
+    storeId ? { storeId, includeUnpublished: true } : "skip"
+  );
+
   // Combine products for unified display
   const products = useMemo(() => {
     // Use userCourses if available, otherwise show all courses for testing
     const coursesToUse = userCourses || allCourses || [];
     const digitalProductsToUse = digitalProducts || [];
+    const bundlesToUse = userBundles || [];
 
     const courseProducts = coursesToUse.map((course: any) => ({
       ...course,
@@ -95,8 +103,17 @@ export function CreatorDashboardContent() {
       category: (product as any).category || 'Sample Pack'
     }));
 
-    return [...courseProducts, ...digitalProductItems];
-  }, [userCourses, allCourses, digitalProducts]);
+    const bundleItems = bundlesToUse.map((bundle: any) => ({
+      ...bundle,
+      title: bundle.name,
+      type: 'bundle' as const,
+      price: bundle.bundlePrice || 0,
+      downloadCount: bundle.totalPurchases || 0,
+      category: 'Bundle'
+    }));
+
+    return [...courseProducts, ...digitalProductItems, ...bundleItems];
+  }, [userCourses, allCourses, digitalProducts, userBundles]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -493,7 +510,7 @@ export function CreatorDashboardContent() {
         transition={{ delay: 0.3 }}
       >
         <h2 className="text-lg font-semibold mb-4">Content Breakdown</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="text-center">
             <CardContent className="p-6">
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -531,6 +548,16 @@ export function CreatorDashboardContent() {
               </div>
               <p className="text-2xl font-bold text-foreground">0</p>
               <p className="text-sm text-muted-foreground">Coaching</p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center">
+            <CardContent className="p-6">
+              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Layers className="w-6 h-6 text-amber-600" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{userBundles?.length || 0}</p>
+              <p className="text-sm text-muted-foreground">Bundles</p>
             </CardContent>
           </Card>
         </div>
@@ -589,9 +616,17 @@ export function CreatorDashboardContent() {
               <Card key={product._id}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      product.type === 'bundle'
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500'
+                        : product.type === 'course'
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                          : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                    }`}>
                       {product.type === 'course' ? (
                         <Play className="w-6 h-6 text-white" />
+                      ) : product.type === 'bundle' ? (
+                        <Layers className="w-6 h-6 text-white" />
                       ) : (
                         <Music className="w-6 h-6 text-white" />
                       )}
@@ -600,7 +635,7 @@ export function CreatorDashboardContent() {
                       <h3 className="font-medium text-foreground truncate">{product.title}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs">
-                          {product.type === 'course' ? 'Course' : 'Digital Product'}
+                          {product.type === 'course' ? 'Course' : product.type === 'bundle' ? 'Bundle' : 'Digital Product'}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           ${product.price || 0}

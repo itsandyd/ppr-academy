@@ -296,7 +296,8 @@ export const searchMarketplace = query({
         v.literal("coaching"),
         v.literal("sample-packs"),
         v.literal("plugins"),
-        v.literal("ableton-racks")
+        v.literal("ableton-racks"),
+        v.literal("bundles")
       )
     ),
     category: v.optional(v.string()),
@@ -637,6 +638,63 @@ export const searchMarketplace = query({
       );
 
       allResults.push(...racksWithDetails);
+    }
+
+    // Fetch bundles
+    if (contentType === "all" || contentType === "bundles") {
+      const bundles = await ctx.db
+        .query("bundles")
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .collect();
+
+      const bundlesWithDetails = await Promise.all(
+        bundles.map(async (bundle) => {
+          let creatorName = "Creator";
+          let creatorAvatar: string | undefined = undefined;
+
+          if (bundle.storeId) {
+            const store = await ctx.db.get(bundle.storeId);
+            if (store) {
+              const user = await ctx.db
+                .query("users")
+                .filter((q) => q.eq(q.field("clerkId"), store.userId))
+                .first();
+              if (user) {
+                creatorName = user.name || store.name || "Creator";
+                creatorAvatar = user.imageUrl;
+              }
+            }
+          }
+
+          // Count bundle purchases
+          const purchases = await ctx.db
+            .query("purchases")
+            .filter((q) => q.eq(q.field("bundleId"), bundle._id))
+            .collect();
+
+          return {
+            _id: bundle._id,
+            _creationTime: bundle._creationTime,
+            title: bundle.name,
+            slug: bundle.slug || bundle._id,
+            description: bundle.description,
+            price: bundle.bundlePrice,
+            originalPrice: bundle.originalPrice,
+            discountPercentage: bundle.discountPercentage,
+            savings: bundle.savings,
+            imageUrl: await getImageUrl(bundle.imageUrl),
+            contentType: "bundle" as const,
+            bundleType: bundle.bundleType,
+            courseCount: bundle.courseIds?.length || 0,
+            productCount: bundle.productIds?.length || 0,
+            purchaseCount: purchases.length,
+            creatorName,
+            creatorAvatar: await getImageUrl(creatorAvatar),
+          };
+        })
+      );
+
+      allResults.push(...bundlesWithDetails);
     }
 
     // Apply filters

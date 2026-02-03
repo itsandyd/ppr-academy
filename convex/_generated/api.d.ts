@@ -14013,7 +14013,8 @@ export declare const api: {
           | "coaching"
           | "sample-packs"
           | "plugins"
-          | "ableton-racks";
+          | "ableton-racks"
+          | "bundles";
         limit?: number;
         offset?: number;
         priceRange?: "free" | "under-50" | "50-100" | "over-100";

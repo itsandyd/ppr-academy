@@ -7,19 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
-import { Search, Package, Download, DollarSign } from "lucide-react";
+import { Search, Package, Download, DollarSign, Layers } from "lucide-react";
 
 export default function ProductsManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all digital products and courses
+  // Fetch all digital products, courses, and bundles
   const digitalProducts = useQuery(api.digitalProducts.getAllProducts) || [];
   const courses = useQuery(api.courses.getAllCourses) || [];
+  const bundles = useQuery(api.bundles.getAllPublishedBundles, {}) || [];
 
-  // Combine both into a unified list
+  // Combine all into a unified list
   const allProducts = [
     ...digitalProducts.map((p: any) => ({ ...p, type: "digital_product" as const })),
     ...courses.map((c: any) => ({ ...c, type: "course" as const })),
+    ...bundles.map((b: any) => ({ ...b, title: b.name, price: b.bundlePrice, type: "bundle" as const })),
   ];
 
   const filteredProducts = allProducts.filter((product) =>
@@ -37,7 +39,7 @@ export default function ProductsManagementPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{allProducts.length}</div>
@@ -54,6 +56,12 @@ export default function ProductsManagementPage() {
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{digitalProducts.length}</div>
             <div className="text-sm text-muted-foreground">Digital Products</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{bundles.length}</div>
+            <div className="text-sm text-muted-foreground">Bundles</div>
           </CardContent>
         </Card>
         <Card>
@@ -107,7 +115,7 @@ export default function ProductsManagementPage() {
                     </p>
                     <div className="mt-1 flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
-                        {product.type === "course" ? "Course" : "Digital Product"}
+                        {product.type === "course" ? "Course" : product.type === "bundle" ? "Bundle" : "Digital Product"}
                       </Badge>
                       {product.type === "digital_product" && product.downloads && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">

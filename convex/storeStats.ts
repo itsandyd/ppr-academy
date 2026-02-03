@@ -266,7 +266,7 @@ export const getQuickStoreStats = query({
     // Get all published courses
     const courses = await ctx.db
       .query("courses")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("storeId"), args.storeId),
           q.eq(q.field("isPublished"), true)
@@ -274,22 +274,30 @@ export const getQuickStoreStats = query({
       )
       .collect();
 
+    // Get all published bundles
+    const bundles = await ctx.db
+      .query("bundles")
+      .withIndex("by_store", (q) => q.eq("storeId", args.storeId as any).eq("isPublished", true))
+      .collect();
+
     // Get all purchases
     const productIds = products.map(p => p._id);
     const courseIds = courses.map(c => c._id);
-    
+    const bundleIds = bundles.map(b => b._id);
+
     const allPurchases = await ctx.db.query("purchases").collect();
-    
-    const storePurchases = allPurchases.filter(p => 
+
+    const storePurchases = allPurchases.filter(p =>
       (p.productId && productIds.includes(p.productId)) ||
-      (p.courseId && courseIds.includes(p.courseId))
+      (p.courseId && courseIds.includes(p.courseId)) ||
+      (p.bundleId && bundleIds.includes(p.bundleId))
     );
 
     // Get unique students
     const uniqueStudents = new Set(storePurchases.map(p => p.userId));
 
     return {
-      totalItems: products.length + courses.length,
+      totalItems: products.length + courses.length + bundles.length,
       totalStudents: uniqueStudents.size,
       totalSales: storePurchases.length,
     };

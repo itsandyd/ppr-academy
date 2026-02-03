@@ -556,6 +556,10 @@ export default function CreatorAnalyticsPage() {
                       <span>Sample Packs</span>
                       <Badge>0</Badge>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span>Bundles</span>
+                      <Badge>0</Badge>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
