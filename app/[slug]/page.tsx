@@ -478,10 +478,13 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         submissionFee: product.submissionFee,
         genres: product.genres,
         mediaType: product.mediaType,
-      })),
+        // Pinning
+        isPinned: product.isPinned,
+        pinnedAt: product.pinnedAt,
+      } as BaseProduct & { isPinned?: boolean; pinnedAt?: number })),
 
       // Courses (add course-specific properties)
-      ...(courses || []).map((course: any): BaseProduct => ({
+      ...(courses || []).map((course: any): BaseProduct & { isPinned?: boolean; pinnedAt?: number } => ({
         _id: course._id,
         title: course.title,
         description: course.description,
@@ -496,6 +499,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         skillLevel: course.skillLevel,
         duration: course.duration,
         lessonsCount: course.lessonsCount,
+        // Pinning
+        isPinned: course.isPinned,
+        pinnedAt: course.pinnedAt,
       })),
 
       // Coaching Profiles

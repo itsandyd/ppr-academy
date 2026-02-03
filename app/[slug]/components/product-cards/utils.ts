@@ -10,6 +10,7 @@ import {
   ListMusic,
   Waves,
   FileAudio,
+  Layers,
   LucideIcon,
 } from "lucide-react";
 
@@ -109,6 +110,15 @@ export function categorizeProducts(products: BaseProduct[]): ProductCategory[] {
       iconBgColor: "bg-cyan-500/10",
       products: [],
     },
+    bundle: {
+      id: "bundle",
+      title: "Bundles",
+      description: "Discounted product bundles with multiple items",
+      icon: Layers,
+      iconColor: "text-orange-500",
+      iconBgColor: "bg-orange-500/10",
+      products: [],
+    },
   };
 
   // Sort products into categories
@@ -133,14 +143,36 @@ export function categorizeProducts(products: BaseProduct[]): ProductCategory[] {
       categories.abletonRack.products.push(product);
     } else if (type === "urlMedia" || product.mediaType) {
       categories.urlMedia.products.push(product);
+    } else if (type === "bundle" || category === "bundle") {
+      categories.bundle.products.push(product);
     } else {
       // Default to digital products
       categories.digitalProduct.products.push(product);
     }
   });
 
+  // Sort products within each category by isPinned (pinned first)
+  Object.values(categories).forEach((cat) => {
+    cat.products.sort((a, b) => {
+      const aIsPinned = (a as any).isPinned ? 1 : 0;
+      const bIsPinned = (b as any).isPinned ? 1 : 0;
+      if (aIsPinned !== bIsPinned) {
+        return bIsPinned - aIsPinned;
+      }
+      // Secondary sort by pinnedAt (most recently pinned first)
+      if (aIsPinned && bIsPinned) {
+        const aPinnedAt = (a as any).pinnedAt || 0;
+        const bPinnedAt = (b as any).pinnedAt || 0;
+        return bPinnedAt - aPinnedAt;
+      }
+      // Then by creation time (newest first)
+      return b._creationTime - a._creationTime;
+    });
+  });
+
   // Return only non-empty categories in preferred order
   const order = [
+    "bundle",
     "membership",
     "beat-lease",
     "course",
@@ -187,6 +219,7 @@ export function getCategoryLabel(categoryId: string): string {
     urlMedia: "Link",
     digitalProduct: "Digital Product",
     digital: "Digital Product",
+    bundle: "Bundle",
   };
 
   return labels[categoryId] || categoryId;
