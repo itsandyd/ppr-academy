@@ -970,7 +970,7 @@ export default function WorkflowBuilderPage() {
 
   // Queries for AI email generation
   const userCourses = useQuery(api.courses.getCoursesByUser, user?.id ? { userId: user.id } : "skip");
-  const userProducts = useQuery(api.digitalProducts.getProductsByStore, storeId ? { storeId } : "skip");
+  const userProducts = useQuery(api.digitalProducts.getProductsByStore, store?._id ? { storeId: store._id } : "skip");
 
   // Get contact stats for total count
   const contactStats = useQuery(
