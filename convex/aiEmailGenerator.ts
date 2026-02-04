@@ -874,10 +874,8 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
           data: {
             label: "Has Purchased?",
             conditionType: "has_purchased_product",
-            conditionData: {
-              courseId: args.courseId || undefined,
-              productId: args.productId || undefined,
-            },
+            courseId: args.courseId || undefined,
+            productId: args.productId || undefined,
           },
         });
         edges.push({
