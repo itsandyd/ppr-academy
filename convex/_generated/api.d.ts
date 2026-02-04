@@ -9604,7 +9604,14 @@ export declare const api: {
         scheduledAt?: number;
         sentAt?: number;
         sentCount?: number;
-        status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+        status:
+          | "draft"
+          | "scheduled"
+          | "sending"
+          | "sent"
+          | "failed"
+          | "paused"
+          | "partial";
         storeId: string;
         subject: string;
         tags?: Array<string>;
@@ -9623,7 +9630,14 @@ export declare const api: {
         name: string;
         recipientCount?: number;
         replyToEmail?: string;
-        status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+        status:
+          | "draft"
+          | "scheduled"
+          | "sending"
+          | "sent"
+          | "failed"
+          | "paused"
+          | "partial";
         subject: string;
       }
     >;
@@ -9668,7 +9682,14 @@ export declare const api: {
       "query",
       "public",
       {
-        status?: "draft" | "scheduled" | "sending" | "sent" | "failed";
+        status?:
+          | "draft"
+          | "scheduled"
+          | "sending"
+          | "sent"
+          | "failed"
+          | "paused"
+          | "partial";
         storeId: string;
       },
       Array<{
@@ -9687,7 +9708,14 @@ export declare const api: {
         scheduledAt?: number;
         sentAt?: number;
         sentCount?: number;
-        status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+        status:
+          | "draft"
+          | "scheduled"
+          | "sending"
+          | "sent"
+          | "failed"
+          | "paused"
+          | "partial";
         storeId: string;
         subject: string;
         tags?: Array<string>;
@@ -9737,7 +9765,14 @@ export declare const api: {
         campaignId: Id<"emailCampaigns">;
         deliveredCount?: number;
         sentAt?: number;
-        status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+        status:
+          | "draft"
+          | "scheduled"
+          | "sending"
+          | "sent"
+          | "failed"
+          | "paused"
+          | "partial";
       },
       null
     >;

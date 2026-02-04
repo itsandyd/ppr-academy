@@ -455,8 +455,21 @@ export const sendCampaignBatch = internalAction({
       htmlContent = (campaign as any).content || "";
       textContent = "";
     } else {
-      htmlContent = (campaign as any).htmlContent || "";
-      textContent = (campaign as any).textContent || "";
+      // For resendCampaigns, check if using a template
+      const campaignData = campaign as any;
+      if (campaignData.templateId && !campaignData.htmlContent) {
+        // Fetch template content
+        const template = await ctx.runQuery(internal.emailQueries.getTemplateById, {
+          templateId: campaignData.templateId,
+        });
+        if (template) {
+          htmlContent = template.htmlContent || "";
+          textContent = template.textContent || "";
+        }
+      } else {
+        htmlContent = campaignData.htmlContent || "";
+        textContent = campaignData.textContent || "";
+      }
     }
 
     if (!htmlContent && !textContent) {

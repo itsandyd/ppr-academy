@@ -4518,7 +4518,10 @@ export type DataModel = {
       content: string;
       deliveredCount?: number;
       excludeTagIds?: Array<Id<"emailTags">>;
+      failedCount?: number;
       fromEmail: string;
+      lastError?: string;
+      lastProcessedCursor?: string;
       name: string;
       openedCount?: number;
       previewText?: string;
@@ -4527,7 +4530,14 @@ export type DataModel = {
       scheduledAt?: number;
       sentAt?: number;
       sentCount?: number;
-      status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+      status:
+        | "draft"
+        | "scheduled"
+        | "sending"
+        | "sent"
+        | "failed"
+        | "paused"
+        | "partial";
       storeId: string;
       subject: string;
       tags?: Array<string>;
@@ -4546,7 +4556,10 @@ export type DataModel = {
       | "content"
       | "deliveredCount"
       | "excludeTagIds"
+      | "failedCount"
       | "fromEmail"
+      | "lastError"
+      | "lastProcessedCursor"
       | "name"
       | "openedCount"
       | "previewText"
@@ -9026,15 +9039,25 @@ export type DataModel = {
       customRecipients?: Array<string>;
       deliveredCount: number;
       errorMessage?: string;
+      failedCount?: number;
       htmlContent?: string;
       inactiveDays?: number;
+      lastError?: string;
+      lastProcessedCursor?: string;
       name: string;
       openedCount: number;
       recipientCount: number;
       scheduledFor?: number;
       sentAt?: number;
       sentCount: number;
-      status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+      status:
+        | "draft"
+        | "scheduled"
+        | "sending"
+        | "sent"
+        | "failed"
+        | "paused"
+        | "partial";
       subject: string;
       targetAudience:
         | "all_users"
@@ -9063,8 +9086,11 @@ export type DataModel = {
       | "customRecipients"
       | "deliveredCount"
       | "errorMessage"
+      | "failedCount"
       | "htmlContent"
       | "inactiveDays"
+      | "lastError"
+      | "lastProcessedCursor"
       | "name"
       | "openedCount"
       | "recipientCount"

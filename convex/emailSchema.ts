@@ -138,7 +138,9 @@ export const resendCampaignsTable = defineTable({
     v.literal("scheduled"),
     v.literal("sending"),
     v.literal("sent"),
-    v.literal("failed")
+    v.literal("failed"),
+    v.literal("paused"),  // Can be resumed after error
+    v.literal("partial")  // Some sent, some failed
   ),
 
   // Schedule
@@ -153,6 +155,11 @@ export const resendCampaignsTable = defineTable({
   clickedCount: v.number(),
   bouncedCount: v.number(),
   complainedCount: v.number(),
+  failedCount: v.optional(v.number()),  // Track failed sends
+
+  // Progress tracking for resumability
+  lastProcessedCursor: v.optional(v.string()),
+  lastError: v.optional(v.string()),
 
   errorMessage: v.optional(v.string()),
 

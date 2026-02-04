@@ -1986,12 +1986,15 @@ export default defineSchema({
       v.literal("scheduled"),
       v.literal("sending"),
       v.literal("sent"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("paused"),  // Can be resumed after error
+      v.literal("partial")  // Some sent, some failed
     ),
     scheduledAt: v.optional(v.number()),
     sentAt: v.optional(v.number()),
     recipientCount: v.optional(v.number()),
     sentCount: v.optional(v.number()), // Number of emails successfully sent
+    failedCount: v.optional(v.number()), // Number of emails that failed
     deliveredCount: v.optional(v.number()),
     openedCount: v.optional(v.number()),
     clickedCount: v.optional(v.number()),
@@ -2003,6 +2006,8 @@ export default defineSchema({
     targetTagIds: v.optional(v.array(v.id("emailTags"))), // Filter recipients by tags (AND logic)
     targetTagMode: v.optional(v.union(v.literal("all"), v.literal("any"))), // all=AND, any=OR
     excludeTagIds: v.optional(v.array(v.id("emailTags"))), // Exclude contacts with these tags
+    lastProcessedCursor: v.optional(v.string()), // For resumability
+    lastError: v.optional(v.string()), // Last error message
   })
     .index("by_storeId", ["storeId"])
     .index("by_adminUserId", ["adminUserId"])

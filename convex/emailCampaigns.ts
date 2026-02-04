@@ -77,7 +77,9 @@ export const getCampaigns = query({
         v.literal("scheduled"),
         v.literal("sending"),
         v.literal("sent"),
-        v.literal("failed")
+        v.literal("failed"),
+        v.literal("paused"),
+        v.literal("partial")
       )
     ),
   },
@@ -96,7 +98,9 @@ export const getCampaigns = query({
         v.literal("scheduled"),
         v.literal("sending"),
         v.literal("sent"),
-        v.literal("failed")
+        v.literal("failed"),
+        v.literal("paused"),
+        v.literal("partial")
       ),
       scheduledAt: v.optional(v.number()),
       sentAt: v.optional(v.number()),
@@ -143,7 +147,9 @@ export const getCampaign = query({
         v.literal("scheduled"),
         v.literal("sending"),
         v.literal("sent"),
-        v.literal("failed")
+        v.literal("failed"),
+        v.literal("paused"),
+        v.literal("partial")
       ),
       scheduledAt: v.optional(v.number()),
       sentAt: v.optional(v.number()),
@@ -493,7 +499,9 @@ export const getCampaignForSending = query({
         v.literal("scheduled"),
         v.literal("sending"),
         v.literal("sent"),
-        v.literal("failed")
+        v.literal("failed"),
+        v.literal("paused"),
+        v.literal("partial")
       ),
       fromEmail: v.string(),
       replyToEmail: v.optional(v.string()),
@@ -514,7 +522,9 @@ export const updateCampaignStatus = mutation({
       v.literal("scheduled"),
       v.literal("sending"),
       v.literal("sent"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("paused"),
+      v.literal("partial")
     ),
     sentAt: v.optional(v.number()),
     deliveredCount: v.optional(v.number()),
