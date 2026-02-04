@@ -27,6 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -889,6 +899,21 @@ export default function WorkflowBuilderPage() {
   const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string | null>(null);
   const [isCourseCycleConfigOpen, setIsCourseCycleConfigOpen] = useState(false);
 
+  // AI Workflow Sequence Generator State
+  const [isSequenceGeneratorOpen, setIsSequenceGeneratorOpen] = useState(false);
+  const [isGeneratingSequence, setIsGeneratingSequence] = useState(false);
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+  const [sequenceWizardStep, setSequenceWizardStep] = useState(1);
+  const [sequenceCampaignType, setSequenceCampaignType] = useState<
+    "product_launch" | "course_launch" | "lead_nurture" | "onboarding" | "re_engagement" | "promotion" | "evergreen" | "custom"
+  >("product_launch");
+  const [sequenceContextType, setSequenceContextType] = useState<"course" | "product" | "store">("store");
+  const [sequenceCourseId, setSequenceCourseId] = useState<string>("");
+  const [sequenceProductId, setSequenceProductId] = useState<string>("");
+  const [sequenceCustomPrompt, setSequenceCustomPrompt] = useState("");
+  const [sequenceLength, setSequenceLength] = useState(5);
+  const [sequenceTone, setSequenceTone] = useState<"professional" | "friendly" | "casual" | "urgent" | "educational">("friendly");
+
   // A/B Testing State
   const [abTestEnabled, setAbTestEnabled] = useState(false);
   const [abVariants, setAbVariants] = useState<Array<{
@@ -974,6 +999,8 @@ export default function WorkflowBuilderPage() {
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
   const bulkEnrollAll = useAction(api.emailWorkflows.bulkEnrollAllContactsByFilter);
   const generateAIEmail = useAction(api.aiEmailGenerator.generateWorkflowEmail);
+  const generateWorkflowSequence = useAction(api.aiEmailGenerator.generateWorkflowSequence);
+  const preCreateWorkflowTags = useMutation(api.emailWorkflows.preCreateWorkflowTags);
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
   const saveABTest = useMutation(api.emailWorkflowABTesting.saveNodeABTest);
@@ -1216,6 +1243,84 @@ export default function WorkflowBuilderPage() {
     }
   };
 
+  // AI Workflow Sequence Generation Handler
+  const handleGenerateSequence = async (skipConfirm = false) => {
+    if (!storeId) return;
+
+    // Show custom confirmation dialog if overwriting existing work
+    if (nodes.length > 1 && !skipConfirm) {
+      setShowOverwriteConfirm(true);
+      return;
+    }
+
+    setIsGeneratingSequence(true);
+    try {
+      const result = await generateWorkflowSequence({
+        storeId,
+        campaignType: sequenceCampaignType,
+        contextType: sequenceContextType,
+        courseId: sequenceContextType === "course" && sequenceCourseId ? sequenceCourseId as Id<"courses"> : undefined,
+        productId: sequenceContextType === "product" && sequenceProductId ? sequenceProductId as Id<"digitalProducts"> : undefined,
+        customPrompt: sequenceCustomPrompt || undefined,
+        sequenceLength,
+        tone: sequenceTone,
+      });
+
+      // Set the workflow name
+      setWorkflowName(result.workflowName);
+
+      // Pre-create tags from the generated workflow and get tagName -> tagId mapping
+      // This ensures tags exist before we try to resolve them
+      const tagMap = await preCreateWorkflowTags({
+        storeId,
+        nodes: result.nodes,
+      });
+
+      // Create a lookup map for quick resolution
+      const tagNameToId = new Map(tagMap.map((t) => [t.name, t.tagId]));
+
+      // Resolve tagName to tagId for action nodes using the freshly created/fetched tags
+      const resolvedNodes = (result.nodes as Node[]).map((node) => {
+        if (node.type === "action" && node.data?.tagName && !node.data?.tagId) {
+          const tagId = tagNameToId.get(node.data.tagName);
+          if (tagId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                tagId,
+              },
+            };
+          }
+        }
+        return node;
+      });
+
+      // Load the generated nodes and edges
+      setNodes(resolvedNodes);
+      setEdges(result.edges as Edge[]);
+
+      toast({
+        title: "Workflow Generated!",
+        description: `Created ${result.nodes.length} nodes with ${result.edges.length} connections. Review and customize as needed.`,
+      });
+
+      setIsSequenceGeneratorOpen(false);
+
+      // Only reset custom prompt - preserve course/product selection for potential regeneration
+      setSequenceCustomPrompt("");
+    } catch (error) {
+      console.error("Sequence generation error:", error);
+      toast({
+        title: "Generation Failed",
+        description: "Could not generate workflow sequence. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingSequence(false);
+    }
+  };
+
   // Contacts are now filtered server-side via the search query
   const filteredContacts = contacts || [];
 
@@ -1358,8 +1463,28 @@ export default function WorkflowBuilderPage() {
               <span className="sm:hidden">{validationErrors.length}</span>
             </div>
           )}
+          {/* AI Sequence Generator Button - show when creating new workflow */}
+          {!workflowId && (
+            <Button
+              variant="outline"
+              onClick={() => setIsSequenceGeneratorOpen(true)}
+              className="h-8 gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 md:h-9 md:px-3"
+            >
+              <Wand2 className="h-4 w-4 text-purple-600" />
+              <span className="hidden md:inline">AI Generate</span>
+            </Button>
+          )}
           {workflowId && (
             <>
+              <Button
+                variant="outline"
+                onClick={() => setIsSequenceGeneratorOpen(true)}
+                className="h-8 w-8 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 md:h-9 md:w-auto md:gap-2 md:px-3"
+                title="Generate new sequence with AI"
+              >
+                <Wand2 className="h-4 w-4 text-purple-600" />
+                <span className="hidden md:inline">AI Generate</span>
+              </Button>
               <div className="flex items-center gap-2 rounded-md border px-2 py-1 md:px-3 md:py-1.5">
                 <Power
                   className={`h-3.5 w-3.5 md:h-4 md:w-4 ${isActive ? "text-green-600" : "text-muted-foreground"}`}
@@ -1962,11 +2087,21 @@ export default function WorkflowBuilderPage() {
                       <div className="space-y-2">
                         <Label>Select Tag</Label>
                         <Select
-                          value={selectedNode.data.tagId || ""}
-                          onValueChange={(v) => updateNodeData(selectedNode.id, { tagId: v })}
+                          value={
+                            // Resolve tagId from tagName if tagId is not set
+                            selectedNode.data.tagId ||
+                            (selectedNode.data.tagName
+                              ? tags?.find((t: { name: string }) => t.name === selectedNode.data.tagName)?._id
+                              : "") ||
+                            ""
+                          }
+                          onValueChange={(v) => {
+                            // When selecting, also clear tagName to avoid confusion
+                            updateNodeData(selectedNode.id, { tagId: v, tagName: undefined });
+                          }}
                         >
                           <SelectTrigger className="bg-white dark:bg-black">
-                            <SelectValue placeholder="Choose a tag..." />
+                            <SelectValue placeholder={selectedNode.data.tagName || "Choose a tag..."} />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
                             {tags?.map((tag: { _id: string; name: string; color?: string }) => (
@@ -3155,6 +3290,483 @@ export default function WorkflowBuilderPage() {
           </DialogContent>
         </Dialog>
 
+        {/* AI Workflow Sequence Generator Dialog - Premium Redesign */}
+        <Dialog
+          open={isSequenceGeneratorOpen}
+          onOpenChange={(open) => {
+            setIsSequenceGeneratorOpen(open);
+            if (!open) setSequenceWizardStep(1);
+          }}
+        >
+          <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-4xl flex-col overflow-hidden border-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-0 shadow-2xl sm:w-full">
+            {/* Accessibility: Hidden title for screen readers */}
+            <DialogTitle className="sr-only">AI Workflow Sequence Generator</DialogTitle>
+
+            {/* Animated background gradient */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute -left-1/4 -top-1/4 h-96 w-96 animate-pulse rounded-full bg-violet-600/20 blur-3xl" />
+              <div className="absolute -bottom-1/4 -right-1/4 h-96 w-96 animate-pulse rounded-full bg-fuchsia-600/20 blur-3xl" style={{ animationDelay: '1s' }} />
+              <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-cyan-600/10 blur-3xl" style={{ animationDelay: '2s' }} />
+            </div>
+
+            {/* Content container */}
+            <div className="relative z-10 flex h-full flex-col">
+              {/* Header */}
+              <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="relative shrink-0">
+                      <div className="absolute inset-0 animate-ping rounded-xl bg-violet-500/50" style={{ animationDuration: '2s' }} />
+                      <div className="relative rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 p-2 shadow-lg shadow-violet-500/25 sm:p-2.5">
+                        <Wand2 className="h-4 w-4 text-white sm:h-5 sm:w-5" />
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">AI Sequence Generator</h2>
+                      <p className="truncate text-xs text-slate-400 sm:text-sm">Create high-converting email sequences in seconds</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsSequenceGeneratorOpen(false)}
+                    className="shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Step indicator */}
+                <div className="mt-5 flex items-center gap-2">
+                  {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center gap-2">
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all ${
+                          sequenceWizardStep === step
+                            ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30'
+                            : sequenceWizardStep > step
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-white/5 text-slate-500'
+                        }`}
+                      >
+                        {sequenceWizardStep > step ? <Check className="h-4 w-4" /> : step}
+                      </div>
+                      <span className={`hidden text-sm sm:block ${sequenceWizardStep >= step ? 'text-slate-300' : 'text-slate-600'}`}>
+                        {step === 1 ? 'Campaign' : step === 2 ? 'Details' : 'Generate'}
+                      </span>
+                      {step < 3 && <div className={`hidden h-px w-8 sm:block ${sequenceWizardStep > step ? 'bg-emerald-500/50' : 'bg-white/10'}`} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                {/* Step 1: Campaign Type Selection */}
+                {sequenceWizardStep === 1 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="mb-1 text-lg font-medium text-white">What type of campaign?</h3>
+                      <p className="text-sm text-slate-400">Choose the goal for your email sequence</p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        { id: 'product_launch', icon: Package, color: 'orange', label: 'Product Launch', desc: 'Build hype & drive sales' },
+                        { id: 'course_launch', icon: BookOpen, color: 'blue', label: 'Course Launch', desc: 'Educate & convert students' },
+                        { id: 'lead_nurture', icon: Users, color: 'emerald', label: 'Lead Nurture', desc: 'Build trust over time' },
+                        { id: 'onboarding', icon: UserPlus, color: 'cyan', label: 'Onboarding', desc: 'Welcome new customers' },
+                        { id: 're_engagement', icon: RotateCcw, color: 'amber', label: 'Re-engagement', desc: 'Win back cold leads' },
+                        { id: 'promotion', icon: Trophy, color: 'yellow', label: 'Promotion', desc: 'Limited-time offers' },
+                      ].map(({ id, icon: Icon, color, label, desc }) => (
+                        <button
+                          key={id}
+                          onClick={() => {
+                            setSequenceCampaignType(id as any);
+                            // Auto-set context type based on campaign type for better UX
+                            if (id === 'course_launch') {
+                              setSequenceContextType('course');
+                            } else if (id === 'product_launch' || id === 'promotion') {
+                              setSequenceContextType('product');
+                            }
+                          }}
+                          className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
+                            sequenceCampaignType === id
+                              ? `border-${color}-500/50 bg-${color}-500/10 ring-1 ring-${color}-500/30`
+                              : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                          }`}
+                        >
+                          <div className={`absolute inset-0 bg-gradient-to-br from-${color}-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100`} />
+                          <div className="relative flex items-start gap-3">
+                            <div className={`rounded-lg bg-${color}-500/20 p-2`}>
+                              <Icon className={`h-5 w-5 text-${color}-400`} />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-white">{label}</span>
+                                {sequenceCampaignType === id && (
+                                  <div className={`rounded-full bg-${color}-500 p-0.5`}>
+                                    <Check className="h-3 w-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-sm text-slate-400">{desc}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Details */}
+                {sequenceWizardStep === 2 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="mb-1 text-lg font-medium text-white">Customize your sequence</h3>
+                      <p className="text-sm text-slate-400">Tell the AI about your campaign</p>
+                    </div>
+
+                    {/* Context Type Cards */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-slate-300">This campaign is for:</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { id: 'store', icon: Store, label: 'My Brand' },
+                          { id: 'course', icon: BookOpen, label: 'A Course' },
+                          { id: 'product', icon: Package, label: 'A Product' },
+                        ].map(({ id, icon: Icon, label }) => (
+                          <button
+                            key={id}
+                            onClick={() => {
+                              setSequenceContextType(id as any);
+                              setSequenceCourseId('');
+                              setSequenceProductId('');
+                            }}
+                            className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
+                              sequenceContextType === id
+                                ? 'border-violet-500/50 bg-violet-500/10 text-white'
+                                : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-white'
+                            }`}
+                          >
+                            <Icon className="h-5 w-5" />
+                            <span className="text-sm font-medium">{label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Course/Product Selection */}
+                    {sequenceContextType === 'course' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-300">Select your course</label>
+                        {userCourses && userCourses.length > 0 ? (
+                          <Select value={sequenceCourseId} onValueChange={setSequenceCourseId}>
+                            <SelectTrigger className="border-white/10 bg-white/5 text-white hover:bg-white/10">
+                              <SelectValue placeholder="Choose a course..." />
+                            </SelectTrigger>
+                            <SelectContent className="border-white/10 bg-slate-900">
+                              {userCourses.map((course: any) => (
+                                <SelectItem key={course._id} value={course._id} className="text-white focus:bg-white/10">
+                                  {course.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                            <p className="text-sm text-amber-200">You don't have any courses yet.</p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              Create a course first, or select "My Brand" to generate a general sequence.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {sequenceContextType === 'product' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-300">Select your product</label>
+                        {userProducts && userProducts.length > 0 ? (
+                          <Select value={sequenceProductId} onValueChange={setSequenceProductId}>
+                            <SelectTrigger className="border-white/10 bg-white/5 text-white hover:bg-white/10">
+                              <SelectValue placeholder="Choose a product..." />
+                            </SelectTrigger>
+                            <SelectContent className="border-white/10 bg-slate-900">
+                              {userProducts.map((product: any) => (
+                                <SelectItem key={product._id} value={product._id} className="text-white focus:bg-white/10">
+                                  {product.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                            <p className="text-sm text-amber-200">You don't have any products yet.</p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              Create a product first, or select "My Brand" to generate a general sequence.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sequence Length - Visual slider-like buttons */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-slate-300">Sequence length</label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 3, label: '3', desc: 'Quick' },
+                          { value: 5, label: '5', desc: 'Standard' },
+                          { value: 7, label: '7', desc: 'Extended' },
+                          { value: 10, label: '10', desc: 'Full' },
+                        ].map(({ value, label, desc }) => (
+                          <button
+                            key={value}
+                            onClick={() => setSequenceLength(value)}
+                            className={`flex-1 rounded-xl border px-3 py-3 text-center transition-all ${
+                              sequenceLength === value
+                                ? 'border-violet-500/50 bg-violet-500/10'
+                                : 'border-white/10 bg-white/5 hover:border-white/20'
+                            }`}
+                          >
+                            <div className={`text-xl font-bold ${sequenceLength === value ? 'text-white' : 'text-slate-400'}`}>
+                              {label}
+                            </div>
+                            <div className="text-xs text-slate-500">{desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tone Selection */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-slate-300">Writing tone</label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { id: 'friendly', label: 'Friendly' },
+                          { id: 'professional', label: 'Professional' },
+                          { id: 'casual', label: 'Casual' },
+                          { id: 'urgent', label: 'Urgent' },
+                          { id: 'educational', label: 'Educational' },
+                        ].map(({ id, label }) => (
+                          <button
+                            key={id}
+                            onClick={() => setSequenceTone(id as any)}
+                            className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                              sequenceTone === id
+                                ? 'border-violet-500/50 bg-violet-500/20 text-white'
+                                : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-white'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Instructions */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-300">Special instructions (optional)</label>
+                      <textarea
+                        value={sequenceCustomPrompt}
+                        onChange={(e) => setSequenceCustomPrompt(e.target.value)}
+                        placeholder="E.g., Focus on the limited-time bonus, mention our money-back guarantee, include social proof..."
+                        className="h-24 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 transition-colors focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Preview & Generate */}
+                {sequenceWizardStep === 3 && !isGeneratingSequence && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="mb-1 text-lg font-medium text-white">Ready to generate</h3>
+                      <p className="text-sm text-slate-400">Review your settings and create your sequence</p>
+                    </div>
+
+                    {/* Visual Preview */}
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-300">Your sequence will include:</span>
+                        <span className="rounded-full bg-violet-500/20 px-3 py-1 text-xs font-medium text-violet-300">
+                          {sequenceLength} emails
+                        </span>
+                      </div>
+
+                      {/* Visual workflow preview - show first 5 emails, then ellipsis if more */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20">
+                          <UserPlus className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        {Array.from({ length: Math.min(sequenceLength, 5) }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <div className="h-px w-3 bg-white/20" />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/20">
+                              <Mail className="h-3.5 w-3.5 text-blue-400" />
+                            </div>
+                          </div>
+                        ))}
+                        {sequenceLength > 5 && (
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-px w-3 bg-white/20" />
+                            <div className="flex h-9 items-center justify-center rounded-lg bg-white/5 px-3 text-xs text-slate-400">
+                              +{sequenceLength - 5} more
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-px w-3 bg-white/20" />
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/20">
+                            <Trophy className="h-4 w-4 text-violet-400" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      <div className="mt-4 space-y-3 border-t border-white/10 pt-4 text-sm">
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="shrink-0 text-slate-400">Campaign type</span>
+                          <span className="text-right font-medium capitalize text-white">{sequenceCampaignType.replace(/_/g, ' ')}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="shrink-0 text-slate-400">Writing tone</span>
+                          <span className="text-right font-medium capitalize text-white">{sequenceTone}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-400">Context</span>
+                          <span className="break-words font-medium text-white">
+                            {sequenceContextType === 'course' && sequenceCourseId
+                              ? userCourses?.find((c: any) => c._id === sequenceCourseId)?.title || 'Course'
+                              : sequenceContextType === 'product' && sequenceProductId
+                                ? userProducts?.find((p: any) => p._id === sequenceProductId)?.title || 'Product'
+                                : 'My Brand'}
+                          </span>
+                        </div>
+                        {sequenceCustomPrompt && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-slate-400">Custom notes</span>
+                            <span className="break-words text-xs text-slate-300">{sequenceCustomPrompt}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* What you get */}
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-lg bg-emerald-500/20 p-2">
+                          <Sparkles className="h-5 w-5 text-emerald-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-white">AI will generate:</h4>
+                          <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                            <li className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-emerald-400" />
+                              {sequenceLength} professionally written emails
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-emerald-400" />
+                              Optimized timing delays
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-emerald-400" />
+                              Subscriber segmentation tags
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-emerald-400" />
+                              Conversion-focused structure
+                            </li>
+                          </ul>
+                          <p className="mt-3 text-xs text-slate-400">
+                            Every email, delay, and condition is fully customizable after generation
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generating State */}
+                {isGeneratingSequence && (
+                  <div className="flex min-h-[300px] flex-col items-center justify-center py-12">
+                    <div className="relative">
+                      {/* Outer glow rings */}
+                      <div className="absolute inset-0 animate-ping rounded-full border-2 border-violet-500/30" style={{ animationDuration: '2s' }} />
+                      <div className="absolute inset-0 animate-ping rounded-full border border-fuchsia-500/20" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
+
+                      {/* Main icon */}
+                      <div className="relative rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 p-6 shadow-2xl shadow-violet-500/30">
+                        <Wand2 className="h-10 w-10 animate-pulse text-white" />
+                      </div>
+                    </div>
+
+                    <div className="mt-8 text-center">
+                      <h3 className="text-xl font-semibold text-white">Creating your sequence...</h3>
+                      <p className="mt-2 text-slate-400">AI is crafting {sequenceLength} emails optimized for conversion</p>
+                      <p className="mt-1 text-xs text-slate-500">This typically takes 20-40 seconds</p>
+                    </div>
+
+                    {/* Progress dots */}
+                    <div className="mt-6 flex gap-1.5">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className="h-2 w-2 animate-pulse rounded-full bg-violet-500"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              {!isGeneratingSequence && (
+                <div className="border-t border-white/10 px-4 py-4 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        if (sequenceWizardStep === 1) {
+                          setIsSequenceGeneratorOpen(false);
+                        } else {
+                          setSequenceWizardStep(sequenceWizardStep - 1);
+                        }
+                      }}
+                      className="text-slate-400 hover:bg-white/5 hover:text-white"
+                    >
+                      {sequenceWizardStep === 1 ? 'Cancel' : 'Back'}
+                    </Button>
+
+                    {sequenceWizardStep < 3 ? (
+                      <Button
+                        onClick={() => setSequenceWizardStep(sequenceWizardStep + 1)}
+                        disabled={
+                          sequenceWizardStep === 2 &&
+                          ((sequenceContextType === 'course' && !sequenceCourseId) ||
+                           (sequenceContextType === 'product' && !sequenceProductId))
+                        }
+                        className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
+                      >
+                        Continue
+                        <ArrowLeft className="h-4 w-4 rotate-180" />
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleGenerateSequence()}
+                        className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-fuchsia-500"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Generate Sequence
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Course Cycle Configuration Dialog */}
         <Dialog open={isCourseCycleConfigOpen} onOpenChange={setIsCourseCycleConfigOpen}>
           <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto bg-white dark:bg-black">
@@ -3192,6 +3804,36 @@ export default function WorkflowBuilderPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Overwrite Confirmation Dialog */}
+        <AlertDialog open={showOverwriteConfirm} onOpenChange={setShowOverwriteConfirm}>
+          <AlertDialogContent className="border-slate-800 bg-slate-900">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-white">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Replace existing workflow?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-400">
+                This will replace your current workflow with <span className="font-medium text-white">{nodes.length} nodes</span>.
+                Your unsaved changes will be lost. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setShowOverwriteConfirm(false);
+                  handleGenerateSequence(true);
+                }}
+                className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
+              >
+                Yes, replace workflow
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

@@ -3226,6 +3226,51 @@ export declare const api: {
       },
       { body: string; previewText: string; subject: string }
     >;
+    generateWorkflowSequence: FunctionReference<
+      "action",
+      "public",
+      {
+        campaignType:
+          | "product_launch"
+          | "course_launch"
+          | "lead_nurture"
+          | "onboarding"
+          | "re_engagement"
+          | "promotion"
+          | "evergreen"
+          | "custom";
+        contextType: "course" | "product" | "store";
+        courseId?: Id<"courses">;
+        customPrompt?: string;
+        productId?: Id<"digitalProducts">;
+        sequenceLength?: number;
+        storeId: string;
+        tone?:
+          | "professional"
+          | "friendly"
+          | "casual"
+          | "urgent"
+          | "educational";
+      },
+      {
+        edges: Array<{
+          id: string;
+          source: string;
+          sourceHandle?: string;
+          target: string;
+          targetHandle?: string;
+        }>;
+        nodes: Array<{
+          data: any;
+          id: string;
+          position: { x: number; y: number };
+          type: string;
+        }>;
+        suggestedTags: Array<string>;
+        workflowDescription: string;
+        workflowName: string;
+      }
+    >;
   };
   aiMemories: {
     archiveMemory: FunctionReference<
@@ -11916,6 +11961,12 @@ export declare const api: {
         storeId: string;
       },
       Array<any>
+    >;
+    preCreateWorkflowTags: FunctionReference<
+      "mutation",
+      "public",
+      { nodes: Array<any>; storeId: string },
+      Array<{ name: string; tagId: Id<"emailTags"> }>
     >;
     skipExecutionDelay: FunctionReference<
       "mutation",
@@ -23724,6 +23775,12 @@ export declare const internal: {
       },
       { enrolled: number; skipped: number }
     >;
+    ensureWorkflowTagsExist: FunctionReference<
+      "mutation",
+      "internal",
+      { nodes: Array<any>; storeId: string },
+      { created: Array<string>; existing: Array<string> }
+    >;
     evaluateCondition: FunctionReference<
       "query",
       "internal",
@@ -23778,6 +23835,12 @@ export declare const internal: {
       "internal",
       { executionId: Id<"workflowExecutions"> },
       any
+    >;
+    getOrCreateTag: FunctionReference<
+      "mutation",
+      "internal",
+      { color?: string; description?: string; name: string; storeId: string },
+      Id<"emailTags">
     >;
     getStoreByClerkId: FunctionReference<
       "query",

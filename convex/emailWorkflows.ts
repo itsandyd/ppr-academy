@@ -148,6 +148,67 @@ const sequenceTypeValidator = v.optional(v.union(
   v.literal("custom")
 ));
 
+/**
+ * Pre-create tags from workflow nodes - call this BEFORE resolving tagNames to tagIds
+ * Returns a map of tagName -> tagId for resolution
+ */
+export const preCreateWorkflowTags = mutation({
+  args: {
+    storeId: v.string(),
+    nodes: v.array(v.any()),
+  },
+  returns: v.array(v.object({
+    name: v.string(),
+    tagId: v.id("emailTags"),
+  })),
+  handler: async (ctx, args) => {
+    const tagMap: { name: string; tagId: any }[] = [];
+
+    // Extract all tag names from action nodes
+    const tagNames = new Set<string>();
+    for (const node of args.nodes) {
+      if (node.type === "action" && node.data) {
+        const { actionType, tagName, value } = node.data;
+        if (actionType === "add_tag" || actionType === "remove_tag") {
+          const name = tagName || value;
+          if (name && typeof name === "string") {
+            tagNames.add(name);
+          }
+        }
+      }
+    }
+
+    // Create or get each tag
+    for (const name of tagNames) {
+      const existingTag = await ctx.db
+        .query("emailTags")
+        .withIndex("by_storeId_and_name", (q) =>
+          q.eq("storeId", args.storeId).eq("name", name)
+        )
+        .first();
+
+      if (existingTag) {
+        tagMap.push({ name, tagId: existingTag._id });
+      } else {
+        const now = Date.now();
+        const tagId = await ctx.db.insert("emailTags", {
+          storeId: args.storeId,
+          name,
+          color: "#8b5cf6", // Purple for auto-created tags
+          description: "Auto-created from AI workflow",
+          contactCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+        tagMap.push({ name, tagId });
+        console.log(`[EmailWorkflows] Pre-created tag "${name}" (ID: ${tagId})`);
+      }
+    }
+
+    return tagMap;
+  },
+});
+
 export const createWorkflow = mutation({
   args: {
     name: v.string(),
@@ -161,6 +222,12 @@ export const createWorkflow = mutation({
   },
   returns: v.id("emailWorkflows"),
   handler: async (ctx, args) => {
+    // Auto-create any tags referenced in action nodes
+    await ctx.scheduler.runAfter(0, internal.emailWorkflows.ensureWorkflowTagsExist, {
+      storeId: args.storeId,
+      nodes: args.nodes,
+    });
+
     return await ctx.db.insert("emailWorkflows", {
       name: args.name,
       description: args.description,
@@ -192,6 +259,14 @@ export const updateWorkflow = mutation({
     const { workflowId, ...updates } = args;
     const workflow = await ctx.db.get(workflowId);
     if (!workflow) throw new Error("Workflow not found");
+
+    // Auto-create any tags referenced in action nodes when nodes are updated
+    if (args.nodes && args.nodes.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.ensureWorkflowTagsExist, {
+        storeId: workflow.storeId,
+        nodes: args.nodes,
+      });
+    }
 
     const filteredUpdates: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updates)) {
@@ -2218,6 +2293,110 @@ export const createTagInternal = internalMutation({
     });
     console.log(`[EmailWorkflows] Auto-created tag "${args.name}" with ID ${tagId}`);
     return tagId;
+  },
+});
+
+/**
+ * Get or create tag - atomic upsert operation for tags
+ * This is the preferred method for ensuring tags exist when saving workflows
+ */
+export const getOrCreateTag = internalMutation({
+  args: {
+    storeId: v.string(),
+    name: v.string(),
+    color: v.optional(v.string()),
+    description: v.optional(v.string()),
+  },
+  returns: v.id("emailTags"),
+  handler: async (ctx, args) => {
+    // Check if tag already exists
+    const existingTag = await ctx.db
+      .query("emailTags")
+      .withIndex("by_storeId_and_name", (q) =>
+        q.eq("storeId", args.storeId).eq("name", args.name)
+      )
+      .first();
+
+    if (existingTag) {
+      return existingTag._id;
+    }
+
+    // Create new tag with provided or default values
+    const now = Date.now();
+    const tagId = await ctx.db.insert("emailTags", {
+      storeId: args.storeId,
+      name: args.name,
+      color: args.color || "#8b5cf6", // Default purple for workflow-created tags
+      description: args.description || "Auto-created from workflow",
+      contactCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    console.log(`[EmailWorkflows] Auto-created tag "${args.name}" (ID: ${tagId})`);
+    return tagId;
+  },
+});
+
+/**
+ * Ensure all tags referenced in workflow nodes exist
+ * Call this when saving a workflow to pre-create tags
+ */
+export const ensureWorkflowTagsExist = internalMutation({
+  args: {
+    storeId: v.string(),
+    nodes: v.array(v.any()),
+  },
+  returns: v.object({
+    created: v.array(v.string()),
+    existing: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const created: string[] = [];
+    const existing: string[] = [];
+
+    // Extract all tag names from action nodes
+    const tagNames = new Set<string>();
+    for (const node of args.nodes) {
+      if (node.type === "action" && node.data) {
+        const { actionType, tagName, value } = node.data;
+        if (actionType === "add_tag" || actionType === "remove_tag") {
+          const name = tagName || value;
+          if (name && typeof name === "string") {
+            tagNames.add(name);
+          }
+        }
+      }
+    }
+
+    // Create or verify each tag
+    for (const name of tagNames) {
+      const existingTag = await ctx.db
+        .query("emailTags")
+        .withIndex("by_storeId_and_name", (q) =>
+          q.eq("storeId", args.storeId).eq("name", name)
+        )
+        .first();
+
+      if (existingTag) {
+        existing.push(name);
+      } else {
+        const now = Date.now();
+        await ctx.db.insert("emailTags", {
+          storeId: args.storeId,
+          name,
+          color: "#8b5cf6", // Purple for auto-created tags
+          description: "Auto-created from workflow",
+          contactCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+        created.push(name);
+        console.log(`[EmailWorkflows] Pre-created tag "${name}" for workflow`);
+      }
+    }
+
+    return { created, existing };
   },
 });
 
