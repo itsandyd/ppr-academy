@@ -703,7 +703,7 @@ HOOK → STORY → OFFER STRUCTURE:
 - OFFER: Natural transition to the CTA. No hard sell.
 
 EMAIL SIGNATURE (use on final email of sequence, or when no cliffhanger):
-<p>Talk soon,<br/>{{senderName}}<br/>Pause Play Repeat Team</p>
+<p>Talk soon,<br/>{{senderName}}</p>
 
 HTML FORMAT:
 - Use <p> tags for each line or short thought
@@ -748,7 +748,7 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
 4. Tell a REAL story with specific details from the curriculum above.
 5. NO em-dashes (—). Use periods or commas.
 6. End emails 1-${actualSequenceLength - 1} with a cliffhanger teasing the next email.
-7. End the final email with: <p>Talk soon,<br/>{{senderName}}<br/>Pause Play Repeat Team</p>
+7. End the final email with: <p>Talk soon,<br/>{{senderName}}</p>
 8. Each email: 150-250 words. Tight. No fluff.
 9. CTA Link for every email: ${productUrl}
 
