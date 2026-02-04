@@ -3,8 +3,12 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import OpenAI from "openai";
 import { Id } from "./_generated/dataModel";
+import { callLLM, safeParseJson } from "./masterAI/llmClient";
+import type { ModelId } from "./masterAI/types";
+
+// Model to use for email generation - Claude 4.5 Sonnet for best copywriting
+const EMAIL_MODEL: ModelId = "claude-4.5-sonnet";
 
 /**
  * Generate email content for workflow emails using course/store context
@@ -44,14 +48,6 @@ export const generateWorkflowEmail = action({
     body: v.string(),
   }),
   handler: async (ctx, args) => {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
-    });
-
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY not configured");
-    }
-
     // Gather context based on contextType
     let contextInfo = "";
 
@@ -156,24 +152,19 @@ ${contextInfo}
 
 Generate an email that feels personal and authentic to the creator's brand.`;
 
-    console.log("🤖 Generating workflow email with AI...");
+    console.log(`🤖 Generating workflow email with ${EMAIL_MODEL}...`);
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const response = await callLLM({
+      model: EMAIL_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      response_format: { type: "json_object" },
+      responseFormat: "json",
       temperature: 0.8,
     });
 
-    const responseText = completion.choices[0].message.content;
-    if (!responseText) {
-      throw new Error("No response from OpenAI");
-    }
-
-    const result = JSON.parse(responseText);
+    const result = safeParseJson<{ subject?: string; previewText?: string; body?: string }>(response.content, {});
 
     return {
       subject: result.subject || "Hello!",
@@ -198,15 +189,7 @@ export const generateEmailTemplate = action({
     textContent: v.string(),
   }),
   handler: async (ctx, args) => {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
-    });
-
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY not configured in environment variables");
-    }
-
-    const systemPrompt = `You are an expert email copywriter and HTML email designer. 
+    const systemPrompt = `You are an expert email copywriter and HTML email designer.
 Generate professional, engaging email templates with proper HTML structure.
 The emails should be responsive, visually appealing, and follow email best practices.
 
@@ -226,31 +209,26 @@ Return your response as a JSON object with these exact fields:
   "textContent": "Plain text version of the email"
 }`;
 
-    const userPrompt = args.templateType 
+    const userPrompt = args.templateType
       ? `Create a ${args.templateType} email template. ${args.prompt}`
       : args.prompt;
 
-    console.log("🤖 Generating email template with OpenAI...");
+    console.log(`🤖 Generating email template with ${EMAIL_MODEL}...`);
     console.log("Prompt:", userPrompt);
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const response = await callLLM({
+      model: EMAIL_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      response_format: { type: "json_object" },
+      responseFormat: "json",
       temperature: 0.8,
     });
 
-    const responseText = completion.choices[0].message.content;
-    if (!responseText) {
-      throw new Error("No response from OpenAI");
-    }
-
     console.log("✅ Template generated successfully");
 
-    const result = JSON.parse(responseText);
+    const result = safeParseJson<{ name?: string; subject?: string; htmlContent?: string; textContent?: string }>(response.content, {});
     
     return {
       name: result.name || "AI Generated Template",
@@ -313,14 +291,6 @@ export const generateWorkflowSequence = action({
     suggestedTags: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
-    });
-
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY not configured");
-    }
-
     // Gather context
     let contextInfo = "";
     let productName = "Product";
@@ -755,28 +725,23 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
 
 ⚠️ REMINDER: ONLY mention what's in the curriculum above. Do NOT invent bonuses, communities, cheat sheets, or extras that aren't listed. This is critical.`;
 
-    console.log(`🤖 Generating ${actualSequenceLength} template-based emails...`);
+    console.log(`🤖 Generating ${actualSequenceLength} template-based emails with ${EMAIL_MODEL}...`);
 
     // Lower temperature to reduce hallucination while maintaining some creativity
     const temperature = args.campaignType === "lead_nurture" ? 0.5 : 0.6;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const response = await callLLM({
+      model: EMAIL_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      response_format: { type: "json_object" },
+      responseFormat: "json",
       temperature,
-      max_tokens: 16000, // Increased for 200+ word emails per email in sequence
+      maxTokens: 16000, // Increased for 200+ word emails per email in sequence
     });
 
-    const responseText = completion.choices[0].message.content;
-    if (!responseText) {
-      throw new Error("No response from OpenAI");
-    }
-
-    const result = JSON.parse(responseText);
+    const result = safeParseJson<{ emails?: Array<{ subject?: string; previewText?: string; body?: string }> }>(response.content, { emails: [] });
     console.log("✅ Workflow sequence generated with", result.emails?.length, "emails");
 
     // Convert AI response to workflow nodes and edges
