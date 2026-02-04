@@ -679,15 +679,23 @@ SUBJECT LINE RULES (Frank Kern Style):
   - "quick question about ${productName}"
   - "{{firstName}} - you seeing this?"
 
+⚠️ ANTI-HALLUCINATION RULES (CRITICAL - DO NOT VIOLATE):
+- ONLY mention features, modules, lessons, and bonuses that are EXPLICITLY listed in the course/product details below
+- NEVER invent bonuses like "cheat sheets", "templates", "communities", "private groups", "worksheets" unless they are explicitly mentioned
+- NEVER promise outcomes, timeframes, or results that aren't stated in the course description
+- If you're unsure whether something is included, DO NOT mention it
+- Violating this rule makes the creator look like a liar - this is unacceptable
+
 CRITICAL RULES:
 1. Each email: 150-250 words. Punchy. No fluff.
 2. One sentence per line is GOOD. It's how pro copywriters write.
-3. Use SPECIFIC details from the curriculum - actual module/lesson names.
+3. ONLY reference modules/lessons/features that appear in the curriculum below. Nothing else.
 4. NEVER use em-dashes (—) or double hyphens. Use periods or commas.
 5. BANNED phrases: "game-changer", "transform your life", "unlock your potential", "amazing course", "I'm excited to share"
 6. Write as {{senderName}} talking directly to {{firstName}}.
 7. EVERY email needs a CTA link: <p><a href="${productUrl}">CTA Text</a></p>
 8. End every email with a hook for the next one OR the signature.
+9. When describing what's included, use ONLY what's in the provided curriculum. Do not embellish.
 
 HOOK → STORY → OFFER STRUCTURE:
 - HOOK: First 1-2 lines grab attention. Pattern interrupt. Curiosity.
@@ -742,12 +750,14 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
 6. End emails 1-${actualSequenceLength - 1} with a cliffhanger teasing the next email.
 7. End the final email with: <p>Talk soon,<br/>{{senderName}}<br/>Pause Play Repeat Team</p>
 8. Each email: 150-250 words. Tight. No fluff.
-9. CTA Link for every email: ${productUrl}`;
+9. CTA Link for every email: ${productUrl}
+
+⚠️ REMINDER: ONLY mention what's in the curriculum above. Do NOT invent bonuses, communities, cheat sheets, or extras that aren't listed. This is critical.`;
 
     console.log(`🤖 Generating ${actualSequenceLength} template-based emails...`);
 
-    // Lower temperature for more consistent quality while maintaining creativity
-    const temperature = args.campaignType === "lead_nurture" ? 0.65 : 0.72;
+    // Lower temperature to reduce hallucination while maintaining some creativity
+    const temperature = args.campaignType === "lead_nurture" ? 0.5 : 0.6;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
