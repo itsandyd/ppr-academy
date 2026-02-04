@@ -248,6 +248,7 @@ export default function AdminEmailsPage() {
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [isCampaignDialogOpen, setIsCampaignDialogOpen] = useState(false);
   const [isAutomationDialogOpen, setIsAutomationDialogOpen] = useState(false);
+  const [selectedCampaignPreview, setSelectedCampaignPreview] = useState<any>(null);
 
   // Template form state
   const [templateForm, setTemplateForm] = useState({
@@ -1526,10 +1527,184 @@ export default function AdminEmailsPage() {
               </Dialog>
             </div>
 
+            {/* Campaign Preview Dialog */}
+            <Dialog open={!!selectedCampaignPreview} onOpenChange={(open) => !open && setSelectedCampaignPreview(null)}>
+              <DialogContent className="max-h-[90vh] max-w-4xl bg-white dark:bg-black">
+                <DialogHeader className="space-y-3 border-b pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-blue-500/10 p-2.5">
+                      <Eye className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-2xl">Campaign Preview</DialogTitle>
+                      <DialogDescription className="mt-1 text-base">
+                        Preview the email content that will be sent to recipients
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+
+                {selectedCampaignPreview && (
+                  <ScrollArea className="max-h-[calc(90vh-200px)] pr-4">
+                    <div className="space-y-6 py-4">
+                      {/* Campaign Info */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2">
+                          <div className="h-1 w-1 rounded-full bg-blue-500" />
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            Campaign Details
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Campaign Name</p>
+                            <p className="font-medium">{selectedCampaignPreview.name}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Status</p>
+                            <Badge
+                              variant={
+                                selectedCampaignPreview.status === "sent"
+                                  ? "default"
+                                  : selectedCampaignPreview.status === "sending"
+                                    ? "secondary"
+                                    : selectedCampaignPreview.status === "scheduled"
+                                      ? "outline"
+                                      : "destructive"
+                              }
+                              className="capitalize"
+                            >
+                              {selectedCampaignPreview.status}
+                            </Badge>
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Subject Line</p>
+                            <p className="rounded-md border bg-muted/50 p-2 font-medium">{selectedCampaignPreview.subject}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Audience</p>
+                            <p className="capitalize">{selectedCampaignPreview.audienceType || "All Users"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Created</p>
+                            <p>{new Date(selectedCampaignPreview.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Email Content Preview */}
+                      <div className="space-y-4 border-t pt-4">
+                        <div className="flex items-center gap-2 pb-2">
+                          <div className="h-1 w-1 rounded-full bg-green-500" />
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            Email Content
+                          </h3>
+                        </div>
+
+                        {selectedCampaignPreview.htmlContent ? (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">HTML Preview</p>
+                            <div className="rounded-lg border-2 bg-white p-4 dark:bg-gray-950">
+                              <div
+                                className="prose prose-sm max-w-none dark:prose-invert"
+                                dangerouslySetInnerHTML={{ __html: selectedCampaignPreview.htmlContent }}
+                              />
+                            </div>
+                          </div>
+                        ) : selectedCampaignPreview.templateId ? (
+                          <div className="rounded-lg border-2 border-dashed bg-muted/30 p-8 text-center">
+                            <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+                            <p className="text-sm text-muted-foreground">
+                              This campaign uses a template. The content will be loaded from the template when sent.
+                            </p>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Template ID: <code className="rounded bg-muted px-1.5 py-0.5">{selectedCampaignPreview.templateId}</code>
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border-2 border-dashed border-amber-500/30 bg-amber-500/10 p-8 text-center">
+                            <AlertCircle className="mx-auto mb-3 h-10 w-10 text-amber-500/50" />
+                            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                              No content found for this campaign
+                            </p>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              This campaign doesn't have HTML content or a linked template.
+                            </p>
+                          </div>
+                        )}
+
+                        {selectedCampaignPreview.textContent && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">Plain Text Version</p>
+                            <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border-2 bg-muted/30 p-4 text-sm">
+                              {selectedCampaignPreview.textContent}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stats if sent */}
+                      {selectedCampaignPreview.status === "sent" && (
+                        <div className="space-y-4 border-t pt-4">
+                          <div className="flex items-center gap-2 pb-2">
+                            <div className="h-1 w-1 rounded-full bg-purple-500" />
+                            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                              Performance
+                            </h3>
+                          </div>
+                          <div className="grid grid-cols-4 gap-4">
+                            <div className="rounded-lg border bg-muted/30 p-3 text-center">
+                              <p className="text-2xl font-bold">{selectedCampaignPreview.sentCount || 0}</p>
+                              <p className="text-xs text-muted-foreground">Sent</p>
+                            </div>
+                            <div className="rounded-lg border bg-muted/30 p-3 text-center">
+                              <p className="text-2xl font-bold">{selectedCampaignPreview.deliveredCount || 0}</p>
+                              <p className="text-xs text-muted-foreground">Delivered</p>
+                            </div>
+                            <div className="rounded-lg border bg-muted/30 p-3 text-center">
+                              <p className="text-2xl font-bold">{selectedCampaignPreview.openedCount || 0}</p>
+                              <p className="text-xs text-muted-foreground">Opened</p>
+                            </div>
+                            <div className="rounded-lg border bg-muted/30 p-3 text-center">
+                              <p className="text-2xl font-bold">{selectedCampaignPreview.clickedCount || 0}</p>
+                              <p className="text-xs text-muted-foreground">Clicked</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
+
+                <DialogFooter className="border-t pt-4">
+                  <Button variant="outline" onClick={() => setSelectedCampaignPreview(null)}>
+                    Close
+                  </Button>
+                  {selectedCampaignPreview && (selectedCampaignPreview.status === "draft" || selectedCampaignPreview.status === "scheduled") && (
+                    <Button
+                      onClick={() => {
+                        handleSendCampaign(selectedCampaignPreview._id, selectedCampaignPreview.name);
+                        setSelectedCampaignPreview(null);
+                      }}
+                      className="gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Send Now
+                    </Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             {campaigns && campaigns.length > 0 ? (
               <div className="space-y-4">
                 {campaigns.map((campaign: any) => (
-                  <Card key={campaign._id} className="border-2 transition-all hover:shadow-lg">
+                  <Card
+                    key={campaign._id}
+                    className="cursor-pointer border-2 transition-all hover:border-primary/50 hover:shadow-lg"
+                    onClick={() => setSelectedCampaignPreview(campaign)}
+                  >
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between gap-6">
                         <div className="flex-1 space-y-4">
@@ -1592,11 +1767,26 @@ export default function AdminEmailsPage() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCampaignPreview(campaign);
+                            }}
+                            className="gap-2"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Preview
+                          </Button>
                           {(campaign.status === "draft" || campaign.status === "scheduled") && (
                             <Button
                               size="default"
-                              onClick={() => handleSendCampaign(campaign._id, campaign.name)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSendCampaign(campaign._id, campaign.name);
+                              }}
                               className="gap-2"
                             >
                               <Send className="h-4 w-4" />
