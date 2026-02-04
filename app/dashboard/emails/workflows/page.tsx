@@ -65,6 +65,12 @@ import {
   Store,
   Package,
   Wand2,
+  Music,
+  Sliders,
+  Mic2,
+  Headphones,
+  Video,
+  MessagesSquare,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -905,7 +911,10 @@ export default function WorkflowBuilderPage() {
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const [sequenceWizardStep, setSequenceWizardStep] = useState(1);
   const [sequenceCampaignType, setSequenceCampaignType] = useState<
-    "product_launch" | "course_launch" | "lead_nurture" | "onboarding" | "re_engagement" | "promotion" | "evergreen" | "custom"
+    | "product_launch" | "course_launch" | "lead_nurture" | "onboarding" | "re_engagement" | "promotion" | "evergreen" | "custom"
+    // Product-type specific sequences
+    | "sample_pack_launch" | "preset_pack_launch" | "midi_pack_launch" | "beat_lease_launch"
+    | "coaching_launch" | "mixing_service_launch" | "pdf_guide_launch" | "community_launch"
   >("product_launch");
   const [sequenceContextType, setSequenceContextType] = useState<"course" | "product" | "store">("store");
   const [sequenceCourseId, setSequenceCourseId] = useState<string>("");
@@ -3404,51 +3413,104 @@ export default function WorkflowBuilderPage() {
                       <p className="text-sm text-slate-400">Choose the goal for your email sequence</p>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {[
-                        { id: 'product_launch', icon: Package, color: 'orange', label: 'Product Launch', desc: 'Build hype & drive sales' },
-                        { id: 'course_launch', icon: BookOpen, color: 'blue', label: 'Course Launch', desc: 'Educate & convert students' },
-                        { id: 'lead_nurture', icon: Users, color: 'emerald', label: 'Lead Nurture', desc: 'Build trust over time' },
-                        { id: 'onboarding', icon: UserPlus, color: 'cyan', label: 'Onboarding', desc: 'Welcome new customers' },
-                        { id: 're_engagement', icon: RotateCcw, color: 'amber', label: 'Re-engagement', desc: 'Win back cold leads' },
-                        { id: 'promotion', icon: Trophy, color: 'yellow', label: 'Promotion', desc: 'Limited-time offers' },
-                      ].map(({ id, icon: Icon, color, label, desc }) => (
-                        <button
-                          key={id}
-                          onClick={() => {
-                            setSequenceCampaignType(id as any);
-                            // Auto-set context type based on campaign type for better UX
-                            if (id === 'course_launch') {
-                              setSequenceContextType('course');
-                            } else if (id === 'product_launch' || id === 'promotion') {
-                              setSequenceContextType('product');
-                            }
-                          }}
-                          className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
-                            sequenceCampaignType === id
-                              ? `border-${color}-500/50 bg-${color}-500/10 ring-1 ring-${color}-500/30`
-                              : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                          }`}
-                        >
-                          <div className={`absolute inset-0 bg-gradient-to-br from-${color}-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100`} />
-                          <div className="relative flex items-start gap-3">
-                            <div className={`rounded-lg bg-${color}-500/20 p-2`}>
-                              <Icon className={`h-5 w-5 text-${color}-400`} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-white">{label}</span>
-                                {sequenceCampaignType === id && (
-                                  <div className={`rounded-full bg-${color}-500 p-0.5`}>
-                                    <Check className="h-3 w-3 text-white" />
-                                  </div>
-                                )}
+                    {/* General Campaign Types */}
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">General Campaigns</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {[
+                          { id: 'product_launch', icon: Package, color: 'orange', label: 'Product Launch', desc: 'Build hype & drive sales' },
+                          { id: 'course_launch', icon: BookOpen, color: 'blue', label: 'Course Launch', desc: 'Educate & convert students' },
+                          { id: 'lead_nurture', icon: Users, color: 'emerald', label: 'Lead Nurture', desc: 'Build trust over time' },
+                          { id: 'onboarding', icon: UserPlus, color: 'cyan', label: 'Onboarding', desc: 'Welcome new customers' },
+                          { id: 're_engagement', icon: RotateCcw, color: 'amber', label: 'Re-engagement', desc: 'Win back cold leads' },
+                          { id: 'promotion', icon: Trophy, color: 'yellow', label: 'Promotion', desc: 'Limited-time offers' },
+                        ].map(({ id, icon: Icon, color, label, desc }) => (
+                          <button
+                            key={id}
+                            onClick={() => {
+                              setSequenceCampaignType(id as any);
+                              // Auto-set context type based on campaign type for better UX
+                              if (id === 'course_launch') {
+                                setSequenceContextType('course');
+                              } else if (id === 'product_launch' || id === 'promotion') {
+                                setSequenceContextType('product');
+                              }
+                            }}
+                            className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
+                              sequenceCampaignType === id
+                                ? `border-${color}-500/50 bg-${color}-500/10 ring-1 ring-${color}-500/30`
+                                : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                            }`}
+                          >
+                            <div className={`absolute inset-0 bg-gradient-to-br from-${color}-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100`} />
+                            <div className="relative flex items-start gap-3">
+                              <div className={`rounded-lg bg-${color}-500/20 p-2`}>
+                                <Icon className={`h-5 w-5 text-${color}-400`} />
                               </div>
-                              <p className="mt-0.5 text-sm text-slate-400">{desc}</p>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-white">{label}</span>
+                                  {sequenceCampaignType === id && (
+                                    <div className={`rounded-full bg-${color}-500 p-0.5`}>
+                                      <Check className="h-3 w-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="mt-0.5 text-sm text-slate-400">{desc}</p>
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Product-Type Specific Sequences */}
+                    <div className="space-y-3 pt-2">
+                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Product-Specific Sequences</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {[
+                          { id: 'sample_pack_launch', icon: Music, color: 'purple', label: 'Sample Pack', desc: 'Loops, one-shots, drums' },
+                          { id: 'preset_pack_launch', icon: Sliders, color: 'pink', label: 'Preset Pack', desc: 'Serum, Vital, synth presets' },
+                          { id: 'midi_pack_launch', icon: Music, color: 'indigo', label: 'MIDI Pack', desc: 'Melodies & progressions' },
+                          { id: 'beat_lease_launch', icon: Mic2, color: 'red', label: 'Beat Lease', desc: 'Beats & instrumentals' },
+                          { id: 'coaching_launch', icon: Video, color: 'teal', label: 'Coaching', desc: '1-on-1 sessions' },
+                          { id: 'mixing_service_launch', icon: Headphones, color: 'sky', label: 'Mix/Master', desc: 'Mixing & mastering' },
+                          { id: 'pdf_guide_launch', icon: FileText, color: 'lime', label: 'PDF/Guide', desc: 'Ebooks & tutorials' },
+                          { id: 'community_launch', icon: MessagesSquare, color: 'violet', label: 'Community', desc: 'Memberships & groups' },
+                        ].map(({ id, icon: Icon, color, label, desc }) => (
+                          <button
+                            key={id}
+                            onClick={() => {
+                              setSequenceCampaignType(id as any);
+                              // All product-specific types should select product context
+                              setSequenceContextType('product');
+                            }}
+                            className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
+                              sequenceCampaignType === id
+                                ? `border-${color}-500/50 bg-${color}-500/10 ring-1 ring-${color}-500/30`
+                                : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                            }`}
+                          >
+                            <div className={`absolute inset-0 bg-gradient-to-br from-${color}-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100`} />
+                            <div className="relative flex items-start gap-3">
+                              <div className={`rounded-lg bg-${color}-500/20 p-2`}>
+                                <Icon className={`h-5 w-5 text-${color}-400`} />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-white">{label}</span>
+                                  {sequenceCampaignType === id && (
+                                    <div className={`rounded-full bg-${color}-500 p-0.5`}>
+                                      <Check className="h-3 w-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="mt-0.5 text-sm text-slate-400">{desc}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}

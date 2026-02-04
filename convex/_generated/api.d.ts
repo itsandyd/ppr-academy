@@ -3238,7 +3238,15 @@ export declare const api: {
           | "re_engagement"
           | "promotion"
           | "evergreen"
-          | "custom";
+          | "custom"
+          | "sample_pack_launch"
+          | "preset_pack_launch"
+          | "midi_pack_launch"
+          | "beat_lease_launch"
+          | "coaching_launch"
+          | "mixing_service_launch"
+          | "pdf_guide_launch"
+          | "community_launch";
         contextType: "course" | "product" | "store";
         courseId?: Id<"courses">;
         customPrompt?: string;

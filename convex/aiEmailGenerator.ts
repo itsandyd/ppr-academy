@@ -246,6 +246,7 @@ export const generateWorkflowSequence = action({
   args: {
     storeId: v.string(),
     campaignType: v.union(
+      // General campaign types
       v.literal("product_launch"),
       v.literal("course_launch"),
       v.literal("lead_nurture"),
@@ -253,7 +254,16 @@ export const generateWorkflowSequence = action({
       v.literal("re_engagement"),
       v.literal("promotion"),
       v.literal("evergreen"),
-      v.literal("custom")
+      v.literal("custom"),
+      // Product-type specific sequences
+      v.literal("sample_pack_launch"),
+      v.literal("preset_pack_launch"),
+      v.literal("midi_pack_launch"),
+      v.literal("beat_lease_launch"),
+      v.literal("coaching_launch"),
+      v.literal("mixing_service_launch"),
+      v.literal("pdf_guide_launch"),
+      v.literal("community_launch")
     ),
     contextType: v.union(
       v.literal("course"),
@@ -457,6 +467,63 @@ STORE/BRAND INFORMATION:
 - Position as helpful resource, not salesperson
 - Use teaching as selling (educate then offer)
 - Natural segues from content to offer`,
+      // Product-type specific psychology
+      sample_pack_launch: `SAMPLE PACK LAUNCH PSYCHOLOGY:
+- Email 1: Tease the vibe/genre with audio preview (describe what they'll hear)
+- Email 2: Behind-the-scenes of how you created these sounds
+- Email 3: Show what tracks could be made with these samples
+- Email 4: FAQ - file formats, DAW compatibility, licensing terms
+- Email 5: Limited time bonus (extra loops or one-shots)
+- Final: Producer testimonial or track showcase using the samples`,
+      preset_pack_launch: `PRESET PACK LAUNCH PSYCHOLOGY:
+- Email 1: Before/after audio comparison (dry vs with preset)
+- Email 2: Walk through 3 standout presets and when to use them
+- Email 3: Show how easy they are to use (no tweaking needed)
+- Email 4: Compatible synth/DAW requirements explained
+- Email 5: Bonus: Custom macro walkthrough or preset-making tutorial
+- Final: Price comparison to other packs in the market`,
+      midi_pack_launch: `MIDI PACK LAUNCH PSYCHOLOGY:
+- Email 1: Melody/chord progression preview in context of a beat
+- Email 2: Theory breakdown - why these progressions work
+- Email 3: How to flip/customize the MIDIs for unique tracks
+- Email 4: Compatible DAWs and instruments that work best
+- Email 5: Bonus loops or chord progressions as incentive
+- Final: Show genre versatility (same MIDI, different sounds)`,
+      beat_lease_launch: `BEAT LEASE LAUNCH PSYCHOLOGY:
+- Email 1: New beat drop announcement with vibe/mood description
+- Email 2: Licensing tiers explained simply (basic vs premium vs exclusive)
+- Email 3: Artist spotlight using your beats
+- Email 4: What you can and can't do with each license
+- Email 5: Free beat or discount for email subscribers
+- Final: Exclusive/premium tier pitch for serious artists`,
+      coaching_launch: `COACHING LAUNCH PSYCHOLOGY:
+- Email 1: Your credentials and why you're qualified to teach
+- Email 2: Common mistakes you see producers make (that you fix)
+- Email 3: Session format, duration, what to expect
+- Email 4: Student transformation story with specific results
+- Email 5: FAQ - scheduling, refunds, preparation needed
+- Final: Limited spots available (real scarcity if applicable)`,
+      mixing_service_launch: `MIXING/MASTERING SERVICE PSYCHOLOGY:
+- Email 1: Before/after audio examples (night and day difference)
+- Email 2: Your signal chain, plugins, approach explained
+- Email 3: What you need from the client (stems, reference tracks)
+- Email 4: Turnaround time, revisions policy, pricing tiers
+- Email 5: Client testimonial with specific feedback
+- Final: Special rate for first-time clients`,
+      pdf_guide_launch: `PDF/GUIDE LAUNCH PSYCHOLOGY:
+- Email 1: The problem this guide solves (the frustration)
+- Email 2: Share one key insight from the guide (proof of value)
+- Email 3: Table of contents breakdown with what they'll learn
+- Email 4: Who this is for (and who it's NOT for)
+- Email 5: Bonus resources included (templates, checklists)
+- Final: Lifetime access, free updates pitch`,
+      community_launch: `COMMUNITY/MEMBERSHIP PSYCHOLOGY:
+- Email 1: Why you built this community (your vision)
+- Email 2: What's inside (features, content, resources)
+- Email 3: Member spotlight or success story
+- Email 4: How active the community is, what the vibe is like
+- Email 5: FAQ - cancellation, access, private vs public
+- Final: Founding member pricing or limited-time bonus`,
       custom: args.customPrompt || `A custom email sequence based on the provided context.`,
     };
 
@@ -617,6 +684,430 @@ STORE/BRAND INFORMATION:
           purpose: "soft_pitch",
           structure: "Mention what you offer as a natural extension of the value you've given.",
           focus: "Offer without pressure",
+        },
+      ],
+      // SAMPLE PACK LAUNCH TEMPLATES
+      sample_pack_launch: [
+        {
+          purpose: "vibe_tease",
+          structure: "Describe the sonic aesthetic. What genre? What mood? What will they FEEL when they drop these samples in?",
+          focus: "Create anticipation with vivid sound descriptions",
+        },
+        {
+          purpose: "behind_scenes",
+          structure: "How you created these sounds. What gear/software? What inspired the vibe? Recording process.",
+          focus: "Show craft and authenticity",
+        },
+        {
+          purpose: "use_case",
+          structure: "Paint a picture of a producer using these samples. What track comes out? What elements work together?",
+          focus: "Help them visualize making heat with these",
+        },
+        {
+          purpose: "specs_faq",
+          structure: "File formats, sample count, BPM range, key info. DAW compatibility. License terms (royalty-free?).",
+          focus: "Remove technical uncertainty",
+        },
+        {
+          purpose: "bonus_reveal",
+          structure: "Extra one-shots, bonus loops, or MIDI files for email subscribers only.",
+          focus: "Reward subscribers with exclusivity",
+        },
+        {
+          purpose: "social_proof",
+          structure: "Producer testimonial or track made with these samples. Real results.",
+          focus: "Build confidence through evidence",
+        },
+        {
+          purpose: "genre_versatility",
+          structure: "Show how the same samples can work across genres. Hip hop, trap, lo-fi, etc.",
+          focus: "Expand perceived value",
+        },
+        {
+          purpose: "comparison",
+          structure: "Why these samples vs free packs online? Quality difference. Unique sounds.",
+          focus: "Justify the investment",
+        },
+        {
+          purpose: "urgency",
+          structure: "Limited intro pricing or bonus expiring. Why grab it now.",
+          focus: "Create momentum to act",
+        },
+        {
+          purpose: "final_call",
+          structure: "Everything included. One more time. Links to previews. Make decision easy.",
+          focus: "Close with confidence",
+        },
+      ],
+      // PRESET PACK LAUNCH TEMPLATES
+      preset_pack_launch: [
+        {
+          purpose: "before_after",
+          structure: "Describe the sound transformation. Dry synth to massive lead. Weak bass to earth-shaking sub.",
+          focus: "Show dramatic difference presets make",
+        },
+        {
+          purpose: "preset_spotlight",
+          structure: "Walk through 3 standout presets. When to use each. What genre they shine in.",
+          focus: "Make the pack tangible",
+        },
+        {
+          purpose: "ease_of_use",
+          structure: "No tweaking needed. Load and go. Macro controls for quick customization.",
+          focus: "Remove intimidation factor",
+        },
+        {
+          purpose: "compatibility",
+          structure: "Which synth versions work. DAW compatibility. Installation walkthrough.",
+          focus: "Technical clarity",
+        },
+        {
+          purpose: "sound_design",
+          structure: "Your sound design philosophy. What makes your presets different from stock sounds.",
+          focus: "Establish expertise",
+        },
+        {
+          purpose: "genre_use",
+          structure: "Show same preset in different genres. Versatility demonstration.",
+          focus: "Expand use cases",
+        },
+        {
+          purpose: "tutorial_bonus",
+          structure: "Free preset-making tutorial or macro walkthrough included.",
+          focus: "Add educational value",
+        },
+        {
+          purpose: "value_comparison",
+          structure: "Price vs other preset packs. What you get per dollar. Quality per preset.",
+          focus: "Justify investment",
+        },
+        {
+          purpose: "urgency",
+          structure: "Intro pricing ending. Bonus presets expiring.",
+          focus: "Drive action now",
+        },
+        {
+          purpose: "final_call",
+          structure: "Full preset list. Synth requirements. Links to demos. Decision time.",
+          focus: "Confident close",
+        },
+      ],
+      // MIDI PACK LAUNCH TEMPLATES
+      midi_pack_launch: [
+        {
+          purpose: "melody_tease",
+          structure: "Describe the melodies and progressions. Emotional? Hard-hitting? Chill?",
+          focus: "Paint the musical picture",
+        },
+        {
+          purpose: "theory_breakdown",
+          structure: "Why these progressions work. Music theory made simple. Keys and modes used.",
+          focus: "Educational angle that builds value",
+        },
+        {
+          purpose: "customization",
+          structure: "How to flip MIDIs for unique tracks. Change instruments, velocity, timing.",
+          focus: "Show creative possibilities",
+        },
+        {
+          purpose: "compatibility",
+          structure: "DAW compatibility. Best instruments to use. Piano roll vs external synths.",
+          focus: "Technical clarity",
+        },
+        {
+          purpose: "genre_versatility",
+          structure: "Same MIDI, different sounds. Show how one progression fits multiple genres.",
+          focus: "Maximize perceived value",
+        },
+        {
+          purpose: "workflow_benefit",
+          structure: "Beat block solution. Start with MIDI, build around it. Speed up production.",
+          focus: "Solve their pain point",
+        },
+        {
+          purpose: "bonus_loops",
+          structure: "Extra chord progressions or melody loops for email subscribers.",
+          focus: "Exclusive incentive",
+        },
+        {
+          purpose: "comparison",
+          structure: "Hand-crafted vs AI-generated. Why these hit different. Original compositions.",
+          focus: "Quality differentiation",
+        },
+        {
+          purpose: "urgency",
+          structure: "Intro price ending. Bundle deal expiring.",
+          focus: "Push to action",
+        },
+        {
+          purpose: "final_call",
+          structure: "Full MIDI count. BPM and key range. Everything included. Get it now.",
+          focus: "Clear close",
+        },
+      ],
+      // BEAT LEASE LAUNCH TEMPLATES
+      beat_lease_launch: [
+        {
+          purpose: "new_beat_drop",
+          structure: "New beat announcement. Vibe, mood, who it's for. What artist would kill this?",
+          focus: "Generate excitement",
+        },
+        {
+          purpose: "license_breakdown",
+          structure: "Basic vs premium vs exclusive explained simply. What you CAN and CAN'T do.",
+          focus: "Clarity removes friction",
+        },
+        {
+          purpose: "artist_spotlight",
+          structure: "Artist using your beats. Their release. Their success.",
+          focus: "Social proof that converts",
+        },
+        {
+          purpose: "rights_faq",
+          structure: "Streaming limits. Distribution rights. Credits required. No legal confusion.",
+          focus: "Remove legal fear",
+        },
+        {
+          purpose: "free_beat",
+          structure: "Free tagged beat for email subscribers. Show quality before they pay.",
+          focus: "Build trust with free value",
+        },
+        {
+          purpose: "exclusive_pitch",
+          structure: "Why exclusives are worth it. Own the beat. No competition. Serious artists.",
+          focus: "Upsell premium tier",
+        },
+        {
+          purpose: "discography",
+          structure: "Your beat catalog overview. Different vibes available. Something for everyone.",
+          focus: "Show range and options",
+        },
+        {
+          purpose: "collab_offer",
+          structure: "Custom beat offer. Work directly with you. Tailored to their sound.",
+          focus: "Premium personalized service",
+        },
+        {
+          purpose: "urgency",
+          structure: "Beat might sell exclusive. Limited time discount. Act now.",
+          focus: "Real scarcity",
+        },
+        {
+          purpose: "final_call",
+          structure: "License comparison. Links to all beats. Special code for subscribers.",
+          focus: "Make decision easy",
+        },
+      ],
+      // COACHING LAUNCH TEMPLATES
+      coaching_launch: [
+        {
+          purpose: "credentials",
+          structure: "Your background. What qualifies you. Your results and experience.",
+          focus: "Establish authority",
+        },
+        {
+          purpose: "common_mistakes",
+          structure: "Mistakes you see producers make. Problems you fix in sessions.",
+          focus: "Show expertise through diagnosis",
+        },
+        {
+          purpose: "session_format",
+          structure: "What a session looks like. Duration. Video call? Screen share? Feedback style.",
+          focus: "Make it tangible",
+        },
+        {
+          purpose: "transformation",
+          structure: "Student success story. Where they started. Where they are now. Specific results.",
+          focus: "Proof it works",
+        },
+        {
+          purpose: "faq",
+          structure: "Scheduling. Time zones. Cancellation. What to prepare. Tech requirements.",
+          focus: "Remove logistical friction",
+        },
+        {
+          purpose: "value_breakdown",
+          structure: "Cost of mistakes vs cost of coaching. ROI of learning faster.",
+          focus: "Justify the investment",
+        },
+        {
+          purpose: "philosophy",
+          structure: "Your teaching approach. How you're different from YouTube tutorials.",
+          focus: "Differentiate from free content",
+        },
+        {
+          purpose: "testimonials",
+          structure: "Multiple student quotes. Different skill levels. Different goals achieved.",
+          focus: "Broad social proof",
+        },
+        {
+          purpose: "scarcity",
+          structure: "Limited spots per month. Your availability is real. Book while open.",
+          focus: "Authentic scarcity",
+        },
+        {
+          purpose: "final_call",
+          structure: "What you get. How to book. Special rate for email subscribers.",
+          focus: "Clear path to action",
+        },
+      ],
+      // MIXING/MASTERING SERVICE TEMPLATES
+      mixing_service_launch: [
+        {
+          purpose: "before_after",
+          structure: "Describe the transformation. Muddy to clean. Flat to punchy. Night and day.",
+          focus: "Showcase your impact",
+        },
+        {
+          purpose: "process_reveal",
+          structure: "Your signal chain. Key plugins. Approach to mixing. What makes you different.",
+          focus: "Demonstrate expertise",
+        },
+        {
+          purpose: "requirements",
+          structure: "What you need from them. Stems. Reference tracks. Notes on their vision.",
+          focus: "Set expectations",
+        },
+        {
+          purpose: "turnaround",
+          structure: "Delivery timeline. Revision policy. Communication during process.",
+          focus: "Clarity on logistics",
+        },
+        {
+          purpose: "testimonial",
+          structure: "Client feedback. Specific results. Before/after their release.",
+          focus: "Third-party validation",
+        },
+        {
+          purpose: "pricing_tiers",
+          structure: "Basic mix vs full production. What's included at each level.",
+          focus: "Clear options",
+        },
+        {
+          purpose: "genre_expertise",
+          structure: "Genres you specialize in. Portfolio examples in their style.",
+          focus: "Show relevant experience",
+        },
+        {
+          purpose: "comparison",
+          structure: "DIY mixing vs professional. Time saved. Quality gained.",
+          focus: "Justify outsourcing",
+        },
+        {
+          purpose: "special_offer",
+          structure: "First-time client discount. Bundle deal. Email subscriber special.",
+          focus: "Lower barrier to try",
+        },
+        {
+          purpose: "final_call",
+          structure: "How to submit. What to expect. Link to book.",
+          focus: "Simple next step",
+        },
+      ],
+      // PDF/GUIDE LAUNCH TEMPLATES
+      pdf_guide_launch: [
+        {
+          purpose: "problem_agitation",
+          structure: "The frustration this guide solves. The struggle they're facing right now.",
+          focus: "Connect through shared pain",
+        },
+        {
+          purpose: "insight_preview",
+          structure: "Share one key insight from the guide. Prove the value before they buy.",
+          focus: "Demonstrate quality",
+        },
+        {
+          purpose: "table_of_contents",
+          structure: "What's inside chapter by chapter. What they'll learn. Specific takeaways.",
+          focus: "Make content tangible",
+        },
+        {
+          purpose: "ideal_reader",
+          structure: "Who this is for. Who it's NOT for. Be specific about skill level.",
+          focus: "Qualify the right buyers",
+        },
+        {
+          purpose: "bonus_resources",
+          structure: "Templates, checklists, worksheets included. Actionable extras.",
+          focus: "Stack the value",
+        },
+        {
+          purpose: "author_story",
+          structure: "Why you wrote this. Your journey learning this. Credibility.",
+          focus: "Personal connection",
+        },
+        {
+          purpose: "testimonials",
+          structure: "Reader feedback. Specific results from applying the guide.",
+          focus: "Social proof",
+        },
+        {
+          purpose: "comparison",
+          structure: "This guide vs free YouTube videos. Organized, comprehensive, saves time.",
+          focus: "Justify paid content",
+        },
+        {
+          purpose: "urgency",
+          structure: "Launch pricing ending. Bonus expiring. Future price increase.",
+          focus: "Drive action now",
+        },
+        {
+          purpose: "final_call",
+          structure: "Everything included. Lifetime access. Free updates. Get it now.",
+          focus: "Remove last doubts",
+        },
+      ],
+      // COMMUNITY/MEMBERSHIP LAUNCH TEMPLATES
+      community_launch: [
+        {
+          purpose: "vision",
+          structure: "Why you built this community. What void it fills. Your mission.",
+          focus: "Inspire with purpose",
+        },
+        {
+          purpose: "whats_inside",
+          structure: "Features. Content library. Live calls. Resources. The full picture.",
+          focus: "Show the value",
+        },
+        {
+          purpose: "member_spotlight",
+          structure: "Member success story. What they achieved. How community helped.",
+          focus: "Show real results",
+        },
+        {
+          purpose: "vibe_check",
+          structure: "How active is it? What's the culture? Screenshots of conversations.",
+          focus: "Show it's not a ghost town",
+        },
+        {
+          purpose: "faq",
+          structure: "Cancellation policy. Access levels. Private vs public. What's expected.",
+          focus: "Remove commitment fear",
+        },
+        {
+          purpose: "comparison",
+          structure: "Facebook groups vs this. Discord servers vs this. What's different.",
+          focus: "Differentiate from free",
+        },
+        {
+          purpose: "founder_access",
+          structure: "Your involvement. AMAs. Direct feedback. Founder accessibility.",
+          focus: "Personal connection value",
+        },
+        {
+          purpose: "roadmap",
+          structure: "What's coming. Future features. Growing with the community.",
+          focus: "Show long-term value",
+        },
+        {
+          purpose: "founding_member",
+          structure: "Special founding member pricing. Lock in rate. Early adopter perks.",
+          focus: "Reward early believers",
+        },
+        {
+          purpose: "final_call",
+          structure: "Join link. What happens next. Welcome them to the family.",
+          focus: "Warm invitation",
         },
       ],
     };
@@ -783,8 +1274,14 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
     previousNodeId = triggerId;
     yPosition += nodeSpacing;
 
-    // Create "Already Purchased - Exit" node on the right side (for course/product launches)
-    const isSalesSequence = args.campaignType === "course_launch" || args.campaignType === "product_launch" || args.campaignType === "promotion";
+    // Create "Already Purchased - Exit" node on the right side (for sales sequences)
+    // All product-type-specific launches are sales sequences
+    const salesSequenceTypes = [
+      "course_launch", "product_launch", "promotion",
+      "sample_pack_launch", "preset_pack_launch", "midi_pack_launch", "beat_lease_launch",
+      "coaching_launch", "mixing_service_launch", "pdf_guide_launch", "community_launch"
+    ];
+    const isSalesSequence = salesSequenceTypes.includes(args.campaignType);
     const exitNodeId = `exit-purchased-${Date.now()}`;
 
     if (isSalesSequence) {
@@ -943,7 +1440,7 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
       position: { x: xCenter, y: yPosition },
       data: {
         label: "Sequence Complete",
-        goalType: args.campaignType === "product_launch" || args.campaignType === "course_launch" ? "purchase" : "engagement",
+        goalType: isSalesSequence ? "purchase" : "engagement",
       },
     });
     edges.push({
