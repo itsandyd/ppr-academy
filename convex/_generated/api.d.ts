@@ -10970,6 +10970,26 @@ export declare const api: {
       },
       Id<"resendConnections">
     >;
+    getCampaignProgress: FunctionReference<
+      "action",
+      "public",
+      { campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns"> },
+      {
+        canResume: boolean;
+        failedCount: number;
+        lastError?: string;
+        percentComplete: number;
+        recipientCount: number;
+        sentCount: number;
+        status: string;
+      }
+    >;
+    resumeCampaign: FunctionReference<
+      "action",
+      "public",
+      { campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns"> },
+      { message: string; success: boolean }
+    >;
     sendBroadcastEmail: FunctionReference<
       "action",
       "public",
@@ -11299,6 +11319,80 @@ export declare const api: {
       "public",
       { type: "campaign" | "automation" },
       Array<{ count: number; label: string; value: string }>
+    >;
+  };
+  emailTests: {
+    runAllEmailTests: FunctionReference<
+      "action",
+      "public",
+      {},
+      {
+        success: boolean;
+        summary: string;
+        tests: Array<{ message: string; name: string; passed: boolean }>;
+      }
+    >;
+    simulateLargeCampaign: FunctionReference<
+      "action",
+      "public",
+      { recipientCount: number },
+      {
+        message: string;
+        projections: {
+          batchCount: number;
+          estimatedEmailsPerMinute: number;
+          estimatedTotalTimeMinutes: number;
+          invocationsNeeded: number;
+          totalRecipients: number;
+        };
+        success: boolean;
+      }
+    >;
+    testBatchProcessing: FunctionReference<
+      "action",
+      "public",
+      {},
+      {
+        details: {
+          batchSize: number;
+          estimatedTimePerBatchSeconds: number;
+          maxBatchesPerInvocation: number;
+          maxEmailsPerInvocation: number;
+        };
+        message: string;
+        success: boolean;
+      }
+    >;
+    testProgressTracking: FunctionReference<
+      "action",
+      "public",
+      { campaignId?: Id<"resendCampaigns"> | Id<"emailCampaigns"> },
+      {
+        details?: {
+          canResume: boolean;
+          failedCount: number;
+          percentComplete: number;
+          sentCount: number;
+          status: string;
+        };
+        message: string;
+        success: boolean;
+      }
+    >;
+    testRateLimiting: FunctionReference<
+      "action",
+      "public",
+      {},
+      {
+        details: {
+          avgTimePerEmailMs: number;
+          emailsSimulated: number;
+          rateLimitRespected: boolean;
+          totalTimeMs: number;
+        };
+        message: string;
+        success: boolean;
+      }
     >;
   };
   emailUnsubscribe: {
@@ -11650,6 +11744,18 @@ export declare const api: {
       },
       Id<"workflowExecutions">
     >;
+    fastForwardAllDelays: FunctionReference<
+      "mutation",
+      "public",
+      { email: string },
+      { message: string; skippedCount: number; success: boolean }
+    >;
+    forceProcessExecution: FunctionReference<
+      "action",
+      "public",
+      { executionId: Id<"workflowExecutions"> },
+      { message: string; success: boolean }
+    >;
     getContactsAtNode: FunctionReference<
       "query",
       "public",
@@ -11681,6 +11787,20 @@ export declare const api: {
       { workflowId: Id<"emailWorkflows"> },
       any
     >;
+    getRecentCompletedExecutions: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      Array<{
+        _id: Id<"workflowExecutions">;
+        completedAt?: number;
+        completedAtReadable?: string;
+        createdAt: number;
+        customerEmail: string;
+        status: string;
+        workflowName: string;
+      }>
+    >;
     getWorkflow: FunctionReference<
       "query",
       "public",
@@ -11692,6 +11812,22 @@ export declare const api: {
       "public",
       { storeId: string },
       any
+    >;
+    listActiveExecutions: FunctionReference<
+      "query",
+      "public",
+      { email?: string; limit?: number; storeId?: string },
+      Array<{
+        _id: Id<"workflowExecutions">;
+        createdAt: number;
+        currentNodeId?: string;
+        customerEmail: string;
+        scheduledFor?: number;
+        scheduledForReadable?: string;
+        status: string;
+        waitingTime?: string;
+        workflowName: string;
+      }>
     >;
     listAdminWorkflows: FunctionReference<"query", "public", {}, Array<any>>;
     listEmailTemplates: FunctionReference<
@@ -11728,6 +11864,12 @@ export declare const api: {
         storeId: string;
       },
       Array<any>
+    >;
+    skipExecutionDelay: FunctionReference<
+      "mutation",
+      "public",
+      { executionId: Id<"workflowExecutions"> },
+      { message: string; success: boolean }
     >;
     toggleWorkflowActive: FunctionReference<
       "mutation",
@@ -23220,6 +23362,8 @@ export declare const internal: {
       "internal",
       {
         campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns">;
+        failedCount?: number;
+        lastProcessedCursor?: string;
         recipientCount?: number;
         sentCount?: number;
       },
@@ -23230,8 +23374,16 @@ export declare const internal: {
       "internal",
       {
         campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns">;
+        error?: string;
         sentAt?: number;
-        status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+        status:
+          | "draft"
+          | "scheduled"
+          | "sending"
+          | "sent"
+          | "failed"
+          | "partial"
+          | "paused";
       },
       any
     >;
@@ -23295,7 +23447,10 @@ export declare const internal: {
     processCampaign: FunctionReference<
       "action",
       "internal",
-      { campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns"> },
+      {
+        campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns">;
+        resumeFromCursor?: string;
+      },
       any
     >;
     sendCampaignBatch: FunctionReference<
@@ -23567,6 +23722,12 @@ export declare const internal: {
       "mutation",
       "internal",
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
+      null
+    >;
+    skipExecutionDelayInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { executionId: Id<"workflowExecutions"> },
       null
     >;
     trackABTestResult: FunctionReference<

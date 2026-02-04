@@ -2388,3 +2388,278 @@ export const removeTagFromContactInternal = internalMutation({
     return null;
   },
 });
+
+// ============================================================================
+// WORKFLOW TESTING UTILITIES
+// ============================================================================
+
+/**
+ * List all active workflow executions for testing/monitoring
+ * Shows executions with their current status and next scheduled time
+ */
+export const listActiveExecutions = query({
+  args: {
+    storeId: v.optional(v.string()),
+    email: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    _id: v.id("workflowExecutions"),
+    workflowName: v.string(),
+    customerEmail: v.string(),
+    status: v.string(),
+    currentNodeId: v.optional(v.string()),
+    scheduledFor: v.optional(v.number()),
+    scheduledForReadable: v.optional(v.string()),
+    waitingTime: v.optional(v.string()),
+    createdAt: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    let query = ctx.db.query("workflowExecutions");
+
+    // Filter by status (active = pending or running)
+    const executions = await query
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "pending"),
+          q.eq(q.field("status"), "running")
+        )
+      )
+      .order("desc")
+      .take(args.limit || 50);
+
+    // Filter by email if provided
+    let filtered = executions;
+    if (args.email) {
+      filtered = executions.filter((e) =>
+        e.customerEmail.toLowerCase().includes(args.email!.toLowerCase())
+      );
+    }
+    if (args.storeId) {
+      filtered = filtered.filter((e) => e.storeId === args.storeId);
+    }
+
+    // Get workflow names
+    const results = await Promise.all(
+      filtered.map(async (exec) => {
+        const workflow = await ctx.db.get(exec.workflowId);
+        const now = Date.now();
+        const scheduledFor = exec.scheduledFor;
+
+        let waitingTime: string | undefined;
+        if (scheduledFor && scheduledFor > now) {
+          const diffMs = scheduledFor - now;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMins / 60);
+          const diffDays = Math.floor(diffHours / 24);
+
+          if (diffDays > 0) {
+            waitingTime = `${diffDays}d ${diffHours % 24}h`;
+          } else if (diffHours > 0) {
+            waitingTime = `${diffHours}h ${diffMins % 60}m`;
+          } else {
+            waitingTime = `${diffMins}m`;
+          }
+        }
+
+        return {
+          _id: exec._id,
+          workflowName: workflow?.name || "Unknown",
+          customerEmail: exec.customerEmail,
+          status: exec.status,
+          currentNodeId: exec.currentNodeId,
+          scheduledFor: exec.scheduledFor,
+          scheduledForReadable: scheduledFor
+            ? new Date(scheduledFor).toLocaleString()
+            : undefined,
+          waitingTime,
+          createdAt: exec._creationTime,
+        };
+      })
+    );
+
+    return results;
+  },
+});
+
+/**
+ * Skip the delay for a workflow execution - immediately advances to next step
+ * USE FOR TESTING ONLY - makes the execution run immediately
+ */
+export const skipExecutionDelay = mutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const execution = await ctx.db.get(args.executionId);
+
+    if (!execution) {
+      return { success: false, message: "Execution not found" };
+    }
+
+    if (execution.status !== "pending") {
+      return {
+        success: false,
+        message: `Cannot skip delay for execution with status "${execution.status}"`,
+      };
+    }
+
+    // Set scheduledFor to now so it runs on the next cron tick
+    await ctx.db.patch(args.executionId, {
+      scheduledFor: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: `Delay skipped! Execution will run on next processor cycle (within 1 minute).`,
+    };
+  },
+});
+
+/**
+ * Force process a specific execution immediately (for testing)
+ * This triggers the workflow processor for just this execution
+ */
+export const forceProcessExecution = action({
+  args: {
+    executionId: v.id("workflowExecutions"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // First skip any delay
+      await ctx.runMutation(internal.emailWorkflows.skipExecutionDelayInternal, {
+        executionId: args.executionId,
+      });
+
+      // Then process it immediately
+      await ctx.runAction(internal.emailWorkflowActions.executeWorkflowNode, {
+        executionId: args.executionId,
+      });
+
+      return {
+        success: true,
+        message: "Execution processed! Check logs for details.",
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Failed to process: ${error.message}`,
+      };
+    }
+  },
+});
+
+/**
+ * Internal version of skipExecutionDelay
+ */
+export const skipExecutionDelayInternal = internalMutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const execution = await ctx.db.get(args.executionId);
+    if (execution && execution.status === "pending") {
+      await ctx.db.patch(args.executionId, {
+        scheduledFor: Date.now(),
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * Get recently completed executions (to verify delays are firing)
+ */
+export const getRecentCompletedExecutions = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    _id: v.id("workflowExecutions"),
+    workflowName: v.string(),
+    customerEmail: v.string(),
+    status: v.string(),
+    completedAt: v.optional(v.number()),
+    completedAtReadable: v.optional(v.string()),
+    createdAt: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    // Use index for efficient query
+    const executions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_status_scheduledFor", (q) => q.eq("status", "completed"))
+      .order("desc")
+      .take(args.limit || 10);
+
+    const results = await Promise.all(
+      executions.map(async (exec) => {
+        const workflow = await ctx.db.get(exec.workflowId);
+        return {
+          _id: exec._id,
+          workflowName: workflow?.name || "Unknown",
+          customerEmail: exec.customerEmail,
+          status: exec.status,
+          completedAt: exec.completedAt,
+          completedAtReadable: exec.completedAt
+            ? new Date(exec.completedAt).toLocaleString()
+            : undefined,
+          createdAt: exec._creationTime,
+        };
+      })
+    );
+
+    return results;
+  },
+});
+
+/**
+ * Fast-forward ALL delays for a specific email (for testing entire workflow)
+ * Skips delays for all active executions for this email
+ */
+export const fastForwardAllDelays = mutation({
+  args: {
+    email: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    skippedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const executions = await ctx.db
+      .query("workflowExecutions")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("customerEmail"), args.email),
+          q.eq(q.field("status"), "pending")
+        )
+      )
+      .collect();
+
+    let skippedCount = 0;
+    for (const exec of executions) {
+      await ctx.db.patch(exec._id, {
+        scheduledFor: Date.now(),
+      });
+      skippedCount++;
+    }
+
+    return {
+      success: true,
+      message:
+        skippedCount > 0
+          ? `Skipped delays for ${skippedCount} execution(s). They will process on the next cycle.`
+          : "No pending executions found for this email.",
+      skippedCount,
+    };
+  },
+});

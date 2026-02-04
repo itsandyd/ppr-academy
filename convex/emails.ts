@@ -242,16 +242,35 @@ function personalizeContent(
 // EMAIL ACTIONS (Node.js Runtime - Resend Integration)
 // ============================================================================
 
+// Rate limiting configuration
+// Resend limits: Free=2/sec, Pro=10/sec, Team=100/sec
+// We use conservative limits to avoid hitting rate limits
+const EMAILS_PER_SECOND = 5; // Safe for most paid tiers
+const BATCH_SIZE = 50; // Smaller batches for better reliability
+const DELAY_BETWEEN_EMAILS_MS = Math.ceil(1000 / EMAILS_PER_SECOND); // ~200ms between emails
+
+/**
+ * Sleep helper for rate limiting
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Process and send campaign emails in batches (INTERNAL)
+ * Now with rate limiting, progress tracking, and resumability
  */
 export const processCampaign = internalAction({
   args: {
     campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
+    resumeFromCursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     console.log("=== STARTING CAMPAIGN PROCESSING ===");
     console.log("Campaign ID:", args.campaignId);
+    if (args.resumeFromCursor) {
+      console.log("📍 Resuming from cursor:", args.resumeFromCursor);
+    }
 
     try {
       const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
@@ -269,20 +288,23 @@ export const processCampaign = internalAction({
         throw new Error("Campaign is missing a subject line");
       }
 
-      // Update status to sending
-      await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
-        campaignId: args.campaignId,
-        status: "sending",
-      });
-      console.log("✅ Status updated to 'sending'");
+      // Update status to sending (only if not already sending - for resume case)
+      if ((campaign as any).status !== "sending") {
+        await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
+          campaignId: args.campaignId,
+          status: "sending",
+        });
+        console.log("✅ Status updated to 'sending'");
+      }
 
-      // Process recipients in batches
-      let totalSent = 0;
-      let totalFailed = 0;
-      let cursor: string | null = null;
-      let isDone = false;
+      // Track progress
+      let totalSent = (campaign as any).sentCount || 0;
+      let totalFailed = (campaign as any).failedCount || 0;
+      let cursor: string | null = args.resumeFromCursor || null;
+      let batchesProcessed = 0;
+      const MAX_BATCHES_PER_INVOCATION = 10; // Process max 10 batches (~500 emails) per invocation
 
-      while (!isDone) {
+      while (batchesProcessed < MAX_BATCHES_PER_INVOCATION) {
         // Get a batch of recipients
         const recipientBatch: {
           recipients: Array<{
@@ -302,15 +324,15 @@ export const processCampaign = internalAction({
         } = await ctx.runQuery(internal.emailQueries.getCampaignRecipients, {
           campaignId: args.campaignId,
           cursor: cursor || undefined,
-          batchSize: 100,
+          batchSize: BATCH_SIZE,
         });
 
         const recipients = recipientBatch.recipients;
-        isDone = recipientBatch.isDone;
+        const isDone = recipientBatch.isDone;
         cursor = recipientBatch.continueCursor || null;
 
         console.log(
-          `📧 Processing batch of ${recipients.length} recipients (total sent so far: ${totalSent})`
+          `📧 Processing batch ${batchesProcessed + 1} of ${recipients.length} recipients (total sent so far: ${totalSent})`
         );
 
         if (recipients.length === 0) {
@@ -318,7 +340,7 @@ export const processCampaign = internalAction({
           break;
         }
 
-        // Send emails in this batch
+        // Send emails in this batch with rate limiting
         const batchResult = await ctx.runAction(internal.emails.sendCampaignBatch, {
           campaignId: args.campaignId,
           recipients: recipients as any,
@@ -326,30 +348,56 @@ export const processCampaign = internalAction({
 
         totalSent += batchResult.sent;
         totalFailed += batchResult.failed;
+        batchesProcessed++;
 
-        console.log(`✅ Batch complete: ${batchResult.sent} sent, ${batchResult.failed} failed`);
+        // Save progress after each batch (enables resumability)
+        await ctx.runMutation(internal.emailQueries.updateCampaignMetrics, {
+          campaignId: args.campaignId,
+          sentCount: totalSent,
+          failedCount: totalFailed,
+          lastProcessedCursor: cursor || undefined,
+        });
+
+        console.log(`✅ Batch ${batchesProcessed} complete: ${batchResult.sent} sent, ${batchResult.failed} failed`);
+
+        // Check if we're done
+        if (isDone) {
+          console.log("✅ All recipients processed!");
+          break;
+        }
+
+        // Small delay between batches to prevent overwhelming the system
+        await sleep(500);
+      }
+
+      // Check if there are more batches to process
+      if (cursor && batchesProcessed >= MAX_BATCHES_PER_INVOCATION) {
+        console.log(`📅 Scheduling next batch processing (cursor: ${cursor})`);
+        // Schedule the next batch processing via scheduler
+        await ctx.scheduler.runAfter(1000, internal.emails.processCampaign, {
+          campaignId: args.campaignId,
+          resumeFromCursor: cursor,
+        });
+        return; // Don't mark as complete yet
       }
 
       console.log(`✅ Campaign processing complete: ${totalSent} sent, ${totalFailed} failed`);
 
-      // Update campaign status and metrics
+      // Update campaign status to complete
       await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
         campaignId: args.campaignId,
-        status: totalFailed === 0 ? "sent" : "failed",
+        status: totalFailed === 0 ? "sent" : totalSent > 0 ? "partial" : "failed",
         sentAt: Date.now(),
-      });
-
-      await ctx.runMutation(internal.emailQueries.updateCampaignMetrics, {
-        campaignId: args.campaignId,
-        sentCount: totalSent,
       });
 
       console.log("=== CAMPAIGN PROCESSING COMPLETE ===");
     } catch (error) {
       console.error("❌ Campaign processing failed:", error);
+      // Don't immediately mark as failed - allow resume
       await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
         campaignId: args.campaignId,
-        status: "failed",
+        status: "paused", // Use "paused" to indicate it can be resumed
+        error: String(error),
       });
       throw error;
     }
@@ -358,6 +406,7 @@ export const processCampaign = internalAction({
 
 /**
  * Send a batch of campaign emails (INTERNAL)
+ * Now with rate limiting to respect Resend API limits
  */
 export const sendCampaignBatch = internalAction({
   args: {
@@ -445,7 +494,9 @@ export const sendCampaignBatch = internalAction({
       }
     }
 
-    for (const recipient of args.recipients) {
+    for (let i = 0; i < args.recipients.length; i++) {
+      const recipient = args.recipients[i];
+
       try {
         const suppression = suppressionMap.get(recipient.email.toLowerCase());
         if (suppression?.suppressed) {
@@ -507,8 +558,22 @@ export const sendCampaignBatch = internalAction({
         }
 
         sent++;
-      } catch (error) {
+
+        // Rate limiting: add delay between emails (except for the last one)
+        if (i < args.recipients.length - 1) {
+          await sleep(DELAY_BETWEEN_EMAILS_MS);
+        }
+      } catch (error: any) {
         console.error(`Failed to send to ${recipient.email}:`, error);
+
+        // Check if this is a rate limit error
+        if (error?.statusCode === 429 || error?.message?.includes("rate limit")) {
+          console.log("⚠️ Rate limit hit, waiting 5 seconds before continuing...");
+          await sleep(5000);
+          // Retry this recipient
+          i--; // Decrement to retry
+          continue;
+        }
 
         if (recipient.recipientId) {
           await ctx.runMutation(internal.emailQueries.updateRecipientStatus, {
@@ -527,6 +592,7 @@ export const sendCampaignBatch = internalAction({
 
 /**
  * Public action to send a campaign
+ * Now uses scheduler for better reliability with large lists
  */
 export const sendCampaign = action({
   args: {
@@ -534,11 +600,107 @@ export const sendCampaign = action({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Schedule the internal processing action
-    await ctx.runAction(internal.emails.processCampaign, {
+    // Schedule the internal processing action (runs immediately but won't block)
+    await ctx.scheduler.runAfter(0, internal.emails.processCampaign, {
       campaignId: args.campaignId,
     });
     return null;
+  },
+});
+
+/**
+ * Resume a paused or failed campaign
+ * Can be called when a campaign was interrupted mid-send
+ */
+export const resumeCampaign = action({
+  args: {
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Get the campaign to check status and get cursor
+    const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
+      campaignId: args.campaignId,
+    });
+
+    if (!campaign) {
+      return { success: false, message: "Campaign not found" };
+    }
+
+    const campaignData = campaign as any;
+    const status = campaignData.status;
+
+    // Only allow resuming paused, partial, or failed campaigns
+    if (!["paused", "partial", "failed"].includes(status)) {
+      return {
+        success: false,
+        message: `Cannot resume campaign with status "${status}". Only paused, partial, or failed campaigns can be resumed.`,
+      };
+    }
+
+    // Get the cursor to resume from
+    const resumeCursor = campaignData.lastProcessedCursor;
+
+    console.log(`📍 Resuming campaign ${args.campaignId} from cursor: ${resumeCursor || "start"}`);
+
+    // Schedule the processing to continue
+    await ctx.scheduler.runAfter(0, internal.emails.processCampaign, {
+      campaignId: args.campaignId,
+      resumeFromCursor: resumeCursor,
+    });
+
+    const sentSoFar = campaignData.sentCount || 0;
+    return {
+      success: true,
+      message: `Campaign resumed! ${sentSoFar} emails already sent. Processing will continue in the background.`,
+    };
+  },
+});
+
+/**
+ * Get campaign progress for monitoring
+ */
+export const getCampaignProgress = action({
+  args: {
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
+  },
+  returns: v.object({
+    status: v.string(),
+    sentCount: v.number(),
+    failedCount: v.number(),
+    recipientCount: v.number(),
+    percentComplete: v.number(),
+    canResume: v.boolean(),
+    lastError: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
+      campaignId: args.campaignId,
+    });
+
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    const campaignData = campaign as any;
+    const sentCount = campaignData.sentCount || 0;
+    const failedCount = campaignData.failedCount || 0;
+    const recipientCount = campaignData.recipientCount || 0;
+
+    const percentComplete = recipientCount > 0 ? Math.round(((sentCount + failedCount) / recipientCount) * 100) : 0;
+
+    return {
+      status: campaignData.status,
+      sentCount,
+      failedCount,
+      recipientCount,
+      percentComplete,
+      canResume: ["paused", "partial", "failed"].includes(campaignData.status),
+      lastError: campaignData.lastError,
+    };
   },
 });
 

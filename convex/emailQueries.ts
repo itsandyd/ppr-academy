@@ -673,6 +673,7 @@ export const getCampaignRecipients = internalQuery({
 
 /**
  * Update campaign status (INTERNAL)
+ * Now supports additional states for resumability
  */
 export const updateCampaignStatus = internalMutation({
   args: {
@@ -682,13 +683,17 @@ export const updateCampaignStatus = internalMutation({
       v.literal("scheduled"),
       v.literal("sending"),
       v.literal("sent"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("partial"), // Some emails sent, some failed
+      v.literal("paused") // Can be resumed
     ),
     sentAt: v.optional(v.number()),
+    error: v.optional(v.string()), // Store error message for debugging
   },
   handler: async (ctx, args) => {
     const updates: any = { status: args.status, updatedAt: Date.now() };
     if (args.sentAt) updates.sentAt = args.sentAt;
+    if (args.error) updates.lastError = args.error;
     await ctx.db.patch(args.campaignId, updates);
   },
 });
@@ -716,17 +721,22 @@ export const updateRecipientStatus = internalMutation({
 
 /**
  * Update campaign metrics (INTERNAL)
+ * Now supports progress tracking for resumability
  */
 export const updateCampaignMetrics = internalMutation({
   args: {
     campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
     recipientCount: v.optional(v.number()),
     sentCount: v.optional(v.number()),
+    failedCount: v.optional(v.number()), // Track failed emails
+    lastProcessedCursor: v.optional(v.string()), // For resumability
   },
   handler: async (ctx, args) => {
     const updates: any = { updatedAt: Date.now() };
     if (args.recipientCount !== undefined) updates.recipientCount = args.recipientCount;
     if (args.sentCount !== undefined) updates.sentCount = args.sentCount;
+    if (args.failedCount !== undefined) updates.failedCount = args.failedCount;
+    if (args.lastProcessedCursor !== undefined) updates.lastProcessedCursor = args.lastProcessedCursor;
     await ctx.db.patch(args.campaignId, updates);
   },
 });
