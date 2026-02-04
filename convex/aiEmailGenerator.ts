@@ -694,15 +694,16 @@ CRITICAL RULES:
 5. BANNED phrases: "game-changer", "transform your life", "unlock your potential", "amazing course", "I'm excited to share"
 6. Write as {{senderName}} talking directly to {{firstName}}.
 7. EVERY email needs a CTA link: <p><a href="${productUrl}">CTA Text</a></p>
-8. End every email with a hook for the next one OR the signature.
+8. EVERY email MUST end with the signature - no exceptions.
 9. When describing what's included, use ONLY what's in the provided curriculum. Do not embellish.
 
 HOOK → STORY → OFFER STRUCTURE:
 - HOOK: First 1-2 lines grab attention. Pattern interrupt. Curiosity.
 - STORY: Share a specific moment, struggle, or insight. Make it real.
 - OFFER: Natural transition to the CTA. No hard sell.
+- For emails 1 to N-1: Add a cliffhanger/tease BEFORE the signature.
 
-EMAIL SIGNATURE (use on final email of sequence, or when no cliffhanger):
+EMAIL SIGNATURE (REQUIRED on EVERY email - this is the last thing in the email):
 <p>Talk soon,<br/>{{senderName}}</p>
 
 HTML FORMAT:
@@ -747,8 +748,8 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
 3. Hook readers in the first 2 lines. Pattern interrupt.
 4. Tell a REAL story with specific details from the curriculum above.
 5. NO em-dashes (—). Use periods or commas.
-6. End emails 1-${actualSequenceLength - 1} with a cliffhanger teasing the next email.
-7. End the final email with: <p>Talk soon,<br/>{{senderName}}</p>
+6. Emails 1-${actualSequenceLength - 1}: Add a cliffhanger teasing the next email BEFORE the signature.
+7. EVERY email MUST end with: <p>Talk soon,<br/>{{senderName}}</p>
 8. Each email: 150-250 words. Tight. No fluff.
 9. CTA Link for every email: ${productUrl}
 
