@@ -23760,6 +23760,19 @@ export declare const internal: {
       { executionId: Id<"workflowExecutions"> },
       null
     >;
+    createExecution: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        contactId?: Id<"emailContacts">;
+        currentNodeId: string;
+        customerEmail: string;
+        scheduledFor: number;
+        storeId: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      Id<"workflowExecutions">
+    >;
     createTagInternal: FunctionReference<
       "mutation",
       "internal",

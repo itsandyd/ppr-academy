@@ -954,6 +954,12 @@ export default function WorkflowBuilderPage() {
     workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
   );
 
+  // List all workflows for this store (for workflow chaining)
+  const allWorkflows = useQuery(
+    api.emailWorkflows.listWorkflows,
+    storeId ? { storeId } : "skip"
+  );
+
   // Search contacts with server-side filtering for the "Add Contacts" dialog
   const contacts = useQuery(
     api.emailContacts.searchContacts,
@@ -2242,6 +2248,36 @@ export default function WorkflowBuilderPage() {
                     <p className="text-xs text-muted-foreground">
                       Goal nodes mark this path complete when reached
                     </p>
+
+                    {/* Next Workflow - Workflow Chaining */}
+                    <div className="mt-4 border-t pt-4">
+                      <Label>After Goal is Reached</Label>
+                      <Select
+                        value={selectedNode.data.nextWorkflowId || "none"}
+                        onValueChange={(v) =>
+                          updateNodeData(selectedNode.id, {
+                            nextWorkflowId: v === "none" ? undefined : v,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="mt-2 bg-white dark:bg-black">
+                          <SelectValue placeholder="Select next workflow..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px] bg-white dark:bg-black">
+                          <SelectItem value="none">End sequence (no next workflow)</SelectItem>
+                          {allWorkflows
+                            ?.filter((w: any) => w._id !== workflowId) // Exclude current workflow
+                            .map((workflow: any) => (
+                              <SelectItem key={workflow._id} value={workflow._id}>
+                                {workflow.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Automatically enroll contacts in another workflow when they reach this goal
+                      </p>
+                    </div>
                   </div>
                 )}
 

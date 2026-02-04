@@ -2490,6 +2490,34 @@ export const completeExecution = internalMutation({
 });
 
 /**
+ * Create a new workflow execution (used for workflow chaining)
+ */
+export const createExecution = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    storeId: v.string(),
+    customerEmail: v.string(),
+    contactId: v.optional(v.id("emailContacts")),
+    currentNodeId: v.string(),
+    scheduledFor: v.number(),
+  },
+  returns: v.id("workflowExecutions"),
+  handler: async (ctx, args) => {
+    const executionId = await ctx.db.insert("workflowExecutions", {
+      workflowId: args.workflowId,
+      storeId: args.storeId,
+      customerEmail: args.customerEmail,
+      contactId: args.contactId,
+      currentNodeId: args.currentNodeId,
+      status: "pending",
+      startedAt: Date.now(),
+      scheduledFor: args.scheduledFor,
+    });
+    return executionId;
+  },
+});
+
+/**
  * Cancel/remove a contact from a workflow execution
  */
 export const cancelExecution = mutation({

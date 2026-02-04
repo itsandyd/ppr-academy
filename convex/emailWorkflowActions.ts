@@ -245,6 +245,47 @@ export const executeWorkflowNode = internalAction({
       });
 
       console.log(`[EmailWorkflows] Team notification sent via ${notifyMethod}`);
+    } else if (currentNode.type === "goal") {
+      // Goal node - complete the workflow and optionally chain to next workflow
+      console.log(`[EmailWorkflows] Goal node reached for ${execution.customerEmail}`);
+
+      // Complete this workflow
+      await ctx.runMutation(internal.emailWorkflows.completeExecution, {
+        executionId: args.executionId,
+      });
+
+      // Check if there's a next workflow to chain to
+      const nextWorkflowId = currentNode.data?.nextWorkflowId;
+      if (nextWorkflowId) {
+        console.log(`[EmailWorkflows] Chaining to next workflow: ${nextWorkflowId}`);
+
+        // Get the next workflow
+        const nextWorkflow = await ctx.runQuery(internal.emailWorkflows.getWorkflowInternal, {
+          workflowId: nextWorkflowId,
+        });
+
+        if (nextWorkflow && nextWorkflow.isActive) {
+          // Find the first non-trigger node
+          const firstNode = nextWorkflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+          if (firstNode) {
+            // Enroll the contact in the next workflow
+            await ctx.runMutation(internal.emailWorkflows.createExecution, {
+              workflowId: nextWorkflowId,
+              storeId: execution.storeId,
+              customerEmail: execution.customerEmail,
+              contactId: execution.contactId,
+              currentNodeId: firstNode.id,
+              scheduledFor: Date.now(),
+            });
+            console.log(`[EmailWorkflows] Contact ${execution.customerEmail} enrolled in next workflow: ${nextWorkflow.name}`);
+          }
+        } else {
+          console.log(`[EmailWorkflows] Next workflow ${nextWorkflowId} not found or not active`);
+        }
+      }
+
+      return null;
     } else if (currentNode.type === "stop") {
       // Stop node - complete the workflow execution
       console.log(`[EmailWorkflows] Stop node reached, completing workflow for ${execution.customerEmail}`);
