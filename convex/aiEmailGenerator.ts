@@ -817,6 +817,23 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
     previousNodeId = triggerId;
     yPosition += nodeSpacing;
 
+    // Create "Already Purchased - Exit" node on the right side (for course/product launches)
+    const isSalesSequence = args.campaignType === "course_launch" || args.campaignType === "product_launch" || args.campaignType === "promotion";
+    const exitNodeId = `exit-purchased-${Date.now()}`;
+
+    if (isSalesSequence) {
+      nodes.push({
+        id: exitNodeId,
+        type: "action",
+        position: { x: xCenter + 400, y: 300 },
+        data: {
+          label: "Already Purchased - Exit",
+          actionType: "add_tag",
+          tagName: `purchased-${productSlug}-exit`,
+        },
+      });
+    }
+
     // Process emails from AI response
     const emails = result.emails || [];
     for (let i = 0; i < emails.length; i++) {
@@ -846,6 +863,39 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
         yPosition += nodeSpacing;
       }
 
+      // Add condition check before each email for sales sequences
+      // This checks if user has already purchased - if so, exit the sequence
+      if (isSalesSequence) {
+        const conditionId = `condition-${i}-${Date.now()}`;
+        nodes.push({
+          id: conditionId,
+          type: "condition",
+          position: { x: xCenter, y: yPosition },
+          data: {
+            label: "Has Purchased?",
+            conditionType: "has_purchased_product",
+            conditionData: {
+              courseId: args.courseId || undefined,
+              productId: args.productId || undefined,
+            },
+          },
+        });
+        edges.push({
+          id: `edge-${previousNodeId}-${conditionId}`,
+          source: previousNodeId,
+          target: conditionId,
+        });
+        // If purchased (YES) → go to exit
+        edges.push({
+          id: `edge-${conditionId}-${exitNodeId}-yes`,
+          source: conditionId,
+          target: exitNodeId,
+          sourceHandle: "yes",
+        });
+        previousNodeId = conditionId;
+        yPosition += nodeSpacing;
+      }
+
       // Add email node with purpose from template
       const emailId = `email-${i}-${Date.now()}`;
       nodes.push({
@@ -860,11 +910,21 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
           senderName: "{{senderName}}",
         },
       });
-      edges.push({
-        id: `edge-${previousNodeId}-${emailId}`,
-        source: previousNodeId,
-        target: emailId,
-      });
+      // If sales sequence, connect from condition's NO path to email
+      if (isSalesSequence) {
+        edges.push({
+          id: `edge-${previousNodeId}-${emailId}-no`,
+          source: previousNodeId,
+          target: emailId,
+          sourceHandle: "no",
+        });
+      } else {
+        edges.push({
+          id: `edge-${previousNodeId}-${emailId}`,
+          source: previousNodeId,
+          target: emailId,
+        });
+      }
       previousNodeId = emailId;
       yPosition += nodeSpacing;
 
