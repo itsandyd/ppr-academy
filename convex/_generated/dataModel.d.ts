@@ -5585,7 +5585,8 @@ export type DataModel = {
           | "new_signup"
           | "user_inactivity"
           | "any_purchase"
-          | "any_course_complete";
+          | "any_course_complete"
+          | "learner_conversion";
       };
       userId: string;
       _id: Id<"emailWorkflows">;

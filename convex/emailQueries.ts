@@ -6,6 +6,21 @@ import { internal } from "./_generated/api";
 // EMAIL MARKETING SYSTEM - Queries & Mutations (V8 Runtime)
 // ============================================================================
 
+/**
+ * Debug: Count campaigns in resendCampaigns table
+ */
+export const debugCountCampaigns = query({
+  args: {},
+  handler: async (ctx) => {
+    const campaigns = await ctx.db.query("resendCampaigns").collect();
+    return {
+      count: campaigns.length,
+      names: campaigns.slice(0, 5).map(c => c.name || c.subject || "unnamed"),
+      ids: campaigns.slice(0, 5).map(c => c._id),
+    };
+  },
+});
+
 // ============================================================================
 // ADMIN EMAIL SYSTEM (Simplified - uses environment variables)
 // ============================================================================
@@ -199,10 +214,12 @@ export const createTemplate = mutation({
 });
 
 /**
- * Create campaign (admin - no connection required)
+ * Create or update campaign (admin - no connection required)
+ * If campaignId is provided, updates the existing campaign
  */
 export const createCampaign = mutation({
   args: {
+    campaignId: v.optional(v.id("resendCampaigns")), // For updating existing campaigns
     name: v.string(),
     subject: v.string(),
     templateId: v.optional(v.id("resendTemplates")),
@@ -220,6 +237,19 @@ export const createCampaign = mutation({
   },
   returns: v.id("resendCampaigns"),
   handler: async (ctx, args) => {
+    // If campaignId provided, update existing campaign
+    if (args.campaignId) {
+      await ctx.db.patch(args.campaignId, {
+        name: args.name,
+        subject: args.subject,
+        templateId: args.templateId,
+        htmlContent: args.htmlContent,
+        textContent: args.textContent,
+        updatedAt: Date.now(),
+      });
+      return args.campaignId;
+    }
+
     const status = args.scheduledFor && args.scheduledFor > Date.now() ? "scheduled" : "draft";
 
     // Map audienceType to targetAudience
@@ -695,6 +725,56 @@ export const updateCampaignStatus = internalMutation({
     if (args.sentAt) updates.sentAt = args.sentAt;
     if (args.error) updates.lastError = args.error;
     await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Update campaign content - for fixing campaigns missing content
+ */
+export const updateCampaignContent = mutation({
+  args: {
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
+    htmlContent: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.campaignId, {
+      htmlContent: args.htmlContent,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Patch campaign content by name (INTERNAL - for HTTP action)
+ */
+export const patchCampaignContent = internalMutation({
+  args: {
+    campaignName: v.optional(v.string()),
+    campaignId: v.optional(v.string()),
+    htmlContent: v.string(),
+  },
+  handler: async (ctx, args) => {
+    let campaign;
+
+    // Find by name
+    const campaigns = await ctx.db.query("resendCampaigns").collect();
+    console.log(`Found ${campaigns.length} campaigns in resendCampaigns table`);
+    console.log(`Campaign names: ${campaigns.map(c => c.name).join(", ")}`);
+
+    if (args.campaignName) {
+      campaign = campaigns.find(c => c.name?.includes(args.campaignName!) || c.subject?.includes(args.campaignName!));
+    }
+
+    if (!campaign) {
+      throw new Error(`Campaign not found: ${args.campaignName || args.campaignId}. Available: ${campaigns.map(c => c.name).slice(0, 5).join(", ")}`);
+    }
+
+    await ctx.db.patch(campaign._id, {
+      htmlContent: args.htmlContent,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, updatedId: campaign._id };
   },
 });
 

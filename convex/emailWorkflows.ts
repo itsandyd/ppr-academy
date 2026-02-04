@@ -1094,6 +1094,123 @@ export const triggerAdminCourseCompleteWorkflows = internalMutation({
 });
 
 /**
+ * Trigger learner conversion workflows when a user hits a creator-readiness milestone
+ * Triggered by: first enrollment, lessons milestone, certificate earned, expert level, course completed
+ */
+export const triggerLearnerConversionWorkflows = internalMutation({
+  args: {
+    userId: v.string(),
+    userEmail: v.string(),
+    userName: v.optional(v.string()),
+    conversionContext: v.union(
+      v.literal("first_enrollment"),
+      v.literal("lessons_milestone"),
+      v.literal("course_completed"),
+      v.literal("certificate_earned"),
+      v.literal("expert_level"),
+      v.literal("leaderboard_visit"),
+      v.literal("creator_profile_views")
+    ),
+    contextData: v.optional(v.object({
+      courseName: v.optional(v.string()),
+      courseId: v.optional(v.string()),
+      lessonCount: v.optional(v.number()),
+      level: v.optional(v.number()),
+      totalXP: v.optional(v.number()),
+      certificateCount: v.optional(v.number()),
+    })),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Get all active admin workflows with learner_conversion trigger
+    const adminWorkflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const conversionWorkflows = adminWorkflows.filter((w) => w.trigger.type === "learner_conversion");
+
+    if (conversionWorkflows.length === 0) {
+      console.log(`[AdminWorkflows] No active learner_conversion workflows for context: ${args.conversionContext}`);
+      return null;
+    }
+
+    const now = Date.now();
+
+    for (const workflow of conversionWorkflows) {
+      // Check if workflow is configured for this specific context (or all contexts)
+      const triggerContexts = workflow.trigger.config?.contexts || [];
+      if (triggerContexts.length > 0 && !triggerContexts.includes(args.conversionContext)) {
+        console.log(`[AdminWorkflows] Workflow "${workflow.name}" not configured for context: ${args.conversionContext}`);
+        continue;
+      }
+
+      // Check if user is already in this workflow
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.userEmail.toLowerCase()),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      // Also check if user has already completed this workflow
+      const completedExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.userEmail.toLowerCase()),
+            q.eq(q.field("status"), "completed")
+          )
+        )
+        .first();
+
+      if (completedExecution && !workflow.trigger.config?.allowReentry) {
+        console.log(`[AdminWorkflows] ${args.userEmail} already completed workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: workflow._id,
+        storeId: "admin",
+        customerEmail: args.userEmail.toLowerCase(),
+        status: "pending",
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+        scheduledFor: now,
+        executionData: {
+          triggerType: "learner_conversion",
+          conversionContext: args.conversionContext,
+          userId: args.userId,
+          userName: args.userName,
+          ...args.contextData,
+        },
+      });
+
+      await ctx.db.patch(workflow._id, {
+        totalExecutions: (workflow.totalExecutions || 0) + 1,
+        lastExecuted: now,
+      });
+
+      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in learner conversion workflow "${workflow.name}" (context: ${args.conversionContext})`);
+    }
+
+    return null;
+  },
+});
+
+/**
  * Enroll a user in an admin workflow (for manual triggers)
  * This works with user ID instead of contact ID since admin workflows target platform users
  */

@@ -250,6 +250,30 @@ export const triggerFirstEnrollment = internalMutation({
       },
     });
 
+    // Trigger learner conversion email workflow
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerLearnerConversionWorkflows, {
+        userId: args.userId,
+        userEmail: user.email,
+        userName: user.name || user.firstName || undefined,
+        conversionContext: "first_enrollment",
+        contextData: {
+          courseName: course.title,
+          courseId: args.courseId,
+        },
+      });
+
+      // Tag contact as "potential" creator (showing learning interest)
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncCreatorReadinessTag, {
+        userId: args.userId,
+        userEmail: user.email,
+        readinessLevel: "potential",
+        contextData: {
+          coursesCompleted: 0,
+        },
+      });
+    }
+
     return nudgeId;
   },
 });
@@ -315,6 +339,32 @@ export const triggerLessonsMilestone = internalMutation({
         lessonCount: args.lessonCount,
       },
     });
+
+    // Trigger learner conversion email workflow (only at major milestones)
+    if (user?.email && [10, 25, 50].includes(args.lessonCount)) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerLearnerConversionWorkflows, {
+        userId: args.userId,
+        userEmail: user.email,
+        userName: user.name || user.firstName || undefined,
+        conversionContext: "lessons_milestone",
+        contextData: {
+          lessonCount: args.lessonCount,
+        },
+      });
+
+      // Tag contact as "potential" at 25+ lessons, "ready" at 50+
+      if (args.lessonCount >= 25) {
+        const readinessLevel = args.lessonCount >= 50 ? "ready" : "potential";
+        await ctx.scheduler.runAfter(0, internal.emailContactSync.syncCreatorReadinessTag, {
+          userId: args.userId,
+          userEmail: user.email,
+          readinessLevel,
+          contextData: {
+            lessonCount: args.lessonCount,
+          },
+        });
+      }
+    }
 
     return nudgeId;
   },
@@ -432,6 +482,31 @@ export const triggerCertificateShowcase = internalMutation({
       },
     });
 
+    // Trigger learner conversion email workflow
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerLearnerConversionWorkflows, {
+        userId: args.userId,
+        userEmail: user.email,
+        userName: user.name || user.firstName || undefined,
+        conversionContext: "certificate_earned",
+        contextData: {
+          courseName: args.courseName,
+          certificateCount: certificates.length,
+        },
+      });
+
+      // Tag contact based on certificate count - "ready" with 1, "expert" with 2+
+      const readinessLevel = certificates.length >= 2 ? "expert" : "ready";
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncCreatorReadinessTag, {
+        userId: args.userId,
+        userEmail: user.email,
+        readinessLevel,
+        contextData: {
+          certificatesEarned: certificates.length,
+        },
+      });
+    }
+
     return nudgeId;
   },
 });
@@ -496,6 +571,32 @@ export const triggerExpertLevel = internalMutation({
       },
     });
 
+    // Trigger learner conversion email workflow - high priority for expert level!
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerLearnerConversionWorkflows, {
+        userId: args.userId,
+        userEmail: user.email,
+        userName: user.name || user.firstName || undefined,
+        conversionContext: "expert_level",
+        contextData: {
+          level: args.level,
+          totalXP: args.totalXP,
+        },
+      });
+
+      // Tag contact based on level - L8-9 "ready", L10+ "expert"
+      const readinessLevel = args.level >= 10 ? "expert" : "ready";
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncCreatorReadinessTag, {
+        userId: args.userId,
+        userEmail: user.email,
+        readinessLevel,
+        contextData: {
+          level: args.level,
+          totalXP: args.totalXP,
+        },
+      });
+    }
+
     return nudgeId;
   },
 });
@@ -546,7 +647,7 @@ export const trackCreatorProfileView = mutation({
         },
       });
 
-      // If just reached 3, mark as ready to show
+      // If just reached 3, mark as ready to show and tag as "curious"
       if (viewedProfiles.length === 3 && !existingTracking.shown) {
         await ctx.db.insert("analyticsEvents", {
           userId: args.userId,
@@ -557,6 +658,20 @@ export const trackCreatorProfileView = mutation({
             viewCount: 3,
           },
         });
+
+        // Tag contact as "curious" - they're browsing creator profiles
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+          .first();
+
+        if (user?.email) {
+          await ctx.scheduler.runAfter(0, internal.emailContactSync.syncCreatorReadinessTag, {
+            userId: args.userId,
+            userEmail: user.email,
+            readinessLevel: "curious",
+          });
+        }
       }
 
       return existingTracking._id;

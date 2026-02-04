@@ -122,4 +122,47 @@ http.route({
   }),
 });
 
+/**
+ * Admin endpoint to update campaign content
+ * POST /admin/update-campaign-content
+ */
+http.route({
+  path: "/admin/update-campaign-content",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { campaignName, htmlContent, adminSecret } = await request.json() as {
+        campaignName: string;
+        htmlContent: string;
+        adminSecret: string;
+      };
+
+      // Simple secret check (you should use a proper env var in production)
+      if (adminSecret !== "ppr-admin-2024") {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Patch the document by name
+      const result = await ctx.runMutation(internal.emailQueries.patchCampaignContent, {
+        campaignName,
+        htmlContent,
+      });
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      console.error("Failed to update campaign:", error);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
 export default http;

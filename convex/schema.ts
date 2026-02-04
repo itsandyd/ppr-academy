@@ -549,7 +549,8 @@ export default defineSchema({
         v.literal("new_signup"),
         v.literal("user_inactivity"),
         v.literal("any_purchase"),
-        v.literal("any_course_complete")
+        v.literal("any_course_complete"),
+        v.literal("learner_conversion") // Learner hits creator-readiness milestone
       ),
       config: v.any(), // Flexible config for different trigger types
     }),

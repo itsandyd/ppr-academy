@@ -741,3 +741,19 @@ export const getTagPreview = query({
     };
   },
 });
+
+/**
+ * Update resendCampaigns content - for fixing campaigns missing content
+ */
+export const updateResendCampaignContent = mutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    htmlContent: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.campaignId, {
+      htmlContent: args.htmlContent,
+      updatedAt: Date.now(),
+    });
+  },
+});

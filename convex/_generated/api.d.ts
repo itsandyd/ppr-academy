@@ -9776,6 +9776,12 @@ export declare const api: {
       },
       null
     >;
+    updateResendCampaignContent: FunctionReference<
+      "mutation",
+      "public",
+      { campaignId: Id<"resendCampaigns">; htmlContent: string },
+      any
+    >;
   };
   emailContacts: {
     addTagToContact: FunctionReference<
@@ -10704,6 +10710,7 @@ export declare const api: {
       "public",
       {
         audienceType: "all" | "enrolled" | "active" | "specific" | "creators";
+        campaignId?: Id<"resendCampaigns">;
         htmlContent?: string;
         name: string;
         scheduledFor?: number;
@@ -10816,6 +10823,7 @@ export declare const api: {
       { campaignId: Id<"resendCampaigns"> },
       any
     >;
+    debugCountCampaigns: FunctionReference<"query", "public", {}, any>;
     deleteAudienceList: FunctionReference<
       "mutation",
       "public",
@@ -10975,6 +10983,15 @@ export declare const api: {
         listId: Id<"resendAudienceLists">;
         name?: string;
         userIds?: Array<string>;
+      },
+      any
+    >;
+    updateCampaignContent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        campaignId: Id<"resendCampaigns"> | Id<"emailCampaigns">;
+        htmlContent: string;
       },
       any
     >;
@@ -23153,6 +23170,12 @@ export declare const internal: {
     >;
   };
   emailContactSync: {
+    batchUpdateCreatorReadiness: FunctionReference<
+      "mutation",
+      "internal",
+      {},
+      { processed: number; updated: number }
+    >;
     syncContactEngagement: FunctionReference<
       "mutation",
       "internal",
@@ -23211,6 +23234,33 @@ export declare const internal: {
         contactId: Id<"emailContacts">;
         created: boolean;
         tagsAdded: Array<string>;
+      }
+    >;
+    syncCreatorReadinessTag: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        contextData?: {
+          certificatesEarned?: number;
+          coursesCompleted?: number;
+          hasStore?: boolean;
+          lessonCount?: number;
+          level?: number;
+          totalXP?: number;
+        };
+        readinessLevel:
+          | "curious"
+          | "potential"
+          | "ready"
+          | "expert"
+          | "converted";
+        userEmail: string;
+        userId: string;
+      },
+      {
+        contactId: Id<"emailContacts"> | null;
+        previousTags: Array<string>;
+        tagAdded: string;
       }
     >;
   };
@@ -23365,6 +23415,12 @@ export declare const internal: {
       "mutation",
       "internal",
       { emailLogId: Id<"resendLogs">; userId: string },
+      any
+    >;
+    patchCampaignContent: FunctionReference<
+      "mutation",
+      "internal",
+      { campaignId?: string; campaignName?: string; htmlContent: string },
       any
     >;
     saveAdminResendConnection: FunctionReference<
@@ -23823,6 +23879,32 @@ export declare const internal: {
         productName?: string;
         source?: string;
         storeId: string;
+      },
+      null
+    >;
+    triggerLearnerConversionWorkflows: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        contextData?: {
+          certificateCount?: number;
+          courseId?: string;
+          courseName?: string;
+          lessonCount?: number;
+          level?: number;
+          totalXP?: number;
+        };
+        conversionContext:
+          | "first_enrollment"
+          | "lessons_milestone"
+          | "course_completed"
+          | "certificate_earned"
+          | "expert_level"
+          | "leaderboard_visit"
+          | "creator_profile_views";
+        userEmail: string;
+        userId: string;
+        userName?: string;
       },
       null
     >;

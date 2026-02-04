@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 const GENRE_KEYWORDS: Record<string, string[]> = {
@@ -1820,5 +1821,248 @@ export const getProductPurchasers = query({
     }
 
     return results;
+  },
+});
+
+/**
+ * Creator Readiness Tagging
+ * Tags platform users (admin-level contacts) based on their creator readiness journey.
+ * Called by conversion nudge triggers to segment contacts for creator-focused email campaigns.
+ *
+ * Tags added:
+ * - creator:curious - Viewed creator profiles (3+)
+ * - creator:potential - Level 5+ or completed a course
+ * - creator:ready - Level 8+ or earned certificate
+ * - creator:expert - Level 10+ or multiple certificates
+ * - creator:converted - Has created a store
+ */
+
+const ADMIN_STORE_ID = "admin"; // Admin-level contacts use "admin" as storeId
+
+export const syncCreatorReadinessTag = internalMutation({
+  args: {
+    userId: v.string(),
+    userEmail: v.string(),
+    readinessLevel: v.union(
+      v.literal("curious"),      // Showed interest in creators
+      v.literal("potential"),    // L5+ or course completed
+      v.literal("ready"),        // L8+ or certificate earned
+      v.literal("expert"),       // L10+ or multi-cert
+      v.literal("converted")     // Created a store
+    ),
+    contextData: v.optional(v.object({
+      level: v.optional(v.number()),
+      totalXP: v.optional(v.number()),
+      coursesCompleted: v.optional(v.number()),
+      certificatesEarned: v.optional(v.number()),
+      hasStore: v.optional(v.boolean()),
+      lessonCount: v.optional(v.number()),
+    })),
+  },
+  returns: v.object({
+    contactId: v.union(v.id("emailContacts"), v.null()),
+    tagAdded: v.string(),
+    previousTags: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    // Find the contact by email in admin store
+    const contact = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", ADMIN_STORE_ID).eq("email", args.userEmail.toLowerCase())
+      )
+      .first();
+
+    if (!contact) {
+      // Contact doesn't exist in admin store - create one
+      const now = Date.now();
+      const contactId = await ctx.db.insert("emailContacts", {
+        storeId: ADMIN_STORE_ID,
+        email: args.userEmail.toLowerCase(),
+        status: "subscribed",
+        subscribedAt: now,
+        tagIds: [],
+        source: "platform_user",
+        emailsSent: 0,
+        emailsOpened: 0,
+        emailsClicked: 0,
+        customFields: {
+          userId: args.userId,
+          creatorReadiness: args.readinessLevel,
+          ...(args.contextData || {}),
+          lastActivity: now,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const tagName = `creator:${args.readinessLevel}`;
+      await addTagsToContact(ctx, contactId, ADMIN_STORE_ID, [tagName]);
+
+      return {
+        contactId,
+        tagAdded: tagName,
+        previousTags: [],
+      };
+    }
+
+    // Contact exists - update their creator readiness
+    const tagName = `creator:${args.readinessLevel}`;
+
+    // Get existing creator tags to track progression
+    const existingTags = await ctx.db
+      .query("emailTags")
+      .withIndex("by_storeId_and_name")
+      .filter((q) => q.eq(q.field("storeId"), ADMIN_STORE_ID))
+      .collect();
+
+    const creatorTagIds = existingTags
+      .filter((t) => t.name.startsWith("creator:"))
+      .map((t) => t._id);
+
+    const previousCreatorTags = existingTags
+      .filter((t) => t.name.startsWith("creator:") && contact.tagIds.includes(t._id))
+      .map((t) => t.name);
+
+    // Update contact custom fields
+    const currentCustomFields = contact.customFields || {};
+    await ctx.db.patch(contact._id, {
+      customFields: {
+        ...currentCustomFields,
+        userId: args.userId,
+        creatorReadiness: args.readinessLevel,
+        ...(args.contextData || {}),
+        lastActivity: Date.now(),
+      },
+      updatedAt: Date.now(),
+    });
+
+    // Add the new tag
+    await addTagsToContact(ctx, contact._id, ADMIN_STORE_ID, [tagName]);
+
+    // Log activity
+    await ctx.db.insert("emailContactActivity", {
+      contactId: contact._id,
+      storeId: ADMIN_STORE_ID,
+      activityType: "custom_field_updated",
+      metadata: {
+        fieldName: "creatorReadiness",
+        newValue: args.readinessLevel,
+        oldValue: currentCustomFields.creatorReadiness as string | undefined,
+      },
+      timestamp: Date.now(),
+    });
+
+    return {
+      contactId: contact._id,
+      tagAdded: tagName,
+      previousTags: previousCreatorTags,
+    };
+  },
+});
+
+/**
+ * Calculate user level from XP (same formula used in gamification)
+ */
+function calculateLevelFromXP(xp: number): number {
+  if (xp < 100) return 1;
+  if (xp < 250) return 2;
+  if (xp < 500) return 3;
+  if (xp < 1000) return 4;
+  if (xp < 2000) return 5;
+  if (xp < 3500) return 6;
+  if (xp < 5500) return 7;
+  if (xp < 8000) return 8;
+  if (xp < 11000) return 9;
+  if (xp < 15000) return 10;
+  // Beyond level 10, each level requires 5000 more XP
+  return 10 + Math.floor((xp - 15000) / 5000);
+}
+
+/**
+ * Batch update creator readiness tags based on user stats
+ * Can be run as a scheduled job or manually triggered
+ */
+export const batchUpdateCreatorReadiness = internalMutation({
+  args: {},
+  returns: v.object({
+    processed: v.number(),
+    updated: v.number(),
+  }),
+  handler: async (ctx) => {
+    // Get all users with their stats
+    const users = await ctx.db.query("users").collect();
+
+    let processed = 0;
+    let updated = 0;
+
+    for (const user of users) {
+      if (!user.email || !user.clerkId) continue;
+      processed++;
+
+      // Get user's XP from userXP table
+      const userXPRecord = await ctx.db
+        .query("userXP")
+        .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
+        .first();
+      const totalXP = userXPRecord?.totalXP || 0;
+      const level = calculateLevelFromXP(totalXP);
+
+      // Count certificates
+      const certificates = await ctx.db
+        .query("certificates")
+        .withIndex("by_user", (q) => q.eq("userId", user.clerkId!))
+        .collect();
+      const certificatesEarned = certificates.length;
+
+      // Count completed enrollments - use enrollments table and check progress
+      const enrollments = await ctx.db
+        .query("enrollments")
+        .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
+        .collect();
+      // Count as "completed" if progress is 100%
+      const coursesCompleted = enrollments.filter((e) => (e.progress || 0) >= 100).length;
+
+      // Check if user has a store
+      const store = await ctx.db
+        .query("stores")
+        .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
+        .first();
+      const hasStore = !!store;
+
+      // Determine readiness level
+      let readinessLevel: "curious" | "potential" | "ready" | "expert" | "converted";
+
+      if (hasStore) {
+        readinessLevel = "converted";
+      } else if (level >= 10 || certificatesEarned >= 2) {
+        readinessLevel = "expert";
+      } else if (level >= 8 || certificatesEarned >= 1) {
+        readinessLevel = "ready";
+      } else if (level >= 5 || coursesCompleted >= 1) {
+        readinessLevel = "potential";
+      } else {
+        // Skip users who haven't shown any readiness signals
+        continue;
+      }
+
+      // Update the tag
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncCreatorReadinessTag, {
+        userId: user.clerkId,
+        userEmail: user.email,
+        readinessLevel,
+        contextData: {
+          level,
+          totalXP,
+          coursesCompleted,
+          certificatesEarned,
+          hasStore,
+        },
+      });
+
+      updated++;
+    }
+
+    return { processed, updated };
   },
 });
