@@ -366,6 +366,164 @@ export const getNodeExecutionCounts = query({
   },
 });
 
+/**
+ * Get detailed workflow node stats including delay timing information
+ * Returns counts per node type with timing for delay nodes
+ */
+export const getWorkflowNodeStats = query({
+  args: { workflowId: v.id("emailWorkflows") },
+  returns: v.object({
+    totalActive: v.number(),
+    totalInDelay: v.number(),
+    nodeStats: v.array(
+      v.object({
+        nodeId: v.string(),
+        nodeType: v.string(),
+        nodeName: v.optional(v.string()),
+        count: v.number(),
+        // Delay-specific fields
+        nextScheduledAt: v.optional(v.number()),
+        lastScheduledAt: v.optional(v.number()),
+        averageWaitTimeMs: v.optional(v.number()),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    // Get the workflow to access node definitions
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) {
+      return { totalActive: 0, totalInDelay: 0, nodeStats: [] };
+    }
+
+    const nodes = workflow.nodes as Array<{
+      id: string;
+      type: string;
+      data?: { label?: string; delayDays?: number; delayHours?: number; delayMinutes?: number };
+    }>;
+
+    // Build a map of nodeId -> node info
+    const nodeMap = new Map<string, { type: string; name?: string }>();
+    for (const node of nodes) {
+      nodeMap.set(node.id, {
+        type: node.type,
+        name: node.data?.label,
+      });
+    }
+
+    // Collect stats per node
+    const nodeStatsMap = new Map<
+      string,
+      {
+        count: number;
+        scheduledTimes: number[];
+      }
+    >();
+
+    const LIMIT = 15000;
+    const now = Date.now();
+
+    // Get pending executions (contacts waiting)
+    const pendingExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(LIMIT);
+
+    for (const exec of pendingExecutions) {
+      if (exec.currentNodeId) {
+        const stats = nodeStatsMap.get(exec.currentNodeId) || { count: 0, scheduledTimes: [] };
+        stats.count++;
+        if (exec.scheduledFor) {
+          stats.scheduledTimes.push(exec.scheduledFor);
+        }
+        nodeStatsMap.set(exec.currentNodeId, stats);
+      }
+    }
+
+    // Get running executions
+    const runningExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "running")
+      )
+      .take(LIMIT);
+
+    for (const exec of runningExecutions) {
+      if (exec.currentNodeId) {
+        const stats = nodeStatsMap.get(exec.currentNodeId) || { count: 0, scheduledTimes: [] };
+        stats.count++;
+        if (exec.scheduledFor) {
+          stats.scheduledTimes.push(exec.scheduledFor);
+        }
+        nodeStatsMap.set(exec.currentNodeId, stats);
+      }
+    }
+
+    // Build result array
+    let totalActive = 0;
+    let totalInDelay = 0;
+    const nodeStats: Array<{
+      nodeId: string;
+      nodeType: string;
+      nodeName?: string;
+      count: number;
+      nextScheduledAt?: number;
+      lastScheduledAt?: number;
+      averageWaitTimeMs?: number;
+    }> = [];
+
+    for (const [nodeId, stats] of nodeStatsMap) {
+      const nodeInfo = nodeMap.get(nodeId);
+      const nodeType = nodeInfo?.type || "unknown";
+      const isDelayNode = nodeType === "delay";
+
+      totalActive += stats.count;
+      if (isDelayNode) {
+        totalInDelay += stats.count;
+      }
+
+      // Calculate timing stats for nodes with scheduled times
+      let nextScheduledAt: number | undefined;
+      let lastScheduledAt: number | undefined;
+      let averageWaitTimeMs: number | undefined;
+
+      if (stats.scheduledTimes.length > 0) {
+        const sortedTimes = stats.scheduledTimes.sort((a, b) => a - b);
+        nextScheduledAt = sortedTimes[0];
+        lastScheduledAt = sortedTimes[sortedTimes.length - 1];
+
+        // Calculate average wait time from now
+        const futureWaits = sortedTimes.filter((t) => t > now).map((t) => t - now);
+        if (futureWaits.length > 0) {
+          averageWaitTimeMs = Math.round(
+            futureWaits.reduce((a, b) => a + b, 0) / futureWaits.length
+          );
+        }
+      }
+
+      nodeStats.push({
+        nodeId,
+        nodeType,
+        nodeName: nodeInfo?.name,
+        count: stats.count,
+        nextScheduledAt,
+        lastScheduledAt,
+        averageWaitTimeMs,
+      });
+    }
+
+    // Sort by count descending
+    nodeStats.sort((a, b) => b.count - a.count);
+
+    return {
+      totalActive,
+      totalInDelay,
+      nodeStats,
+    };
+  },
+});
+
 export const getContactsAtNode = query({
   args: {
     workflowId: v.id("emailWorkflows"),
@@ -1577,8 +1735,8 @@ export const enrollContactBatchInternal = internalMutation({
 });
 
 /**
- * Action to enroll ALL contacts matching a filter into a workflow
- * Can handle 47k+ contacts by processing in batches
+ * Public action to START bulk enrollment - kicks off the process
+ * Returns immediately and processes in background via self-scheduling
  */
 export const bulkEnrollAllContactsByFilter = action({
   args: {
@@ -1593,19 +1751,59 @@ export const bulkEnrollAllContactsByFilter = action({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    let totalEnrolled = 0;
-    let totalSkipped = 0;
+    // Start the bulk enrollment process via scheduler
+    // This returns immediately and processes in background
+    await ctx.scheduler.runAfter(0, internal.emailWorkflows.processBulkEnrollment, {
+      workflowId: args.workflowId,
+      storeId: args.storeId,
+      tagId: args.tagId,
+      noTags: args.noTags,
+      cursor: undefined,
+      totalEnrolled: 0,
+      totalSkipped: 0,
+      batchNumber: 0,
+    });
+
+    return {
+      enrolled: 0,
+      skipped: 0,
+      message: `Bulk enrollment started! Processing all contacts in background. Check workflow stats for progress.`,
+    };
+  },
+});
+
+/**
+ * Internal action that processes bulk enrollment in chunks with self-scheduling
+ * Handles 47k+ contacts by processing MAX_BATCHES_PER_INVOCATION batches, then scheduling itself
+ * This avoids the 10-minute action timeout
+ */
+export const processBulkEnrollment = internalAction({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    storeId: v.string(),
+    tagId: v.optional(v.id("emailTags")),
+    noTags: v.optional(v.boolean()),
+    cursor: v.optional(v.string()),
+    totalEnrolled: v.number(),
+    totalSkipped: v.number(),
+    batchNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const BATCH_SIZE = 50; // Contacts per mutation batch
+    const MAX_BATCHES_PER_INVOCATION = 40; // ~2000 contacts per invocation (stays well under 10min timeout)
+
+    let { totalEnrolled, totalSkipped, batchNumber } = args;
+    let cursor: string | undefined = args.cursor;
+    let batchesProcessed = 0;
+    let done = false;
+
+    console.log(`[BulkEnroll] Starting invocation #${Math.floor(batchNumber / MAX_BATCHES_PER_INVOCATION) + 1}, cursor: ${cursor || 'start'}, enrolled so far: ${totalEnrolled}`);
 
     // Type definitions for batch results
     type BatchResult = { contactIds: string[]; nextCursor: string | null; hasMore: boolean };
     type EnrollResult = { enrolled: number; skipped: number };
 
-    // Process contacts in batches
-    let cursor: string | undefined = undefined;
-    let done = false;
-    const BATCH_SIZE = 50; // Small batches for mutations
-
-    while (!done) {
+    while (batchesProcessed < MAX_BATCHES_PER_INVOCATION && !done) {
       // Fetch a batch of contact IDs
       const batch: BatchResult = await ctx.runQuery(internal.emailWorkflows.getContactIdsBatch, {
         storeId: args.storeId,
@@ -1620,7 +1818,7 @@ export const bulkEnrollAllContactsByFilter = action({
         break;
       }
 
-      // Enroll this batch (duplicate checking happens in the mutation via DB query)
+      // Enroll this batch
       const result: EnrollResult = await ctx.runMutation(
         internal.emailWorkflows.enrollContactBatchInternal,
         {
@@ -1631,24 +1829,55 @@ export const bulkEnrollAllContactsByFilter = action({
 
       totalEnrolled += result.enrolled;
       totalSkipped += result.skipped;
+      batchNumber++;
+      batchesProcessed++;
 
       cursor = batch.nextCursor ?? undefined;
-      done = !batch.hasMore;
+
+      if (!batch.hasMore) {
+        done = true;
+      }
+
+      // Log progress every 10 batches
+      if (batchesProcessed % 10 === 0) {
+        console.log(`[BulkEnroll] Progress: ${totalEnrolled} enrolled, ${totalSkipped} skipped (batch ${batchNumber})`);
+      }
     }
 
-    // Update workflow stats
+    // If there are more contacts to process, schedule the next invocation
+    if (!done && cursor) {
+      console.log(`[BulkEnroll] Scheduling next invocation. Enrolled so far: ${totalEnrolled}, cursor: ${cursor}`);
+
+      // Small delay to prevent overwhelming the scheduler
+      await ctx.scheduler.runAfter(500, internal.emailWorkflows.processBulkEnrollment, {
+        workflowId: args.workflowId,
+        storeId: args.storeId,
+        tagId: args.tagId,
+        noTags: args.noTags,
+        cursor,
+        totalEnrolled,
+        totalSkipped,
+        batchNumber,
+      });
+
+      // Update partial stats so UI can show progress
+      await ctx.runMutation(internal.emailWorkflows.updateWorkflowStats, {
+        workflowId: args.workflowId,
+        enrolledCount: totalEnrolled,
+      });
+
+      return;
+    }
+
+    // All done! Update final stats
+    console.log(`[BulkEnroll] ✅ COMPLETE! Total enrolled: ${totalEnrolled}, skipped: ${totalSkipped}`);
+
     if (totalEnrolled > 0) {
       await ctx.runMutation(internal.emailWorkflows.updateWorkflowStats, {
         workflowId: args.workflowId,
         enrolledCount: totalEnrolled,
       });
     }
-
-    return {
-      enrolled: totalEnrolled,
-      skipped: totalSkipped,
-      message: `Enrolled ${totalEnrolled.toLocaleString()} contacts, skipped ${totalSkipped.toLocaleString()} (already enrolled or invalid)`,
-    };
   },
 });
 
@@ -2427,6 +2656,7 @@ export const getStoreByClerkId = internalQuery({
 
 /**
  * Get executions that are due to run
+ * Reduced batch size to avoid OCC contention with large backlogs
  */
 export const getDueExecutions = internalQuery({
   args: {},
@@ -2435,21 +2665,22 @@ export const getDueExecutions = internalQuery({
     const now = Date.now();
 
     // Get pending executions that are scheduled for now or earlier
-    // Using compound index for efficient querying without filtering
+    // Using small batch (50) to avoid OCC when processing large backlogs
+    // The cron runs every minute, so 50/min = 3000/hour throughput
     const dueExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "pending").lte("scheduledFor", now)
       )
-      .take(500);
+      .take(50);
 
-    // Also get running executions that might be stuck
+    // Also get running executions that might be stuck (but limit)
     const runningExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "running").lte("scheduledFor", now)
       )
-      .take(100);
+      .take(10);
 
     return [...dueExecutions, ...runningExecutions];
   },

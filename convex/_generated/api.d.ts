@@ -11918,6 +11918,24 @@ export declare const api: {
       { storeId: string },
       any
     >;
+    getWorkflowNodeStats: FunctionReference<
+      "query",
+      "public",
+      { workflowId: Id<"emailWorkflows"> },
+      {
+        nodeStats: Array<{
+          averageWaitTimeMs?: number;
+          count: number;
+          lastScheduledAt?: number;
+          nextScheduledAt?: number;
+          nodeId: string;
+          nodeName?: string;
+          nodeType: string;
+        }>;
+        totalActive: number;
+        totalInDelay: number;
+      }
+    >;
     listActiveExecutions: FunctionReference<
       "query",
       "public",
@@ -15294,6 +15312,106 @@ export declare const api: {
           success: boolean;
           updated: number;
         }
+      >;
+    };
+    fixDelayNodeTracking: {
+      checkCronView: FunctionReference<
+        "mutation",
+        "public",
+        {},
+        { dueCount: number; samples: Array<any> }
+      >;
+      checkExecution: FunctionReference<
+        "mutation",
+        "public",
+        { executionId: Id<"workflowExecutions"> },
+        any
+      >;
+      diagnosePendingExecutions: FunctionReference<
+        "mutation",
+        "public",
+        { workflowId: Id<"emailWorkflows"> },
+        {
+          inFuture: number;
+          inPast: number;
+          samples: Array<any>;
+          totalPending: number;
+          withScheduledFor: number;
+          withoutScheduledFor: number;
+        }
+      >;
+      fixDelayNodeTracking: FunctionReference<
+        "mutation",
+        "public",
+        {
+          batchSize?: number;
+          dryRun?: boolean;
+          workflowId?: Id<"emailWorkflows">;
+        },
+        {
+          alreadyCorrect: number;
+          details: Array<{
+            email: string;
+            executionId: string;
+            newNodeId: string;
+            oldNodeId: string;
+            scheduledFor: number;
+          }>;
+          fixed: number;
+          hasMore: boolean;
+          isDryRun: boolean;
+          processed: number;
+          skipped: number;
+          success: boolean;
+        }
+      >;
+      forceProcessStuckExecutions: FunctionReference<
+        "mutation",
+        "public",
+        {
+          batchSize?: number;
+          dryRun?: boolean;
+          workflowId: Id<"emailWorkflows">;
+        },
+        { hasMore: boolean; processed: number; scheduled: number }
+      >;
+      getExecutionStats: FunctionReference<
+        "mutation",
+        "public",
+        { workflowId: Id<"emailWorkflows"> },
+        {
+          byNodeType: any;
+          byStatus: any;
+          pendingWithFutureSchedule: number;
+          sampleEmails: Array<string>;
+          total: number;
+        }
+      >;
+      getFailedExecutions: FunctionReference<
+        "mutation",
+        "public",
+        { workflowId: Id<"emailWorkflows"> },
+        Array<any>
+      >;
+      resetFailedExecutions: FunctionReference<
+        "mutation",
+        "public",
+        {
+          dryRun?: boolean;
+          spreadMinutes?: number;
+          workflowId: Id<"emailWorkflows">;
+        },
+        { found: number; reset: number }
+      >;
+      spreadPendingExecutions: FunctionReference<
+        "mutation",
+        "public",
+        {
+          dryRun?: boolean;
+          spreadMinutes?: number;
+          workflowId: Id<"emailWorkflows">;
+        },
+        { found: number; hasMore: boolean; message: string; updated: number }
       >;
     };
     importPlugins: {
@@ -23886,6 +24004,21 @@ export declare const internal: {
       "internal",
       { error: string; executionId: Id<"workflowExecutions"> },
       null
+    >;
+    processBulkEnrollment: FunctionReference<
+      "action",
+      "internal",
+      {
+        batchNumber: number;
+        cursor?: string;
+        noTags?: boolean;
+        storeId: string;
+        tagId?: Id<"emailTags">;
+        totalEnrolled: number;
+        totalSkipped: number;
+        workflowId: Id<"emailWorkflows">;
+      },
+      any
     >;
     processScheduledExecutions: FunctionReference<
       "mutation",

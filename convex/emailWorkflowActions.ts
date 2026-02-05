@@ -630,14 +630,14 @@ export const executeWorkflowNode = internalAction({
       return null;
     }
 
-    // Calculate delay if next node is a delay node OR if current was delay
-    let delayMs = 0;
-    if (nextNode.type === "delay" || currentNode.type === "delay") {
-      const delayNode = currentNode.type === "delay" ? currentNode : nextNode;
-      const delayData = delayNode.data || {};
+    // Handle delay nodes properly - set currentNodeId to the DELAY node so we can track contacts waiting
+    if (nextNode.type === "delay") {
+      // Calculate delay from the delay node
+      const delayData = nextNode.data || {};
       const delayValue = delayData.delay || delayData.delayValue || 1;
       const delayUnit = delayData.delayUnit || "days";
 
+      let delayMs = 0;
       switch (delayUnit) {
         case "minutes":
           delayMs = delayValue * 60 * 1000;
@@ -651,18 +651,40 @@ export const executeWorkflowNode = internalAction({
         default:
           delayMs = delayValue * 24 * 60 * 60 * 1000;
       }
+
+      const scheduledFor = Date.now() + delayMs;
+
+      // Set currentNodeId to the DELAY node (so we can see contacts waiting in delay)
+      await ctx.runMutation(internal.emailWorkflows.advanceExecution, {
+        executionId: args.executionId,
+        nextNodeId: nextNode.id, // Stay at the delay node
+        scheduledFor,
+      });
+
+      console.log(`[EmailWorkflows] Contact entering delay node ${nextNode.id}, will continue at ${new Date(scheduledFor).toISOString()}`);
+      return null;
     }
 
-    // Schedule next node
-    const scheduledFor = Date.now() + delayMs;
+    // If current node WAS a delay, we're exiting the delay - move to next node immediately
+    if (currentNode.type === "delay") {
+      await ctx.runMutation(internal.emailWorkflows.advanceExecution, {
+        executionId: args.executionId,
+        nextNodeId: nextNode.id,
+        scheduledFor: Date.now(), // Execute immediately
+      });
 
+      console.log(`[EmailWorkflows] Exiting delay, advancing to node ${nextNode.id}`);
+      return null;
+    }
+
+    // Normal case - no delay involved, advance immediately
     await ctx.runMutation(internal.emailWorkflows.advanceExecution, {
       executionId: args.executionId,
       nextNodeId: nextNode.id,
-      scheduledFor,
+      scheduledFor: Date.now(),
     });
 
-    console.log(`[EmailWorkflows] Advanced to node ${nextNode.id}, scheduled for ${new Date(scheduledFor).toISOString()}`);
+    console.log(`[EmailWorkflows] Advanced to node ${nextNode.id}`);
 
     return null;
   },

@@ -26,12 +26,14 @@ crons.interval(
   {}
 );
 
-crons.interval(
-  "process workflow executions",
-  { minutes: 5 },
-  internal.workflowActions.processWorkflowExecutions,
-  {}
-);
+// DISABLED - was causing OCC conflicts with emailWorkflowActions cron
+// Both were processing the same workflowExecutions table
+// crons.interval(
+//   "process workflow executions",
+//   { minutes: 5 },
+//   internal.workflowActions.processWorkflowExecutions,
+//   {}
+// );
 
 crons.interval(
   "process email workflow executions",
