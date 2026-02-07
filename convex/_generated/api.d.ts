@@ -23900,6 +23900,18 @@ export declare const internal: {
       },
       null
     >;
+    batchReEnrollStuckExecutions: FunctionReference<
+      "action",
+      "internal",
+      {
+        batchNumber?: number;
+        stuckAtNodeId: string;
+        targetNodeId: string;
+        totalReEnrolled?: number;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { message: string; totalReEnrolled: number }
+    >;
     batchResumeFailedExecutions: FunctionReference<
       "action",
       "internal",
@@ -24023,6 +24035,12 @@ export declare const internal: {
       { color?: string; description?: string; name: string; storeId: string },
       Id<"emailTags">
     >;
+    getSampleCompletedExecutions: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; workflowId: Id<"emailWorkflows"> },
+      any
+    >;
     getStoreByClerkId: FunctionReference<
       "query",
       "internal",
@@ -24074,6 +24092,17 @@ export declare const internal: {
       "internal",
       {},
       null
+    >;
+    reEnrollStuckCompletedExecutions: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        batchSize?: number;
+        stuckAtNodeId: string;
+        targetNodeId: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { hasMore: boolean; reEnrolled: number }
     >;
     removeTagFromContactInternal: FunctionReference<
       "mutation",

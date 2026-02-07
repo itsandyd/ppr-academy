@@ -5,36 +5,14 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
+// DEPRECATED: This processor has been replaced by emailWorkflowActions.ts
+// Its cron was disabled in crons.ts due to OCC conflicts.
+// Do NOT re-enable. All workflow processing goes through emailWorkflowActions.
 export const processWorkflowExecutions = internalAction({
   args: {},
-  handler: async (ctx) => {
-    const dueExecutions = await ctx.runQuery(internal.workflowHelpers.getDueExecutions, {
-      limit: 50,
-    });
-
-    console.log(`[Workflow] Processing ${dueExecutions.length} due executions`);
-
-    let processed = 0;
-    let failed = 0;
-
-    for (const execution of dueExecutions) {
-      try {
-        await ctx.runAction(internal.workflowActions.processExecution, {
-          executionId: execution._id,
-        });
-        processed++;
-      } catch (error) {
-        console.error(`[Workflow] Failed to process execution ${execution._id}:`, error);
-        await ctx.runMutation(internal.workflowHelpers.markExecutionFailed, {
-          executionId: execution._id,
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
-        });
-        failed++;
-      }
-    }
-
-    console.log(`[Workflow] Complete: ${processed} processed, ${failed} failed`);
-    return { processed, failed };
+  handler: async () => {
+    console.log(`[Workflow] DEPRECATED - this processor is disabled. Use emailWorkflowActions instead.`);
+    return { processed: 0, failed: 0 };
   },
 });
 

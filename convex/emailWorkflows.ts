@@ -3220,6 +3220,162 @@ export const fastForwardAllDelays = mutation({
 });
 
 /**
+ * Re-enroll completed executions that got stuck at a specific node
+ * Resets them to pending at a new target node
+ * Processes in batches to avoid OCC conflicts
+ */
+export const reEnrollStuckCompletedExecutions = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    stuckAtNodeId: v.string(),
+    targetNodeId: v.string(),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    reEnrolled: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const limit = args.batchSize || 200;
+
+    // Find completed executions stuck at the specified node
+    const stuckExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "completed")
+      )
+      .take(limit + 1); // Take one extra to check if there are more
+
+    // Filter to only those stuck at the specified node
+    const toReEnroll = stuckExecs
+      .filter((e) => e.currentNodeId === args.stuckAtNodeId)
+      .slice(0, limit);
+
+    for (const exec of toReEnroll) {
+      await ctx.db.patch(exec._id, {
+        status: "pending" as const,
+        currentNodeId: args.targetNodeId,
+        scheduledFor: Date.now(),
+        completedAt: undefined,
+      });
+    }
+
+    // Check if there might be more (rough check)
+    const hasMore = stuckExecs.length > limit ||
+      stuckExecs.filter((e) => e.currentNodeId === args.stuckAtNodeId).length >= limit;
+
+    return { reEnrolled: toReEnroll.length, hasMore };
+  },
+});
+
+/**
+ * Batch re-enrollment action - processes re-enrollment in batches with delays
+ * to avoid overwhelming Convex OCC and Resend rate limits
+ */
+export const batchReEnrollStuckExecutions = internalAction({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    stuckAtNodeId: v.string(),
+    targetNodeId: v.string(),
+    totalReEnrolled: v.optional(v.number()),
+    batchNumber: v.optional(v.number()),
+  },
+  returns: v.object({
+    totalReEnrolled: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    let totalReEnrolled = args.totalReEnrolled || 0;
+    let batchNumber = args.batchNumber || 0;
+    let hasMore = true;
+    const BATCHES_PER_INVOCATION = 10; // 10 batches of 200 = 2000 per invocation
+    let batchesProcessed = 0;
+
+    while (hasMore && batchesProcessed < BATCHES_PER_INVOCATION) {
+      const result = await ctx.runMutation(
+        internal.emailWorkflows.reEnrollStuckCompletedExecutions,
+        {
+          workflowId: args.workflowId,
+          stuckAtNodeId: args.stuckAtNodeId,
+          targetNodeId: args.targetNodeId,
+          batchSize: 200,
+        }
+      );
+
+      totalReEnrolled += result.reEnrolled;
+      hasMore = result.hasMore && result.reEnrolled > 0;
+      batchNumber++;
+      batchesProcessed++;
+
+      console.log(
+        `[ReEnroll] Batch ${batchNumber}: re-enrolled ${result.reEnrolled}, total: ${totalReEnrolled}, hasMore: ${hasMore}`
+      );
+
+      if (!hasMore) break;
+    }
+
+    if (hasMore) {
+      // Schedule next batch with a 2-second delay to let the cron process some
+      await ctx.scheduler.runAfter(
+        2000,
+        internal.emailWorkflows.batchReEnrollStuckExecutions,
+        {
+          workflowId: args.workflowId,
+          stuckAtNodeId: args.stuckAtNodeId,
+          targetNodeId: args.targetNodeId,
+          totalReEnrolled,
+          batchNumber,
+        }
+      );
+
+      return {
+        totalReEnrolled,
+        message: `Re-enrolled ${totalReEnrolled} so far (batch ${batchNumber}), continuing in background...`,
+      };
+    }
+
+    return {
+      totalReEnrolled,
+      message: `Done! Re-enrolled ${totalReEnrolled} executions to target node. The cron will process them at ~3000/hour.`,
+    };
+  },
+});
+
+/**
+ * Diagnostic: Get sample completed executions for a workflow
+ * Shows timing to help verify emails were actually sent
+ */
+export const getSampleCompletedExecutions = internalQuery({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    limit: v.optional(v.number()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const execs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "completed")
+      )
+      .take(args.limit || 5);
+
+    return execs.map((e) => ({
+      id: e._id,
+      email: e.customerEmail,
+      createdAt: new Date(e._creationTime).toISOString(),
+      startedAt: e.startedAt ? new Date(e.startedAt).toISOString() : null,
+      completedAt: e.completedAt ? new Date(e.completedAt).toISOString() : null,
+      currentNodeId: e.currentNodeId,
+      durationHours: e.completedAt && e.startedAt
+        ? ((e.completedAt - e.startedAt) / 3600000).toFixed(1)
+        : e.completedAt
+          ? ((e.completedAt - e._creationTime) / 3600000).toFixed(1)
+          : null,
+    }));
+  },
+});
+
+/**
  * Diagnostic: List all workflows with their pending/failed execution counts
  * Used to quickly find which workflow has stuck executions
  */
