@@ -87,6 +87,9 @@ Use these stats in posts:
 
 ## Thread 1: AI Course Generator
 
+**PPR Academy Feature Description:**
+PPR Academy's AI Course Generator is a production-grade multi-agent system powered by GPT-4o that transforms your expertise into structured, professional courses in minutes instead of months. The system deploys five specialized AI agents working in an orchestrated pipeline: a Research Agent (temperature 0.3) that runs Tavily web searches to gather current industry best practices across 5-15 results per query, a Structure Agent (temperature 0.7) that designs pedagogically-sound curriculum with JSON schema validation enforcing exact module/lesson/chapter counts, a Content Agent (temperature 0.8) that writes 800-1,200 words of video-script-ready content per chapter with a built-in content tracker that prevents topic repetition across chapters, an Image Agent that sources visuals from Unsplash with curated fallback collections for synthesizer, mixing, and production imagery, and a Quality Agent that scores output across five metrics: Topic Focus, Content Depth, Structure Coherence, Learning Objectives, and Technical Accuracy. The system processes agents in optimized parallel phases—Research + Image run simultaneously, then Structure sequentially, then Content + Quality in parallel—generating a default structure of 4 modules, 12 lessons, and 36 chapters. It supports 20+ music production categories from Hip-Hop Production to Synthesis, with strict topic enforcement prompts that prevent content drift. Creators input their topic, skill level (beginner/intermediate/advanced), and optional learning objectives—the AI outputs complete module breakdowns, lesson-by-lesson scripts, and chapter content ready for recording with suggested visuals. A Fast Generation mode produces outlines in 30-60 seconds, while full generation takes 3-5 minutes. Every chapter supports Mux video hosting, ElevenLabs text-to-speech narration, and drip content scheduling. Creators retain full editorial control through a drag-and-drop course editor to add their voice, reorder content, and inject personal examples.
+
 ### Hook Tweet (1/6):
 "I just turned 3 bullet points into a complete 40-lesson course.
 
@@ -142,6 +145,9 @@ Your knowledge is valuable. AI just removed the barrier to sharing it.
 ---
 
 ## Thread 2: Beat Lease System
+
+**PPR Academy Feature Description:**
+PPR Academy's Beat Lease System provides producers with a complete, legally-sound infrastructure for selling beats at four industry-standard license tiers with automatic PDF contract generation via pdf-lib and tier-based file delivery. The four tiers are: Basic (MP3 + WAV delivery, 5,000 distribution cap, 100,000 streaming cap, credit required), Premium (MP3 + WAV + stems, 50,000 distribution cap, 1,000,000 streaming cap, music video rights, credit required), Unlimited (MP3 + WAV + stems + trackouts, no distribution or streaming limits, credit optional), and Exclusive (all files including project files, no limits, beat permanently removed from store with exclusiveSoldAt timestamp and marketplace delisting). Each tier is individually configurable per beat—creators set custom prices, toggle commercial use, radio broadcasting, and music video rights per tier. When a customer purchases, the system automatically determines file delivery based on tier type, generates a legally-binding PDF contract with sections covering Grant of Rights, Usage Rights, Distribution Limits, Files Included, Credit Requirements, Exclusivity Terms, Restrictions, Termination Clauses, and Signature Blocks with dates. All license terms are snapshotted into the beatLicenses table at purchase time—price, distribution/streaming limits, and rights are permanently locked regardless of future tier changes. The system prevents duplicate exclusive purchases via composite database indexes (userId + beatId). Beat metadata supports BPM, musical key, and genre tagging. Purchases route through Stripe with creator payouts tracked in the creatorPayouts table, including platform fees, processing fees, and net payout calculations. An interactive audio waveform component built with the Web Audio API lets buyers preview beats with 100-bar normalized amplitude visualization, play/pause controls, and interactive seeking before purchase.
 
 ### Hook Tweet (1/6):
 "Sold a beat for $50.
@@ -199,6 +205,9 @@ Set up tiered licensing today: [Link]"
 
 ## Thread 3: Follow Gates
 
+**PPR Academy Feature Description:**
+PPR Academy's Follow Gate system transforms every free download into a triple-win growth opportunity by requiring verified social actions before content delivery. The system supports 13 platforms: Instagram, TikTok, YouTube, Spotify (with full OAuth verification using user-follow-read and user-follow-modify scopes), SoundCloud, Apple Music, Deezer, Twitch, Mixcloud, Facebook, Twitter/X, Bandcamp, and email capture. When you attach a Follow Gate to any free product, course, or bundle, users see a step-based wizard interface—FollowGateWizard walks them through each required platform follow with progress tracking. Creators configure which platforms are mandatory vs. optional, set minimum follow requirements (e.g., "follow at least 2 of 4 platforms"), customize the gate message, and provide their social profile URLs through the FollowGateSettings component. Each submission records the user's email (normalized and lowercased), name, followed platforms as a tracked object, IP address, and user agent—with rate limiting of 5 submissions per email per hour to prevent abuse. On successful submission, the system triggers emailContactSync.syncContactFromFollowGate to automatically add the lead to the creator's email contact list with source tracking. Download tracking monitors hasDownloaded status, download count, and last download timestamp. Real-time analytics provide total submissions, total downloads, per-platform follow rate breakdown, conversion rate (downloads/submissions), and a recent submissions feed. Follow Gates are configurable on digitalProducts, courses, and bundles via followGateEnabled, followGateRequirements (with per-platform toggles), and followGateSocialLinks fields directly in the product schema. Every free piece of content now simultaneously grows your social following across 13 platforms, builds your email list, and delivers value to fans—with verified OAuth for platforms like Spotify ensuring genuine follows, not just checkbox clicks.
+
 ### Hook Tweet (1/5):
 "Gave away 500 sample packs last month.
 
@@ -251,6 +260,9 @@ Set up Follow Gates: [Link]"
 ---
 
 ## Thread 4: Email Workflow Builder
+
+**PPR Academy Feature Description:**
+PPR Academy's Email Workflow Builder is a visual automation platform built on React Flow with 14 distinct node types and 22 trigger types that lets creators design sophisticated email sequences without any coding. The drag-and-drop canvas supports: TriggerNode (22 trigger types including lead_signup, product_purchase, cart_abandon, tag_added, segment_member, webhook, page_visit, birthday, anniversary, email_reply, and 5 admin-level triggers like all_users, new_signup, user_inactivity), EmailNode (sends templated emails via Resend API with domain verification for SPF/DKIM/DMARC), DelayNode (configurable in minutes, hours, days, or weeks), ConditionNode (branch on email_opened, clicked_link, has_tag, or time-based conditions), ActionNode (add/remove tags, add to audience list, send notifications), StopNode, WebhookNode (POST/GET/PUT to external services), SplitNode (A/B test splitting by percentage), NotifyNode, GoalNode (track purchase/signup/link_click conversions), CourseCycleNode (perpetual course nurture loops), CourseEmailNode, PurchaseCheckNode, and CycleLoopNode. Nodes are color-coded: orange for triggers, red for emails, blue for delays, purple for conditions, cyan for actions, green for webhooks, yellow for goals. Workflow sequences are categorized as welcome, buyer, course_student, coaching_client, lead_nurture, product_launch, reengagement, winback, or custom. Pre-built templates include Producer Welcome Series (5 days, 3 emails), Purchase Thank You Sequence (7 days), Re-engagement Campaign (14 days), Course Completion Celebration, and Beat Lease Nurture (10 days). The system processes executions every 5 minutes via cron, tracking status (pending/running/completed/failed/cancelled) with full execution logs per contact. The integrated CRM supports ActiveCampaign-style contacts with 15+ custom fields (daw, typeOfMusic, goals, musicAlias, studentLevel, genreSpecialty), email A/B testing with statistical significance detection, and a lead scoring system that grades contacts A through D based on email engagement, course engagement, purchase activity, and automatic score decay for inactivity. Email templates are organized by marketing funnel stage (TOFU/MOFU/BOFU) across sample packs, courses, beat leases, and coaching verticals with estimated open rates per template. Email health monitoring tracks deliverability scores, bounce rates, spam complaint rates, and provides automated recommendations.
 
 ### Hook Tweet (1/6):
 "I send 50+ emails a week.
@@ -310,6 +322,9 @@ Start building: [Link]"
 ---
 
 ## Thread 5: Pre-Save Campaigns for Releases
+
+**PPR Academy Feature Description:**
+PPR Academy's Pre-Save Campaign system provides a complete release marketing infrastructure tracked in the releasePreSaves table with OAuth-based automatic pre-saves across 5 streaming platforms: Spotify (with spotifyAccessToken/spotifyRefreshToken for authenticated pre-saves), Apple Music (with appleMusicUserToken), Deezer, Tidal, and Amazon Music. Each pre-save captures the fan's email, name, source (email/social/direct), IP address, and platform confirmations as individual boolean fields. The system integrates directly with PPR's email workflow engine—every pre-save can trigger automated drip campaigns tracked via enrolledInDripCampaign and dripCampaignEnrollmentId fields. The email sequence includes: immediate confirmation (preSaveConfirmationSent flag), 48-hour hype reminder (followUp48hEmailSent flag), release day alert (releaseDayEmailSent flag), and post-release playlist pitch (playlistPitchEmailSent flag). Post-release engagement tracking monitors hasStreamed (whether the fan actually listened) and addedToPlaylist (whether they added it to a playlist). All pre-saves are indexed by release, email, creator, store, and a composite email+release index for deduplication. The release product type integrates with PPR's digital products system, supporting cover art, track previews, countdown timers, and multi-platform streaming links. Analytics track pre-save counts by platform, email engagement across the drip sequence, and post-release streaming behavior so creators can optimize future campaigns. This multi-touch approach—pre-save capture, email nurturing, release day activation, and playlist promotion—signals algorithmic momentum to streaming platforms, improving editorial playlist placement odds.
 
 ### Hook Tweet (1/6):
 "My last release hit 10,000 streams day one.
@@ -373,6 +388,9 @@ Create your pre-save campaign: [Link]"
 
 ## Thread 6: Custom Creator Storefronts
 
+**PPR Academy Feature Description:**
+PPR Academy's Custom Creator Storefront replaces scattered link-in-bio tools with a fully functional e-commerce destination stored in the stores table with comprehensive customization. Each store supports: name, slug (auto-generated, unique), avatar, logoUrl, bannerImage, bio, and custom domain with domain verification status tracking (pending/verified/active). Social links support 14 platforms in two formats—a legacy object format (website, twitter, instagram, linkedin, youtube, tiktok, spotify, soundcloud, appleMusic, bandcamp, threads, discord, twitch, beatport) and a v2 array format supporting multiple links per platform with custom labels. The storefront layout features a dark theme with gradient orbs and responsive product grids (1 column mobile, 2 tablet, 3 desktop), hero section with avatar and stats cards showing items, students, and sales counts, a filter bar for sorting/filtering, and product pinning (isPinned + pinnedAt fields) so creators can feature products at the top. Storefronts support 6 plan tiers: free, starter, creator, creator_pro, business, and early_access—each with Stripe subscription management (stripeCustomerId, stripeSubscriptionId, subscriptionStatus tracking active/trialing/past_due/canceled/incomplete, trialEndsAt). Built-in email configuration lets creators set fromEmail, fromName, replyToEmail with testing and monthly send tracking. Notification integrations support Slack and Discord webhooks. The getStoreStats query provides comprehensive analytics: total products, courses, enrollments, downloads, revenue, average rating, follower count, and free vs. paid product splits. Social proof queries (getCourseSocialProof, getProductSocialProof) show enrollments this week/month, reviews, and ratings. The getStoreStudents query provides a student roster with purchase data, while getStudentDetailedProgress tracks per-student course progress. Every storefront is a complete business hub—not just a page of links.
+
 ### Hook Tweet (1/5):
 "Still using Linktree?
 
@@ -420,6 +438,9 @@ Build a storefront that converts: [Link]"
 ---
 
 ## Thread 7: Text-to-Speech Narration
+
+**PPR Academy Feature Description:**
+PPR Academy's Text-to-Speech Narration system eliminates the biggest barrier to course creation: the voiceover process. Powered by ElevenLabs API integration (ELEVEN_LABS_API_KEY), the system converts written chapter content into broadcast-quality audio narration through a managed generation pipeline. The flow is: startAudioGeneration() mutation sets the chapter's audioGenerationStatus to "generating," then an internal action fetches the chapter content (description/HTML), calls the /api/generate-audio endpoint which interfaces with ElevenLabs, and on success updates audioGenerationStatus to "completed" with the audioUrl stored directly on the courseChapter record along with an audioGeneratedAt timestamp. If generation fails, the status moves to "failed" with an audioGenerationError message. Each chapter in the courseChapters table tracks both audio and video generation independently with separate status fields (audioGenerationStatus and videoGenerationStatus), allowing creators to generate narration for specific chapters without affecting others. The generated audio integrates with Mux video hosting—chapters also support muxAssetId, muxPlaybackId, muxUploadId, and muxAssetStatus (waiting/preparing/ready/errored) with videoDuration tracking in seconds. Creators write or paste their script (or use AI-generated scripts from the Course Generator which produces 800-1,200 words per chapter), select their voice, and generate polished audio files ready to overlay on screen recordings. This solves self-consciousness about voice, background noise in home studios, accent concerns for global audiences, and endless re-takes. The result: faster production, consistent audio quality, and courses that actually get finished and published.
 
 ### Hook Tweet (1/5):
 "Recorded my own voiceover.
@@ -471,6 +492,9 @@ Generate your first AI voiceover: [Link]"
 ---
 
 ## Thread 8: Coaching Session Management
+
+**PPR Academy Feature Description:**
+PPR Academy's Coaching Session Management system transforms the administrative chaos of 1-on-1 mentoring into a fully automated experience tracked in the coachingSessions table. Each session records: productId (linking to a coaching product in digitalProducts), coachId, studentId, scheduledDate (Unix timestamp), startTime/endTime (HH:MM format), duration in minutes, totalCost, and status (SCHEDULED/IN_PROGRESS/COMPLETED/CANCELLED). The core automation is Discord channel management via a cron job running every 15 minutes in coachingSessionManager.ts: 2 hours before a session, the system automatically creates a Discord role for the session, creates a private voice channel, restricts access to the session role, assigns the role to both coach and student, and marks discordSetupComplete. 1 hour after the session ends, the system automatically deletes the voice channel and role, marks discordCleanedUp, preventing channel/role bloat. Automated reminders trigger at 24 hours and 1 hour before sessions (tracked via reminderSent flag with 30-minute buffer windows) to dramatically reduce no-shows. Coaching products in the digitalProducts table support configurable duration, sessionType (video/audio/phone), custom form fields for intake, availability settings, and discordRoleId. The coachingProducts queries support getCoachingProductsByStore, getPublishedCoachingProductsByStore, getCoachingProductsByCoach, and getCoachingProductById. Sessions are indexed by coachId, studentId, and scheduledDate for fast lookups. All payments process through Stripe checkout sessions at /api/coaching/create-checkout-session with creator payouts tracked in the creatorPayouts table including platform fees, processing fees, and net payout calculations. The system supports single sessions, packages, and ongoing mentorship tiers with different pricing—all with zero manual scheduling overhead.
 
 ### Hook Tweet (1/5):
 "Offered 1-on-1 coaching.
@@ -524,6 +548,9 @@ Set up automated coaching: [Link]"
 
 ## Thread 9: Creator Subscription Tiers
 
+**PPR Academy Feature Description:**
+PPR Academy's Creator Subscription Tiers enable predictable, recurring revenue through a full membership infrastructure stored in subscriptionPlans and membershipSubscriptions tables. Creators define plans with: name, description, tier number (1=Basic, 2=Pro, 3=VIP), monthlyPrice and yearlyPrice (in cents), currency, features array (list of benefits), specific courseAccess (array of course IDs) or hasAllCourses (boolean for full library access), specific digitalProductAccess or hasAllProducts, discountPercentage for additional purchases, configurable trialDays, maxStudents limit, and Stripe price IDs for both monthly and yearly billing. Subscriptions track: status (active/trialing/past_due/expired/canceled/paused), billingCycle (monthly/yearly/lifetime), currentPeriodStart/End, cancelAtPeriodEnd, failedPaymentAttempts, and nextBillingDate. The system handles the full lifecycle: createSubscription (with optional trials), upgradeSubscription, downgradeSubscription, cancelSubscription (immediately or at period end), reactivateSubscription, and renewSubscription—all through dedicated mutations. The checkSubscriptionAccess query verifies whether a user can access specific courses or products based on their active subscription tier. Store-level analytics via getStoreSubscriptionStats provide revenue and churn metrics. Payment plans support installments via the paymentPlans table with configurable frequency (weekly/biweekly/monthly), down payments, and automatic installment tracking. All billing routes through Stripe at /api/subscriptions/create-checkout with creator payouts tracked including platform fees and processing fees. The subscription model transforms the creator-fan relationship from one-time transactions to ongoing community value.
+
 ### Hook Tweet (1/5):
 "Made $2,000 from one course launch.
 
@@ -572,6 +599,9 @@ Create subscription tiers: [Link]"
 ---
 
 ## Thread 10: Lead Scoring
+
+**PPR Academy Feature Description:**
+PPR Academy's Lead Scoring system automatically ranks email subscribers by engagement level using the leadScores table with a multi-dimensional scoring model. Each contact accumulates points across four tracked dimensions: emailEngagement (opens, clicks, replies), courseEngagement (course activity and progress), purchaseActivity (transactions and spending), and general activity. Scores range from 0 to 1000+ and are automatically graded: A (300+ points) for purchase-ready superfans, B (200-299) for highly engaged contacts, C (100-199) for warm leads needing nurturing, and D (0-99) for cold contacts requiring re-engagement. The system tracks totalEmailsOpened, totalEmailsClicked, totalPurchases, and daysSinceLastActivity as concrete counters. A scoreHistory array stores the last 10 score changes with reasons, providing a timeline of engagement shifts. Automatic score decay via lastDecayAt penalizes inactivity over time—contacts who stop engaging gradually lose points. The contactActivity table logs every engagement event with types including: email_opened, email_clicked, email_replied, email_bounced, email_complained, purchase, course_enrolled, tag_added, tag_removed, score_updated, manual_note, and form_submitted—each with pointsAdded tracking. Lead scores integrate directly into email workflow conditions: ConditionNode in the workflow builder can branch automation paths based on score thresholds, automatically routing hot leads to exclusive offers and cold leads to win-back campaigns. The emailSegments table supports dynamic segments with conditions using operators (equals, not_equals, greater_than, less_than, contains, in, not_in) with AND/OR logic, enabling segments like "score > 200 AND has_tag 'course_buyer'" that auto-update as contacts change. Contact records in the contacts table maintain score, replyPoints, purchasePoints, and totalPoints as separate fields alongside 15+ custom fields specific to music producers (daw, typeOfMusic, goals, musicAlias, studentLevel, genreSpecialty, howLongProducing). This granular scoring makes your marketing intelligent and your relationships data-driven.
 
 ### Hook Tweet (1/5):
 "10,000 email subscribers.
@@ -625,6 +655,9 @@ Start scoring your leads: [Link]"
 
 ## Thread 11: Gamification & Achievements
 
+**PPR Academy Feature Description:**
+PPR Academy's Gamification & Achievements system applies proven game design psychology through three interconnected subsystems tracked in dedicated database tables. The XP & Levels system (userXP table) awards XP for every learning action—100 XP per level with automatic level-up detection. The Achievements system (userAchievements table) tracks 16+ achievement types with progress bars (current/target) and auto-unlock: student achievements include first-course (25 XP), first-completion (100 XP), five-courses (250 XP), first-certificate (100 XP), 7-day-streak (75 XP), 30-day-streak (500 XP), and community-contributor (150 XP); creator achievements include first-product (50 XP), first-sale (100 XP), revenue-100 (150 XP), revenue-1000 (300 XP), ten-products (200 XP), 100-students (250 XP), and top-seller (1,000 XP). A separate Creator XP system uses non-linear progression (Math.sqrt(xp/100)+1, capped at level 100) with granular action rewards: product_created (25 XP), course_published (100 XP), first_sale (150 XP), five_star_review (50 XP), revenue_milestone_10000 (1,000 XP). The Streak system (learningStreaks table) tracks currentStreak, longestStreak, lastActivityDate (daily tracking prevents double-counting), totalDaysActive, totalHoursLearned, and streakMilestones array for [7, 30, 100, 365] day milestones. Three Leaderboard types in leaderboards.ts provide competitive context: Creator Leaderboard by revenue (with "Top Seller" and "Rising Star" badges), Student Leaderboard by XP (with "Scholar" badge), and Activity Leaderboard by streak (with fire/star/sparkle badges). Each supports weekly, monthly, and all-time periods. getUserPosition returns rank and percentile (0-100) across all three boards. Course progress tracking (userProgress table) records per-chapter completion with timeSpent, completedAt, and lastAccessedAt, with getCourseProgress returning totalChapters, completedChapters, completionPercentage, isComplete, hasCertificate, and totalTimeSpent. The studentProgress table adds risk detection (isAtRisk, needsHelp flags), chaptersPerWeek velocity, estimatedCompletionDate, and engagementScore (0-100).
+
 ### Hook Tweet (1/5):
 "Course completion rate: 8%.
 
@@ -676,6 +709,9 @@ Add achievements and watch completion rates soar: [Link]"
 
 ## Thread 12: Certificates & Verification
 
+**PPR Academy Feature Description:**
+PPR Academy's Certificates & Verification system automatically generates verifiable credentials when a student completes 100% of a course, stored in the certificates table with comprehensive tracking. The generation flow is: markChapterComplete() mutation triggers calculateCourseProgressInternal() which checks for 100% completion, then calls checkAndIssueCertificate() internal mutation, which calls generateCertificate() to create the record—with automatic duplicate prevention (checks for existing certificate on that user+course combo via composite index). Each certificate includes: userId, userName, userEmail, courseId, courseTitle, instructorId, instructorName, a unique certificateId (format: CERT-{base36 timestamp}-{random}), completionDate, issueDate, totalChapters, completedChapters, completionPercentage (always 100), optional timeSpent in minutes, and a human-friendly verificationCode in the format "ABC-123-XYZ" (9 characters, 3 groups of 3, excluding confusing characters like I/O/L for easy typing). Each certificate has isValid status (can be revoked by owner or instructor), verificationCount tracking how many times it's been verified, and lastVerifiedAt timestamp. The verifyCertificate() mutation logs every verification attempt in the certificateVerifications table with verifierIp, verifierUserAgent, isValid result, and timestamp—providing an audit trail. Certificates support PDF storage via Convex's built-in storage system (pdfStorageId and pdfUrl fields). The public verification page at /verify allows anyone to look up a certificate by verification code (case-insensitive) via getCertificateByCode(), displaying completion details and preventing fraud. Students access their certificates via getUserCertificates() (ordered newest first), check specific courses via hasCertificate(), and can share directly to LinkedIn or download high-resolution PDFs for portfolios. For self-taught producers without formal education, verified certificates with unique IDs and public verification pages provide credibility when applying for studio jobs, freelance gigs, or collaboration opportunities.
+
 ### Hook Tweet (1/5):
 "'What proof do you have that you can mix?'
 
@@ -724,6 +760,9 @@ Start learning with verified completion: [Link]"
 ---
 
 ## Thread 13: Sample Pack Creator
+
+**PPR Academy Feature Description:**
+PPR Academy's Sample Pack Creator provides a complete audio product infrastructure tracked across two tables: samplePacks (pack-level) and audioSamples (individual file-level). Each audio sample in the audioSamples table stores: title, description, storageId (Convex file storage), fileUrl (public streaming URL), fileName, fileSize (bytes), duration (seconds), format (wav/mp3/aiff), and rich metadata including bpm, key (C/Am/D# etc.), genre, subGenre, tags array, and category (drums/bass/synth/vocals/fx/melody/loops/one-shots). Critically, each sample stores waveformData as a normalized peaks array for browser-based visualization via the AudioWaveform component (Web Audio API, 100 bars, interactive seeking, play/pause controls, configurable colors and dimensions). Samples track peakAmplitude, creditPrice (for credit-based purchases), plays, downloads, favorites counters, and licenseType (royalty-free/exclusive/commercial) with optional licenseTerms. Individual samples can be sold separately via isIndividuallySellable and individualPrice fields, or grouped into packs via packIds array. At the pack level, samplePacks aggregate: sampleIds array, totalSamples, totalSize (bytes), totalDuration (seconds), genres array, categories array, tags array, bpmRange (min/max), creditPrice, downloads, favorites, and revenue (total credits earned) counters. The sampleDownloads table tracks every transaction with: userId, sampleId/packId, creditAmount, transactionId, downloadCount (re-download support), lastDownloadAt, licenseType, and unique licenseKey. The AudioPlayer component supports three variants (default/compact/minimal) with play/pause, seek slider, time display, volume control with mute, and error handling. Demo track support lets creators upload a composition showcasing samples in action—the demoAudioUrl field on products. Professional presentation with waveform previews, metadata tagging, and demo tracks dramatically increases perceived value compared to generic ZIP files.
 
 ### Hook Tweet (1/5):
 "Uploaded my samples as a ZIP file.
@@ -780,6 +819,9 @@ Create professional sample packs with previews: [Link]"
 
 ## Thread 14: Affiliate System
 
+**PPR Academy Feature Description:**
+PPR Academy's Affiliate System transforms satisfied customers into a commissioned sales force tracked across four dedicated tables: affiliates, affiliateClicks, affiliateSales, and affiliatePayouts. Users apply via applyForAffiliate() (status: pending) with an optional applicationNote. Creators approve via approveAffiliate() (setting custom commissionRate and commissionType: "percentage" or "fixed_per_sale") or reject with rejectionReason. Each affiliate gets a unique affiliateCode (e.g., "JOHN20") with configurable cookieDuration (default 30 days), payoutMethod (stripe/paypal/manual), and payoutEmail. The affiliateClicks table records every click with: visitorId (anonymous tracking), ipAddress, userAgent, referrerUrl, landingPage, and converted boolean linking to orderId. When a tracked visitor purchases within the cookie window, recordAffiliateSale() creates an entry in affiliateSales with: orderAmount, commissionRate, calculated commissionAmount, commissionStatus (pending/approved/paid/reversed), itemType (course/product/subscription), and itemId. The approval workflow lets creators review pending commissions via approveSale() before payout, or reverseSale() for refunds. Batch payouts are created via createAffiliatePayout() which groups approved sales into a single payout record with: amount, currency, status (pending/processing/completed/failed), payoutMethod, transactionId, salesIncluded array, totalSales count, and payoutDate. The completeAffiliatePayout() and failAffiliatePayout() mutations handle final settlement. The affiliate record itself aggregates: totalClicks, totalSales, totalRevenue, totalCommissionEarned, and totalCommissionPaid for at-a-glance performance. getAffiliateStats provides clicks, conversion rate, and earnings. Affiliates can be suspended via suspendAffiliate() and their settings updated via updateAffiliateSettings(). The system creates perfect incentive alignment: affiliates earn on every sale, creators get performance-based marketing, and buyers get trusted peer recommendations.
+
 ### Hook Tweet (1/5):
 "My biggest course promoter last month:
 
@@ -830,6 +872,9 @@ Launch an affiliate program: [Link]"
 ---
 
 ## Thread 15: Notion-Style Notes System
+
+**PPR Academy Feature Description:**
+PPR Academy's Notes System provides two complementary note-taking systems. The Collaborative Notes system (courseNotes table in collaborativeNotes.ts) attaches timestamped notes to specific moments in course videos: each note records courseId, chapterId, userId, content (markdown/rich text), timestamp (seconds in video), and isPublic visibility toggle. createNote() creates timestamped notes at specific video positions (private by default), getChapterNotes() returns a user's own notes plus optionally public notes from classmates sorted by timestamp, getNotesAtTimestamp() returns notes within a configurable time window (default +/-5 seconds) for inline display while watching, and toggleNoteVisibility() switches between public/private. Only the owner can edit or delete their notes. The standalone Notes system (31KB editor component) provides a Notion-style knowledge management hub supporting multiple input methods: paste a YouTube URL for AI transcript extraction with structured notes and timestamps, upload PDFs for AI-powered summaries, or enter webpage URLs for automatic scraping via the content-scraper.ts library. The system integrates with the AI Course Generator pipeline—accumulated research notes can be converted into course outlines using AI to structure collected knowledge into teachable curriculum (the notes-to-course workflow leverages the same multi-agent system that powers course generation). The platform also includes a RAG (Retrieval-Augmented Generation) system built on vector embeddings (embeddings.ts, embeddingActions.ts, rag.ts) enabling semantic search across notes and content. AI conversations (aiConversations.ts) and AI memories (aiMemories.ts) provide persistent, context-aware interactions. Whether you're researching for a new course, saving references during learning, or building a personal wiki of production knowledge, the system transforms scattered information into structured, searchable, and actionable assets.
 
 ### Hook Tweet (1/5):
 "Research scattered across:
@@ -886,6 +931,9 @@ Build a second brain that actually works: [Link]"
 
 ## LinkedIn Post 1: AI Course Generator
 
+**PPR Academy Feature Description:**
+PPR Academy's AI Course Generator is enterprise-grade educational content infrastructure built on a multi-agent AI architecture using GPT-4o with Tavily web search integration. The system deploys five specialized agents in an optimized parallel pipeline: a Research Agent (temperature 0.3, 2K tokens) that runs 4 Tavily web searches with domain-specific queries like "[topic] music production tutorial [skillLevel]" across 5-15 results per query, a Structure Agent (temperature 0.7, 4K tokens) that designs curriculum with JSON schema validation enforcing exact module/lesson/chapter counts, a Content Agent (temperature 0.8, 4K tokens) that generates 800-1,200 words per chapter with a content deduplication tracker maintaining covered concepts, previous chapter summaries, and module progress to prevent repetition across 36+ chapters, an Image Agent that sources visuals from Unsplash with curated fallback collections for music production topics (synthesizer, mixing, production imagery), and a Quality Agent that scores output across five metrics: Topic Focus (target 20%+ mention ratio), Content Depth (target 800+ words/chapter), Structure Coherence, Learning Objectives, and Technical Accuracy—producing an overall 0-100 quality score stored with the course. The architecture processes phases in parallel where possible (Research + Image simultaneously, then Structure, then Content + Quality) with chapters generated in batches of 4 with 500ms rate limiting. The platform supports 20+ music production categories from Hip-Hop Production to Synthesis, with strict topic enforcement prompts preventing content drift. Default output is 4 modules, 12 lessons, 36 chapters. A Fast Generation mode produces outlines in 30-60 seconds. Creators maintain full editorial control through a drag-and-drop course editor supporting module/lesson/chapter management, video URL and duration specifications, Mux video hosting, ElevenLabs text-to-speech narration, and drip content scheduling (days_after_enrollment, specific_date, or after_previous).
+
 **Opening Hook:**
 The music education industry is worth $2.5B annually. Yet most producers who could teach never do.
 
@@ -921,6 +969,9 @@ What's the course you've always wanted to create but never had time for?
 ---
 
 ## LinkedIn Post 2: Creator Economy Infrastructure
+
+**PPR Academy Feature Description:**
+PPR Academy represents a vertical SaaS approach to creator economy infrastructure—a production-grade platform with 270 routes (198 pages + 72 API endpoints), 269 Convex backend files, 216+ React components, and a 6,658-line database schema defining 50+ tables. The platform consolidates what typically requires 7+ separate subscriptions: AI-powered course creation with a 5-agent GPT-4o pipeline generating 36-chapter courses, digital product sales across 20+ product categories (sample-pack, preset-pack, beat-lease, midi-pack, effect-chain, coaching, mixing-service, mastering-service, playlist-curation, release, pdf, and more) with automatic tier-based file delivery, coaching session management with automated Discord channel creation/cleanup (cron every 15 minutes), email marketing automation with a React Flow visual workflow builder supporting 14 node types and 22 trigger types, customizable storefronts with custom domain verification (pending/verified/active) and 14-platform social link support, and comprehensive analytics spanning 19 event types with video analytics (watch duration, drop-off points, playback speed), student progress tracking (risk flags, engagement scores), and store-level revenue dashboards. The integration advantage is multiplicative: Follow Gate submissions automatically sync to the email CRM via emailContactSync, course completion triggers certificate generation which can trigger email workflows, lead scoring dynamically segments contacts across email campaigns, and the affiliate system tracks clicks through to purchases with cookie-based attribution. The music production vertical means native beat licensing with 4 tiers and PDF contract generation, sample pack metadata (key/BPM/genre/category per file with waveform visualization), preset packs specifying 30+ target plugins (serum, vital, massive, omnisphere, fabfilter, etc.) with DAW version requirements, and OAuth-based Spotify/Apple Music pre-save campaigns with drip email sequences. This is 12 core integrations (Clerk, Stripe, ElevenLabs, Mux, Resend, FAL.ai, UploadThing, LangChain, OpenAI, Discord, Instagram Graph API, Tavily) working as a unified system.
 
 **Opening Hook:**
 The creator economy hit $250B in 2024.
@@ -968,6 +1019,9 @@ What tools are you using that you wish talked to each other?
 
 ## LinkedIn Post 3: Email Marketing for Creators
 
+**PPR Academy Feature Description:**
+PPR Academy's Email Marketing system is a 30+ file subsystem spanning emailWorkflows.ts (51KB), emailTemplates.ts (63KB), emailWorkflowActions.ts (17KB), emailCampaigns, emailSegmentation, emailLeadScoring, emailDeliverability, emailHealthMonitoring, emailABTesting, emailContactSync, and emailCreatorSegments (17KB). The visual Workflow Builder built on React Flow supports 14 node types (Trigger, Email, Delay, Condition, Action, Stop, Webhook, Split, Notify, Goal, CourseCycle, CourseEmail, PurchaseCheck, CycleLoop) and 22 trigger types including lead_signup, product_purchase, cart_abandon, tag_added, segment_member, webhook, page_visit, birthday, email_reply, and 5 admin-level triggers (all_users, new_signup, user_inactivity, any_purchase, any_course_complete). Pre-built workflow templates include Producer Welcome Series (5 days, 3 emails + 2 delays), Purchase Thank You Sequence (7 days), Re-engagement Campaign (14 days), Course Completion Celebration, and Beat Lease Nurture (10 days). Email templates are organized by marketing funnel stage (TOFU/MOFU/BOFU) across sample packs, courses, beat leases, and coaching verticals with estimated open rates per template. The integrated CRM (contacts table) supports ActiveCampaign-style contacts with 15+ music-specific custom fields (daw, typeOfMusic, goals, musicAlias, studentLevel, genreSpecialty, howLongProducing), import from ActiveCampaign, and 12 activity types tracked in contactActivity. Lead scoring grades contacts A-D (300+, 200-299, 100-199, 0-99) across emailEngagement, courseEngagement, and purchaseActivity dimensions with automatic score decay. Email campaigns support tag-based targeting (AND/OR mode), exclude tags, resumable batch sending, and per-recipient status tracking (queued/sent/delivered/opened/clicked/bounced/failed). A/B testing supports subject, content, send_time, and from_name variants with statistical significance detection and confidence levels. Email health monitoring tracks deliverability scores, bounce rates, spam complaint rates, and provides automated recommendations. Resend API integration supports custom domain verification with SPF/DKIM/DMARC status tracking. All email sending routes through /api/emails with Resend.
+
 **Opening Hook:**
 I see creators with 50,000 Instagram followers making less than creators with 5,000 email subscribers.
 
@@ -1014,6 +1068,9 @@ What's stopping you from taking email seriously?
 
 ## LinkedIn Post 4: Vertical SaaS for Music
 
+**PPR Academy Feature Description:**
+PPR Academy exemplifies the vertical SaaS thesis with deep, native support for music production workflows that generic platforms can't match. Beat licensing includes four tiers (Basic: 5K distribution/100K streaming caps, Premium: 50K/1M with stems, Unlimited: no caps with trackouts, Exclusive: full ownership transfer with marketplace delisting) with automatic PDF contract generation via pdf-lib covering 9 legal sections (Grant of Rights, Usage Rights, Distribution Limits, Files Included, Credit Requirements, Exclusivity Terms, Restrictions, Termination, Signatures)—terms snapshotted at purchase time in the beatLicenses table. Sample pack products support per-file metadata via the audioSamples table: bpm, key, genre, subGenre, tags, category (drums/bass/synth/vocals/fx/melody/loops/one-shots), waveformData (normalized peaks array for Web Audio API visualization), peakAmplitude, and format (wav/mp3/aiff)—with an AudioWaveform component providing 100-bar interactive playback with seeking. Course categorization speaks the language of production with 20+ categories: Hip-Hop Production, Electronic Music, Mixing & Mastering, Sound Design, Music Theory, Pop/Rock/Trap/House/Techno/Vocal/Jazz/R&B/Ambient Production, Drum Programming, Synthesis, Sampling, Audio Engineering, and Live Performance. Preset products specify compatible plugins across 30+ targets (serum, vital, massive, massive-x, omnisphere, sylenth1, phase-plant, pigments, diva, ana-2, spire, zebra, hive, plus DAW-stock instruments like ableton-wavetable, fl-sytrus, logic-alchemy) with targetPluginVersion, fileFormat (adg/adv/alp), and cpuLoad rating. Effect chain products track abletonVersion (Live 9-12), rackType (audioEffect/instrument/midiEffect/drumRack), effectType array, macroCount, requiresMaxForLive, thirdPartyPlugins, chainImageUrl, and macroScreenshotUrls. Pre-save campaigns use OAuth integration with Spotify (access/refresh tokens) and Apple Music (user tokens) for verified automatic pre-saves. Follow Gates support 13 platforms with OAuth verification. This vertical specificity across 50+ database tables creates compounding advantages that horizontal tools will never match.
+
 **Opening Hook:**
 Horizontal SaaS: Build for everyone, compete with giants.
 
@@ -1057,6 +1114,9 @@ What industry do you think needs purpose-built tools?
 ---
 
 ## LinkedIn Post 5: Future of Music Education
+
+**PPR Academy Feature Description:**
+PPR Academy addresses a critical market inefficiency in music education through three core technology innovations. First, AI Course Generation using a 5-agent GPT-4o pipeline (Research, Structure, Content, Image, Quality) with Tavily web search reduces curriculum development from months to minutes—a Fast Generation mode produces outlines in 30-60 seconds, while full generation creates 4 modules, 12 lessons, and 36 chapters (800-1,200 words each) in 3-5 minutes, with a Quality Agent scoring output across 5 metrics (Topic Focus, Content Depth, Structure Coherence, Learning Objectives, Technical Accuracy). Second, Text-to-Speech narration via ElevenLabs API with a managed generation pipeline (pending → generating → completed/failed status tracking per chapter) eliminates the voiceover obstacle—each chapter independently tracks audioGenerationStatus and videoGenerationStatus, allowing selective narration without affecting other content. Third, the integrated platform combines Mux video hosting (with asset status tracking: waiting/preparing/ready/errored and videoDuration in seconds), Stripe payments (with checkout sessions for courses, products, coaching, subscriptions, bundles, and beats), Resend email marketing (with 22 workflow trigger types and A/B testing with statistical significance), and a gamification system that drives completion through XP leveling (100 XP/level), 16+ achievements, streak tracking (with 7/30/100/365-day milestones), and three leaderboard types. The course structure (Course → Modules → Lessons → Chapters) supports drip content (days_after_enrollment, specific_date, after_previous), per-chapter progress tracking (userProgress table with timeSpent, completedAt, lastAccessedAt), automatic certificate generation at 100% completion (with unique verification codes in ABC-123-XYZ format and public verification pages at /verify), timestamped collaborative notes, lesson-level Q&A with voting and resolution, and live viewer presence (heartbeat every 30-45 seconds, 60-second expiration). Student analytics in the studentProgress table detect at-risk learners (isAtRisk, needsHelp flags) and track chaptersPerWeek velocity, estimatedCompletionDate, and engagementScore (0-100). Course recommendations use a scoring algorithm weighting: similar to completed (40 pts), skill progression (30 pts), skill gap (20 pts), and content quality (10 pts).
 
 **Opening Hook:**
 Music schools charge $50,000/year.
@@ -1104,6 +1164,9 @@ What specialized knowledge have you been meaning to package?
 
 ## Post 1: AI Course Generator
 
+**PPR Academy Feature Description:**
+PPR Academy's AI Course Generator uses a 5-agent GPT-4o pipeline (Research with Tavily web search, Structure with JSON schema validation, Content generating 800-1,200 words per chapter with deduplication tracking, Image sourcing from Unsplash with curated fallbacks, Quality scoring across 5 metrics) to transform your expertise into complete course curricula—default output: 4 modules, 12 lessons, 36 chapters. Supports 20+ music production categories. Full generation in 3-5 minutes, Fast mode in 30-60 seconds. Edit everything through a drag-and-drop course editor with Mux video hosting and ElevenLabs narration support. The ultimate barrier-removal tool for producers who've been saying "I should make a course" for years.
+
 **Caption:**
 POV: You've been saying "I should make a course" for 3 years
 
@@ -1124,6 +1187,9 @@ What would YOUR course be about? Drop it below and I'll tell you if AI can help.
 ---
 
 ## Post 2: Beat Lease Tiers
+
+**PPR Academy Feature Description:**
+PPR Academy's Beat Lease System offers four tiers with automatic PDF contract generation via pdf-lib: Basic (MP3+WAV, 5K distribution/100K streaming caps, credit required), Premium (MP3+WAV+stems, 50K/1M caps, music video rights), Unlimited (all files+trackouts, no caps), and Exclusive (full ownership, beat delisted from marketplace with exclusiveSoldAt timestamp). Each purchase automatically delivers tier-specific files, generates a 9-section legally-binding contract, and snapshots all terms into the beatLicenses table. Configurable per-tier pricing, rights toggles, and Stripe integration. Interactive audio waveform preview with Web Audio API. Your beats' value scales with their success.
 
 **Caption:**
 STOP selling beats without license terms
@@ -1147,6 +1213,9 @@ Save this for when you're ready to go pro.
 
 ## Post 3: Follow Gates
 
+**PPR Academy Feature Description:**
+PPR Academy's Follow Gate system gates downloads behind verified social actions across 13 platforms (Instagram, TikTok, YouTube, Spotify with OAuth verification, SoundCloud, Apple Music, Deezer, Twitch, Mixcloud, Facebook, Twitter/X, Bandcamp, and email). A step-based FollowGateWizard walks users through each required platform. Submissions are rate-limited (5/email/hour), auto-synced to the email CRM, and tracked with download counts and per-platform follow rates. Configurable on products, courses, and bundles via followGateEnabled with per-platform toggles and minimum follow requirements. Triple win: follower + subscriber + happy fan.
+
 **Caption:**
 Free sample pack = 500 downloads, 0 followers
 
@@ -1167,6 +1236,9 @@ Link in bio to set this up.
 ---
 
 ## Post 4: Email Automation
+
+**PPR Academy Feature Description:**
+PPR Academy's Email Workflow Builder is a React Flow-based visual editor with 14 node types (Trigger, Email, Delay, Condition, Action, Stop, Webhook, Split, Notify, Goal, CourseCycle, CourseEmail, PurchaseCheck, CycleLoop) and 22 trigger types including cart_abandon, webhook, birthday, and email_reply. Color-coded nodes (orange triggers, red emails, blue delays, purple conditions, cyan actions, green webhooks, yellow goals). Pre-built templates: Producer Welcome Series, Purchase Thank You, Re-engagement, Course Completion, Beat Lease Nurture. Executions process every 5 minutes via cron. Integrates with A-D lead scoring across emailEngagement, courseEngagement, and purchaseActivity dimensions. Email templates organized by TOFU/MOFU/BOFU funnel stages.
 
 **Caption:**
 When people ask how I make money while sleeping:
@@ -1190,6 +1262,9 @@ Comment "FLOW" and I'll show you my exact automation.
 ---
 
 ## Post 5: Pre-Save Campaigns
+
+**PPR Academy Feature Description:**
+PPR Academy's Pre-Save Campaign system uses OAuth-based automatic pre-saves across 5 platforms: Spotify (with access/refresh tokens), Apple Music (with user tokens), Deezer, Tidal, and Amazon Music. Each pre-save captures email, name, source (email/social/direct), and platform confirmations. Integrates with email workflows via enrolledInDripCampaign fields. Automated email sequence with per-flag tracking: preSaveConfirmationSent, followUp48hEmailSent, releaseDayEmailSent, playlistPitchEmailSent. Post-release engagement tracks hasStreamed and addedToPlaylist. Indexed by release, email, creator, and store for analytics. Stop dropping music into the void—launch campaigns.
 
 **Caption:**
 My release marketing strategy:
@@ -1215,6 +1290,9 @@ Save this for your next release.
 
 ## Post 6: Custom Storefronts
 
+**PPR Academy Feature Description:**
+PPR Academy's Custom Creator Storefront replaces scattered links with a branded e-commerce destination. Each store supports: name, slug, avatar, logoUrl, bannerImage, bio, custom domain with verification status tracking, and social links across 14 platforms (website, twitter, instagram, linkedin, youtube, tiktok, spotify, soundcloud, appleMusic, bandcamp, threads, discord, twitch, beatport) in both legacy and v2 formats. Dark-themed responsive layout (1/2/3 column grids), product pinning (isPinned + pinnedAt), 6 plan tiers (free through business), Stripe subscription management, email configuration, and Slack/Discord webhook integrations. Store analytics: total products, courses, enrollments, downloads, revenue, ratings, and student roster. Your link-in-bio should be selling, not just linking.
+
 **Caption:**
 Linktree: links
 Beacons: links but pretty
@@ -1236,6 +1314,9 @@ Custom domain included.
 
 ## Post 7: AI Voice Narration
 
+**PPR Academy Feature Description:**
+PPR Academy's Text-to-Speech system powered by ElevenLabs API converts chapter content into broadcast-quality narration through a managed pipeline: startAudioGeneration() sets audioGenerationStatus to "generating," internal action calls /api/generate-audio, on success stores audioUrl with audioGeneratedAt timestamp, on failure records audioGenerationError. Each chapter independently tracks audio and video generation status, allowing selective narration. Integrates with Mux video hosting (muxAssetId, muxPlaybackId, asset status tracking). Write your script (or use the AI Course Generator's 800-1,200 words per chapter), generate narration, overlay on video. Courses actually get finished.
+
 **Caption:**
 Hate the sound of your own voice? (same)
 
@@ -1256,6 +1337,9 @@ The future is wild tbh.
 ---
 
 ## Post 8: Coaching Automation
+
+**PPR Academy Feature Description:**
+PPR Academy's Coaching Session Management automates the entire 1-on-1 workflow via the coachingSessions table and a cron job running every 15 minutes in coachingSessionManager.ts. Sessions track: scheduledDate, startTime/endTime (HH:MM), duration, totalCost, status (SCHEDULED/IN_PROGRESS/COMPLETED/CANCELLED). 2 hours before: auto-creates Discord role + private voice channel, assigns role to coach and student (discordSetupComplete). 1 hour after: auto-deletes channel and role (discordCleanedUp). Automated reminders at 24hr and 1hr (reminderSent flag with 30-min buffer). Coaching products support configurable duration, sessionType (video/audio/phone), custom intake forms. Stripe checkout at /api/coaching/create-checkout-session. Zero admin time.
 
 **Caption:**
 Old coaching workflow:
@@ -1283,6 +1367,9 @@ Automation is self-care actually.
 
 ## Post 9: Subscription Tiers
 
+**PPR Academy Feature Description:**
+PPR Academy's Subscription Tiers enable predictable recurring revenue via subscriptionPlans and membershipSubscriptions tables. Plans define: name, tier number, monthlyPrice/yearlyPrice (cents), features array, courseAccess (specific IDs or hasAllCourses), digitalProductAccess (specific IDs or hasAllProducts), discountPercentage, trialDays, maxStudents. Subscriptions track: status (active/trialing/past_due/expired/canceled/paused), billingCycle (monthly/yearly/lifetime), currentPeriodStart/End, cancelAtPeriodEnd, failedPaymentAttempts. Full lifecycle: create, upgrade, downgrade, cancel, reactivate, renew. checkSubscriptionAccess verifies content access by tier. Payment plans support installments (weekly/biweekly/monthly). Stripe billing integration. 100 subscribers at $29 = $2,900/month recurring.
+
 **Caption:**
 One-time sales: $2000 this month, $0 next month
 
@@ -1301,6 +1388,9 @@ Stop chasing launches. Start building recurring.
 ---
 
 ## Post 10: Gamification
+
+**PPR Academy Feature Description:**
+PPR Academy's Gamification system uses three interconnected subsystems: XP & Levels (userXP table, 100 XP/level, auto level-up), 16+ Achievements (userAchievements table with progress tracking and auto-unlock: first-completion 100 XP, 30-day-streak 500 XP, top-seller 1,000 XP), and Streaks (learningStreaks table with currentStreak, longestStreak, totalDaysActive, totalHoursLearned, milestones at 7/30/100/365 days). Separate Creator XP system with non-linear progression (sqrt-based, capped at level 100) and 17+ action rewards. Three Leaderboard types: Creator by revenue, Student by XP, Activity by streak—each with weekly/monthly/all-time periods and getUserPosition returning rank + percentile. Student progress tracks isAtRisk/needsHelp risk flags, chaptersPerWeek velocity, and engagementScore (0-100).
 
 **Caption:**
 My course completion rate was 8%.
@@ -1326,6 +1416,9 @@ Make learning feel like gaming.
 
 ## Post 11: Certificates
 
+**PPR Academy Feature Description:**
+PPR Academy's Certificate system auto-generates verifiable credentials at 100% course completion via an automated pipeline: markChapterComplete() → calculateCourseProgressInternal() → checkAndIssueCertificate() → generateCertificate() with duplicate prevention. Each certificate stores: userName, courseTitle, instructorName, unique certificateId (CERT-{base36timestamp}-{random}), and a human-friendly verificationCode (ABC-123-XYZ format, excludes confusing chars I/O/L). Public verification at /verify via getCertificateByCode() (case-insensitive). Verification audit trail in certificateVerifications table (IP, user-agent, timestamp). Certificates support isValid revocation, verificationCount tracking, PDF storage via Convex, and LinkedIn sharing.
+
 **Caption:**
 "What qualifications do you have?"
 
@@ -1346,6 +1439,9 @@ Your self-education counts when it's verifiable.
 ---
 
 ## Post 12: Sample Pack Presentation
+
+**PPR Academy Feature Description:**
+PPR Academy's Sample Pack Creator uses two database tables: audioSamples (per-file: bpm, key, genre, subGenre, tags, category [drums/bass/synth/vocals/fx/melody/loops/one-shots], waveformData as normalized peaks array, peakAmplitude, format [wav/mp3/aiff], duration, plays/downloads/favorites counters) and samplePacks (aggregate: sampleIds array, totalSamples, totalSize, totalDuration, bpmRange min/max, genres/categories/tags arrays). AudioWaveform component provides 100-bar interactive playback via Web Audio API with configurable colors, seeking, and play/pause. Samples can be sold individually (isIndividuallySellable + individualPrice) or in packs. Credit-based pricing via creditPrice. License tracking per download with unique licenseKey. Demo track support via demoAudioUrl. Professional presentation = 2-3x higher sales from identical samples.
 
 **Caption:**
 Your samples: amazing
@@ -1372,6 +1468,9 @@ Same samples. Better packaging. 10x sales.
 
 ## Post 13: Affiliate Marketing
 
+**PPR Academy Feature Description:**
+PPR Academy's Affiliate System uses 4 dedicated tables: affiliates (unique affiliateCode, configurable commissionRate, commissionType percentage/fixed_per_sale, cookieDuration default 30 days, payoutMethod stripe/paypal/manual, status active/pending/suspended/rejected), affiliateClicks (visitorId, ipAddress, referrerUrl, landingPage, converted boolean), affiliateSales (orderAmount, commissionRate, calculated commissionAmount, commissionStatus pending/approved/paid/reversed, itemType course/product/subscription), and affiliatePayouts (batch payouts with salesIncluded array, status pending/processing/completed/failed). Full approval workflow: apply → approve with custom commission or reject with reason. Sales require creator approval before payout. Aggregate stats: totalClicks, totalSales, totalRevenue, totalCommissionEarned, totalCommissionPaid. Affiliates can be suspended. Peer recommendations beat ads.
+
 **Caption:**
 My top promoter last month wasn't me.
 
@@ -1395,6 +1494,9 @@ Comment "AFFILIATE" to learn how to set this up.
 
 ## Post 14: Notes to Course Pipeline
 
+**PPR Academy Feature Description:**
+PPR Academy's Notes system combines collaborative course notes (courseNotes table: timestamped notes at specific video positions, public/private toggle, getNotesAtTimestamp() for inline display within +/-5 seconds) with a standalone Notion-style research hub. Paste YouTube URLs—content-scraper.ts extracts transcripts, AI generates structured notes. Upload PDFs for AI summaries. Enter webpages for automatic scraping. The platform's RAG system (embeddings.ts, embeddingActions.ts, rag.ts) enables semantic search across all content. AI conversations (aiConversations.ts) and persistent AI memories (aiMemories.ts) provide context-aware interactions. The killer feature: conversion of accumulated notes into course outlines via the same 5-agent GPT-4o pipeline that powers course generation. Your consumption becomes creation.
+
 **Caption:**
 Research phase: 3 weeks of YouTube, articles, podcasts
 
@@ -1413,6 +1515,9 @@ Your consumption becomes creation.
 ---
 
 ## Post 15: Cart Abandonment
+
+**PPR Academy Feature Description:**
+PPR Academy's Cart Abandonment Recovery uses the cartAbandonEvents table tracking: storeId, contactId, contactEmail, cartId, cartValue (cents), cartItems array (productId, productName, quantity, price per item), abandonedAt timestamp, recoveryEmailSent/recoveryEmailSentAt flags, recovered/recoveredAt conversion tracking, and workflowTriggered/executionId linking to the email workflow engine. The cart_abandon trigger type in the email workflow builder enables automated multi-step recovery sequences through the visual drag-and-drop editor—creators can build custom recovery flows with delays, conditions (if opened previous email), and actions (apply discount tag). Indexes support per-store, per-contact, and recovered-status queries for analytics. Recovers sales that would otherwise disappear. Fully automated, no manual chasing.
 
 **Caption:**
 70% of carts get abandoned.
@@ -1437,6 +1542,9 @@ Recovered sales I thought were gone forever.
 
 ## Post 16: Direct Messaging
 
+**PPR Academy Feature Description:**
+PPR Academy's built-in Direct Messaging system (directMessages.ts, 12KB) enables instant communication between creators and fans without leaving the platform. The system supports threaded conversations with context preservation, read/unread status tracking, and integration with the notification system (notifications.ts with notificationPreferences.ts for per-user notification settings). Social DM features (socialDM.ts) extend messaging to social media automation contexts. Students ask product questions and get fast answers. Buyers get support without hunting for email addresses. Personal connections form with customers. Modern "DM me" energy replaces outdated "email hello@" friction.
+
 **Caption:**
 Stop making fans email you.
 
@@ -1458,6 +1566,9 @@ Built-in messaging is the vibe.
 ---
 
 ## Post 17: Effect Chain Creator
+
+**PPR Academy Feature Description:**
+PPR Academy's Effect Chain/Preset Creator lets you monetize your signature processing with dedicated schema fields in the digitalProducts table. Effect chains specify: abletonVersion (Live 9-12), minAbletonVersion, rackType (audioEffect/instrument/midiEffect/drumRack), effectType array (e.g., ["Delay", "Reverb"]), macroCount (typically 8), cpuLoad (low/medium/high), complexity (beginner/intermediate/advanced), fileFormat (adg/adv/alp), fileSize (MB), installationNotes, requiresMaxForLive boolean, and thirdPartyPlugins array (e.g., ["FabFilter Pro-Q", "Soundtoys"]). Visual assets: demoAudioUrl (30-second preview), chainImageUrl (screenshot of device chain), macroScreenshotUrls array. Preset packs target 30+ plugins: serum, vital, massive, massive-x, omnisphere, sylenth1, phase-plant, pigments, diva, ana-2, spire, zebra, hive, plus DAW-stock instruments (ableton-wavetable, ableton-operator, fl-sytrus, fl-harmor, logic-alchemy, logic-retro-synth) and effects (fabfilter, soundtoys, valhalla), with targetPluginVersion tracking.
 
 **Caption:**
 Your mixing chain is fire.
@@ -1483,6 +1594,9 @@ Works for Ableton, FL, Logic, Bitwig, and more.
 
 ## Post 18: Playlist Curation Marketplace
 
+**PPR Academy Feature Description:**
+PPR Academy's Playlist Curation Marketplace uses the playlistCuration product type in the digitalProducts table, connecting artists with playlist curators transparently. Products support the full e-commerce infrastructure: Stripe checkout, Follow Gates for lead capture, affiliate tracking, and order bumps. Curators list their playlists with follower counts, genre focus, and acceptance rates. Artists pay for guaranteed review (not placement—that would violate Spotify terms). The platform's review and rating system provides accountability. Purchase tracking, download counts, and analytics reveal which curators deliver value. Integrates with Spotify pre-save campaigns and the email workflow engine for follow-up sequences. For curators: monetize your playlists legitimately. For artists: find real curators with real audiences.
+
 **Caption:**
 Getting on playlists is the #1 way to grow streams.
 
@@ -1505,6 +1619,9 @@ That's what we built. No more submission black holes.
 
 ## Post 19: Live Viewer Presence
 
+**PPR Academy Feature Description:**
+PPR Academy's Live Viewer Presence uses the liveViewers table with heartbeat-based tracking: recordPresence() is called every 30-45 seconds, creating/updating viewer records with courseId, chapterId, userId, lastSeen timestamp, and a 60-second expiresAt TTL. getLiveViewerCount() returns active viewers with optional per-chapter breakdown. getActiveViewers() returns user details (userId, userName, userAvatar, chapterTitle, lastSeen) with a default limit of 20. removePresence() handles explicit disconnects. cleanupExpiredViewers() runs as a cron job to delete stale records. "7 others are viewing this lesson" transforms solo learning into a communal experience. Online education that feels less like Netflix and more like a classroom.
+
 **Caption:**
 2am learning alone.
 
@@ -1525,6 +1642,9 @@ Real-time presence shows you're part of something.
 ---
 
 ## Post 20: Recommendations Engine
+
+**PPR Academy Feature Description:**
+PPR Academy's Recommendations Engine (recommendations.ts) generates personalized suggestions stored in the recommendations table with: userId, recommendations array (courseId, score 0-100, reason), generatedAt, and expiresAt (7-day cache). The scoring algorithm weights four factors: Similar to Completed Courses (40 pts for same-category matches), Skill Level Progression (30 pts for beginner→intermediate advancement), Skill Gap (20 pts for unexplored categories), and Content Quality (10 pts for published courses with modules). Reasons are labeled: "similar_to_completed," "skill_progression," "skill_gap," "trending." Combined with the platform's RAG system (embeddings.ts, embeddingActions.ts for vector embeddings, rag.ts for retrieval-augmented generation) and socialPostEmbeddings (15KB) for semantic search, the system provides contextual music production recommendations—not generic "people who bought X also bought Y."
 
 **Caption:**
 You finished an Ableton mixing course.
@@ -1550,6 +1670,9 @@ Actual context. Actual relevance.
 
 ## Post 21: Wishlists
 
+**PPR Academy Feature Description:**
+PPR Academy's Wishlist feature (wishlists.ts, 14KB) uses the wishlists table supporting both products and courses: userId, productId/courseId, itemType ("product"/"course"), productType, priceAtAdd (snapshot price to detect drops), and notifyOnPriceDrop (default: true). Key mutations: addProductToWishlist/addCourseToWishlist (with price tracking), removeFromWishlist, togglePriceDropNotification. Key queries: isInWishlist, getUserWishlist (with sorting/filtering), getWishlistItemsWithPriceDrops (items that have dropped below priceAtAdd), getWishlistCount, getWishlistCategories. Composite indexes (userId+productId, userId+courseId) prevent duplicates. For creators: wishlists reveal purchase intent—users who wishlist are warm leads for promotional campaigns and the birthday email workflow trigger.
+
 **Caption:**
 $497 course looks amazing but the budget says no.
 
@@ -1570,6 +1693,9 @@ Plus: Share your wishlist before your birthday. *hint hint*
 ---
 
 ## Post 22: Multi-DAW Support
+
+**PPR Academy Feature Description:**
+PPR Academy supports all major DAWs with structured metadata in the digitalProducts schema. Effect chains track: abletonVersion (Live 9 through Live 12), minAbletonVersion, rackType (audioEffect/instrument/midiEffect/drumRack). Preset packs specify targetPlugin from 30+ options including DAW-stock instruments: ableton-wavetable, ableton-operator, ableton-analog, fl-sytrus, fl-harmor, fl-harmless, logic-alchemy, logic-retro-synth—plus third-party synths and effects. Products track targetPluginVersion, fileFormat (adg/adv/alp), requiresMaxForLive, and thirdPartyPlugins array. Courses use 20+ categories including DAW-specific ones. Learner preferences (learnerPreferences table) store user's preferred DAW for personalized recommendations. Contact records track daw field for email segmentation. Your customers use different DAWs—your products clearly indicate compatibility.
 
 **Caption:**
 Me in 2020: "Only works in Ableton"
@@ -1597,6 +1723,9 @@ Or at least label which ones they work in.
 
 ## Post 23: Q&A System
 
+**PPR Academy Feature Description:**
+PPR Academy's Q&A System (qa.ts, 14KB) uses the questions table with: courseId, lessonId, chapterIndex, title, content (markdown), authorId, authorName, authorAvatar, isResolved, acceptedAnswerId, viewCount, upvotes, answerCount, and lastActivityAt. The answers table links to questions with content, author, votes, and acceptance status. getQuestionsByLesson() filters by courseId + lessonId with sort options: "recent" (default), "votes" (highest first), or "unanswered." getQuestionsByCourse() returns all questions for a course with optional limit. Instructors mark accepted answers via acceptedAnswerId. Activity is tracked in the contactActivity table (form_submitted type). Upvoting surfaces the best answers. Questions persist, helping future students with the same issues. Course completion rate up 3x when students can get unstuck.
+
 **Caption:**
 Student gets stuck on lesson 7.
 
@@ -1618,6 +1747,9 @@ Course completion rate: up 3x.
 ---
 
 ## Post 24: Lead Magnet Analytics
+
+**PPR Academy Feature Description:**
+PPR Academy's analytics system tracks 19+ event types (page_view, product_view, purchase, download, enrollment, course_complete, email_opened, email_clicked, and more) across dedicated analyticsEvents, productViews, revenueEvents, and userSessions tables—each with multi-dimensional indexes for store, user, and time-based queries. The Lead Magnet Analyzer (masterAI/leadMagnetAnalyzer.ts) uses AI to score every chapter's lead magnet potential on a 1–10 scale, categorizing visual ideas as concept_diagram, process_flow, comparison, equipment_setup, waveform_visual, or metaphor with importance ratings (critical/helpful/optional) and 1536-dimensional embeddings for semantic search. Two built-in conversion funnels—Learner (Visit → Signup → Enroll → Return Week 2) and Creator (Visit → Start Creator Flow → Publish First Item → First Sale)—compute conversion rates, drop-off percentages, and median time-to-next-step, plus a getStuckUsers query identifies creators who started but haven't published after 3+ days. Full UTM parameter support (utm_source, utm_medium, utm_campaign), A/B experiment tracking (experiment_id, variant), and revenue breakdowns (grossAmount, platformFee, processingFee, netAmount) give creators granular visibility into which free content actually converts.
 
 **Caption:**
 Gave away 1,000 sample packs.
@@ -1642,6 +1774,9 @@ Measure what matters.
 ---
 
 ## Post 25: Copyright Protection
+
+**PPR Academy Feature Description:**
+PPR Academy's Copyright Protection system implements full DMCA compliance through copyright.ts and copyrightEmails.ts (16KB of email templates). The submitCopyrightClaim mutation validates legal attestations (goodFaithStatement, accuracyStatement, digitalSignature) and immediately dispatches two Resend emails from legal@ppracademy.com—a "Claim Received" confirmation to the claimant and a "DMCA Copyright Claim Notice - Action Required" to the accused creator with a 14-day response deadline and counter-notice CTA button. The copyrightClaim schema captures claimantName, claimantEmail, claimantAddress, originalWorkDescription, originalWorkUrl, and infringementDescription. Creators can dispute via submitCounterNotice (requiring physical address, jurisdiction consent, and digital signature), which flips report status to "counter_notice" for admin review. The issueCopyrightStrike mutation enforces a three-strike policy tracked in the stores table via copyrightStrikes count and strikeHistory array—Strike 1–2 issue warnings with content removal (isPublished: false), Strike 3 triggers automatic account suspension (suspendedAt, isPublic: false, all products hidden, payouts paused). Reports flow through five statuses (pending → reviewed → resolved/dismissed/counter_notice), with every admin action logged to adminActivityLogs. The admin dashboard provides getReportStats (pending/reviewed/resolved/dismissed/counter_notice counts) and getCopyrightReports with status filtering.
 
 **Caption:**
 Someone stole your sample pack and is selling it.

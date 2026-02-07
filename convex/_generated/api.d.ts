@@ -11886,6 +11886,21 @@ export declare const api: {
       { templateId: Id<"emailTemplates"> },
       any
     >;
+    getExecutionStatusSummary: FunctionReference<
+      "query",
+      "public",
+      { workflowId: Id<"emailWorkflows"> },
+      {
+        cancelled: number;
+        completed: number;
+        estimatedProcessingTime: string;
+        failed: number;
+        pending: number;
+        pendingOverdue: number;
+        pendingScheduledFuture: number;
+        running: number;
+      }
+    >;
     getNodeExecutionCounts: FunctionReference<
       "query",
       "public",
@@ -11903,6 +11918,23 @@ export declare const api: {
         createdAt: number;
         customerEmail: string;
         status: string;
+        workflowName: string;
+      }>
+    >;
+    getScheduledExecutions: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId?: string; workflowId?: Id<"emailWorkflows"> },
+      Array<{
+        _id: Id<"workflowExecutions">;
+        currentNodeLabel?: string;
+        currentNodeType?: string;
+        customerEmail: string;
+        scheduledFor?: number;
+        scheduledForReadable: string;
+        startedAt?: number;
+        status: string;
+        timeUntilExecution: string;
         workflowName: string;
       }>
     >;
@@ -23868,6 +23900,16 @@ export declare const internal: {
       },
       null
     >;
+    batchResumeFailedExecutions: FunctionReference<
+      "action",
+      "internal",
+      {
+        resetToNodeId?: string;
+        totalResumed?: number;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { message: string; totalResumed: number }
+    >;
     callWebhook: FunctionReference<
       "action",
       "internal",
@@ -23993,12 +24035,19 @@ export declare const internal: {
       { name: string; storeId: string },
       any
     >;
+    getWorkflowExecutionDiagnostics: FunctionReference<
+      "query",
+      "internal",
+      { workflowId: Id<"emailWorkflows"> },
+      any
+    >;
     getWorkflowInternal: FunctionReference<
       "query",
       "internal",
       { workflowId: Id<"emailWorkflows"> },
       any
     >;
+    listAllWorkflowsWithCounts: FunctionReference<"query", "internal", {}, any>;
     markExecutionFailed: FunctionReference<
       "mutation",
       "internal",
@@ -24031,6 +24080,16 @@ export declare const internal: {
       "internal",
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
+    >;
+    resumeFailedExecutions: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        batchSize?: number;
+        resetToNodeId?: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { hasMore: boolean; resumed: number }
     >;
     skipExecutionDelayInternal: FunctionReference<
       "mutation",

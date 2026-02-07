@@ -3218,3 +3218,426 @@ export const fastForwardAllDelays = mutation({
     };
   },
 });
+
+/**
+ * Diagnostic: List all workflows with their pending/failed execution counts
+ * Used to quickly find which workflow has stuck executions
+ */
+export const listAllWorkflowsWithCounts = internalQuery({
+  args: {},
+  returns: v.any(),
+  handler: async (ctx) => {
+    const workflows = await ctx.db.query("emailWorkflows").take(100);
+
+    const results = [];
+    for (const wf of workflows) {
+      const pending = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId_status", (q) =>
+          q.eq("workflowId", wf._id).eq("status", "pending")
+        )
+        .take(1);
+
+      const failed = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId_status", (q) =>
+          q.eq("workflowId", wf._id).eq("status", "failed")
+        )
+        .take(1);
+
+      const running = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId_status", (q) =>
+          q.eq("workflowId", wf._id).eq("status", "running")
+        )
+        .take(1);
+
+      // Only show workflows that have active/failed executions
+      if (pending.length > 0 || failed.length > 0 || running.length > 0) {
+        results.push({
+          id: wf._id,
+          name: wf.name,
+          storeId: wf.storeId,
+          isActive: wf.isActive,
+          hasPending: pending.length > 0,
+          hasFailed: failed.length > 0,
+          hasRunning: running.length > 0,
+        });
+      }
+    }
+
+    return results;
+  },
+});
+
+/**
+ * Diagnostic: Get execution status breakdown for a workflow
+ * Shows counts by status and by node, plus failed execution details
+ */
+export const getWorkflowExecutionDiagnostics = internalQuery({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return { error: "Workflow not found" };
+
+    // Build node map for readable output
+    const nodes = (workflow.nodes || []) as Array<{ id: string; type: string; data?: any }>;
+    const nodeMap = new Map<string, { type: string; label: string }>();
+    for (const n of nodes) {
+      nodeMap.set(n.id, { type: n.type, label: n.data?.label || n.data?.subject || n.type });
+    }
+
+    const statusCounts: Record<string, number> = {};
+    const nodeBreakdown: Record<string, Record<string, number>> = {};
+    const failedSamples: Array<{ email: string; error?: string; nodeId?: string }> = [];
+
+    // Count by status
+    for (const status of ["pending", "running", "completed", "failed", "cancelled"] as const) {
+      const execs = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId_status", (q) =>
+          q.eq("workflowId", args.workflowId).eq("status", status)
+        )
+        .take(15000);
+
+      statusCounts[status] = execs.length;
+
+      // Build node breakdown for active statuses
+      if (status === "pending" || status === "running" || status === "failed") {
+        for (const exec of execs) {
+          const nodeId = exec.currentNodeId || "unknown";
+          const nodeInfo = nodeMap.get(nodeId);
+          // Sanitize label to only contain valid ASCII chars for Convex field names
+          const rawLabel = nodeInfo ? `${nodeInfo.type}_${nodeInfo.label}` : nodeId;
+          const nodeLabel = rawLabel.replace(/[^a-zA-Z0-9_\-. ]/g, "").substring(0, 60);
+
+          if (!nodeBreakdown[status]) nodeBreakdown[status] = {};
+          nodeBreakdown[status][nodeLabel] = (nodeBreakdown[status][nodeLabel] || 0) + 1;
+
+          // Collect failed samples
+          if (status === "failed" && failedSamples.length < 10) {
+            failedSamples.push({
+              email: exec.customerEmail,
+              error: exec.errorMessage,
+              nodeId: exec.currentNodeId,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      workflowName: workflow.name,
+      statusCounts,
+      nodeBreakdown,
+      failedSamples,
+      totalNodes: nodes.length,
+      nodeList: nodes.map((n) => `${n.id} (${n.type}: ${n.data?.label || n.data?.subject || ""})`),
+    };
+  },
+});
+
+/**
+ * Resume failed executions for a workflow - resets them to pending
+ * so the cron will pick them up again
+ */
+export const resumeFailedExecutions = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    batchSize: v.optional(v.number()),
+    resetToNodeId: v.optional(v.string()),
+  },
+  returns: v.object({
+    resumed: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const limit = args.batchSize || 500;
+
+    const failedExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "failed")
+      )
+      .take(limit);
+
+    let resumed = 0;
+    for (const exec of failedExecs) {
+      const patch: any = {
+        status: "pending" as const,
+        scheduledFor: Date.now(),
+        errorMessage: undefined,
+        completedAt: undefined,
+      };
+
+      if (args.resetToNodeId) {
+        patch.currentNodeId = args.resetToNodeId;
+      }
+
+      await ctx.db.patch(exec._id, patch);
+      resumed++;
+    }
+
+    // Check if there are more
+    const moreExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "failed")
+      )
+      .take(1);
+
+    return { resumed, hasMore: moreExecs.length > 0 };
+  },
+});
+
+/**
+ * Batch resume action - handles resuming large numbers of failed executions
+ * Processes in batches to avoid OCC conflicts
+ */
+export const batchResumeFailedExecutions = internalAction({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    resetToNodeId: v.optional(v.string()),
+    totalResumed: v.optional(v.number()),
+  },
+  returns: v.object({
+    totalResumed: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    let totalResumed = args.totalResumed || 0;
+    let hasMore = true;
+    let batchCount = 0;
+    const MAX_BATCHES = 20; // Process 20 batches per invocation
+
+    while (hasMore && batchCount < MAX_BATCHES) {
+      const result = await ctx.runMutation(internal.emailWorkflows.resumeFailedExecutions, {
+        workflowId: args.workflowId,
+        batchSize: 200,
+        resetToNodeId: args.resetToNodeId,
+      });
+
+      totalResumed += result.resumed;
+      hasMore = result.hasMore;
+      batchCount++;
+
+      console.log(`[ResumeFailedExecutions] Batch ${batchCount}: resumed ${result.resumed}, total: ${totalResumed}`);
+    }
+
+    if (hasMore) {
+      // Schedule continuation
+      await ctx.scheduler.runAfter(500, internal.emailWorkflows.batchResumeFailedExecutions, {
+        workflowId: args.workflowId,
+        resetToNodeId: args.resetToNodeId,
+        totalResumed,
+      });
+
+      return {
+        totalResumed,
+        message: `Resumed ${totalResumed} so far, continuing in background...`,
+      };
+    }
+
+    return {
+      totalResumed,
+      message: `Successfully resumed ${totalResumed} failed executions. They will be processed by the cron.`,
+    };
+  },
+});
+
+/**
+ * Get upcoming scheduled executions with timing info
+ * Shows what's queued to run in the future
+ */
+export const getScheduledExecutions = query({
+  args: {
+    workflowId: v.optional(v.id("emailWorkflows")),
+    storeId: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("workflowExecutions"),
+      workflowName: v.string(),
+      customerEmail: v.string(),
+      status: v.string(),
+      currentNodeType: v.optional(v.string()),
+      currentNodeLabel: v.optional(v.string()),
+      scheduledFor: v.optional(v.number()),
+      scheduledForReadable: v.string(),
+      timeUntilExecution: v.string(),
+      startedAt: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const limit = args.limit || 100;
+
+    // Get pending executions scheduled for the future
+    let pendingExecs;
+    if (args.workflowId) {
+      const wfId = args.workflowId;
+      pendingExecs = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId_status", (q) =>
+          q.eq("workflowId", wfId).eq("status", "pending")
+        )
+        .take(limit);
+    } else {
+      pendingExecs = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_status_scheduledFor", (q) => q.eq("status", "pending"))
+        .take(limit);
+    }
+
+    if (args.storeId) {
+      pendingExecs = pendingExecs.filter((e) => e.storeId === args.storeId);
+    }
+
+    // Get workflow info for names
+    const workflowCache = new Map<string, any>();
+
+    const results = await Promise.all(
+      pendingExecs.map(async (exec) => {
+        const wfId = exec.workflowId as any;
+        if (!workflowCache.has(wfId)) {
+          workflowCache.set(wfId, await ctx.db.get(exec.workflowId));
+        }
+        const workflow = workflowCache.get(wfId);
+
+        // Find current node info
+        let currentNodeType: string | undefined;
+        let currentNodeLabel: string | undefined;
+        if (workflow && exec.currentNodeId) {
+          const node = (workflow.nodes || []).find((n: any) => n.id === exec.currentNodeId);
+          if (node) {
+            currentNodeType = node.type;
+            currentNodeLabel = node.data?.label || node.data?.subject || node.type;
+          }
+        }
+
+        // Calculate time until execution
+        const scheduledFor = exec.scheduledFor || now;
+        const diffMs = scheduledFor - now;
+        let timeUntilExecution: string;
+
+        if (diffMs <= 0) {
+          timeUntilExecution = "Overdue - waiting for processing";
+        } else {
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMins / 60);
+          const diffDays = Math.floor(diffHours / 24);
+
+          if (diffDays > 0) {
+            timeUntilExecution = `${diffDays}d ${diffHours % 24}h ${diffMins % 60}m`;
+          } else if (diffHours > 0) {
+            timeUntilExecution = `${diffHours}h ${diffMins % 60}m`;
+          } else {
+            timeUntilExecution = `${diffMins}m`;
+          }
+        }
+
+        return {
+          _id: exec._id,
+          workflowName: workflow?.name || "Unknown",
+          customerEmail: exec.customerEmail,
+          status: exec.status,
+          currentNodeType,
+          currentNodeLabel,
+          scheduledFor: exec.scheduledFor,
+          scheduledForReadable: exec.scheduledFor
+            ? new Date(exec.scheduledFor).toISOString()
+            : "Not scheduled",
+          timeUntilExecution,
+          startedAt: exec.startedAt,
+        };
+      })
+    );
+
+    // Sort by scheduledFor ascending (soonest first)
+    results.sort((a, b) => (a.scheduledFor || 0) - (b.scheduledFor || 0));
+
+    return results;
+  },
+});
+
+/**
+ * Get execution status summary for a specific workflow
+ * Queries each status separately to stay under Convex document read limits
+ * Note: requires workflowId to avoid reading too many docs
+ */
+export const getExecutionStatusSummary = query({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+  },
+  returns: v.object({
+    pending: v.number(),
+    pendingOverdue: v.number(),
+    pendingScheduledFuture: v.number(),
+    running: v.number(),
+    completed: v.number(),
+    failed: v.number(),
+    cancelled: v.number(),
+    estimatedProcessingTime: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Query each status separately using the compound index (stays under read limits)
+    const pendingExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(15000);
+
+    const runningExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "running")
+      )
+      .take(15000);
+
+    // For completed/failed/cancelled, just get count (don't need details)
+    const failedExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "failed")
+      )
+      .take(15000);
+
+    let pendingOverdue = 0;
+    let pendingScheduledFuture = 0;
+    for (const exec of pendingExecs) {
+      if (exec.scheduledFor && exec.scheduledFor <= now) {
+        pendingOverdue++;
+      } else if (exec.scheduledFor && exec.scheduledFor > now) {
+        pendingScheduledFuture++;
+      }
+    }
+
+    // Estimate processing time for overdue items (50 per minute)
+    const overdueMinutes = Math.ceil(pendingOverdue / 50);
+    const overdueHours = Math.floor(overdueMinutes / 60);
+    const estimatedProcessingTime =
+      pendingOverdue === 0
+        ? "No overdue items"
+        : overdueHours > 0
+          ? `~${overdueHours}h ${overdueMinutes % 60}m to process ${pendingOverdue} overdue items`
+          : `~${overdueMinutes}m to process ${pendingOverdue} overdue items`;
+
+    return {
+      pending: pendingExecs.length,
+      pendingOverdue,
+      pendingScheduledFuture,
+      running: runningExecs.length,
+      completed: -1, // Use -1 to indicate "not counted" (too many to query safely)
+      failed: failedExecs.length,
+      cancelled: -1,
+      estimatedProcessingTime,
+    };
+  },
+});

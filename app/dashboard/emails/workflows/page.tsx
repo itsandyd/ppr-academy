@@ -1008,6 +1008,18 @@ export default function WorkflowBuilderPage() {
     workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
   );
 
+  const executionStatus = useQuery(
+    api.emailWorkflows.getExecutionStatusSummary,
+    workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
+  );
+
+  const scheduledExecutions = useQuery(
+    api.emailWorkflows.getScheduledExecutions,
+    workflowId ? { workflowId: workflowId as Id<"emailWorkflows">, limit: 20 } : "skip"
+  );
+
+  const [showScheduled, setShowScheduled] = useState(false);
+
   const createWorkflow = useMutation(api.emailWorkflows.createWorkflow);
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
@@ -1554,6 +1566,97 @@ export default function WorkflowBuilderPage() {
           </Button>
         </div>
       </header>
+
+      {/* Execution Status Bar */}
+      {workflowId && executionStatus && (executionStatus.pending > 0 || executionStatus.failed > 0 || executionStatus.running > 0) && (
+        <div className="border-b bg-zinc-50 px-4 py-2 dark:bg-zinc-900/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-xs">
+              {executionStatus.pending > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{executionStatus.pending.toLocaleString()}</span> pending
+                    {executionStatus.pendingOverdue > 0 && (
+                      <span className="ml-1 text-amber-600">({executionStatus.pendingOverdue.toLocaleString()} overdue)</span>
+                    )}
+                    {executionStatus.pendingScheduledFuture > 0 && (
+                      <span className="ml-1 text-blue-600">({executionStatus.pendingScheduledFuture.toLocaleString()} scheduled)</span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {executionStatus.running > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{executionStatus.running}</span> running
+                  </span>
+                </div>
+              )}
+              {executionStatus.failed > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{executionStatus.failed}</span> failed
+                  </span>
+                </div>
+              )}
+              {executionStatus.estimatedProcessingTime !== "No overdue items" && (
+                <span className="text-muted-foreground">{executionStatus.estimatedProcessingTime}</span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowScheduled(!showScheduled)}
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <Clock className="h-3 w-3" />
+              {showScheduled ? "Hide" : "Show"} scheduled
+            </button>
+          </div>
+
+          {showScheduled && scheduledExecutions && scheduledExecutions.length > 0 && (
+            <div className="mt-2 max-h-[200px] overflow-y-auto rounded border bg-white dark:bg-zinc-900">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-800">
+                  <tr>
+                    <th className="px-2 py-1 text-left font-medium text-muted-foreground">Email</th>
+                    <th className="px-2 py-1 text-left font-medium text-muted-foreground">Current Step</th>
+                    <th className="px-2 py-1 text-left font-medium text-muted-foreground">Scheduled For</th>
+                    <th className="px-2 py-1 text-left font-medium text-muted-foreground">Time Until</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduledExecutions.map((exec) => (
+                    <tr key={exec._id} className="border-t border-zinc-100 dark:border-zinc-800">
+                      <td className="max-w-[200px] truncate px-2 py-1">{exec.customerEmail}</td>
+                      <td className="px-2 py-1">
+                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800">
+                          {exec.currentNodeLabel || exec.currentNodeType || "—"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1 text-muted-foreground">
+                        {exec.scheduledFor
+                          ? `${new Date(exec.scheduledFor).toLocaleDateString()} ${new Date(exec.scheduledFor).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                          : "—"}
+                      </td>
+                      <td className="px-2 py-1">
+                        <span className={exec.timeUntilExecution.includes("Overdue") ? "text-amber-600" : "text-blue-600"}>
+                          {exec.timeUntilExecution}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {showScheduled && (!scheduledExecutions || scheduledExecutions.length === 0) && (
+            <p className="mt-2 text-xs text-muted-foreground">No scheduled executions found.</p>
+          )}
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <NodeSidebar onAddNode={addNodeFn || undefined} />
