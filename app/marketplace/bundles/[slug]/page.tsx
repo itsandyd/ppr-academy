@@ -1,12 +1,13 @@
 "use client";
 
-import { use, useState } from "react";
-import { useQuery } from "convex/react";
+import { use, useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
@@ -18,11 +19,14 @@ import {
   BookOpen,
   ShoppingBag,
   User,
+  Lock,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
+import { FollowGateWizard, FollowGateStep } from "@/components/follow-gates/FollowGateWizard";
 
 interface BundleDetailPageProps {
   params: Promise<{
@@ -36,6 +40,18 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
   const router = useRouter();
   const bundle = useQuery(api.bundles.getBundleBySlug, { slug });
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isClaimingFree, setIsClaimingFree] = useState(false);
+  const [freeBundleClaimed, setFreeBundleClaimed] = useState(false);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+
+  // Follow gate state
+  const [followGateWizardOpen, setFollowGateWizardOpen] = useState(false);
+  const [followGateCompleted, setFollowGateCompleted] = useState(false);
+
+  // Mutations
+  const createBundlePurchase = useMutation(api.library.createBundlePurchase);
+  const submitLead = useMutation(api.leadSubmissions.submitLead);
 
   // Handle loading state
   if (bundle === undefined) {
@@ -51,6 +67,76 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
     notFound();
   }
 
+  const isFree = bundle.bundlePrice === 0;
+
+  // Build follow gate steps from bundle config
+  const followGateSteps = useMemo((): FollowGateStep[] => {
+    if (!bundle) return [];
+    const requirements = bundle.followGateRequirements || {};
+    const socialLinks = bundle.followGateSocialLinks || {};
+    const steps: FollowGateStep[] = [];
+    let order = 0;
+
+    if (requirements.requireEmail !== false) {
+      steps.push({ platform: "email", mandatory: true, order: order++ });
+    }
+    if (requirements.requireInstagram && socialLinks.instagram) {
+      steps.push({ platform: "instagram", url: socialLinks.instagram, mandatory: true, order: order++ });
+    }
+    if (requirements.requireTiktok && socialLinks.tiktok) {
+      steps.push({ platform: "tiktok", url: socialLinks.tiktok, mandatory: true, order: order++ });
+    }
+    if (requirements.requireYoutube && socialLinks.youtube) {
+      steps.push({ platform: "youtube", url: socialLinks.youtube, mandatory: true, order: order++ });
+    }
+    if (requirements.requireSpotify && socialLinks.spotify) {
+      steps.push({ platform: "spotify", url: socialLinks.spotify, mandatory: true, order: order++ });
+    }
+    return steps;
+  }, [bundle]);
+
+  const hasFollowGate = bundle.followGateEnabled;
+  const hasFollowGateSteps = followGateSteps.length > 0;
+
+  const handleFollowGateComplete = useCallback((capturedEmail: string, _completedSteps: Record<string, boolean>) => {
+    setFollowGateCompleted(true);
+    setFollowGateWizardOpen(false);
+    setEmail(capturedEmail);
+  }, []);
+
+  const handleClaimFreeBundle = async () => {
+    if (!isUserLoaded) return;
+
+    if (!user) {
+      toast.error("Please sign in to claim this bundle");
+      router.push(`/sign-in?redirect_url=/marketplace/bundles/${slug}`);
+      return;
+    }
+
+    setIsClaimingFree(true);
+    try {
+      await createBundlePurchase({
+        userId: user.id,
+        bundleId: bundle._id,
+        amount: 0,
+        currency: "USD",
+        paymentMethod: "free",
+      });
+      setFreeBundleClaimed(true);
+      toast.success("Bundle claimed! You now have access to all items.");
+      router.push("/dashboard?mode=learn&purchase=success");
+    } catch (error: any) {
+      if (error?.message?.includes("already have access")) {
+        toast.error("You already have access to this bundle.");
+      } else {
+        console.error("Free bundle claim error:", error);
+        toast.error("Failed to claim bundle. Please try again.");
+      }
+    } finally {
+      setIsClaimingFree(false);
+    }
+  };
+
   const formatPrice = (price?: number) => {
     if (!price || price === 0) return "Free";
     return `$${(price / 100).toFixed(2)}`;
@@ -62,6 +148,12 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
     if (!user) {
       toast.error("Please sign in to purchase");
       router.push(`/sign-in?redirect_url=/marketplace/bundles/${slug}`);
+      return;
+    }
+
+    // Free bundles bypass Stripe entirely
+    if (isFree) {
+      await handleClaimFreeBundle();
       return;
     }
 
@@ -300,44 +392,118 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
                 {/* Price */}
                 <div className="py-4 text-center">
                   <div className="mb-2 flex items-center justify-center gap-2">
-                    <span className="text-4xl font-bold">{formatPrice(bundleData.bundlePrice)}</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground line-through">
-                    <span>{formatPrice(bundleData.originalPrice)}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-center gap-2 font-semibold text-green-600">
-                    <TrendingDown className="h-4 w-4" />
-                    <span>
-                      Save {formatPrice(bundleData.savings)} ({bundleData.discountPercentage}%)
+                    <span className={`text-4xl font-bold ${isFree ? "text-emerald-500" : ""}`}>
+                      {formatPrice(bundleData.bundlePrice)}
                     </span>
                   </div>
+                  {!isFree && (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground line-through">
+                        <span>{formatPrice(bundleData.originalPrice)}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-center gap-2 font-semibold text-green-600">
+                        <TrendingDown className="h-4 w-4" />
+                        <span>
+                          Save {formatPrice(bundleData.savings)} ({bundleData.discountPercentage}%)
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <Separator />
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <Button
-                    onClick={handlePurchase}
-                    disabled={isCheckingOut}
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-500/90 hover:to-purple-500/90"
-                  >
-                    {isCheckingOut ? (
+                  {isFree && !freeBundleClaimed ? (
+                    hasFollowGate && hasFollowGateSteps && !followGateCompleted ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
+                        <div className="text-center">
+                          <h3 className="text-sm font-semibold">
+                            <Lock className="mr-1 inline-block h-4 w-4" />
+                            Follow to Unlock Bundle
+                          </h3>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {bundle.followGateMessage || "Support the creator to get free access"}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            if (!isUserLoaded) return;
+                            if (!user) {
+                              toast.error("Please sign in to claim this bundle");
+                              router.push(`/sign-in?redirect_url=/marketplace/bundles/${slug}`);
+                              return;
+                            }
+                            setFollowGateWizardOpen(true);
+                          }}
+                          size="lg"
+                          className="w-full bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-600 hover:to-pink-600"
+                        >
+                          <Lock className="mr-2 h-4 w-4" />
+                          Unlock Free Bundle
+                        </Button>
                       </>
                     ) : (
                       <>
-                        Buy Bundle Now
-                        <ShoppingCart className="ml-2 h-4 w-4" />
+                        <Button
+                          onClick={handleClaimFreeBundle}
+                          disabled={isClaimingFree}
+                          size="lg"
+                          className="w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-500/90 hover:to-green-500/90"
+                        >
+                          {isClaimingFree ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Claiming...
+                            </>
+                          ) : (
+                            <>
+                              Get Free Bundle
+                              <Download className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-center text-xs text-muted-foreground">
+                          Instant access to all items
+                        </p>
                       </>
-                    )}
-                  </Button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    30-day money-back guarantee
-                  </p>
+                    )
+                  ) : freeBundleClaimed ? (
+                    <>
+                      <div className="flex items-center justify-center gap-2 py-2 text-emerald-600">
+                        <Check className="h-5 w-5" />
+                        <span className="font-semibold">Bundle Claimed!</span>
+                      </div>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Check your dashboard for access
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={handlePurchase}
+                        disabled={isCheckingOut}
+                        size="lg"
+                        className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-500/90 hover:to-purple-500/90"
+                      >
+                        {isCheckingOut ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Buy Bundle Now
+                            <ShoppingCart className="ml-2 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-center text-xs text-muted-foreground">
+                        30-day money-back guarantee
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 <Separator />
@@ -382,6 +548,18 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Follow Gate Wizard */}
+      {hasFollowGate && hasFollowGateSteps && (
+        <FollowGateWizard
+          open={followGateWizardOpen}
+          onOpenChange={setFollowGateWizardOpen}
+          steps={followGateSteps}
+          customMessage={bundle.followGateMessage}
+          creatorName={bundleData.creatorName || "Creator"}
+          onComplete={handleFollowGateComplete}
+        />
+      )}
     </div>
   );
 }

@@ -247,12 +247,30 @@ export default function BundlePage({ params }: BundlePageProps) {
     }
   };
 
-  // Handle download - for bundles, this would typically redirect to a download page
-  // or trigger downloads for all items
+  // Handle bundle access - open download URLs for products, redirect for courses
   const handleDownload = () => {
-    toast.success("Preparing your bundle downloads...");
-    // In the future, this could redirect to a bundle download page
-    // or trigger individual downloads for each item
+    const downloadableProducts = (bundle.products || []).filter(
+      (p: any) => p.downloadUrl || p.url
+    );
+
+    if (downloadableProducts.length > 0) {
+      // Open each downloadable product in a new tab
+      for (const product of downloadableProducts) {
+        const url = product.downloadUrl || product.url;
+        if (url) {
+          window.open(url, "_blank");
+        }
+      }
+      toast.success(`Opening ${downloadableProducts.length} download${downloadableProducts.length > 1 ? "s" : ""}...`);
+    }
+
+    // If bundle has courses, prompt user to sign up for full access
+    if (coursesCount > 0) {
+      toast.success("Sign up for an account to access your courses!");
+      router.push(`/sign-up?redirect_url=/dashboard?mode=learn`);
+    } else if (downloadableProducts.length === 0) {
+      toast.error("No downloadable items found in this bundle.");
+    }
   };
 
   // Handle share
