@@ -223,7 +223,44 @@ export const markEmailsFailed = internalMutation({
 });
 
 /**
- * Get queue stats for monitoring.
+ * Debug: inspect the actual htmlContent of sent emails to diagnose truncation.
+ */
+export const debugSentEmailContent = internalQuery({
+  args: {
+    limit: v.optional(v.number()),
+    subject: v.optional(v.string()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 5;
+    const sentEmails = await ctx.db
+      .query("emailSendQueue")
+      .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "sent"))
+      .take(500);
+
+    // Filter by subject if specified, then take last N (most recent by sentAt)
+    let filtered = args.subject
+      ? sentEmails.filter((e) => e.subject === args.subject)
+      : sentEmails;
+
+    // Sort by sentAt descending to get most recent first
+    filtered.sort((a, b) => (b.sentAt ?? 0) - (a.sentAt ?? 0));
+    filtered = filtered.slice(0, limit);
+
+    return filtered.map((e) => ({
+      _id: e._id,
+      toEmail: e.toEmail,
+      subject: e.subject,
+      htmlContentLength: e.htmlContent?.length ?? 0,
+      htmlContentPreview: e.htmlContent?.substring(0, 500) ?? "(null)",
+      htmlContentEnd: e.htmlContent?.substring(Math.max(0, (e.htmlContent?.length ?? 0) - 200)) ?? "(null)",
+      sentAt: e.sentAt,
+    }));
+  },
+});
+
+/**
+ * Get queue stats for monitoring - includes all statuses and recent activity.
  */
 export const getQueueStats = internalQuery({
   args: {},
@@ -239,16 +276,37 @@ export const getQueueStats = internalQuery({
       .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "sending"))
       .take(1000);
 
-    // Per-store breakdown
+    const sent = await ctx.db
+      .query("emailSendQueue")
+      .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "sent"))
+      .take(10000);
+
+    const failed = await ctx.db
+      .query("emailSendQueue")
+      .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "failed"))
+      .take(1000);
+
+    // Per-store breakdown of queued
     const perStore: Record<string, number> = {};
     for (const email of queued) {
       perStore[email.storeId] = (perStore[email.storeId] || 0) + 1;
     }
 
+    // Recent sent samples
+    const recentSent = sent.slice(-5).map((e) => ({
+      toEmail: e.toEmail,
+      subject: e.subject,
+      sentAt: e.sentAt,
+      source: e.source,
+    }));
+
     return {
       totalQueued: queued.length,
       totalSending: sending.length,
+      totalSent: sent.length,
+      totalFailed: failed.length,
       perStore,
+      recentSent,
       timestamp: Date.now(),
     };
   },

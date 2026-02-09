@@ -641,6 +641,31 @@ export const executeWorkflowNode = internalAction({
       }
     }
 
+    // If current node is a leaf action/tag node (no outgoing edges),
+    // find the correct sequence continuation by looking at the PARENT node's other edges.
+    // This handles the pattern: email → tag (leaf) AND email → delay (sequence)
+    // When we're stuck at the tag leaf, we need to follow the sibling delay edge instead.
+    if (!connection && currentNode.type === "action") {
+      const incomingEdge = workflow.edges?.find((e: any) => e.target === currentNode.id);
+      if (incomingEdge) {
+        const parentNode = workflow.nodes.find((n: any) => n.id === incomingEdge.source);
+        if (parentNode) {
+          // Find sibling edges from the parent that go to non-action nodes
+          const siblingEdges = workflow.edges?.filter(
+            (e: any) => e.source === parentNode.id && e.target !== currentNode.id
+          ) || [];
+          const sequenceSibling = siblingEdges.find((e: any) => {
+            const targetNode = workflow.nodes.find((n: any) => n.id === e.target);
+            return targetNode && targetNode.type !== "action";
+          });
+          if (sequenceSibling) {
+            connection = sequenceSibling;
+            console.log(`[EmailWorkflows] Action node ${currentNode.id} is a leaf - following sibling edge from parent ${parentNode.id} to ${sequenceSibling.target}`);
+          }
+        }
+      }
+    }
+
     if (!connection) {
       // No more nodes - complete the workflow
       console.log(`[EmailWorkflows] No next node, completing workflow for ${execution.customerEmail}`);
@@ -663,7 +688,8 @@ export const executeWorkflowNode = internalAction({
       // Calculate delay from the delay node
       const delayData = nextNode.data || {};
       const delayValue = delayData.delay || delayData.delayValue || 1;
-      const delayUnit = delayData.delayUnit || "days";
+      // Check both delayUnit and delayType (the workflow editor uses delayType)
+      const delayUnit = delayData.delayUnit || delayData.delayType || "days";
 
       let delayMs = 0;
       switch (delayUnit) {
@@ -753,6 +779,19 @@ export const resolveAndEnqueueCustomEmail = internalAction({
       }
     }
 
+    // Get store name for {{senderName}} variable
+    let senderName = "";
+    try {
+      const store = await ctx.runQuery(internal.emailWorkflows.getStoreByClerkId, {
+        userId: args.storeId,
+      });
+      if (store) {
+        senderName = store.name || "";
+      }
+    } catch (e) {
+      console.log(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
+    }
+
     // Get user stats for personalization
     let userStats = {
       level: "1", xp: "0", coursesEnrolled: "0", lessonsCompleted: "0",
@@ -813,6 +852,8 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         .replace(/\{\{first_name\}\}/g, firstName)
         .replace(/\{\{name\}\}/g, name || "there")
         .replace(/\{\{email\}\}/g, args.customerEmail)
+        .replace(/\{\{senderName\}\}/g, senderName || fromName)
+        .replace(/\{\{sender_name\}\}/g, senderName || fromName)
         .replace(/\{\{level\}\}/g, userStats.level)
         .replace(/\{\{xp\}\}/g, userStats.xp)
         .replace(/\{\{coursesEnrolled\}\}/g, userStats.coursesEnrolled)
@@ -832,10 +873,28 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
     };
 
-    const htmlContent = replaceAllVariables(args.content);
-    const finalSubject = replaceAllVariables(args.subject);
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "PPR Academy";
+
+    const bodyContent = replaceAllVariables(args.content);
+    const finalSubject = replaceAllVariables(args.subject);
+
+    // Wrap in proper HTML email structure for consistent rendering
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1a1a1a;background-color:#ffffff;">
+<div style="max-width:600px;margin:0 auto;padding:20px;">
+${bodyContent}
+</div>
+<div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
+<a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+</div>
+</body>
+</html>`;
 
     // Determine source type
     const source = args.source === "drip" ? "drip" as const
@@ -985,6 +1044,19 @@ export const sendCustomWorkflowEmail = internalAction({
       }
     }
 
+    // Get store name for {{senderName}} variable
+    let senderName = "";
+    try {
+      const store = await ctx.runQuery(internal.emailWorkflows.getStoreByClerkId, {
+        userId: args.storeId,
+      });
+      if (store) {
+        senderName = store.name || "";
+      }
+    } catch (e) {
+      console.log(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
+    }
+
     // Get user stats for personalization (level, XP, courses, etc.)
     let userStats = {
       level: "1",
@@ -1043,6 +1115,8 @@ export const sendCustomWorkflowEmail = internalAction({
 
     const resend = new Resend(process.env.RESEND_API_KEY);
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+    const fromName = process.env.FROM_NAME || "PPR Academy";
 
     // Generate unsubscribe URL
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
@@ -1058,6 +1132,8 @@ export const sendCustomWorkflowEmail = internalAction({
         .replace(/\{\{first_name\}\}/g, firstName)
         .replace(/\{\{name\}\}/g, name || "there")
         .replace(/\{\{email\}\}/g, args.customerEmail)
+        .replace(/\{\{senderName\}\}/g, senderName || fromName)
+        .replace(/\{\{sender_name\}\}/g, senderName || fromName)
         .replace(/\{\{level\}\}/g, userStats.level)
         .replace(/\{\{xp\}\}/g, userStats.xp)
         .replace(/\{\{coursesEnrolled\}\}/g, userStats.coursesEnrolled)
@@ -1080,11 +1156,25 @@ export const sendCustomWorkflowEmail = internalAction({
         .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
     };
 
-    const htmlContent = replaceAllVariables(args.content);
+    const bodyContent = replaceAllVariables(args.content);
     const finalSubject = replaceAllVariables(args.subject);
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    // Wrap in proper HTML email structure for consistent rendering
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1a1a1a;background-color:#ffffff;">
+<div style="max-width:600px;margin:0 auto;padding:20px;">
+${bodyContent}
+</div>
+<div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
+<a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+</div>
+</body>
+</html>`;
 
     try {
       await resend.emails.send({

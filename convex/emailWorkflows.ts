@@ -2687,6 +2687,49 @@ export const getDueExecutions = internalQuery({
 });
 
 /**
+ * Debug query to see what getDueExecutions returns (workflow breakdown, node types, sample IDs)
+ */
+export const debugDueExecutions = internalQuery({
+  args: {},
+  returns: v.any(),
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    const dueExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_status_scheduledFor", (q) =>
+        q.eq("status", "pending").lte("scheduledFor", now)
+      )
+      .take(200);
+
+    // Group by workflowId
+    const byWorkflow: Record<string, { count: number; nodeIds: string[]; sampleIds: string[] }> = {};
+    for (const exec of dueExecutions) {
+      const wfId = exec.workflowId;
+      if (!byWorkflow[wfId]) {
+        byWorkflow[wfId] = { count: 0, nodeIds: [], sampleIds: [] };
+      }
+      byWorkflow[wfId].count++;
+      const nodeId = exec.currentNodeId || "unknown";
+      if (!byWorkflow[wfId].nodeIds.includes(nodeId)) {
+        byWorkflow[wfId].nodeIds.push(nodeId);
+      }
+      if (byWorkflow[wfId].sampleIds.length < 3) {
+        byWorkflow[wfId].sampleIds.push(exec._id);
+      }
+    }
+
+    return {
+      total: dueExecutions.length,
+      byWorkflow,
+      now,
+      oldestScheduledFor: dueExecutions[0]?.scheduledFor,
+      newestScheduledFor: dueExecutions[dueExecutions.length - 1]?.scheduledFor,
+    };
+  },
+});
+
+/**
  * Mark execution as failed
  */
 export const markExecutionFailed = internalMutation({
@@ -3861,12 +3904,15 @@ export const reroutePendingExecutions = internalMutation({
   handler: async (ctx, args) => {
     const limit = args.batchSize || 500;
 
+    // Scan up to 8000 pending executions to find ones at the target node.
+    // We need a large scan because the target node may not be the first ones in index order.
+    const SCAN_SIZE = 8000;
     const pendingExecs = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_workflowId_status", (q) =>
         q.eq("workflowId", args.workflowId).eq("status", "pending")
       )
-      .take(limit + 100);
+      .take(SCAN_SIZE);
 
     const toReroute = pendingExecs
       .filter((e) => e.currentNodeId === args.fromNodeId)
@@ -3879,11 +3925,12 @@ export const reroutePendingExecutions = internalMutation({
       });
     }
 
-    const remaining = pendingExecs.filter(
+    const totalAtNode = pendingExecs.filter(
       (e) => e.currentNodeId === args.fromNodeId
-    ).length - toReroute.length;
+    ).length;
+    const remaining = totalAtNode - toReroute.length;
 
-    return { rerouted: toReroute.length, hasMore: remaining > 0 || pendingExecs.length > limit };
+    return { rerouted: toReroute.length, hasMore: remaining > 0 || pendingExecs.length >= SCAN_SIZE };
   },
 });
 
@@ -3914,7 +3961,7 @@ export const batchReroutePendingExecutions = internalAction({
         fromNodeId: args.fromNodeId,
         toNodeId: args.toNodeId,
         scheduledFor: args.scheduledFor,
-        batchSize: 300,
+        batchSize: 100,
       });
 
       totalRerouted += result.rerouted;
@@ -3924,6 +3971,9 @@ export const batchReroutePendingExecutions = internalAction({
       console.log(`[BatchReroute] Batch ${batchCount}: rerouted ${result.rerouted}, total: ${totalRerouted}`);
 
       if (result.rerouted === 0) break;
+
+      // Wait 2s between batches to avoid OCC conflicts with the processing cron
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
     if (hasMore) {

@@ -628,3 +628,138 @@ export const getExecutionStats = mutation({
     };
   },
 });
+
+/**
+ * Reset all pending executions for a workflow to a specific node.
+ * Use this to restart stuck executions from a specific point in the sequence.
+ *
+ * Usage:
+ *   npx convex run migrations/fixDelayNodeTracking:resetPendingToNode '{
+ *     "workflowId": "...",
+ *     "targetNodeId": "email-1-1770194191344",
+ *     "dryRun": true
+ *   }'
+ */
+/**
+ * Reroute executions stuck at a specific node (both pending AND running) to another node.
+ * Handles the orphaned "running" status executions that processScheduledExecutions created.
+ */
+export const rerouteStuckAtNode = mutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    fromNodeId: v.string(),
+    toNodeId: v.string(),
+    scheduledFor: v.optional(v.number()),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const batchSize = args.batchSize ?? 500;
+    const targetScheduledFor = args.scheduledFor ?? Date.now();
+
+    // Get PENDING executions at the source node - scan larger window
+    const pending = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(15000);
+
+    const pendingAtNode = pending
+      .filter((e) => e.currentNodeId === args.fromNodeId)
+      .slice(0, batchSize);
+
+    // Get RUNNING executions at the source node
+    const running = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "running")
+      )
+      .take(15000);
+
+    const runningAtNode = running
+      .filter((e) => e.currentNodeId === args.fromNodeId)
+      .slice(0, batchSize);
+
+    let rerouted = 0;
+
+    for (const exec of pendingAtNode) {
+      await ctx.db.patch(exec._id, {
+        currentNodeId: args.toNodeId,
+        scheduledFor: targetScheduledFor,
+        status: "pending",
+      });
+      rerouted++;
+    }
+
+    for (const exec of runningAtNode) {
+      await ctx.db.patch(exec._id, {
+        currentNodeId: args.toNodeId,
+        scheduledFor: targetScheduledFor,
+        status: "pending",
+      });
+      rerouted++;
+    }
+
+    return {
+      pendingFound: pendingAtNode.length,
+      runningFound: runningAtNode.length,
+      totalRerouted: rerouted,
+      hasMore: pendingAtNode.length >= batchSize || runningAtNode.length >= batchSize,
+    };
+  },
+});
+
+export const resetPendingToNode = mutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    targetNodeId: v.string(),
+    dryRun: v.optional(v.boolean()),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? true;
+    const batchSize = args.batchSize ?? 500;
+    const now = Date.now();
+
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return { error: "Workflow not found" };
+
+    // Verify target node exists
+    const targetNode = workflow.nodes.find((n: any) => n.id === args.targetNodeId);
+    if (!targetNode) return { error: `Node ${args.targetNodeId} not found in workflow` };
+
+    // Get pending executions
+    const pendingExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(batchSize);
+
+    let reset = 0;
+
+    if (!dryRun) {
+      for (const exec of pendingExecutions) {
+        await ctx.db.patch(exec._id, {
+          currentNodeId: args.targetNodeId,
+          scheduledFor: now,
+          status: "pending",
+        });
+        reset++;
+      }
+    }
+
+    return {
+      dryRun,
+      targetNode: `${targetNode.id} (${targetNode.type}: ${targetNode.data?.label || targetNode.data?.subject || ""})`,
+      totalPendingFound: pendingExecutions.length,
+      reset,
+      hasMore: pendingExecutions.length >= batchSize,
+      message: dryRun
+        ? `Would reset ${pendingExecutions.length} executions to ${args.targetNodeId}`
+        : `Reset ${reset} executions to ${args.targetNodeId}`,
+    };
+  },
+});

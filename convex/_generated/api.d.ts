@@ -15425,6 +15425,18 @@ export declare const api: {
         { workflowId: Id<"emailWorkflows"> },
         Array<any>
       >;
+      rerouteStuckAtNode: FunctionReference<
+        "mutation",
+        "public",
+        {
+          batchSize?: number;
+          fromNodeId: string;
+          scheduledFor?: number;
+          toNodeId: string;
+          workflowId: Id<"emailWorkflows">;
+        },
+        any
+      >;
       resetFailedExecutions: FunctionReference<
         "mutation",
         "public",
@@ -15434,6 +15446,17 @@ export declare const api: {
           workflowId: Id<"emailWorkflows">;
         },
         { found: number; reset: number }
+      >;
+      resetPendingToNode: FunctionReference<
+        "mutation",
+        "public",
+        {
+          batchSize?: number;
+          dryRun?: boolean;
+          targetNodeId: string;
+          workflowId: Id<"emailWorkflows">;
+        },
+        any
       >;
       spreadPendingExecutions: FunctionReference<
         "mutation",
@@ -23798,6 +23821,12 @@ export declare const internal: {
       { limit: number; storeId: string },
       Array<any>
     >;
+    debugSentEmailContent: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; subject?: string },
+      any
+    >;
     enqueueEmail: FunctionReference<
       "mutation",
       "internal",
@@ -24097,6 +24126,7 @@ export declare const internal: {
       { name: string; storeId: string },
       Id<"emailTags">
     >;
+    debugDueExecutions: FunctionReference<"query", "internal", {}, any>;
     enrollContactBatchInternal: FunctionReference<
       "mutation",
       "internal",
