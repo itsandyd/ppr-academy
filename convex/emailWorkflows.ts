@@ -2672,7 +2672,7 @@ export const getDueExecutions = internalQuery({
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "pending").lte("scheduledFor", now)
       )
-      .take(200);
+      .take(1000);
 
     // Also get running executions that might be stuck (but limit)
     const runningExecutions = await ctx.db
@@ -2680,7 +2680,7 @@ export const getDueExecutions = internalQuery({
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "running").lte("scheduledFor", now)
       )
-      .take(10);
+      .take(50);
 
     return [...dueExecutions, ...runningExecutions];
   },
