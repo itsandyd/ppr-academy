@@ -17,19 +17,30 @@ export const processEmailWorkflowExecutions = internalAction({
 
     console.log(`[EmailWorkflows] Processing ${dueExecutions.length} due executions`);
 
+    let processed = 0;
+    let failed = 0;
+
     for (const execution of dueExecutions) {
       try {
         await ctx.runAction(internal.emailWorkflowActions.executeWorkflowNode, {
           executionId: execution._id,
         });
+        processed++;
       } catch (error) {
-        console.error(`[EmailWorkflows] Failed to process execution ${execution._id}:`, error);
-        await ctx.runMutation(internal.emailWorkflows.markExecutionFailed, {
-          executionId: execution._id,
-          error: String(error),
-        });
+        failed++;
+        console.error(`[EmailWorkflows] Failed execution ${execution._id} (${execution.customerEmail}):`, error);
+        try {
+          await ctx.runMutation(internal.emailWorkflows.markExecutionFailed, {
+            executionId: execution._id,
+            error: String(error),
+          });
+        } catch {
+          // Ignore failure to mark as failed
+        }
       }
     }
+
+    console.log(`[EmailWorkflows] Batch complete: ${processed} processed, ${failed} failed, ${dueExecutions.length} total`);
 
     return null;
   },
@@ -80,7 +91,7 @@ export const executeWorkflowNode = internalAction({
 
     // Execute based on node type
     if (currentNode.type === "email") {
-      // Send email
+      // Resolve email content and enqueue for batch sending
       const templateId = currentNode.data?.templateId;
       const customSubject = currentNode.data?.subject;
       // Check both 'content' and 'body' fields (editor might use either)
@@ -94,24 +105,26 @@ export const executeWorkflowNode = internalAction({
       }));
 
       if (templateId) {
-        console.log(`[EmailWorkflows] Sending template email ${templateId} to ${execution.customerEmail}`);
-        await ctx.runAction(internal.emailWorkflowActions.sendWorkflowEmail, {
+        console.log(`[EmailWorkflows] Enqueuing template email ${templateId} for ${execution.customerEmail}`);
+        await ctx.runAction(internal.emailWorkflowActions.resolveAndEnqueueTemplateEmail, {
           contactId: execution.contactId,
           templateId,
           storeId: execution.storeId,
           customerEmail: execution.customerEmail,
+          workflowExecutionId: args.executionId,
         });
-        console.log(`[EmailWorkflows] Template email sent successfully`);
+        console.log(`[EmailWorkflows] Template email enqueued`);
       } else if (customSubject && customContent) {
-        console.log(`[EmailWorkflows] Sending custom email "${customSubject}" to ${execution.customerEmail}`);
-        await ctx.runAction(internal.emailWorkflowActions.sendCustomWorkflowEmail, {
+        console.log(`[EmailWorkflows] Enqueuing custom email "${customSubject}" for ${execution.customerEmail}`);
+        await ctx.runAction(internal.emailWorkflowActions.resolveAndEnqueueCustomEmail, {
           contactId: execution.contactId,
           subject: customSubject,
           content: customContent,
           storeId: execution.storeId,
           customerEmail: execution.customerEmail,
+          workflowExecutionId: args.executionId,
         });
-        console.log(`[EmailWorkflows] Custom email sent successfully`);
+        console.log(`[EmailWorkflows] Custom email enqueued`);
       } else {
         console.error(`[EmailWorkflows] Email node has no template or custom content! Node data:`, currentNode.data);
       }
@@ -423,13 +436,14 @@ export const executeWorkflowNode = internalAction({
       });
 
       if (email) {
-        // Send the email
-        await ctx.runAction(internal.emailWorkflowActions.sendCustomWorkflowEmail, {
+        // Enqueue the email for batch sending
+        await ctx.runAction(internal.emailWorkflowActions.resolveAndEnqueueCustomEmail, {
           contactId: execution.contactId,
           subject: email.subject,
           content: email.htmlContent,
           storeId: execution.storeId,
           customerEmail: execution.customerEmail,
+          workflowExecutionId: args.executionId,
         });
 
         // Track email sent
@@ -437,7 +451,7 @@ export const executeWorkflowNode = internalAction({
           emailId: email._id,
         });
 
-        console.log(`[EmailWorkflows] Sent ${emailPhase} email #${emailIndex + 1} for course ${courseIndex + 1}`);
+        console.log(`[EmailWorkflows] Enqueued ${emailPhase} email #${emailIndex + 1} for course ${courseIndex + 1}`);
       } else {
         console.log(`[EmailWorkflows] No email found for ${emailPhase} #${emailIndex}, course ${courseIndex}`);
       }
@@ -610,8 +624,22 @@ export const executeWorkflowNode = internalAction({
       console.log(`[EmailWorkflows] Unknown node type: ${currentNode.type}`);
     }
 
-    // Find next node
-    const connection = workflow.edges?.find((e: any) => e.source === currentNode.id);
+    // Find next node - when a node has multiple outgoing edges (e.g., email -> tag AND email -> delay),
+    // prefer the sequence-continuation edge (delay/email/condition/goal/stop) over side-effect edges (action/tag).
+    // Side-effect edges (to action/tag nodes) are fire-and-forget branches already executed inline.
+    const allOutgoingEdges = workflow.edges?.filter((e: any) => e.source === currentNode.id) || [];
+    let connection = allOutgoingEdges[0]; // default to first
+
+    if (allOutgoingEdges.length > 1) {
+      // Prefer non-action edges for sequence continuation
+      const sequenceEdge = allOutgoingEdges.find((e: any) => {
+        const targetNode = workflow.nodes.find((n: any) => n.id === e.target);
+        return targetNode && targetNode.type !== "action";
+      });
+      if (sequenceEdge) {
+        connection = sequenceEdge;
+      }
+    }
 
     if (!connection) {
       // No more nodes - complete the workflow
@@ -691,7 +719,243 @@ export const executeWorkflowNode = internalAction({
 });
 
 /**
- * Send a custom email (not from template) from workflow
+ * Resolve custom email content (personalization, variables) and enqueue for batch sending.
+ * Replaces the old inline-send pattern for custom workflow emails.
+ */
+export const resolveAndEnqueueCustomEmail = internalAction({
+  args: {
+    contactId: v.optional(v.id("emailContacts")),
+    subject: v.string(),
+    content: v.string(),
+    storeId: v.string(),
+    customerEmail: v.string(),
+    workflowExecutionId: v.optional(v.id("workflowExecutions")),
+    dripEnrollmentId: v.optional(v.id("dripCampaignEnrollments")),
+    source: v.optional(v.string()),
+    priority: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const crypto = await import("crypto");
+
+    // Get contact info if available
+    let firstName = "there";
+    let name = "";
+    if (args.contactId) {
+      const contact = await ctx.runQuery(internal.emailWorkflows.getContactInternal, {
+        contactId: args.contactId,
+      });
+      if (contact) {
+        firstName = contact.firstName || contact.email.split("@")[0];
+        name = contact.firstName && contact.lastName
+          ? `${contact.firstName} ${contact.lastName}`
+          : contact.firstName || "";
+      }
+    }
+
+    // Get user stats for personalization
+    let userStats = {
+      level: "1", xp: "0", coursesEnrolled: "0", lessonsCompleted: "0",
+      storeName: "", memberSince: "", daysSinceJoined: "0", totalSpent: "$0",
+    };
+
+    try {
+      const stats = await ctx.runQuery(internal.emailUserStats.getUserStatsForEmailByEmail, {
+        email: args.customerEmail,
+      });
+      if (stats) {
+        userStats = {
+          level: String(stats.level || 1), xp: String(stats.xp || 0),
+          coursesEnrolled: String(stats.coursesEnrolled || 0),
+          lessonsCompleted: String(stats.lessonsCompleted || 0),
+          storeName: stats.storeName || "", memberSince: stats.memberSince || "",
+          daysSinceJoined: String(stats.daysSinceJoined || 0),
+          totalSpent: `$${stats.totalSpent || 0}`,
+        };
+      }
+    } catch (e) {
+      console.log(`[WorkflowEmail] Could not fetch user stats for ${args.customerEmail}:`, e);
+    }
+
+    // Get platform stats
+    let platformStats = {
+      newCoursesCount: "0", latestCourseName: "", newSamplePacksCount: "0",
+      newCreatorsCount: "0", topCourseThisWeek: "Production Essentials",
+    };
+
+    try {
+      const pStats = await ctx.runQuery(internal.emailUserStats.getPlatformStatsForEmail, {});
+      if (pStats) {
+        platformStats = {
+          newCoursesCount: String(pStats.newCoursesCount || 0),
+          latestCourseName: pStats.latestCourseName || "",
+          newSamplePacksCount: String(pStats.newSamplePacksCount || 0),
+          newCreatorsCount: String(pStats.newCreatorsCount || 0),
+          topCourseThisWeek: pStats.topCourseThisWeek || "Production Essentials",
+        };
+      }
+    } catch (e) {
+      console.log(`[WorkflowEmail] Could not fetch platform stats:`, e);
+    }
+
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+
+    // Generate unsubscribe URL
+    const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+    const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${emailBase64}.${signature}`;
+
+    // Replace all template variables
+    const replaceAllVariables = (text: string): string => {
+      return text
+        .replace(/\{\{firstName\}\}/g, firstName)
+        .replace(/\{\{first_name\}\}/g, firstName)
+        .replace(/\{\{name\}\}/g, name || "there")
+        .replace(/\{\{email\}\}/g, args.customerEmail)
+        .replace(/\{\{level\}\}/g, userStats.level)
+        .replace(/\{\{xp\}\}/g, userStats.xp)
+        .replace(/\{\{coursesEnrolled\}\}/g, userStats.coursesEnrolled)
+        .replace(/\{\{lessonsCompleted\}\}/g, userStats.lessonsCompleted)
+        .replace(/\{\{storeName\}\}/g, userStats.storeName)
+        .replace(/\{\{memberSince\}\}/g, userStats.memberSince)
+        .replace(/\{\{daysSinceJoined\}\}/g, userStats.daysSinceJoined)
+        .replace(/\{\{totalSpent\}\}/g, userStats.totalSpent)
+        .replace(/\{\{platformUrl\}\}/g, platformUrl)
+        .replace(/\{\{newCoursesCount\}\}/g, platformStats.newCoursesCount)
+        .replace(/\{\{latestCourseName\}\}/g, platformStats.latestCourseName)
+        .replace(/\{\{newSamplePacksCount\}\}/g, platformStats.newSamplePacksCount)
+        .replace(/\{\{newCreatorsCount\}\}/g, platformStats.newCreatorsCount)
+        .replace(/\{\{topCourseThisWeek\}\}/g, platformStats.topCourseThisWeek)
+        .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
+        .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
+        .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+    };
+
+    const htmlContent = replaceAllVariables(args.content);
+    const finalSubject = replaceAllVariables(args.subject);
+    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+    const fromName = process.env.FROM_NAME || "PPR Academy";
+
+    // Determine source type
+    const source = args.source === "drip" ? "drip" as const
+      : args.source === "broadcast" ? "broadcast" as const
+      : args.source === "transactional" ? "transactional" as const
+      : "workflow" as const;
+
+    // Enqueue instead of sending
+    await ctx.runMutation(internal.emailSendQueue.enqueueEmail, {
+      storeId: args.storeId,
+      source,
+      workflowExecutionId: args.workflowExecutionId,
+      dripEnrollmentId: args.dripEnrollmentId,
+      toEmail: args.customerEmail,
+      fromName,
+      fromEmail,
+      subject: finalSubject,
+      htmlContent,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      priority: args.priority,
+    });
+
+    console.log(`[WorkflowEmail] Enqueued custom email for ${args.customerEmail}: ${finalSubject}`);
+    return null;
+  },
+});
+
+/**
+ * Resolve template email content and enqueue for batch sending.
+ * Replaces the old inline-send pattern for template workflow emails.
+ */
+export const resolveAndEnqueueTemplateEmail = internalAction({
+  args: {
+    contactId: v.optional(v.id("emailContacts")),
+    templateId: v.id("emailTemplates"),
+    storeId: v.string(),
+    customerEmail: v.string(),
+    workflowExecutionId: v.optional(v.id("workflowExecutions")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const crypto = await import("crypto");
+
+    // Get the template
+    const template = await ctx.runQuery(internal.emailWorkflows.getEmailTemplateInternal, {
+      templateId: args.templateId,
+    });
+
+    if (!template) {
+      console.error(`[WorkflowEmail] Template ${args.templateId} not found`);
+      return null;
+    }
+
+    // Get contact info if available
+    let firstName = "there";
+    let name = "";
+    if (args.contactId) {
+      const contact = await ctx.runQuery(internal.emailWorkflows.getContactInternal, {
+        contactId: args.contactId,
+      });
+      if (contact) {
+        firstName = contact.firstName || contact.email.split("@")[0];
+        name = contact.firstName && contact.lastName
+          ? `${contact.firstName} ${contact.lastName}`
+          : contact.firstName || "";
+      }
+    }
+
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+
+    // Generate unsubscribe URL
+    const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+    const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${emailBase64}.${signature}`;
+
+    // Personalize content
+    const htmlContent = (template.htmlContent || template.content || "")
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{first_name\}\}/g, firstName)
+      .replace(/\{\{name\}\}/g, name || "there")
+      .replace(/\{\{email\}\}/g, args.customerEmail)
+      .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
+      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
+
+    const subject = template.subject
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{first_name\}\}/g, firstName)
+      .replace(/\{\{name\}\}/g, name || "there");
+
+    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+    const fromName = process.env.FROM_NAME || "PPR Academy";
+
+    // Enqueue instead of sending
+    await ctx.runMutation(internal.emailSendQueue.enqueueEmail, {
+      storeId: args.storeId,
+      source: "workflow",
+      workflowExecutionId: args.workflowExecutionId,
+      toEmail: args.customerEmail,
+      fromName,
+      fromEmail,
+      subject,
+      htmlContent,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+
+    console.log(`[WorkflowEmail] Enqueued template email for ${args.customerEmail}: ${subject}`);
+    return null;
+  },
+});
+
+/**
+ * Send a custom email (not from template) from workflow.
+ * LEGACY: Kept for backwards compatibility. New code should use resolveAndEnqueueCustomEmail.
  */
 export const sendCustomWorkflowEmail = internalAction({
   args: {

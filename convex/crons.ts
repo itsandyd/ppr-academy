@@ -49,4 +49,11 @@ crons.interval(
   {}
 );
 
+crons.interval(
+  "process email send queue",
+  { seconds: 30 },
+  internal.emailSendQueueActions.processEmailSendQueue,
+  {}
+);
+
 export default crons;

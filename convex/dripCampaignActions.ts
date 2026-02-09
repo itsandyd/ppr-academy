@@ -55,8 +55,9 @@ export const processDueDripEmails = internalAction({
           continue;
         }
 
-        await ctx.runAction(internal.dripCampaignActions.sendDripEmail, {
+        await ctx.runAction(internal.dripCampaignActions.resolveAndEnqueueDripEmail, {
           enrollmentId: enrollment._id,
+          storeId: campaign.storeId,
           email: enrollment.email,
           name: enrollment.name || "",
           subject: step.subject,
@@ -81,6 +82,78 @@ export const processDueDripEmails = internalAction({
   },
 });
 
+/**
+ * Resolve drip email content and enqueue for batch sending.
+ * Replaces the old inline-send pattern for drip campaign emails.
+ */
+export const resolveAndEnqueueDripEmail = internalAction({
+  args: {
+    enrollmentId: v.id("dripCampaignEnrollments"),
+    storeId: v.string(),
+    email: v.string(),
+    name: v.string(),
+    subject: v.string(),
+    htmlContent: v.string(),
+    textContent: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const crypto = await import("crypto");
+
+    const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+    const emailBase64 = Buffer.from(args.email).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(args.email).digest("base64url");
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com"}/unsubscribe/${emailBase64}.${signature}`;
+
+    const firstName = args.name.split(" ")[0] || "there";
+    const personalizedHtml = args.htmlContent
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{first_name\}\}/g, firstName)
+      .replace(/\{\{name\}\}/g, args.name || "there")
+      .replace(/\{\{email\}\}/g, args.email)
+      .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
+      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
+
+    const personalizedSubject = args.subject
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{first_name\}\}/g, firstName)
+      .replace(/\{\{name\}\}/g, args.name || "there");
+
+    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+    const fromName = process.env.FROM_NAME || "PPR Academy";
+
+    const personalizedText = args.textContent
+      ?.replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{first_name\}\}/g, firstName)
+      .replace(/\{\{name\}\}/g, args.name || "there")
+      .replace(/\{\{email\}\}/g, args.email)
+      .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
+      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
+
+    // Enqueue instead of sending
+    await ctx.runMutation(internal.emailSendQueue.enqueueEmail, {
+      storeId: args.storeId,
+      source: "drip",
+      dripEnrollmentId: args.enrollmentId,
+      toEmail: args.email,
+      fromName,
+      fromEmail,
+      subject: personalizedSubject,
+      htmlContent: personalizedHtml,
+      textContent: personalizedText,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+
+    console.log(`[Drip] Enqueued email for ${args.email}: ${personalizedSubject}`);
+  },
+});
+
+/**
+ * Send a drip email directly via Resend.
+ * LEGACY: Kept for backwards compatibility. New code uses resolveAndEnqueueDripEmail.
+ */
 export const sendDripEmail = internalAction({
   args: {
     enrollmentId: v.id("dripCampaignEnrollments"),

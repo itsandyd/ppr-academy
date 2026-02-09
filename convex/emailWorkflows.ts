@@ -2665,14 +2665,14 @@ export const getDueExecutions = internalQuery({
     const now = Date.now();
 
     // Get pending executions that are scheduled for now or earlier
-    // Using small batch (50) to avoid OCC when processing large backlogs
-    // The cron runs every minute, so 50/min = 3000/hour throughput
+    // Processor runs in parallel batches, so we can handle more per tick
+    // The cron runs every minute with parallel processing for high throughput
     const dueExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "pending").lte("scheduledFor", now)
       )
-      .take(50);
+      .take(200);
 
     // Also get running executions that might be stuck (but limit)
     const runningExecutions = await ctx.db
@@ -3725,6 +3725,229 @@ export const getScheduledExecutions = query({
  * Queries each status separately to stay under Convex document read limits
  * Note: requires workflowId to avoid reading too many docs
  */
+/**
+ * Bulk-complete executions stuck at stop/goal nodes.
+ * These only need a status flip — no emails to send.
+ */
+export const bulkCompleteStopNodeExecutions = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    completed: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const limit = args.batchSize || 500;
+
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return { completed: 0, hasMore: false };
+
+    // Find stop and goal node IDs
+    const terminalNodeIds = (workflow.nodes || [])
+      .filter((n: any) => n.type === "stop" || n.type === "goal")
+      .map((n: any) => n.id);
+
+    if (terminalNodeIds.length === 0) return { completed: 0, hasMore: false };
+
+    // Get pending executions for this workflow
+    const pendingExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(limit);
+
+    let completed = 0;
+    for (const exec of pendingExecs) {
+      if (terminalNodeIds.includes(exec.currentNodeId)) {
+        await ctx.db.patch(exec._id, {
+          status: "completed",
+          completedAt: Date.now(),
+        });
+        completed++;
+      }
+    }
+
+    // Check for more
+    const moreExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .filter((q) => {
+        let condition = q.eq(q.field("currentNodeId"), terminalNodeIds[0]);
+        for (let i = 1; i < terminalNodeIds.length; i++) {
+          condition = q.or(condition, q.eq(q.field("currentNodeId"), terminalNodeIds[i]));
+        }
+        return condition;
+      })
+      .take(1);
+
+    return { completed, hasMore: moreExecs.length > 0 };
+  },
+});
+
+/**
+ * Batch action to bulk-complete all stop/goal node executions for a workflow.
+ * Processes in batches to avoid OCC conflicts and Convex limits.
+ */
+export const batchCompleteStopNodes = internalAction({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    totalCompleted: v.optional(v.number()),
+  },
+  returns: v.object({
+    totalCompleted: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    let totalCompleted = args.totalCompleted || 0;
+    let hasMore = true;
+    let batchCount = 0;
+    const MAX_BATCHES = 20;
+
+    while (hasMore && batchCount < MAX_BATCHES) {
+      const result = await ctx.runMutation(internal.emailWorkflows.bulkCompleteStopNodeExecutions, {
+        workflowId: args.workflowId,
+        batchSize: 300,
+      });
+
+      totalCompleted += result.completed;
+      hasMore = result.hasMore;
+      batchCount++;
+
+      console.log(`[BulkComplete] Batch ${batchCount}: completed ${result.completed}, total: ${totalCompleted}`);
+
+      if (result.completed === 0) break;
+    }
+
+    if (hasMore) {
+      await ctx.scheduler.runAfter(500, internal.emailWorkflows.batchCompleteStopNodes, {
+        workflowId: args.workflowId,
+        totalCompleted,
+      });
+
+      return {
+        totalCompleted,
+        message: `Completed ${totalCompleted} so far, continuing in background...`,
+      };
+    }
+
+    return {
+      totalCompleted,
+      message: `Bulk-completed ${totalCompleted} stop/goal node executions.`,
+    };
+  },
+});
+
+/**
+ * Reroute pending executions stuck at a specific node to a different node.
+ * Used to fix executions stuck at dead-end action/tag nodes.
+ */
+export const reroutePendingExecutions = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    fromNodeId: v.string(),
+    toNodeId: v.string(),
+    scheduledFor: v.optional(v.number()),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    rerouted: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const limit = args.batchSize || 500;
+
+    const pendingExecs = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(limit + 100);
+
+    const toReroute = pendingExecs
+      .filter((e) => e.currentNodeId === args.fromNodeId)
+      .slice(0, limit);
+
+    for (const exec of toReroute) {
+      await ctx.db.patch(exec._id, {
+        currentNodeId: args.toNodeId,
+        scheduledFor: args.scheduledFor || Date.now(),
+      });
+    }
+
+    const remaining = pendingExecs.filter(
+      (e) => e.currentNodeId === args.fromNodeId
+    ).length - toReroute.length;
+
+    return { rerouted: toReroute.length, hasMore: remaining > 0 || pendingExecs.length > limit };
+  },
+});
+
+/**
+ * Batch reroute action - processes rerouting in batches
+ */
+export const batchReroutePendingExecutions = internalAction({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    fromNodeId: v.string(),
+    toNodeId: v.string(),
+    scheduledFor: v.optional(v.number()),
+    totalRerouted: v.optional(v.number()),
+  },
+  returns: v.object({
+    totalRerouted: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    let totalRerouted = args.totalRerouted || 0;
+    let hasMore = true;
+    let batchCount = 0;
+    const MAX_BATCHES = 20;
+
+    while (hasMore && batchCount < MAX_BATCHES) {
+      const result = await ctx.runMutation(internal.emailWorkflows.reroutePendingExecutions, {
+        workflowId: args.workflowId,
+        fromNodeId: args.fromNodeId,
+        toNodeId: args.toNodeId,
+        scheduledFor: args.scheduledFor,
+        batchSize: 300,
+      });
+
+      totalRerouted += result.rerouted;
+      hasMore = result.hasMore;
+      batchCount++;
+
+      console.log(`[BatchReroute] Batch ${batchCount}: rerouted ${result.rerouted}, total: ${totalRerouted}`);
+
+      if (result.rerouted === 0) break;
+    }
+
+    if (hasMore) {
+      await ctx.scheduler.runAfter(500, internal.emailWorkflows.batchReroutePendingExecutions, {
+        workflowId: args.workflowId,
+        fromNodeId: args.fromNodeId,
+        toNodeId: args.toNodeId,
+        scheduledFor: args.scheduledFor,
+        totalRerouted,
+      });
+
+      return {
+        totalRerouted,
+        message: `Rerouted ${totalRerouted} so far, continuing in background...`,
+      };
+    }
+
+    return {
+      totalRerouted,
+      message: `Rerouted ${totalRerouted} executions from ${args.fromNodeId} to ${args.toNodeId}.`,
+    };
+  },
+});
+
 export const getExecutionStatusSummary = query({
   args: {
     workflowId: v.id("emailWorkflows"),

@@ -6655,4 +6655,50 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.optional(v.string()), // Clerk ID of admin who made the change
   }).index("by_key", ["key"]),
+
+  // ============================================================================
+  // EMAIL SEND QUEUE (Fair multi-tenant email sending with Resend batch API)
+  // ============================================================================
+  emailSendQueue: defineTable({
+    storeId: v.string(),
+    // Source tracking - which system enqueued this email
+    source: v.union(
+      v.literal("workflow"),
+      v.literal("drip"),
+      v.literal("broadcast"),
+      v.literal("transactional")
+    ),
+    workflowExecutionId: v.optional(v.id("workflowExecutions")),
+    dripEnrollmentId: v.optional(v.id("dripCampaignEnrollments")),
+    // Fully resolved email content (ready to send via Resend)
+    toEmail: v.string(),
+    fromName: v.string(),
+    fromEmail: v.string(),
+    subject: v.string(),
+    htmlContent: v.string(),
+    textContent: v.optional(v.string()),
+    replyTo: v.optional(v.string()),
+    headers: v.optional(v.any()),
+    // Queue management
+    status: v.union(
+      v.literal("queued"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    priority: v.number(), // 1=transactional, 5=workflow/drip, 10=bulk broadcast
+    attempts: v.number(),
+    maxAttempts: v.number(),
+    lastError: v.optional(v.string()),
+    // Timestamps
+    queuedAt: v.number(),
+    sentAt: v.optional(v.number()),
+    nextRetryAt: v.optional(v.number()),
+  })
+    .index("by_status_priority_queuedAt", ["status", "priority", "queuedAt"])
+    .index("by_storeId_status", ["storeId", "status"])
+    .index("by_workflowExecutionId", ["workflowExecutionId"])
+    .index("by_dripEnrollmentId", ["dripEnrollmentId"])
+    .index("by_status_nextRetryAt", ["status", "nextRetryAt"]),
 });

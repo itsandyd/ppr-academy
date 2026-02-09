@@ -5416,6 +5416,71 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  emailSendQueue: {
+    document: {
+      attempts: number;
+      dripEnrollmentId?: Id<"dripCampaignEnrollments">;
+      fromEmail: string;
+      fromName: string;
+      headers?: any;
+      htmlContent: string;
+      lastError?: string;
+      maxAttempts: number;
+      nextRetryAt?: number;
+      priority: number;
+      queuedAt: number;
+      replyTo?: string;
+      sentAt?: number;
+      source: "workflow" | "drip" | "broadcast" | "transactional";
+      status: "queued" | "sending" | "sent" | "failed" | "cancelled";
+      storeId: string;
+      subject: string;
+      textContent?: string;
+      toEmail: string;
+      workflowExecutionId?: Id<"workflowExecutions">;
+      _id: Id<"emailSendQueue">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "attempts"
+      | "dripEnrollmentId"
+      | "fromEmail"
+      | "fromName"
+      | "headers"
+      | "htmlContent"
+      | "lastError"
+      | "maxAttempts"
+      | "nextRetryAt"
+      | "priority"
+      | "queuedAt"
+      | "replyTo"
+      | "sentAt"
+      | "source"
+      | "status"
+      | "storeId"
+      | "subject"
+      | "textContent"
+      | "toEmail"
+      | "workflowExecutionId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_dripEnrollmentId: ["dripEnrollmentId", "_creationTime"];
+      by_status_nextRetryAt: ["status", "nextRetryAt", "_creationTime"];
+      by_status_priority_queuedAt: [
+        "status",
+        "priority",
+        "queuedAt",
+        "_creationTime",
+      ];
+      by_storeId_status: ["storeId", "status", "_creationTime"];
+      by_workflowExecutionId: ["workflowExecutionId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   emailTags: {
     document: {
       color?: string;

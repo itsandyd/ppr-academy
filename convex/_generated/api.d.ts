@@ -23151,6 +23151,20 @@ export declare const internal: {
   };
   dripCampaignActions: {
     processDueDripEmails: FunctionReference<"action", "internal", {}, any>;
+    resolveAndEnqueueDripEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        email: string;
+        enrollmentId: Id<"dripCampaignEnrollments">;
+        htmlContent: string;
+        name: string;
+        storeId: string;
+        subject: string;
+        textContent?: string;
+      },
+      any
+    >;
     sendDripEmail: FunctionReference<
       "action",
       "internal",
@@ -23777,6 +23791,78 @@ export declare const internal: {
       { memberCount: number; updated: boolean }
     >;
   };
+  emailSendQueue: {
+    claimBatchForStore: FunctionReference<
+      "mutation",
+      "internal",
+      { limit: number; storeId: string },
+      Array<any>
+    >;
+    enqueueEmail: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        dripEnrollmentId?: Id<"dripCampaignEnrollments">;
+        fromEmail: string;
+        fromName: string;
+        headers?: any;
+        htmlContent: string;
+        priority?: number;
+        replyTo?: string;
+        source: "workflow" | "drip" | "broadcast" | "transactional";
+        storeId: string;
+        subject: string;
+        textContent?: string;
+        toEmail: string;
+        workflowExecutionId?: Id<"workflowExecutions">;
+      },
+      Id<"emailSendQueue">
+    >;
+    enqueueEmailBatch: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        emails: Array<{
+          dripEnrollmentId?: Id<"dripCampaignEnrollments">;
+          fromEmail: string;
+          fromName: string;
+          headers?: any;
+          htmlContent: string;
+          priority?: number;
+          replyTo?: string;
+          source: "workflow" | "drip" | "broadcast" | "transactional";
+          storeId: string;
+          subject: string;
+          textContent?: string;
+          toEmail: string;
+          workflowExecutionId?: Id<"workflowExecutions">;
+        }>;
+      },
+      Array<Id<"emailSendQueue">>
+    >;
+    getActiveStoreIds: FunctionReference<
+      "query",
+      "internal",
+      {},
+      Array<string>
+    >;
+    getQueueStats: FunctionReference<"query", "internal", {}, any>;
+    markEmailsFailed: FunctionReference<
+      "mutation",
+      "internal",
+      { emailIds: Array<Id<"emailSendQueue">>; error: string },
+      null
+    >;
+    markEmailsSent: FunctionReference<
+      "mutation",
+      "internal",
+      { emailIds: Array<Id<"emailSendQueue">> },
+      null
+    >;
+  };
+  emailSendQueueActions: {
+    processEmailSendQueue: FunctionReference<"action", "internal", {}, null>;
+  };
   emailUnsubscribe: {
     checkSuppressionBatch: FunctionReference<
       "query",
@@ -23837,6 +23923,34 @@ export declare const internal: {
       "action",
       "internal",
       {},
+      null
+    >;
+    resolveAndEnqueueCustomEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        contactId?: Id<"emailContacts">;
+        content: string;
+        customerEmail: string;
+        dripEnrollmentId?: Id<"dripCampaignEnrollments">;
+        priority?: number;
+        source?: string;
+        storeId: string;
+        subject: string;
+        workflowExecutionId?: Id<"workflowExecutions">;
+      },
+      null
+    >;
+    resolveAndEnqueueTemplateEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        contactId?: Id<"emailContacts">;
+        customerEmail: string;
+        storeId: string;
+        templateId: Id<"emailTemplates">;
+        workflowExecutionId?: Id<"workflowExecutions">;
+      },
       null
     >;
     sendCustomWorkflowEmail: FunctionReference<
@@ -23900,6 +24014,12 @@ export declare const internal: {
       },
       null
     >;
+    batchCompleteStopNodes: FunctionReference<
+      "action",
+      "internal",
+      { totalCompleted?: number; workflowId: Id<"emailWorkflows"> },
+      { message: string; totalCompleted: number }
+    >;
     batchReEnrollStuckExecutions: FunctionReference<
       "action",
       "internal",
@@ -23912,6 +24032,18 @@ export declare const internal: {
       },
       { message: string; totalReEnrolled: number }
     >;
+    batchReroutePendingExecutions: FunctionReference<
+      "action",
+      "internal",
+      {
+        fromNodeId: string;
+        scheduledFor?: number;
+        toNodeId: string;
+        totalRerouted?: number;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { message: string; totalRerouted: number }
+    >;
     batchResumeFailedExecutions: FunctionReference<
       "action",
       "internal",
@@ -23921,6 +24053,12 @@ export declare const internal: {
         workflowId: Id<"emailWorkflows">;
       },
       { message: string; totalResumed: number }
+    >;
+    bulkCompleteStopNodeExecutions: FunctionReference<
+      "mutation",
+      "internal",
+      { batchSize?: number; workflowId: Id<"emailWorkflows"> },
+      { completed: number; hasMore: boolean }
     >;
     callWebhook: FunctionReference<
       "action",
@@ -24109,6 +24247,18 @@ export declare const internal: {
       "internal",
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
+    >;
+    reroutePendingExecutions: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        batchSize?: number;
+        fromNodeId: string;
+        scheduledFor?: number;
+        toNodeId: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { hasMore: boolean; rerouted: number }
     >;
     resumeFailedExecutions: FunctionReference<
       "mutation",
