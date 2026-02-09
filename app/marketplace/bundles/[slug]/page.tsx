@@ -53,23 +53,7 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
   const createBundlePurchase = useMutation(api.library.createBundlePurchase);
   const submitLead = useMutation(api.leadSubmissions.submitLead);
 
-  // Handle loading state
-  if (bundle === undefined) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  // Handle not found
-  if (bundle === null) {
-    notFound();
-  }
-
-  const isFree = bundle.bundlePrice === 0;
-
-  // Build follow gate steps from bundle config
+  // Build follow gate steps from bundle config (must be before early returns)
   const followGateSteps = useMemo((): FollowGateStep[] => {
     if (!bundle) return [];
     const requirements = bundle.followGateRequirements || {};
@@ -95,14 +79,29 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
     return steps;
   }, [bundle]);
 
-  const hasFollowGate = bundle.followGateEnabled;
-  const hasFollowGateSteps = followGateSteps.length > 0;
-
   const handleFollowGateComplete = useCallback((capturedEmail: string, _completedSteps: Record<string, boolean>) => {
     setFollowGateCompleted(true);
     setFollowGateWizardOpen(false);
     setEmail(capturedEmail);
   }, []);
+
+  // Handle loading state
+  if (bundle === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  // Handle not found
+  if (bundle === null) {
+    notFound();
+  }
+
+  const isFree = bundle.bundlePrice === 0;
+  const hasFollowGate = bundle.followGateEnabled;
+  const hasFollowGateSteps = followGateSteps.length > 0;
 
   const handleClaimFreeBundle = async () => {
     if (!isUserLoaded) return;
