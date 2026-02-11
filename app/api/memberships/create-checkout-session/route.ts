@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -70,6 +73,26 @@ export async function POST(request: NextRequest) {
       });
 
       stripePriceId = stripePrice.id;
+
+      // Persist the Stripe price ID back to the tier so future checkouts reuse it
+      try {
+        const updateArgs: {
+          tierId: Id<"creatorSubscriptionTiers">;
+          stripePriceIdMonthly?: string;
+          stripePriceIdYearly?: string;
+        } = {
+          tierId: tierId as Id<"creatorSubscriptionTiers">,
+        };
+        if (billingCycle === "yearly") {
+          updateArgs.stripePriceIdYearly = stripePrice.id;
+        } else {
+          updateArgs.stripePriceIdMonthly = stripePrice.id;
+        }
+        await fetchMutation(api.memberships.updateStripePriceIds, updateArgs);
+      } catch (e) {
+        // Non-fatal: log but don't block checkout
+        console.warn("Failed to persist Stripe price ID to tier:", e);
+      }
     }
 
     const sessionData: Stripe.Checkout.SessionCreateParams = {

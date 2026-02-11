@@ -28,6 +28,7 @@ import {
   List,
   Plug,
   Layers,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceGrid } from "@/app/_components/marketplace-grid";
@@ -280,10 +281,16 @@ export default function MarketplacePage() {
                         </Link>
                       </TabsTrigger>
                     </TabsList>
-                    <TabsList className="mt-2 grid w-full grid-cols-1 bg-white dark:bg-black">
+                    <TabsList className="mt-2 grid w-full grid-cols-2 bg-white dark:bg-black">
                       <TabsTrigger value="bundles" className="text-xs">
                         <Layers className="mr-1 h-3 w-3" />
                         Bundles
+                      </TabsTrigger>
+                      <TabsTrigger value="memberships" className="text-xs" asChild>
+                        <Link href="/marketplace/memberships">
+                          <Crown className="mr-1 h-3 w-3" />
+                          Memberships
+                        </Link>
                       </TabsTrigger>
                     </TabsList>
                     <TabsList className="mt-2 grid w-full bg-white dark:bg-black">

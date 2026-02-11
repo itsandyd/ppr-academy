@@ -37,6 +37,7 @@ import {
   ChevronRight,
   Megaphone,
   UserCog,
+  Crown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -126,6 +127,12 @@ const learnLinks: SidebarLink[] = [
     color: "text-amber-500",
   },
   {
+    href: "/dashboard/memberships?mode=learn",
+    label: "My Memberships",
+    icon: Crown,
+    color: "text-amber-500",
+  },
+  {
     href: "/dashboard/certificates?mode=learn",
     label: "Certificates",
     icon: Award,
@@ -174,6 +181,12 @@ const createCategories: SidebarCategory[] = [
         label: "Coaching",
         icon: Video,
         color: "text-teal-500",
+      },
+      {
+        href: "/dashboard/memberships?mode=create",
+        label: "Memberships",
+        icon: Crown,
+        color: "text-amber-500",
       },
       {
         href: "/dashboard/notes?mode=create",

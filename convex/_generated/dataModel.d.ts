@@ -3333,13 +3333,16 @@ export type DataModel = {
       benefits: Array<string>;
       creatorId: string;
       description: string;
+      imageUrl?: string;
       isActive: boolean;
       maxCourses?: number;
       priceMonthly: number;
       priceYearly?: number;
+      slug?: string;
       storeId: string;
       stripePriceIdMonthly: string;
       stripePriceIdYearly?: string;
+      subscriberCount?: number;
       tierName: string;
       trialDays?: number;
       _id: Id<"creatorSubscriptionTiers">;
@@ -3351,13 +3354,16 @@ export type DataModel = {
       | "benefits"
       | "creatorId"
       | "description"
+      | "imageUrl"
       | "isActive"
       | "maxCourses"
       | "priceMonthly"
       | "priceYearly"
+      | "slug"
       | "storeId"
       | "stripePriceIdMonthly"
       | "stripePriceIdYearly"
+      | "subscriberCount"
       | "tierName"
       | "trialDays";
     indexes: {
@@ -3366,6 +3372,7 @@ export type DataModel = {
       by_active: ["isActive", "_creationTime"];
       by_creatorId: ["creatorId", "_creationTime"];
       by_creator_active: ["creatorId", "isActive", "_creationTime"];
+      by_slug: ["slug", "_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
     };
     searchIndexes: {};

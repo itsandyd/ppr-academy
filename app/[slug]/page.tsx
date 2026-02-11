@@ -437,6 +437,12 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { storeId: store._id } : "skip"
   );
 
+  // Fetch membership tiers for this store
+  const membershipTiers = useQuery(
+    api.memberships.getStoreMemberships,
+    store ? { storeId: store._id } : "skip"
+  );
+
   // Track creator profile view for conversion nudges
   useCreatorProfileViewTracking(store?.userId, store?._id);
 
@@ -544,8 +550,28 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         isPinned: bundle.isPinned,
         pinnedAt: bundle.pinnedAt,
       } as BaseProduct & { isPinned?: boolean; pinnedAt?: number })),
+
+      // Membership Tiers
+      ...(membershipTiers || []).map((tier: any): BaseProduct => ({
+        _id: tier._id,
+        title: tier.tierName,
+        description: tier.description,
+        price: tier.priceMonthly || 0,
+        imageUrl: tier.imageUrl,
+        buttonLabel: tier.trialDays ? "Start Free Trial" : "Subscribe Now",
+        slug: tier.slug || tier._id,
+        category: "Membership",
+        productType: "membership",
+        _creationTime: tier._creationTime,
+        isPublished: tier.isActive,
+        tierName: tier.tierName,
+        priceMonthly: tier.priceMonthly,
+        priceYearly: tier.priceYearly,
+        benefits: tier.benefits,
+        trialDays: tier.trialDays,
+      })),
     ],
-    [products, courses, coachProfiles, bundles]
+    [products, courses, coachProfiles, bundles, membershipTiers]
   );
 
   // Enhanced filtering and search logic
@@ -669,7 +695,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         router.push(`/${slug}/beats/${productSlug}`);
         break;
       case "membership":
-        router.push(`/${slug}/memberships/${productSlug}`);
+        router.push(`/marketplace/memberships/${productSlug}`);
         break;
       case "tip-jar":
         router.push(`/${slug}/tips/${productSlug}`);

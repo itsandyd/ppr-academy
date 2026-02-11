@@ -236,12 +236,31 @@ export const createMembershipTier = mutation({
     includedCourseIds: v.optional(v.array(v.string())),
     includedProductIds: v.optional(v.array(v.string())),
     includeAllContent: v.optional(v.boolean()),
+    imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Generate slug from tier name
+    let baseSlug = args.tierName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    let slug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const existing = await ctx.db
+        .query("creatorSubscriptionTiers")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first();
+      if (!existing) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
     const tierId = await ctx.db.insert("creatorSubscriptionTiers", {
       creatorId: args.creatorId,
       storeId: args.storeId,
       tierName: args.tierName,
+      slug,
       description: args.description,
       priceMonthly: args.priceMonthly,
       priceYearly: args.priceYearly,
@@ -250,6 +269,8 @@ export const createMembershipTier = mutation({
       benefits: args.benefits,
       maxCourses: args.includeAllContent ? undefined : args.maxCourses,
       trialDays: args.trialDays,
+      imageUrl: args.imageUrl,
+      subscriberCount: 0,
       isActive: false,
     });
 
@@ -457,11 +478,16 @@ export const createMembershipSubscription = mutation({
       creatorId: tier.creatorId,
       tierId: args.tierId,
       storeId: tier.storeId,
-      status: args.trialEnd && args.trialEnd > now ? "active" : "active",
+      status: "active",
       stripeSubscriptionId: args.stripeSubscriptionId,
       currentPeriodStart: now,
       currentPeriodEnd: periodEnd,
       cancelAtPeriodEnd: false,
+    });
+
+    // Increment subscriber count on tier
+    await ctx.db.patch(args.tierId, {
+      subscriberCount: (tier.subscriberCount || 0) + 1,
     });
 
     return { success: true, subscriptionId };
@@ -545,6 +571,191 @@ export const updateStripePriceIds = mutation({
     await ctx.db.patch(tierId, updates);
 
     return { success: true };
+  },
+});
+
+// ---- Marketplace & Store Queries ----
+
+export const getAllPublishedMemberships = query({
+  args: {
+    searchQuery: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    let tiers = await ctx.db
+      .query("creatorSubscriptionTiers")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+
+    if (args.searchQuery) {
+      const search = args.searchQuery.toLowerCase();
+      tiers = tiers.filter(
+        (t) =>
+          t.tierName.toLowerCase().includes(search) ||
+          t.description.toLowerCase().includes(search)
+      );
+    }
+
+    const enriched = await Promise.all(
+      tiers.map(async (tier) => {
+        const store = await ctx.db
+          .query("stores")
+          .filter((q) => q.eq(q.field("userId"), tier.creatorId))
+          .first();
+
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", tier.creatorId))
+          .first();
+
+        const accessRules = await ctx.db
+          .query("contentAccess")
+          .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+          .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
+          .collect();
+
+        const courseCount = accessRules.filter((r) => r.resourceType === "course").length;
+        const productCount = accessRules.filter((r) => r.resourceType === "product").length;
+
+        return {
+          ...tier,
+          store: store ? { name: store.name, slug: store.slug, logoUrl: store.logoUrl } : null,
+          creator: user ? { name: `${user.firstName || ""} ${user.lastName || ""}`.trim(), imageUrl: user.imageUrl } : null,
+          courseCount,
+          productCount,
+          includesAllContent: tier.maxCourses === undefined || tier.maxCourses === null,
+        };
+      })
+    );
+
+    return enriched.sort((a, b) => (b.subscriberCount || 0) - (a.subscriberCount || 0));
+  },
+});
+
+export const getMembershipBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const tier = await ctx.db
+      .query("creatorSubscriptionTiers")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+
+    if (!tier) return null;
+
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("userId"), tier.creatorId))
+      .first();
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", tier.creatorId))
+      .first();
+
+    const accessRules = await ctx.db
+      .query("contentAccess")
+      .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+      .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
+      .collect();
+
+    const courseIds = accessRules
+      .filter((r) => r.resourceType === "course")
+      .map((r) => r.resourceId as Id<"courses">);
+    const productIds = accessRules
+      .filter((r) => r.resourceType === "product")
+      .map((r) => r.resourceId as Id<"digitalProducts">);
+
+    const courses = (await Promise.all(courseIds.map((id) => ctx.db.get(id)))).filter(Boolean);
+    const products = (await Promise.all(productIds.map((id) => ctx.db.get(id)))).filter(Boolean);
+
+    // Get all tiers for this store (for tier comparison)
+    const allStoreTiers = await ctx.db
+      .query("creatorSubscriptionTiers")
+      .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    return {
+      ...tier,
+      courses,
+      products,
+      store: store ? { _id: store._id, name: store.name, slug: store.slug, logoUrl: store.logoUrl, bio: store.bio } : null,
+      creator: user ? { name: `${user.firstName || ""} ${user.lastName || ""}`.trim(), imageUrl: user.imageUrl, stripeConnectAccountId: user.stripeConnectAccountId } : null,
+      allStoreTiers: allStoreTiers.sort((a, b) => a.priceMonthly - b.priceMonthly),
+      includesAllContent: tier.maxCourses === undefined || tier.maxCourses === null,
+    };
+  },
+});
+
+export const getStoreMemberships = query({
+  args: { storeId: v.string() },
+  handler: async (ctx, args) => {
+    // Find store by ID or userId
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) =>
+        q.or(q.eq(q.field("_id"), args.storeId as any), q.eq(q.field("userId"), args.storeId))
+      )
+      .first();
+
+    if (!store) return [];
+
+    const tiers = await ctx.db
+      .query("creatorSubscriptionTiers")
+      .withIndex("by_storeId", (q) => q.eq("storeId", store.userId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const enriched = await Promise.all(
+      tiers.map(async (tier) => {
+        const accessRules = await ctx.db
+          .query("contentAccess")
+          .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+          .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
+          .collect();
+
+        return {
+          ...tier,
+          courseCount: accessRules.filter((r) => r.resourceType === "course").length,
+          productCount: accessRules.filter((r) => r.resourceType === "product").length,
+          includesAllContent: tier.maxCourses === undefined || tier.maxCourses === null,
+        };
+      })
+    );
+
+    return enriched.sort((a, b) => a.priceMonthly - b.priceMonthly);
+  },
+});
+
+export const getUserMemberships = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const subscriptions = await ctx.db
+      .query("userCreatorSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const enriched = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const tier = await ctx.db.get(sub.tierId);
+        const store = await ctx.db
+          .query("stores")
+          .filter((q) => q.eq(q.field("userId"), sub.creatorId))
+          .first();
+        const creator = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", sub.creatorId))
+          .first();
+
+        return {
+          ...sub,
+          tier: tier ? { tierName: tier.tierName, slug: tier.slug, priceMonthly: tier.priceMonthly, priceYearly: tier.priceYearly, benefits: tier.benefits, imageUrl: tier.imageUrl } : null,
+          store: store ? { name: store.name, slug: store.slug, logoUrl: store.logoUrl } : null,
+          creator: creator ? { name: `${creator.firstName || ""} ${creator.lastName || ""}`.trim(), imageUrl: creator.imageUrl } : null,
+        };
+      })
+    );
+
+    return enriched;
   },
 });
 

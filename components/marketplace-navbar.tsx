@@ -15,6 +15,7 @@ import {
   Disc3,
   FileText,
   Headphones,
+  Crown,
 } from "lucide-react";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
 
@@ -65,6 +66,12 @@ export function MarketplaceNavbar() {
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Coaching
+            </Link>
+            <Link
+              href="/marketplace/memberships"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Memberships
             </Link>
             <Link
               href="/marketplace/creators"
@@ -158,6 +165,12 @@ export function MarketplaceNavbar() {
                   <Button variant="ghost" className="w-full justify-start">
                     <FileText className="mr-3 h-4 w-4" />
                     Guides & eBooks
+                  </Button>
+                </Link>
+                <Link href="/marketplace/memberships" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Crown className="mr-3 h-4 w-4" />
+                    Memberships
                   </Button>
                 </Link>
                 <Link href="/marketplace/creators" onClick={() => setMobileMenuOpen(false)}>

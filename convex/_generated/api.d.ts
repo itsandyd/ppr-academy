@@ -15335,6 +15335,7 @@ export declare const api: {
         benefits: Array<string>;
         creatorId: string;
         description: string;
+        imageUrl?: string;
         includeAllContent?: boolean;
         includedCourseIds?: Array<string>;
         includedProductIds?: Array<string>;
@@ -15353,10 +15354,22 @@ export declare const api: {
       { tierId: Id<"creatorSubscriptionTiers"> },
       any
     >;
+    getAllPublishedMemberships: FunctionReference<
+      "query",
+      "public",
+      { searchQuery?: string },
+      any
+    >;
     getCreatorCoursesAndProducts: FunctionReference<
       "query",
       "public",
       { storeId: string },
+      any
+    >;
+    getMembershipBySlug: FunctionReference<
+      "query",
+      "public",
+      { slug: string },
       any
     >;
     getMembershipTierDetails: FunctionReference<
@@ -15369,6 +15382,12 @@ export declare const api: {
       "query",
       "public",
       { includeInactive?: boolean; storeId: string },
+      any
+    >;
+    getStoreMemberships: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
       any
     >;
     getStoreSubscribers: FunctionReference<
@@ -15384,6 +15403,12 @@ export declare const api: {
       "query",
       "public",
       { storeId: string; userId: string },
+      any
+    >;
+    getUserMemberships: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
       any
     >;
     publishMembershipTier: FunctionReference<

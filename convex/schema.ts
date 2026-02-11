@@ -1887,6 +1887,7 @@ export default defineSchema({
     creatorId: v.string(), // Creator's userId
     storeId: v.string(),
     tierName: v.string(), // "Basic", "Pro", "VIP"
+    slug: v.optional(v.string()), // URL-friendly identifier
     description: v.string(),
     priceMonthly: v.number(),
     priceYearly: v.optional(v.number()),
@@ -1895,12 +1896,15 @@ export default defineSchema({
     benefits: v.array(v.string()),
     maxCourses: v.optional(v.number()), // null = unlimited
     trialDays: v.optional(v.number()), // Free trial period in days
+    imageUrl: v.optional(v.string()), // Tier thumbnail
+    subscriberCount: v.optional(v.number()), // Cached count for marketplace
     isActive: v.boolean(),
   })
     .index("by_creatorId", ["creatorId"])
     .index("by_storeId", ["storeId"])
     .index("by_active", ["isActive"])
-    .index("by_creator_active", ["creatorId", "isActive"]),
+    .index("by_creator_active", ["creatorId", "isActive"])
+    .index("by_slug", ["slug"]),
 
   // User subscriptions to creators
   userCreatorSubscriptions: defineTable({

@@ -12,6 +12,7 @@ import { Id } from "./_generated/dataModel";
 export type AccessType =
   | "purchased"
   | "bundle"
+  | "membership"
   | "free_preview"
   | "follow_gate"
   | "creator"
@@ -103,6 +104,12 @@ export const canAccessChapter = query({
     const bundleAccess = await checkBundleAccess(ctx, userId, args.courseId);
     if (bundleAccess.hasAccess) {
       return bundleAccess;
+    }
+
+    // Check for membership/subscription access
+    const membershipAccess = await checkMembershipCourseAccess(ctx, userId, course);
+    if (membershipAccess) {
+      return { hasAccess: true, accessType: "membership" };
     }
 
     // Check for follow gate access (free course with follow requirements)
@@ -207,6 +214,17 @@ export const canAccessCourse = query({
     if (bundleAccess.hasAccess) {
       return {
         ...bundleAccess,
+        freeChaptersCount,
+        totalChapters,
+      };
+    }
+
+    // Membership/subscription access check
+    const membershipAccess = await checkMembershipCourseAccess(ctx, userId, course);
+    if (membershipAccess) {
+      return {
+        hasAccess: true,
+        accessType: "membership",
         freeChaptersCount,
         totalChapters,
       };
@@ -438,12 +456,63 @@ async function checkFullCourseAccess(
     return true;
   }
 
+  // Membership/subscription access
+  const membershipAccess = await checkMembershipCourseAccess(ctx, userId, course);
+  if (membershipAccess) {
+    return true;
+  }
+
   // Follow gate completion for free courses
   if (course.followGateEnabled && course.price === 0) {
     return await checkFollowGateCompletion(ctx, userId, course._id);
   }
 
   return false;
+}
+
+/**
+ * Check if user has access to a course through an active membership subscription
+ */
+async function checkMembershipCourseAccess(
+  ctx: any,
+  userId: string,
+  course: any
+): Promise<boolean> {
+  const creatorId = course.userId;
+
+  // Find active subscription to this creator
+  const subscription = await ctx.db
+    .query("userCreatorSubscriptions")
+    .withIndex("by_user_creator", (q: any) =>
+      q.eq("userId", userId).eq("creatorId", creatorId)
+    )
+    .filter((q: any) => q.eq(q.field("status"), "active"))
+    .first();
+
+  if (!subscription) return false;
+
+  // Get the tier
+  const tier = await ctx.db.get(subscription.tierId);
+  if (!tier) return false;
+
+  // If tier has unlimited courses (maxCourses is undefined/null), grant access
+  if (tier.maxCourses === undefined || tier.maxCourses === null) {
+    return true;
+  }
+
+  // Check if this specific course is included in the tier's content access rules
+  const accessRule = await ctx.db
+    .query("contentAccess")
+    .withIndex("by_resourceId", (q: any) => q.eq("resourceId", course._id))
+    .filter((q: any) =>
+      q.and(
+        q.eq(q.field("resourceType"), "course"),
+        q.eq(q.field("requiredTierId"), subscription.tierId)
+      )
+    )
+    .first();
+
+  return !!accessRule;
 }
 
 // ===== FOLLOW GATE MUTATIONS =====
