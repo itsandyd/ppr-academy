@@ -44,8 +44,12 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const price = billingCycle === "yearly" ? priceYearly : priceMonthly;
+    const price = billingCycle === "yearly" ? (priceYearly || priceMonthly * 10) : priceMonthly;
     const platformFeePercent = 10;
+
+    if (!price || price <= 0) {
+      return NextResponse.json({ error: "Invalid price" }, { status: 400 });
+    }
 
     let stripePriceId = billingCycle === "yearly" ? stripePriceIdYearly : stripePriceIdMonthly;
 
@@ -135,11 +139,21 @@ export async function POST(request: NextRequest) {
       sessionData.subscription_data!.trial_period_days = trialDays;
     }
 
+    // Only use Connect if the account is valid and has charges enabled
     if (creatorStripeAccountId) {
-      sessionData.subscription_data!.application_fee_percent = platformFeePercent;
-      sessionData.subscription_data!.transfer_data = {
-        destination: creatorStripeAccountId,
-      };
+      try {
+        const account = await stripe.accounts.retrieve(creatorStripeAccountId);
+        if (account.charges_enabled) {
+          sessionData.subscription_data!.application_fee_percent = platformFeePercent;
+          sessionData.subscription_data!.transfer_data = {
+            destination: creatorStripeAccountId,
+          };
+        } else {
+          console.warn(`Stripe Connect account ${creatorStripeAccountId} does not have charges enabled, skipping Connect`);
+        }
+      } catch (e) {
+        console.warn(`Failed to retrieve Stripe Connect account ${creatorStripeAccountId}, skipping Connect:`, e);
+      }
     }
 
     const session = await stripe.checkout.sessions.create(sessionData);
@@ -165,11 +179,18 @@ export async function POST(request: NextRequest) {
 
     console.error("❌ Membership checkout session creation failed:", error);
 
+    const isStripeError = error && typeof error === "object" && "type" in error;
+    const errorMessage = isStripeError
+      ? (error as any).message
+      : error instanceof Error
+        ? error.message
+        : "Unknown error";
+
     return NextResponse.json(
       {
         success: false,
         error: "Failed to create checkout session",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: errorMessage,
       },
       { status: 500 }
     );
