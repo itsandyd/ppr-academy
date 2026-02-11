@@ -43,21 +43,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    console.log("📋 Checkout request:", { tierId, tierName, billingCycle, priceMonthly, priceYearly, storeId, creatorId, creatorStripeAccountId: creatorStripeAccountId ? "present" : "none" });
-
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const price = billingCycle === "yearly" ? (priceYearly || priceMonthly * 10) : priceMonthly;
     const platformFeePercent = 10;
 
     if (!price || price <= 0) {
-      return NextResponse.json({ error: "Invalid price", details: { price, priceMonthly, priceYearly, billingCycle } }, { status: 400 });
+      return NextResponse.json({ error: "Invalid price" }, { status: 400 });
     }
 
     let stripePriceId = billingCycle === "yearly" ? stripePriceIdYearly : stripePriceIdMonthly;
-    console.log("💰 Price info:", { price, stripePriceId: stripePriceId || "none - will create" });
 
     if (!stripePriceId) {
-      console.log("🔧 Creating Stripe product and price...");
       const product = await stripe.products.create({
         name: tierName,
         metadata: {
@@ -66,7 +62,6 @@ export async function POST(request: NextRequest) {
           creatorId,
         },
       });
-      console.log("✅ Product created:", product.id);
 
       const stripePrice = await stripe.prices.create({
         product: product.id,
@@ -80,7 +75,6 @@ export async function POST(request: NextRequest) {
           billingCycle,
         },
       });
-      console.log("✅ Price created:", stripePrice.id);
 
       stripePriceId = stripePrice.id;
 
@@ -99,9 +93,7 @@ export async function POST(request: NextRequest) {
           updateArgs.stripePriceIdMonthly = stripePrice.id;
         }
         await fetchMutation(api.memberships.updateStripePriceIds, updateArgs);
-        console.log("✅ Price ID persisted to tier");
       } catch (e) {
-        // Non-fatal: log but don't block checkout
         console.warn("Failed to persist Stripe price ID to tier:", e);
       }
     }
@@ -149,35 +141,21 @@ export async function POST(request: NextRequest) {
     // Only use Connect if the account is valid and has charges enabled
     if (creatorStripeAccountId) {
       try {
-        console.log("🔍 Checking Stripe Connect account:", creatorStripeAccountId);
         const account = await stripe.accounts.retrieve(creatorStripeAccountId);
-        console.log("📊 Connect account status:", { charges_enabled: account.charges_enabled, payouts_enabled: account.payouts_enabled });
         if (account.charges_enabled) {
           sessionData.subscription_data!.application_fee_percent = platformFeePercent;
           sessionData.subscription_data!.transfer_data = {
             destination: creatorStripeAccountId,
           };
-          console.log("✅ Connect transfer configured");
         } else {
-          console.warn(`Stripe Connect account ${creatorStripeAccountId} does not have charges enabled, skipping Connect`);
+          console.warn(`Stripe Connect account ${creatorStripeAccountId} charges not enabled, skipping Connect`);
         }
       } catch (e) {
-        console.warn(`Failed to retrieve Stripe Connect account ${creatorStripeAccountId}, skipping Connect:`, e);
+        console.warn(`Failed to retrieve Stripe Connect account, skipping Connect:`, e);
       }
     }
 
-    console.log("🚀 Creating checkout session...");
     const session = await stripe.checkout.sessions.create(sessionData);
-    console.log("✅ Checkout session created:", session.id);
-
-    console.log("✅ Membership checkout session created:", {
-      sessionId: session.id,
-      tierName,
-      billingCycle,
-      price,
-      trialDays: trialDays || 0,
-      customer: customerName,
-    });
 
     return NextResponse.json({
       success: true,
@@ -189,28 +167,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
     }
 
+    console.error("Membership checkout failed:", error);
+
     const isStripeError = error && typeof error === "object" && "type" in error;
     const errorMessage = isStripeError
       ? (error as any).message
       : error instanceof Error
         ? error.message
         : "Unknown error";
-    const errorType = isStripeError ? (error as any).type : "unknown";
-    const errorCode = isStripeError ? (error as any).code : undefined;
-
-    console.error("❌ Membership checkout session creation failed:", {
-      message: errorMessage,
-      type: errorType,
-      code: errorCode,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
 
     return NextResponse.json(
       {
         success: false,
-        error: errorMessage,
-        code: errorCode,
-        type: errorType,
+        error: "Failed to create checkout session",
+        details: errorMessage,
       },
       { status: 500 }
     );
