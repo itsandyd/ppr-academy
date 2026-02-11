@@ -31,7 +31,8 @@ import {
   TrendingDown,
   Star,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LearnerOnboarding } from "@/components/onboarding/LearnerOnboarding";
 import { ReferralCard } from "@/components/referrals/ReferralCard";
@@ -42,6 +43,8 @@ import { BecomeCreatorCard } from "@/components/dashboard/BecomeCreatorCard";
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const createUser = useMutation(api.users.createOrUpdateUserFromClerk);
+  const searchParams = useSearchParams();
+  const sessionVerified = useRef(false);
 
   // Apply referral code if user came from a referral link
   useApplyReferral();
@@ -66,6 +69,30 @@ export function LearnModeContent() {
       });
     }
   }, [isUserLoaded, user, convexUser, createUser]);
+
+  // Verify purchase/subscription session if redirected from Stripe checkout
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id");
+    if (!sessionId || sessionVerified.current || !user) return;
+
+    const isPurchase = searchParams.get("purchase") === "success";
+    const isSubscription = searchParams.get("subscription") === "success";
+    if (!isPurchase && !isSubscription) return;
+
+    sessionVerified.current = true;
+
+    const endpoint = isPurchase
+      ? "/api/courses/verify-session"
+      : "/api/memberships/verify-session";
+
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    }).catch((err) => {
+      console.error("Session verification failed:", err);
+    });
+  }, [searchParams, user]);
 
   const enrolledCourses = useQuery(
     api.userLibrary.getUserEnrolledCourses,
