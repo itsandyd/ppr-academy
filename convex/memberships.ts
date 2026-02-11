@@ -189,12 +189,19 @@ export const getStoreSubscribers = query({
     ),
   },
   handler: async (ctx, args) => {
-    const store = await ctx.db
-      .query("stores")
-      .filter((q) =>
-        q.or(q.eq(q.field("_id"), args.storeId as any), q.eq(q.field("userId"), args.storeId))
-      )
-      .first();
+    // Find store by direct ID or userId
+    let store: any = null;
+    try {
+      store = await ctx.db.get(args.storeId as Id<"stores">);
+    } catch {
+      // Not a valid Convex ID
+    }
+    if (!store) {
+      store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("userId"), args.storeId))
+        .first();
+    }
 
     if (!store) return [];
 
@@ -324,6 +331,26 @@ export const updateMembershipTier = mutation({
     const tier = await ctx.db.get(tierId);
     if (!tier) {
       throw new Error("Tier not found");
+    }
+
+    // Regenerate slug if tierName changes
+    if (updates.tierName && updates.tierName !== tier.tierName) {
+      let baseSlug = updates.tierName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      let slug = baseSlug;
+      let counter = 1;
+      while (true) {
+        const existing = await ctx.db
+          .query("creatorSubscriptionTiers")
+          .withIndex("by_slug", (q) => q.eq("slug", slug))
+          .first();
+        if (!existing || existing._id === tierId) break;
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      (updates as any).slug = slug;
     }
 
     await ctx.db.patch(tierId, updates);
@@ -630,10 +657,19 @@ export const getAllPublishedMemberships = query({
 export const getMembershipBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    const tier = await ctx.db
+    // Try slug first, then fall back to _id lookup
+    let tier = await ctx.db
       .query("creatorSubscriptionTiers")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
+
+    if (!tier) {
+      try {
+        tier = await ctx.db.get(args.slug as Id<"creatorSubscriptionTiers">);
+      } catch {
+        // Not a valid ID
+      }
+    }
 
     if (!tier) return null;
 
@@ -685,21 +721,14 @@ export const getMembershipBySlug = query({
 export const getStoreMemberships = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
-    // Find store by ID or userId
-    const store = await ctx.db
-      .query("stores")
-      .filter((q) =>
-        q.or(q.eq(q.field("_id"), args.storeId as any), q.eq(q.field("userId"), args.storeId))
-      )
-      .first();
-
-    if (!store) return [];
-
-    const tiers = await ctx.db
+    // Query tiers using the storeId index
+    let tiers = await ctx.db
       .query("creatorSubscriptionTiers")
-      .withIndex("by_storeId", (q) => q.eq("storeId", store.userId))
-      .filter((q) => q.eq(q.field("isActive"), true))
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
+
+    // Filter to active only
+    tiers = tiers.filter((t) => t.isActive);
 
     const enriched = await Promise.all(
       tiers.map(async (tier) => {
@@ -758,12 +787,18 @@ export const getUserMemberships = query({
 export const getCreatorCoursesAndProducts = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
-    const store = await ctx.db
-      .query("stores")
-      .filter((q) =>
-        q.or(q.eq(q.field("_id"), args.storeId as any), q.eq(q.field("userId"), args.storeId))
-      )
-      .first();
+    let store: any = null;
+    try {
+      store = await ctx.db.get(args.storeId as Id<"stores">);
+    } catch {
+      // Not a valid Convex ID
+    }
+    if (!store) {
+      store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("userId"), args.storeId))
+        .first();
+    }
 
     if (!store) return { courses: [], products: [] };
 

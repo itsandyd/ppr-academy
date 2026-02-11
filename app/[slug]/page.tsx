@@ -698,7 +698,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         router.push(`/${slug}/beats/${productSlug}`);
         break;
       case "membership":
-        router.push(`/marketplace/memberships/${productSlug}`);
+        router.push(`/${slug}/memberships/${productSlug}`);
         break;
       case "tip-jar":
         router.push(`/${slug}/tips/${productSlug}`);
