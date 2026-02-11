@@ -48,6 +48,8 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
 
   const [isYearly, setIsYearly] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [showAllCourses, setShowAllCourses] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug });
@@ -215,7 +217,7 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                   All Content Included
                 </Badge>
               )}
-              {membership.trialDays && membership.trialDays > 0 && (
+              {(membership.trialDays ?? 0) > 0 && (
                 <Badge variant="outline">
                   <Calendar className="mr-1 h-3 w-3" />
                   {membership.trialDays}-day free trial
@@ -296,102 +298,6 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                         </li>
                       ))}
                     </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Included Courses */}
-              {membership.courses && membership.courses.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <BookOpen className="h-5 w-5 text-amber-600" />
-                      Included Courses ({membership.courses.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {membership.courses.map((course: any) => (
-                      <div
-                        key={course._id}
-                        className="flex items-center justify-between rounded-lg border border-border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          {course.imageUrl && (
-                            <div className="relative h-10 w-10 overflow-hidden rounded">
-                              <Image
-                                src={course.imageUrl}
-                                alt={course.title}
-                                fill
-                                className="object-cover"
-                                sizes="40px"
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <h4 className="text-sm font-semibold">{course.title}</h4>
-                            {course.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
-                                {course.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {course.price > 0 && (
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            ${course.price.toFixed(2)}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Included Products */}
-              {membership.products && membership.products.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <ShoppingBag className="h-5 w-5 text-amber-600" />
-                      Included Products ({membership.products.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {membership.products.map((product: any) => (
-                      <div
-                        key={product._id}
-                        className="flex items-center justify-between rounded-lg border border-border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          {product.imageUrl && (
-                            <div className="relative h-10 w-10 overflow-hidden rounded">
-                              <Image
-                                src={product.imageUrl}
-                                alt={product.title || product.name}
-                                fill
-                                className="object-cover"
-                                sizes="40px"
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <h4 className="text-sm font-semibold">
-                              {product.title || product.name}
-                            </h4>
-                            {product.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
-                                {product.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {product.price > 0 && (
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            ${product.price.toFixed(2)}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
                   </CardContent>
                 </Card>
               )}
@@ -480,7 +386,7 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                   </div>
 
                   {/* Trial info */}
-                  {membership.trialDays && membership.trialDays > 0 && (
+                  {(membership.trialDays ?? 0) > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 text-center">
                       <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
                         <Zap className="inline-block mr-1 h-4 w-4" />
@@ -520,7 +426,7 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                         ) : (
                           <>
                             <Crown className="mr-2 h-5 w-5" />
-                            {membership.trialDays && membership.trialDays > 0
+                            {(membership.trialDays ?? 0) > 0
                               ? `Start ${membership.trialDays}-Day Free Trial`
                               : "Subscribe Now"}
                           </>
@@ -585,6 +491,137 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
               </div>
             </div>
           </div>
+
+          {/* Included Content - Full width below pricing */}
+          {(totalCourses > 0 || totalProducts > 0) && (
+            <div className="mt-12 space-y-8">
+              <h2 className="text-2xl font-bold text-center">
+                Everything Included in Your Membership
+              </h2>
+
+              {/* Courses grid */}
+              {membership.courses && membership.courses.length > 0 && (() => {
+                const PREVIEW_COUNT = 6;
+                const visibleCourses = showAllCourses
+                  ? membership.courses
+                  : membership.courses.slice(0, PREVIEW_COUNT);
+                const hiddenCount = membership.courses.length - PREVIEW_COUNT;
+                return (
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
+                      <BookOpen className="h-5 w-5 text-amber-600" />
+                      {membership.courses.length} Courses
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {visibleCourses.map((course: any) => (
+                        <div
+                          key={course._id}
+                          className="group overflow-hidden rounded-lg border border-border bg-card"
+                        >
+                          {course.imageUrl ? (
+                            <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                              <Image
+                                src={course.imageUrl}
+                                alt={course.title}
+                                fill
+                                className="object-cover transition-transform group-hover:scale-105"
+                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                              />
+                              {(course.price ?? 0) > 0 && (
+                                <Badge className="absolute top-1.5 right-1.5 bg-background/80 text-foreground text-[10px] backdrop-blur-sm">
+                                  ${course.price.toFixed(2)}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex aspect-video items-center justify-center bg-muted">
+                              <BookOpen className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="p-2.5">
+                            <h4 className="text-sm font-semibold line-clamp-2 leading-snug">
+                              {course.title}
+                            </h4>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {hiddenCount > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-4"
+                        onClick={() => setShowAllCourses(!showAllCourses)}
+                      >
+                        {showAllCourses ? "Show less" : `Show all ${membership.courses.length} courses`}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Products grid */}
+              {membership.products && membership.products.length > 0 && (() => {
+                const PREVIEW_COUNT = 6;
+                const visibleProducts = showAllProducts
+                  ? membership.products
+                  : membership.products.slice(0, PREVIEW_COUNT);
+                const hiddenCount = membership.products.length - PREVIEW_COUNT;
+                return (
+                  <div>
+                    <h3 className="flex items-center gap-2 text-lg font-semibold mb-4">
+                      <ShoppingBag className="h-5 w-5 text-amber-600" />
+                      {membership.products.length} Products
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {visibleProducts.map((product: any) => (
+                        <div
+                          key={product._id}
+                          className="group overflow-hidden rounded-lg border border-border bg-card"
+                        >
+                          {product.imageUrl ? (
+                            <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                              <Image
+                                src={product.imageUrl}
+                                alt={product.title || product.name}
+                                fill
+                                className="object-cover transition-transform group-hover:scale-105"
+                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                              />
+                              {(product.price ?? 0) > 0 && (
+                                <Badge className="absolute top-1.5 right-1.5 bg-background/80 text-foreground text-[10px] backdrop-blur-sm">
+                                  ${product.price.toFixed(2)}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex aspect-video items-center justify-center bg-muted">
+                              <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="p-2.5">
+                            <h4 className="text-sm font-semibold line-clamp-2 leading-snug">
+                              {product.title || product.name}
+                            </h4>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {hiddenCount > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-4"
+                        onClick={() => setShowAllProducts(!showAllProducts)}
+                      >
+                        {showAllProducts ? "Show less" : `Show all ${membership.products.length} products`}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Other Tiers */}
           {membership.allStoreTiers && membership.allStoreTiers.length > 1 && (
