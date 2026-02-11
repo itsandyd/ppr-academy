@@ -39,7 +39,9 @@ import {
   EyeOff,
   Pin,
   PinOff,
-  Layers
+  Layers,
+  Crown,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -61,6 +63,9 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const publishBundle: any = useMutation(api.bundles.publishBundle);
   const unpublishBundle: any = useMutation(api.bundles.unpublishBundle);
   const updateBundle: any = useMutation(api.bundles.updateBundle);
+  const publishMembershipTier: any = useMutation(api.memberships.publishMembershipTier);
+  const unpublishMembershipTier: any = useMutation(api.memberships.unpublishMembershipTier);
+  const deleteMembershipTier: any = useMutation(api.memberships.deleteMembershipTier);
 
   // Product action handlers
   const handleEditProduct = (productId: string) => {
@@ -73,6 +78,8 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
       router.push(`/dashboard/create/course?courseId=${productId}&step=course`);
     } else if (product.type === 'bundle') {
       router.push(`/dashboard/create/bundle?bundleId=${productId}&step=basics`);
+    } else if (product.type === 'membership') {
+      router.push(`/dashboard/create/membership?tierId=${productId}`);
     } else if (product.productCategory === 'sample-pack' || product.productCategory === 'preset-pack' || product.productCategory === 'midi-pack') {
       router.push(`/dashboard/create/pack?type=${product.productCategory}&packId=${productId}`);
     } else if (product.productCategory === 'effect-chain' || product.productCategory === 'ableton-rack') {
@@ -100,6 +107,8 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           await deleteCourse({ courseId: productId as any, userId: user?.id || '' });
         } else if (product?.type === 'bundle') {
           await deleteBundle({ bundleId: productId as any });
+        } else if (product?.type === 'membership') {
+          await deleteMembershipTier({ tierId: productId as any });
         } else {
           await deleteProduct({ id: productId as any, userId: user?.id || '' });
         }
@@ -127,6 +136,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           await unpublishBundle({ bundleId: productId as any });
         } else {
           await publishBundle({ bundleId: productId as any });
+        }
+      } else if (product?.type === 'membership') {
+        if (currentState) {
+          await unpublishMembershipTier({ tierId: productId as any });
+        } else {
+          await publishMembershipTier({ tierId: productId as any });
         }
       } else {
         await updateProduct({
@@ -207,11 +222,19 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     storeId ? { storeId, includeUnpublished: true } : 'skip'
   );
 
+  // Fetch membership tiers (using store userId as storeId)
+  const store = stores?.[0];
+  const membershipTiers: any = useQuery(
+    api.memberships.getMembershipTiersByStore,
+    store?.userId ? { storeId: store.userId, includeInactive: true } : 'skip'
+  );
+
   // Combine and categorize
   const allProducts = [
     ...(userCourses?.map((c: any) => ({ ...c, type: 'course' })) || []),
     ...(digitalProducts?.map((p: any) => ({ ...p, type: 'digital' })) || []),
-    ...(userBundles?.map((b: any) => ({ ...b, type: 'bundle', title: b.name, productCategory: 'bundle' })) || [])
+    ...(userBundles?.map((b: any) => ({ ...b, type: 'bundle', title: b.name, productCategory: 'bundle' })) || []),
+    ...(membershipTiers?.map((t: any) => ({ ...t, type: 'membership', title: t.tierName, isPublished: t.isActive, productCategory: 'membership' })) || []),
   ];
 
   const publishedProducts = allProducts.filter((p: any) => p.isPublished);
@@ -248,7 +271,8 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   ) || [];
 
   const bundles = userBundles || [];
-  
+  const memberships = membershipTiers || [];
+
   // Count by DAW for filtering
   const dawCounts = effectChains.reduce((acc: any, chain: any) => {
     const daw = chain.dawType || 'ableton'; // Default to ableton for legacy
@@ -433,6 +457,20 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                 </TooltipTrigger>
                 <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                   <p>Bundles ({bundles.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
+
+            <TabsTrigger value="memberships" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <Crown className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Memberships</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Memberships ({memberships.length})</p>
                 </TooltipContent>
               </Tooltip>
             </TabsTrigger>
@@ -698,6 +736,30 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {bundles.map((bundle: any) => (
                 <BundleCard key={bundle._id} bundle={bundle} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="memberships" className="space-y-4 mt-6">
+          {memberships.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Crown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Memberships Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Create subscription tiers for recurring revenue
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/create/membership">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Membership
+                </Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {memberships.map((tier: any) => (
+                <MembershipTierCard key={tier._id} tier={tier} />
               ))}
             </div>
           )}
@@ -1041,6 +1103,7 @@ function ProductCard({ product, onEdit, onDelete, onTogglePublish, onTogglePin }
 }) {
   const Icon = product.type === 'course' ? BookOpen :
                product.type === 'bundle' ? Layers :
+               product.type === 'membership' ? Crown :
                product.productCategory === 'bundle' ? Layers :
                product.productCategory === 'sample-pack' ? Music :
                product.productCategory === 'preset-pack' ? Music :
@@ -1147,6 +1210,62 @@ function ProductCard({ product, onEdit, onDelete, onTogglePublish, onTogglePin }
         </p>
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold">${product.price || 0}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MembershipTierCard({ tier }: { tier: any }) {
+  const router = useRouter();
+
+  return (
+    <Card className={`group hover:shadow-lg transition-all overflow-hidden ${!tier.isActive ? 'border-dashed opacity-75' : ''}`}>
+      <div className="aspect-video w-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 flex items-center justify-center">
+        <Crown className="w-16 h-16 text-amber-400 dark:text-amber-600" />
+      </div>
+
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-lg line-clamp-2 flex-1">
+            {tier.tierName}
+          </h3>
+          <Badge variant={tier.isActive ? 'default' : 'secondary'}>
+            {tier.isActive ? 'Live' : 'Draft'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="outline" className="text-xs">
+            Membership
+          </Badge>
+          {(tier.subscriberCount || 0) > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              <Users className="w-3 h-3 mr-1" />
+              {tier.subscriberCount} subscriber{tier.subscriberCount !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {tier.description || 'No description'}
+        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-lg font-bold">${tier.priceMonthly?.toFixed(2) || '0.00'}</span>
+            <span className="text-sm text-muted-foreground">/mo</span>
+            {tier.priceYearly && (
+              <span className="ml-2 text-sm text-muted-foreground">
+                ${tier.priceYearly.toFixed(2)}/yr
+              </span>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/create/membership?tierId=${tier._id}`)}
+          >
+            <Edit className="w-4 h-4 mr-1" />
+            Edit
+          </Button>
         </div>
       </CardContent>
     </Card>

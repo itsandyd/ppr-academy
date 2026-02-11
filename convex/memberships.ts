@@ -390,10 +390,6 @@ export const publishMembershipTier = mutation({
       throw new Error("Tier not found");
     }
 
-    if (!tier.stripePriceIdMonthly) {
-      throw new Error("Stripe price ID required before publishing");
-    }
-
     await ctx.db.patch(args.tierId, { isActive: true });
     return { success: true };
   },
