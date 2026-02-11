@@ -100,6 +100,11 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
   const currentPrice = isYearly ? yearlyPrice : monthlyPrice;
   const savings = isYearly ? monthlyPrice * 12 - yearlyPrice : 0;
   const benefits = membership.benefits || [];
+  const totalCourses = membership.courses?.length || 0;
+  const totalProducts = membership.products?.length || 0;
+  const totalContentValue =
+    (membership.courses || []).reduce((sum: number, c: any) => sum + (c.price || 0), 0) +
+    (membership.products || []).reduce((sum: number, p: any) => sum + (p.price || 0), 0);
 
   // Generate structured data for SEO
   const membershipUrl = `${baseUrl}/${slug}/memberships/${membershipSlug}`;
@@ -228,13 +233,60 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Left Column - Benefits & Content */}
             <div className="space-y-6">
-              {/* Benefits */}
+              {/* Value proposition summary */}
+              {(totalCourses > 0 || totalProducts > 0) && (
+                <Card className="border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                      <Sparkles className="h-5 w-5 text-amber-500" />
+                      {membership.includesAllContent ? "Full Access to Everything" : "What\u0027s included"}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {totalCourses > 0 && (
+                        <div className="text-center p-3 rounded-lg bg-background/60">
+                          <BookOpen className="h-6 w-6 text-amber-600 mx-auto mb-1" />
+                          <div className="text-2xl font-bold">{totalCourses}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {totalCourses === 1 ? "Course" : "Courses"}
+                          </div>
+                        </div>
+                      )}
+                      {totalProducts > 0 && (
+                        <div className="text-center p-3 rounded-lg bg-background/60">
+                          <ShoppingBag className="h-6 w-6 text-amber-600 mx-auto mb-1" />
+                          <div className="text-2xl font-bold">{totalProducts}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {totalProducts === 1 ? "Product" : "Products"}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {totalContentValue > 0 && (
+                      <div className="mt-4 text-center p-3 rounded-lg bg-background/60">
+                        <p className="text-sm text-muted-foreground">
+                          Total value if purchased separately
+                        </p>
+                        <p className="text-2xl font-bold text-amber-600">
+                          ${totalContentValue.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                    {membership.includesAllContent && (
+                      <p className="mt-3 text-sm text-muted-foreground text-center">
+                        Plus instant access to all future content
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Custom benefits */}
               {benefits.length > 0 && (
                 <Card>
                   <CardContent className="p-6 space-y-4">
                     <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-amber-500" />
-                      What&apos;s included
+                      <Check className="h-5 w-5 text-emerald-500" />
+                      Member Benefits
                     </h3>
                     <ul className="space-y-3">
                       {benefits.map((benefit: string, index: number) => (
@@ -277,11 +329,16 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                           )}
                           <div>
                             <h4 className="text-sm font-semibold">{course.title}</h4>
+                            {course.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {course.description}
+                              </p>
+                            )}
                           </div>
                         </div>
                         {course.price > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            ${(course.price / 100).toFixed(2)}
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            ${course.price.toFixed(2)}
                           </Badge>
                         )}
                       </div>
@@ -321,11 +378,16 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                             <h4 className="text-sm font-semibold">
                               {product.title || product.name}
                             </h4>
+                            {product.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {product.description}
+                              </p>
+                            )}
                           </div>
                         </div>
                         {product.price > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            ${(product.price / 100).toFixed(2)}
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            ${product.price.toFixed(2)}
                           </Badge>
                         )}
                       </div>
@@ -466,6 +528,10 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
                       </Button>
 
                       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-amber-500" />
+                          Instant access
+                        </span>
                         <span className="flex items-center gap-1">
                           <CheckCircle className="h-3 w-3 text-emerald-500" />
                           Cancel anytime

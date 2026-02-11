@@ -683,21 +683,42 @@ export const getMembershipBySlug = query({
       .withIndex("by_clerkId", (q) => q.eq("clerkId", tier.creatorId))
       .first();
 
-    const accessRules = await ctx.db
-      .query("contentAccess")
-      .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
-      .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
-      .collect();
+    const includesAllContent = tier.maxCourses === undefined || tier.maxCourses === null;
 
-    const courseIds = accessRules
-      .filter((r) => r.resourceType === "course")
-      .map((r) => r.resourceId as Id<"courses">);
-    const productIds = accessRules
-      .filter((r) => r.resourceType === "product")
-      .map((r) => r.resourceId as Id<"digitalProducts">);
+    let courses: any[] = [];
+    let products: any[] = [];
 
-    const courses = (await Promise.all(courseIds.map((id) => ctx.db.get(id)))).filter(Boolean);
-    const products = (await Promise.all(productIds.map((id) => ctx.db.get(id)))).filter(Boolean);
+    if (includesAllContent) {
+      // Fetch ALL published courses and products from this store
+      const allCourses = await ctx.db
+        .query("courses")
+        .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+        .collect();
+      courses = allCourses.filter((c) => c.isPublished);
+
+      const allProducts = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+        .collect();
+      products = allProducts.filter((p) => p.isPublished);
+    } else {
+      // Fetch only content linked via contentAccess rules
+      const accessRules = await ctx.db
+        .query("contentAccess")
+        .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
+        .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
+        .collect();
+
+      const courseIds = accessRules
+        .filter((r) => r.resourceType === "course")
+        .map((r) => r.resourceId as Id<"courses">);
+      const productIds = accessRules
+        .filter((r) => r.resourceType === "product")
+        .map((r) => r.resourceId as Id<"digitalProducts">);
+
+      courses = (await Promise.all(courseIds.map((id) => ctx.db.get(id)))).filter(Boolean);
+      products = (await Promise.all(productIds.map((id) => ctx.db.get(id)))).filter(Boolean);
+    }
 
     // Get all tiers for this store (for tier comparison)
     const allStoreTiers = await ctx.db
@@ -713,7 +734,7 @@ export const getMembershipBySlug = query({
       store: store ? { _id: store._id, name: store.name, slug: store.slug, logoUrl: store.logoUrl, bio: store.bio } : null,
       creator: user ? { name: `${user.firstName || ""} ${user.lastName || ""}`.trim(), imageUrl: user.imageUrl, stripeConnectAccountId: user.stripeConnectAccountId } : null,
       allStoreTiers: allStoreTiers.sort((a, b) => a.priceMonthly - b.priceMonthly),
-      includesAllContent: tier.maxCourses === undefined || tier.maxCourses === null,
+      includesAllContent,
     };
   },
 });
