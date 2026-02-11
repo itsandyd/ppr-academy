@@ -32,6 +32,14 @@ export function MembershipCard({ product, onClick }: ProductCardProps) {
       )}
       onClick={() => onClick?.(product)}
     >
+      {/* Featured badge */}
+      {(product as any).isPinned && (
+        <Badge className="absolute left-3 top-3 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium shadow-lg">
+          <Star className="mr-1 h-3 w-3 fill-current" />
+          Featured
+        </Badge>
+      )}
+
       {/* Premium ribbon */}
       <div className="absolute -right-8 top-6 z-10 rotate-45 bg-gradient-to-r from-amber-500 to-orange-500 px-10 py-1 text-xs font-bold text-white shadow-lg">
         PREMIUM

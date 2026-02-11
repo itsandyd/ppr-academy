@@ -10,7 +10,7 @@ import crypto from "crypto";
  */
 
 const UNSUBSCRIBE_SECRET =
-  process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback-secret-change-me";
+  process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
 
 /**
  * Generate a secure unsubscribe token for an email address

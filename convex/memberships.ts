@@ -782,3 +782,22 @@ export const getCreatorCoursesAndProducts = query({
     return { courses, products };
   },
 });
+
+export const updateMembershipTierPin = mutation({
+  args: {
+    tierId: v.id("creatorSubscriptionTiers"),
+    isPinned: v.boolean(),
+    pinnedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const tier = await ctx.db.get(args.tierId);
+    if (!tier) {
+      throw new Error("Tier not found");
+    }
+    await ctx.db.patch(args.tierId, {
+      isPinned: args.isPinned,
+      pinnedAt: args.pinnedAt,
+    });
+    return { success: true };
+  },
+});

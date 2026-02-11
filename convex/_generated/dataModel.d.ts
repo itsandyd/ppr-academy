@@ -3335,7 +3335,9 @@ export type DataModel = {
       description: string;
       imageUrl?: string;
       isActive: boolean;
+      isPinned?: boolean;
       maxCourses?: number;
+      pinnedAt?: number;
       priceMonthly: number;
       priceYearly?: number;
       slug?: string;
@@ -3356,7 +3358,9 @@ export type DataModel = {
       | "description"
       | "imageUrl"
       | "isActive"
+      | "isPinned"
       | "maxCourses"
+      | "pinnedAt"
       | "priceMonthly"
       | "priceYearly"
       | "slug"

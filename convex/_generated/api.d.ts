@@ -15452,6 +15452,16 @@ export declare const api: {
       },
       any
     >;
+    updateMembershipTierPin: FunctionReference<
+      "mutation",
+      "public",
+      {
+        isPinned: boolean;
+        pinnedAt?: number;
+        tierId: Id<"creatorSubscriptionTiers">;
+      },
+      any
+    >;
     updateStripePriceIds: FunctionReference<
       "mutation",
       "public",

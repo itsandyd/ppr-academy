@@ -122,7 +122,7 @@ function getResendClient(apiKey?: string) {
 
 function generateUnsubscribeUrl(email: string): string {
   const secret =
-    process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback-secret";
+    process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
   const emailBase64 = Buffer.from(email).toString("base64url");
   const signature = crypto.createHmac("sha256", secret).update(email).digest("base64url");
   const token = `${emailBase64}.${signature}`;

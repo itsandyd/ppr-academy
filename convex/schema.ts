@@ -1898,6 +1898,8 @@ export default defineSchema({
     trialDays: v.optional(v.number()), // Free trial period in days
     imageUrl: v.optional(v.string()), // Tier thumbnail
     subscriberCount: v.optional(v.number()), // Cached count for marketplace
+    isPinned: v.optional(v.boolean()),
+    pinnedAt: v.optional(v.number()),
     isActive: v.boolean(),
   })
     .index("by_creatorId", ["creatorId"])

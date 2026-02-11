@@ -66,6 +66,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const publishMembershipTier: any = useMutation(api.memberships.publishMembershipTier);
   const unpublishMembershipTier: any = useMutation(api.memberships.unpublishMembershipTier);
   const deleteMembershipTier: any = useMutation(api.memberships.deleteMembershipTier);
+  const updateMembershipTierPin: any = useMutation(api.memberships.updateMembershipTierPin);
 
   // Product action handlers
   const handleEditProduct = (productId: string) => {
@@ -173,6 +174,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
       } else if (product?.type === 'course') {
         await updateCourse({
           id: productId as any,
+          isPinned: newPinnedState,
+          pinnedAt: newPinnedState ? Date.now() : undefined
+        });
+      } else if (product?.type === 'membership') {
+        await updateMembershipTierPin({
+          tierId: productId as any,
           isPinned: newPinnedState,
           pinnedAt: newPinnedState ? Date.now() : undefined
         });

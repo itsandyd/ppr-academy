@@ -569,7 +569,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         priceYearly: tier.priceYearly,
         benefits: tier.benefits,
         trialDays: tier.trialDays,
-      })),
+        // Pinning
+        isPinned: tier.isPinned,
+        pinnedAt: tier.pinnedAt,
+      } as BaseProduct & { isPinned?: boolean; pinnedAt?: number })),
     ],
     [products, courses, coachProfiles, bundles, membershipTiers]
   );
