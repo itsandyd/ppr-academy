@@ -2161,6 +2161,77 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  cheatSheets: {
+    document: {
+      aiModel?: string;
+      courseId: Id<"courses">;
+      courseTitle: string;
+      createdAt: number;
+      digitalProductId?: Id<"digitalProducts">;
+      generatedAt?: number;
+      outline: {
+        footer?: string;
+        sections: Array<{
+          heading: string;
+          items: Array<{
+            isTip?: boolean;
+            isWarning?: boolean;
+            subItems?: Array<string>;
+            text: string;
+          }>;
+          type:
+            | "key_takeaways"
+            | "quick_reference"
+            | "step_by_step"
+            | "tips"
+            | "comparison"
+            | "glossary"
+            | "custom";
+        }>;
+        subtitle?: string;
+        title: string;
+      };
+      pdfGeneratedAt?: number;
+      pdfStorageId?: Id<"_storage">;
+      pdfUrl?: string;
+      selectedChapterIds: Array<string>;
+      status: "draft" | "generated" | "published";
+      updatedAt: number;
+      userId: string;
+      _id: Id<"cheatSheets">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "aiModel"
+      | "courseId"
+      | "courseTitle"
+      | "createdAt"
+      | "digitalProductId"
+      | "generatedAt"
+      | "outline"
+      | "outline.footer"
+      | "outline.sections"
+      | "outline.subtitle"
+      | "outline.title"
+      | "pdfGeneratedAt"
+      | "pdfStorageId"
+      | "pdfUrl"
+      | "selectedChapterIds"
+      | "status"
+      | "updatedAt"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_courseId: ["courseId", "_creationTime"];
+      by_status: ["status", "_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   coachingSessions: {
     document: {
       coachId: string;

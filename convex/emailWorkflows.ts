@@ -2687,6 +2687,140 @@ export const getDueExecutions = internalQuery({
 });
 
 /**
+ * Bulk-advance delay and action/tag nodes without action overhead.
+ * Returns IDs of email nodes that need full action processing.
+ */
+export const bulkAdvanceSimpleNodes = internalMutation({
+  args: {
+    executionIds: v.array(v.id("workflowExecutions")),
+  },
+  returns: v.object({
+    advanced: v.number(),
+    emailNodeIds: v.array(v.id("workflowExecutions")),
+    completed: v.number(),
+    skipped: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let advanced = 0;
+    let completed = 0;
+    let skipped = 0;
+    const emailNodeIds: any[] = [];
+    const now = Date.now();
+
+    // Cache workflows
+    const workflowCache = new Map<string, any>();
+
+    for (const execId of args.executionIds) {
+      const execution = await ctx.db.get(execId);
+      if (!execution || execution.status === "completed" || execution.status === "failed") {
+        skipped++;
+        continue;
+      }
+
+      // Get workflow
+      let workflow = workflowCache.get(execution.workflowId);
+      if (!workflow) {
+        workflow = await ctx.db.get(execution.workflowId);
+        if (workflow) workflowCache.set(execution.workflowId, workflow);
+      }
+      if (!workflow) { skipped++; continue; }
+
+      const currentNode = workflow.nodes?.find((n: any) => n.id === execution.currentNodeId);
+      if (!currentNode) {
+        // No node - complete
+        await ctx.db.patch(execId, { status: "completed", completedAt: now });
+        completed++;
+        continue;
+      }
+
+      // Email nodes need full action processing (Resend API call)
+      if (currentNode.type === "email") {
+        emailNodeIds.push(execId);
+        continue;
+      }
+
+      // Goal/stop nodes - complete
+      if (currentNode.type === "goal" || currentNode.type === "stop") {
+        await ctx.db.patch(execId, { status: "completed", completedAt: now });
+        completed++;
+        continue;
+      }
+
+      // For delay, action, trigger nodes - find next node and advance
+      const allOutgoingEdges = workflow.edges?.filter((e: any) => e.source === currentNode.id) || [];
+      let connection = allOutgoingEdges[0];
+
+      if (allOutgoingEdges.length > 1) {
+        const sequenceEdge = allOutgoingEdges.find((e: any) => {
+          const targetNode = workflow.nodes.find((n: any) => n.id === e.target);
+          return targetNode && targetNode.type !== "action";
+        });
+        if (sequenceEdge) connection = sequenceEdge;
+      }
+
+      // Leaf action node fix
+      if (!connection && currentNode.type === "action") {
+        const incomingEdge = workflow.edges?.find((e: any) => e.target === currentNode.id);
+        if (incomingEdge) {
+          const parentNode = workflow.nodes.find((n: any) => n.id === incomingEdge.source);
+          if (parentNode) {
+            const siblingEdges = workflow.edges?.filter(
+              (e: any) => e.source === parentNode.id && e.target !== currentNode.id
+            ) || [];
+            const sequenceSibling = siblingEdges.find((e: any) => {
+              const targetNode = workflow.nodes.find((n: any) => n.id === e.target);
+              return targetNode && targetNode.type !== "action";
+            });
+            if (sequenceSibling) connection = sequenceSibling;
+          }
+        }
+      }
+
+      if (!connection) {
+        await ctx.db.patch(execId, { status: "completed", completedAt: now });
+        completed++;
+        continue;
+      }
+
+      const nextNode = workflow.nodes.find((n: any) => n.id === connection.target);
+      if (!nextNode) {
+        await ctx.db.patch(execId, { status: "completed", completedAt: now });
+        completed++;
+        continue;
+      }
+
+      // If next node is a delay, calculate scheduledFor
+      if (nextNode.type === "delay") {
+        const delayData = nextNode.data || {};
+        const delayValue = delayData.delay || delayData.delayValue || 1;
+        const delayUnit = delayData.delayUnit || delayData.delayType || "days";
+        let delayMs = 0;
+        switch (delayUnit) {
+          case "minutes": delayMs = delayValue * 60 * 1000; break;
+          case "hours": delayMs = delayValue * 60 * 60 * 1000; break;
+          default: delayMs = delayValue * 24 * 60 * 60 * 1000;
+        }
+        await ctx.db.patch(execId, {
+          currentNodeId: nextNode.id,
+          scheduledFor: now + delayMs,
+          status: "pending",
+        });
+      } else {
+        // Advance immediately
+        await ctx.db.patch(execId, {
+          currentNodeId: nextNode.id,
+          scheduledFor: now,
+          status: "pending",
+        });
+      }
+      advanced++;
+    }
+
+    return { advanced, emailNodeIds, completed, skipped };
+  },
+});
+
+/**
  * Debug query to see what getDueExecutions returns (workflow breakdown, node types, sample IDs)
  */
 export const debugDueExecutions = internalQuery({
@@ -2725,6 +2859,45 @@ export const debugDueExecutions = internalQuery({
       now,
       oldestScheduledFor: dueExecutions[0]?.scheduledFor,
       newestScheduledFor: dueExecutions[dueExecutions.length - 1]?.scheduledFor,
+    };
+  },
+});
+
+/**
+ * Debug: Check executions at a specific node to verify scheduledFor timestamps.
+ */
+export const debugExecutionsAtNode = internalQuery({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    nodeId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const limit = args.limit ?? 10;
+
+    const pending = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(15000);
+
+    const atNode = pending.filter((e) => e.currentNodeId === args.nodeId);
+    const samples = atNode.slice(0, limit);
+
+    return {
+      totalAtNode: atNode.length,
+      now,
+      samples: samples.map((e) => ({
+        _id: e._id,
+        currentNodeId: e.currentNodeId,
+        scheduledFor: e.scheduledFor,
+        scheduledForDate: e.scheduledFor ? new Date(e.scheduledFor).toISOString() : null,
+        hoursUntilDue: e.scheduledFor ? ((e.scheduledFor - now) / (1000 * 60 * 60)).toFixed(1) : null,
+        status: e.status,
+      })),
     };
   },
 });

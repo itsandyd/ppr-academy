@@ -5,42 +5,55 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 /**
- * Main workflow execution processor - called by cron every 5 minutes
- * Processes all due workflow executions
+ * Main workflow execution processor - called by cron.
+ * Uses bulk mutation for delay/tag/action nodes (fast), only uses actions for email nodes (slow).
  */
 export const processEmailWorkflowExecutions = internalAction({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    // Get executions that are due to run
     const dueExecutions = await ctx.runQuery(internal.emailWorkflows.getDueExecutions, {});
 
-    console.log(`[EmailWorkflows] Processing ${dueExecutions.length} due executions`);
+    if (dueExecutions.length === 0) return null;
 
-    let processed = 0;
-    let failed = 0;
+    // Phase 1: Bulk-advance all non-email nodes in a single mutation (fast)
+    const execIds = dueExecutions.map((e: any) => e._id);
+    const bulkResult = await ctx.runMutation(internal.emailWorkflows.bulkAdvanceSimpleNodes, {
+      executionIds: execIds,
+    });
 
-    for (const execution of dueExecutions) {
+    console.log(
+      `[EmailWorkflows] Bulk: ${bulkResult.advanced} advanced, ${bulkResult.completed} completed, ` +
+      `${bulkResult.skipped} skipped, ${bulkResult.emailNodeIds.length} emails need action`
+    );
+
+    // Phase 2: Process email nodes via actions (need Resend API)
+    let emailProcessed = 0;
+    let emailFailed = 0;
+
+    for (const execId of bulkResult.emailNodeIds) {
       try {
         await ctx.runAction(internal.emailWorkflowActions.executeWorkflowNode, {
-          executionId: execution._id,
+          executionId: execId,
         });
-        processed++;
+        emailProcessed++;
       } catch (error) {
-        failed++;
-        console.error(`[EmailWorkflows] Failed execution ${execution._id} (${execution.customerEmail}):`, error);
+        emailFailed++;
+        console.error(`[EmailWorkflows] Failed email execution ${execId}:`, error);
         try {
           await ctx.runMutation(internal.emailWorkflows.markExecutionFailed, {
-            executionId: execution._id,
+            executionId: execId,
             error: String(error),
           });
         } catch {
-          // Ignore failure to mark as failed
+          // Ignore
         }
       }
     }
 
-    console.log(`[EmailWorkflows] Batch complete: ${processed} processed, ${failed} failed, ${dueExecutions.length} total`);
+    if (bulkResult.emailNodeIds.length > 0) {
+      console.log(`[EmailWorkflows] Emails: ${emailProcessed} sent, ${emailFailed} failed`);
+    }
 
     return null;
   },

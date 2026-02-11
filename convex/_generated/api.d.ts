@@ -5435,6 +5435,113 @@ export declare const api: {
       { message: string; success: boolean; title: string }
     >;
   };
+  cheatSheetMutations: {
+    deleteCheatSheet: FunctionReference<
+      "mutation",
+      "public",
+      { cheatSheetId: Id<"cheatSheets"> },
+      any
+    >;
+    getCheatSheet: FunctionReference<
+      "query",
+      "public",
+      { cheatSheetId: Id<"cheatSheets"> },
+      any
+    >;
+    getCheatSheetsByCourse: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses"> },
+      any
+    >;
+    listCheatSheets: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    publishAsLeadMagnet: FunctionReference<
+      "mutation",
+      "public",
+      { cheatSheetId: Id<"cheatSheets">; storeId: string; userId: string },
+      any
+    >;
+    saveCheatSheet: FunctionReference<
+      "mutation",
+      "public",
+      {
+        aiModel?: string;
+        cheatSheetId?: Id<"cheatSheets">;
+        courseId: Id<"courses">;
+        courseTitle: string;
+        outline: {
+          footer?: string;
+          sections: Array<{
+            heading: string;
+            items: Array<{
+              isTip?: boolean;
+              isWarning?: boolean;
+              subItems?: Array<string>;
+              text: string;
+            }>;
+            type:
+              | "key_takeaways"
+              | "quick_reference"
+              | "step_by_step"
+              | "tips"
+              | "comparison"
+              | "glossary"
+              | "custom";
+          }>;
+          subtitle?: string;
+          title: string;
+        };
+        selectedChapterIds: Array<string>;
+        userId: string;
+      },
+      any
+    >;
+    updateOutline: FunctionReference<
+      "mutation",
+      "public",
+      {
+        cheatSheetId: Id<"cheatSheets">;
+        outline: {
+          footer?: string;
+          sections: Array<{
+            heading: string;
+            items: Array<{
+              isTip?: boolean;
+              isWarning?: boolean;
+              subItems?: Array<string>;
+              text: string;
+            }>;
+            type:
+              | "key_takeaways"
+              | "quick_reference"
+              | "step_by_step"
+              | "tips"
+              | "comparison"
+              | "glossary"
+              | "custom";
+          }>;
+          subtitle?: string;
+          title: string;
+        };
+      },
+      any
+    >;
+    updatePdfInfo: FunctionReference<
+      "mutation",
+      "public",
+      {
+        cheatSheetId: Id<"cheatSheets">;
+        pdfStorageId: Id<"_storage">;
+        pdfUrl: string;
+      },
+      any
+    >;
+  };
   clerkSync: {
     getSyncStats: FunctionReference<
       "query",
@@ -6988,6 +7095,12 @@ export declare const api: {
           | "failed";
         videoUrl?: string;
       }>
+    >;
+    getCourseChaptersEnriched: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses"> },
+      any
     >;
     getCourseForEdit: FunctionReference<
       "query",
@@ -14329,6 +14442,18 @@ export declare const api: {
     >;
   };
   masterAI: {
+    cheatSheetGenerator: {
+      generateOutline: FunctionReference<
+        "action",
+        "public",
+        {
+          chapterIds: Array<string>;
+          courseId: Id<"courses">;
+          customInstructions?: string;
+        },
+        any
+      >;
+    };
     index: {
       askAgenticAI: FunctionReference<
         "action",
@@ -24083,6 +24208,17 @@ export declare const internal: {
       },
       { message: string; totalResumed: number }
     >;
+    bulkAdvanceSimpleNodes: FunctionReference<
+      "mutation",
+      "internal",
+      { executionIds: Array<Id<"workflowExecutions">> },
+      {
+        advanced: number;
+        completed: number;
+        emailNodeIds: Array<Id<"workflowExecutions">>;
+        skipped: number;
+      }
+    >;
     bulkCompleteStopNodeExecutions: FunctionReference<
       "mutation",
       "internal",
@@ -24127,6 +24263,12 @@ export declare const internal: {
       Id<"emailTags">
     >;
     debugDueExecutions: FunctionReference<"query", "internal", {}, any>;
+    debugExecutionsAtNode: FunctionReference<
+      "query",
+      "internal",
+      { limit?: number; nodeId: string; workflowId: Id<"emailWorkflows"> },
+      any
+    >;
     enrollContactBatchInternal: FunctionReference<
       "mutation",
       "internal",

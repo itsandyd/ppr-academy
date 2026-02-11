@@ -1918,6 +1918,61 @@ export const getChaptersForLeadMagnet = internalQuery({
 });
 
 /**
+ * Get enriched chapters for cheat sheet generator (public query)
+ * Returns chapters with module/lesson titles for admin UI selection
+ */
+export const getCourseChaptersEnriched = query({
+  args: {
+    courseId: v.id("courses"),
+  },
+  handler: async (ctx, args) => {
+    const chapters = await ctx.db
+      .query("courseChapters")
+      .withIndex("by_courseId", (q: any) => q.eq("courseId", args.courseId))
+      .collect();
+
+    const enrichedChapters = await Promise.all(
+      chapters.map(async (chapter: any) => {
+        let lessonTitle: string | undefined;
+        let moduleTitle: string | undefined;
+
+        if (chapter.lessonId) {
+          const lesson = await ctx.db
+            .query("courseLessons")
+            .filter((q: any) => q.eq(q.field("_id"), chapter.lessonId as any))
+            .first();
+
+          if (lesson) {
+            lessonTitle = lesson.title;
+            if (lesson.moduleId) {
+              const mod = await ctx.db
+                .query("courseModules")
+                .filter((q: any) => q.eq(q.field("_id"), lesson.moduleId as any))
+                .first();
+              if (mod) {
+                moduleTitle = mod.title;
+              }
+            }
+          }
+        }
+
+        return {
+          _id: chapter._id,
+          title: chapter.title,
+          description: chapter.description,
+          position: chapter.position,
+          lessonId: chapter.lessonId,
+          lessonTitle,
+          moduleTitle,
+        };
+      })
+    );
+
+    return enrichedChapters;
+  },
+});
+
+/**
  * Get all chapters for a course (public query)
  * Used by social content creation flow to select chapter content
  * Resolves storage IDs to URLs for audio/video fields

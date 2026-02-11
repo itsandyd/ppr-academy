@@ -5649,6 +5649,74 @@ export default defineSchema({
     .index("by_userId_and_createdAt", ["userId", "createdAt"]),
 
   // =============================================================================
+  // Cheat Sheet Generator - AI-powered PDF cheat sheets from course content
+  // =============================================================================
+
+  cheatSheets: defineTable({
+    userId: v.string(), // Clerk ID of admin who created it
+
+    // Source course
+    courseId: v.id("courses"),
+    courseTitle: v.string(),
+    selectedChapterIds: v.array(v.string()), // IDs of chapters used as source
+
+    // Editable outline structure (AI-generated, then user-refined)
+    outline: v.object({
+      title: v.string(),
+      subtitle: v.optional(v.string()),
+      sections: v.array(
+        v.object({
+          heading: v.string(),
+          type: v.union(
+            v.literal("key_takeaways"),
+            v.literal("quick_reference"),
+            v.literal("step_by_step"),
+            v.literal("tips"),
+            v.literal("comparison"),
+            v.literal("glossary"),
+            v.literal("custom")
+          ),
+          items: v.array(
+            v.object({
+              text: v.string(),
+              subItems: v.optional(v.array(v.string())),
+              isTip: v.optional(v.boolean()),
+              isWarning: v.optional(v.boolean()),
+            })
+          ),
+        })
+      ),
+      footer: v.optional(v.string()),
+    }),
+
+    // Generation metadata
+    aiModel: v.optional(v.string()),
+    generatedAt: v.optional(v.number()),
+
+    // PDF output
+    pdfStorageId: v.optional(v.id("_storage")),
+    pdfUrl: v.optional(v.string()),
+    pdfGeneratedAt: v.optional(v.number()),
+
+    // Link to digitalProducts (if published as lead magnet)
+    digitalProductId: v.optional(v.id("digitalProducts")),
+
+    // Lifecycle status
+    status: v.union(
+      v.literal("draft"),      // Outline created, not yet PDF'd
+      v.literal("generated"),  // PDF generated
+      v.literal("published")   // Published as digitalProduct
+    ),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_status", ["status"]),
+
+  // =============================================================================
   // AI Course Builder - Batch course generation queue and outlines
   // =============================================================================
 

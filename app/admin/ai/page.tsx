@@ -1,7 +1,7 @@
 "use client";
 
 import { AdminCategoryPage } from "../components/AdminCategoryPage";
-import { Sparkles, Wand2, TrendingUp, Lightbulb, Database } from "lucide-react";
+import { Sparkles, Wand2, TrendingUp, Lightbulb, Database, FileText } from "lucide-react";
 
 const aiCards = [
   {
@@ -40,6 +40,13 @@ const aiCards = [
     href: "/admin/embeddings",
     icon: Database,
     color: "bg-cyan-500",
+  },
+  {
+    title: "Cheat Sheet Generator",
+    description: "Generate branded PDF cheat sheets from course content",
+    href: "/admin/lead-magnets/cheat-sheets",
+    icon: FileText,
+    color: "bg-indigo-500",
   },
 ];
 
