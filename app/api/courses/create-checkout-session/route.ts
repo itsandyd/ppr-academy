@@ -2,61 +2,99 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
-// Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: NextRequest) {
   try {
-    // ✅ SECURITY: Require authentication
     const user = await requireAuth();
-    
-    // ✅ SECURITY: Rate limiting (strict - 5 requests/min)
+
     const identifier = getRateLimitIdentifier(request, user.id);
     const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
     if (rateCheck instanceof NextResponse) {
       return rateCheck;
     }
-    
-    const { 
-      courseId, 
+
+    const {
+      courseId,
       courseSlug,
-      customerEmail, 
-      customerName, 
-      coursePrice, 
+      customerEmail,
+      customerName,
+      coursePrice,
       courseTitle,
-      userId, // User ID for library access
-      stripePriceId, // Use stored price ID
-      creatorStripeAccountId 
+      userId,
+      stripePriceId: incomingStripePriceId,
+      stripeProductId: incomingStripeProductId,
+      storeId,
+      creatorId,
+      creatorStripeAccountId,
     } = await request.json();
-    
-    // ✅ SECURITY: Verify user matches authenticated user
+
     if (userId && userId !== user.id) {
-      return NextResponse.json(
-        { error: "User mismatch" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "User mismatch" }, { status: 403 });
     }
 
     if (!courseId || !customerEmail || !customerName || coursePrice === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    if (!stripePriceId) {
-      return NextResponse.json({ error: "Course not synced to Stripe. Please contact support." }, { status: 400 });
+    if (!coursePrice || coursePrice <= 0) {
+      return NextResponse.json({ error: "Invalid price" }, { status: 400 });
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Calculate platform fee (10%)
-    const platformFeeAmount = Math.round(coursePrice * 0.1 * 100); // Convert to cents
+    let stripePriceId = incomingStripePriceId;
 
-    // Create checkout session
-    const sessionData: any = {
+    // Create Stripe product and price on the fly if missing
+    if (!stripePriceId) {
+      let stripeProductId = incomingStripeProductId;
+
+      if (!stripeProductId) {
+        const product = await stripe.products.create({
+          name: courseTitle || "Course",
+          metadata: {
+            courseId,
+            storeId: storeId || "",
+            creatorId: creatorId || "",
+          },
+        });
+        stripeProductId = product.id;
+      }
+
+      const stripePrice = await stripe.prices.create({
+        product: stripeProductId,
+        unit_amount: Math.round(coursePrice * 100),
+        currency: "usd",
+        metadata: {
+          courseId,
+        },
+      });
+
+      stripePriceId = stripePrice.id;
+
+      // Persist Stripe IDs back to the course for future checkouts
+      try {
+        await fetchMutation(api.courses.updateCourseStripeIdsPublic, {
+          courseId: courseId as Id<"courses">,
+          stripeProductId,
+          stripePriceId: stripePrice.id,
+        });
+      } catch (e) {
+        console.warn("Failed to persist Stripe IDs to course:", e);
+      }
+    }
+
+    const platformFeeAmount = Math.round(coursePrice * 0.1 * 100);
+
+    const sessionData: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: stripePriceId, // Use stored price ID
+          price: stripePriceId,
           quantity: 1,
         },
       ],
@@ -70,56 +108,59 @@ export async function POST(request: NextRequest) {
         courseTitle,
         customerEmail,
         customerName,
-        userId, // Include userId in metadata for webhook
+        userId,
         productType: "course",
-        amount: (coursePrice * 100).toString(), // Amount in cents as string
+        amount: (coursePrice * 100).toString(),
         currency: "usd",
       },
     };
 
-    // If creator has Stripe Connect account, use Connect payments
+    // Only use Connect if the account is valid and has charges enabled
     if (creatorStripeAccountId) {
-      sessionData.payment_intent_data = {
-        application_fee_amount: platformFeeAmount,
-        transfer_data: {
-          destination: creatorStripeAccountId,
-        },
-      };
+      try {
+        const account = await stripe.accounts.retrieve(creatorStripeAccountId);
+        if (account.charges_enabled) {
+          sessionData.payment_intent_data = {
+            application_fee_amount: platformFeeAmount,
+            transfer_data: {
+              destination: creatorStripeAccountId,
+            },
+          };
+        } else {
+          console.warn(`Stripe Connect account ${creatorStripeAccountId} charges not enabled, skipping Connect`);
+        }
+      } catch (e) {
+        console.warn(`Failed to retrieve Stripe Connect account, skipping Connect:`, e);
+      }
     }
 
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log("✅ Checkout session created:", {
-      sessionId: session.id,
-      courseTitle,
-      amount: coursePrice,
-      platformFee: platformFeeAmount / 100,
-      customer: customerName,
-    });
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       checkoutUrl: session.url,
-      sessionId: session.id 
+      sessionId: session.id,
     });
-
   } catch (error) {
-    // Handle auth errors
     if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json(
-        { error: "Unauthorized. Please sign in." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
     }
-    
-    console.error("❌ Checkout session creation failed:", error);
-    
+
+    console.error("Course checkout failed:", error);
+
+    const isStripeError = error && typeof error === "object" && "type" in error;
+    const errorMessage = isStripeError
+      ? (error as any).message
+      : error instanceof Error
+        ? error.message
+        : "Unknown error";
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: "Failed to create checkout session",
-        details: error instanceof Error ? error.message : "Unknown error"
-      }, 
+        details: errorMessage,
+      },
       { status: 500 }
     );
   }

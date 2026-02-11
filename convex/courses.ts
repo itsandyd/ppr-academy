@@ -1349,6 +1349,23 @@ export const updateCourseStripeIds = internalMutation({
   },
 });
 
+// Public mutation to update Stripe IDs (called from API route during checkout)
+export const updateCourseStripeIdsPublic = mutation({
+  args: {
+    courseId: v.id("courses"),
+    stripeProductId: v.string(),
+    stripePriceId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.courseId, {
+      stripeProductId: args.stripeProductId,
+      stripePriceId: args.stripePriceId,
+    });
+    return null;
+  },
+});
+
 // Internal query to get course by ID
 export const getCourseById = internalQuery({
   args: { courseId: v.id("courses") },

@@ -7505,6 +7505,16 @@ export declare const api: {
         userId: string;
       } | null
     >;
+    updateCourseStripeIdsPublic: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseId: Id<"courses">;
+        stripePriceId: string;
+        stripeProductId: string;
+      },
+      null
+    >;
     updateCourseWithModules: FunctionReference<
       "mutation",
       "public",
