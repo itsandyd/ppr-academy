@@ -320,14 +320,16 @@ function CreateModeMemberships() {
   );
   const store = stores?.[0];
 
+  const storeId = store?._id;
+
   const tiers = useQuery(
     api.memberships.getMembershipTiersByStore,
-    store?.userId ? { storeId: store.userId, includeInactive: true } : "skip"
+    storeId ? { storeId, includeInactive: true } : "skip"
   );
 
   const subscribers = useQuery(
     api.memberships.getStoreSubscribers,
-    store?.userId ? { storeId: store.userId } : "skip"
+    storeId ? { storeId } : "skip"
   );
 
   const publishTier = useMutation(api.memberships.publishMembershipTier);

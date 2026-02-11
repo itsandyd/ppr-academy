@@ -222,11 +222,10 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     storeId ? { storeId, includeUnpublished: true } : 'skip'
   );
 
-  // Fetch membership tiers (using store userId as storeId)
-  const store = stores?.[0];
+  // Fetch membership tiers (storeId here is the Convex _id, matching what createMembershipTier uses)
   const membershipTiers: any = useQuery(
     api.memberships.getMembershipTiersByStore,
-    store?.userId ? { storeId: store.userId, includeInactive: true } : 'skip'
+    storeId ? { storeId, includeInactive: true } : 'skip'
   );
 
   // Combine and categorize
