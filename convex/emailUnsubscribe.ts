@@ -207,6 +207,54 @@ export const markBounced = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
+
+    // For hard bounces, suppress the address entirely
+    if (args.bounceType === "hard") {
+      const existingPref = await ctx.db
+        .query("resendPreferences")
+        .filter((q) => q.eq(q.field("userId"), email))
+        .first();
+
+      if (existingPref) {
+        await ctx.db.patch(existingPref._id, {
+          isUnsubscribed: true,
+          unsubscribedAt: Date.now(),
+          unsubscribeReason: `Hard bounce - auto-suppressed`,
+          platformEmails: false,
+          courseEmails: false,
+          marketingEmails: false,
+          weeklyDigest: false,
+          updatedAt: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("resendPreferences", {
+          userId: email,
+          platformEmails: false,
+          courseEmails: false,
+          marketingEmails: false,
+          weeklyDigest: false,
+          isUnsubscribed: true,
+          unsubscribedAt: Date.now(),
+          unsubscribeReason: `Hard bounce - auto-suppressed`,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    // Also update any emailContacts record
+    const contact = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (contact) {
+      await ctx.db.patch(contact._id, {
+        status: "bounced" as const,
+      });
+    }
+
     return null;
   },
 });

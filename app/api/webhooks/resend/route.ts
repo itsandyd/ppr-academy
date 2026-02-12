@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
       metadata: eventData,
     });
 
+    // Auto-suppress on spam complaint
     if (type === "email.complained" && data.to) {
       const recipientEmail = Array.isArray(data.to) ? data.to[0] : data.to;
       if (recipientEmail) {
@@ -152,6 +153,23 @@ export async function POST(req: NextRequest) {
           console.log(`[Resend Webhook] Auto-unsubscribed ${recipientEmail} due to spam complaint`);
         } catch (err) {
           console.error(`[Resend Webhook] Failed to auto-unsubscribe ${recipientEmail}:`, err);
+        }
+      }
+    }
+
+    // Auto-suppress on hard bounce
+    if (type === "email.bounced" && data.to) {
+      const recipientEmail = Array.isArray(data.to) ? data.to[0] : data.to;
+      const bounceType = data.bounce?.type || "unknown";
+      if (recipientEmail) {
+        try {
+          await fetchMutation(api.emailUnsubscribe.unsubscribeByEmail, {
+            email: recipientEmail,
+            reason: `Bounce (${bounceType}) - auto-suppressed`,
+          });
+          console.log(`[Resend Webhook] Auto-suppressed ${recipientEmail} due to ${bounceType} bounce`);
+        } catch (err) {
+          console.error(`[Resend Webhook] Failed to auto-suppress bounced ${recipientEmail}:`, err);
         }
       }
     }

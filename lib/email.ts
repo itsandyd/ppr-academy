@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { generateUnsubscribeUrl, generateListUnsubscribeHeader } from './unsubscribe';
 
 // Initialize Resend only when needed
 const getResendClient = () => {
@@ -11,6 +12,24 @@ const getResendClient = () => {
 // Email configuration
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
 const DEFAULT_REPLY_TO = process.env.REPLY_TO_EMAIL || FROM_EMAIL;
+
+// CAN-SPAM compliant footer with unsubscribe link and physical address
+function getEmailFooter(recipientEmail: string): string {
+  const unsubscribeUrl = generateUnsubscribeUrl(recipientEmail);
+  return `
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+      <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 8px 0;">
+        <a href="${unsubscribeUrl}" style="color: #6366f1; text-decoration: underline;">Unsubscribe</a>
+        &nbsp;•&nbsp;
+        <a href="https://ppracademy.com" style="color: #6366f1; text-decoration: underline;">Website</a>
+        &nbsp;•&nbsp;
+        <a href="mailto:support@ppracademy.com" style="color: #6366f1; text-decoration: underline;">Help</a>
+      </p>
+      <p style="font-size: 11px; color: #a0aec0; text-align: center; margin: 8px 0;">
+        PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709
+      </p>
+    </div>`;
+}
 
 // Email templates
 export interface WelcomeEmailData {
@@ -154,15 +173,16 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: data.adminEmail || DEFAULT_REPLY_TO,
       subject: `🎉 Your ${data.leadMagnetTitle} is ready for download!`,
-      html: getLeadMagnetEmailTemplate(data),
+      html: getLeadMagnetEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
-    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send lead magnet email:', error);
@@ -204,9 +224,11 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
 
   try {
     const resend = getResendClient();
+    const recipientEmail = data.customerName.includes('@') ? data.customerName : `customer@example.com`;
+    const listHeaders = generateListUnsubscribeHeader(recipientEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
-      to: data.customerName.includes('@') ? data.customerName : `customer@example.com`,
+      to: recipientEmail,
       replyTo: data.adminEmail || DEFAULT_REPLY_TO,
       subject: `Welcome! Your ${data.productName} is ready`,
       html: `
@@ -214,7 +236,8 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
         <p>Thank you for your interest in ${data.productName}.</p>
         ${data.downloadUrl ? `<p><a href="${data.downloadUrl}">Download your resource here</a></p>` : ''}
         <p>Best regards,<br>${data.adminName}</p>
-      `,
+      ` + getEmailFooter(recipientEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -311,15 +334,16 @@ export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `Payment Issue - Action Required for ${data.productName}`,
-      html: getPaymentFailureEmailTemplate(data),
+      html: getPaymentFailureEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
-    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send payment failure email:', error);
@@ -420,15 +444,16 @@ export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData)
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `🎓 Welcome to ${data.courseTitle} - You're Enrolled!`,
-      html: getCourseEnrollmentEmailTemplate(data),
+      html: getCourseEnrollmentEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
-    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send course enrollment email:', error);
@@ -515,12 +540,14 @@ export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `💝 Thank you for your $${data.amount.toFixed(2)} tip!`,
-      html: getTipConfirmationEmailTemplate(data),
+      html: getTipConfirmationEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -627,12 +654,14 @@ export async function sendMembershipConfirmationEmail(data: MembershipConfirmati
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `⭐ Welcome to ${data.membershipName} - Your Membership is Active!`,
-      html: getMembershipConfirmationEmailTemplate(data),
+      html: getMembershipConfirmationEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -731,12 +760,14 @@ export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `🎵 Your ${data.tierName} License for "${data.beatTitle}" is Ready!`,
-      html: getBeatPurchaseEmailTemplate(data),
+      html: getBeatPurchaseEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -824,12 +855,14 @@ export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurcha
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `📦 Your purchase of "${data.productTitle}" is ready!`,
-      html: getDigitalProductPurchaseEmailTemplate(data),
+      html: getDigitalProductPurchaseEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -921,12 +954,14 @@ export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `🎁 Your bundle "${data.bundleTitle}" is ready!`,
-      html: getBundlePurchaseEmailTemplate(data),
+      html: getBundlePurchaseEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -1038,12 +1073,14 @@ export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEm
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `💬 Your coaching session is booked for ${data.scheduledDate}!`,
-      html: getCoachingConfirmationEmailTemplate(data),
+      html: getCoachingConfirmationEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -1137,12 +1174,14 @@ export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `🪙 ${data.credits + data.bonusCredits} credits added to your account!`,
-      html: getCreditsPurchaseEmailTemplate(data),
+      html: getCreditsPurchaseEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -1274,12 +1313,14 @@ export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `🎚️ Your ${data.serviceType} order is confirmed!`,
-      html: getMixingServiceEmailTemplate(data),
+      html: getMixingServiceEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -1388,12 +1429,14 @@ export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailD
 
   try {
     const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `🎧 Your track "${data.trackName}" has been submitted for review!`,
-      html: getPlaylistSubmissionEmailTemplate(data),
+      html: getPlaylistSubmissionEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
@@ -1508,12 +1551,14 @@ export async function sendCoachingReminderEmail(data: CoachingReminderEmailData)
   try {
     const resend = getResendClient();
     const urgency = data.hoursUntilSession <= 1 ? '⚡ STARTING SOON' : `⏰ In ${data.hoursUntilSession}h`;
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
       subject: `${urgency} - Reminder: ${data.sessionTitle} on ${data.scheduledDate}`,
-      html: getCoachingReminderEmailTemplate(data),
+      html: getCoachingReminderEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
     });
 
     return { success: true, messageId: result.data?.id };
