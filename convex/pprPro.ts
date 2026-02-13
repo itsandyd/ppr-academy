@@ -7,7 +7,100 @@ import { query, mutation, internalQuery, internalMutation } from "./_generated/s
  * Separate from creator plans and per-store memberships.
  */
 
-// ===== QUERIES =====
+// ===== PLAN QUERIES =====
+
+/**
+ * Get all active PPR Pro plans (for pricing page / checkout)
+ */
+export const getPlans = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("pprProPlans")
+      .withIndex("by_isActive", (q) => q.eq("isActive", true))
+      .collect();
+  },
+});
+
+/**
+ * Get a specific plan by interval
+ */
+export const getPlanByInterval = query({
+  args: {
+    interval: v.union(v.literal("month"), v.literal("year")),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("pprProPlans")
+      .withIndex("by_interval", (q) => q.eq("interval", args.interval))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .first();
+  },
+});
+
+/**
+ * Seed default PPR Pro plans (call once from admin or on first checkout)
+ */
+export const seedPlans = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Check if plans already exist
+    const existing = await ctx.db
+      .query("pprProPlans")
+      .withIndex("by_isActive", (q) => q.eq("isActive", true))
+      .collect();
+
+    if (existing.length > 0) {
+      return { seeded: false, message: "Plans already exist", plans: existing };
+    }
+
+    const monthlyId = await ctx.db.insert("pprProPlans", {
+      name: "PPR Pro Monthly",
+      interval: "month",
+      price: 1200, // $12
+      isActive: true,
+    });
+
+    const yearlyId = await ctx.db.insert("pprProPlans", {
+      name: "PPR Pro Yearly",
+      interval: "year",
+      price: 10800, // $108
+      isActive: true,
+    });
+
+    return { seeded: true, monthlyId, yearlyId };
+  },
+});
+
+/**
+ * Update Stripe IDs on a plan (called from checkout route after creating product/price)
+ */
+export const updatePlanStripeIds = mutation({
+  args: {
+    interval: v.union(v.literal("month"), v.literal("year")),
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const plan = await ctx.db
+      .query("pprProPlans")
+      .withIndex("by_interval", (q) => q.eq("interval", args.interval))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .first();
+
+    if (!plan) {
+      throw new Error(`No active PPR Pro plan found for interval: ${args.interval}`);
+    }
+
+    const updates: Record<string, string> = {};
+    if (args.stripeProductId) updates.stripeProductId = args.stripeProductId;
+    if (args.stripePriceId) updates.stripePriceId = args.stripePriceId;
+
+    await ctx.db.patch(plan._id, updates);
+  },
+});
+
+// ===== SUBSCRIPTION QUERIES =====
 
 /**
  * Check if a user has an active PPR Pro subscription

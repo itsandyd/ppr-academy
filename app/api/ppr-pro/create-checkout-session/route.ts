@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-// PPR Pro pricing - hardcoded since these are platform-level
-const PPR_PRO_PRICES = {
-  monthly: process.env.PPR_PRO_MONTHLY_PRICE_ID!,
-  yearly: process.env.PPR_PRO_YEARLY_PRICE_ID!,
-};
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,12 +27,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid plan. Must be 'monthly' or 'yearly'" }, { status: 400 });
     }
 
-    const stripePriceId = PPR_PRO_PRICES[plan as "monthly" | "yearly"];
-    if (!stripePriceId) {
+    const interval: "month" | "year" = plan === "yearly" ? "year" : "month";
+
+    // Fetch plan config from database
+    let dbPlan = await fetchQuery(api.pprPro.getPlanByInterval, { interval });
+
+    // Auto-seed plans if they don't exist yet
+    if (!dbPlan) {
+      await fetchMutation(api.pprPro.seedPlans, {});
+      dbPlan = await fetchQuery(api.pprPro.getPlanByInterval, { interval });
+    }
+
+    if (!dbPlan) {
       return NextResponse.json(
-        { error: "PPR Pro price not configured. Contact support." },
+        { error: "PPR Pro plan not found. Please contact support." },
         { status: 500 }
       );
+    }
+
+    // Get or create Stripe price (same pattern as membership/course checkout)
+    let stripePriceId = dbPlan.stripePriceId;
+
+    if (!stripePriceId) {
+      let stripeProductId = dbPlan.stripeProductId;
+
+      // Create Stripe product if needed
+      if (!stripeProductId) {
+        const product = await stripe.products.create({
+          name: "PPR Pro",
+          description: "Unlimited access to all courses on PPR Academy",
+          metadata: {
+            productType: "ppr_pro",
+          },
+        });
+        stripeProductId = product.id;
+      }
+
+      // Create Stripe price
+      const stripePrice = await stripe.prices.create({
+        product: stripeProductId,
+        unit_amount: dbPlan.price,
+        currency: "usd",
+        recurring: {
+          interval,
+        },
+        metadata: {
+          productType: "ppr_pro",
+          interval,
+        },
+      });
+
+      stripePriceId = stripePrice.id;
+
+      // Persist Stripe IDs back to the database for future checkouts
+      try {
+        await fetchMutation(api.pprPro.updatePlanStripeIds, {
+          interval,
+          stripeProductId,
+          stripePriceId: stripePrice.id,
+        });
+      } catch (e) {
+        console.warn("Failed to persist PPR Pro Stripe IDs:", e);
+      }
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

@@ -17413,6 +17413,13 @@ export declare const api: {
       { stripeSubscriptionId: string },
       any
     >;
+    getPlanByInterval: FunctionReference<
+      "query",
+      "public",
+      { interval: "month" | "year" },
+      any
+    >;
+    getPlans: FunctionReference<"query", "public", {}, any>;
     getSubscription: FunctionReference<
       "query",
       "public",
@@ -17424,6 +17431,17 @@ export declare const api: {
       "public",
       { userId: string },
       boolean
+    >;
+    seedPlans: FunctionReference<"mutation", "public", {}, any>;
+    updatePlanStripeIds: FunctionReference<
+      "mutation",
+      "public",
+      {
+        interval: "month" | "year";
+        stripePriceId?: string;
+        stripeProductId?: string;
+      },
+      any
     >;
     updateSubscriptionStatus: FunctionReference<
       "mutation",

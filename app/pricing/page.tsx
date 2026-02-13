@@ -20,10 +20,15 @@ export default function PricingPage() {
     api.pprPro.getSubscription,
     user?.id ? { userId: user.id } : "skip"
   );
+  const pprProPlans = useQuery(api.pprPro.getPlans);
 
   const isProMember =
     pprProSubscription?.status === "active" ||
     pprProSubscription?.status === "trialing";
+
+  // Get prices from database, with sensible defaults while loading
+  const monthlyPlan = pprProPlans?.find((p: { interval: string }) => p.interval === "month");
+  const yearlyPlan = pprProPlans?.find((p: { interval: string }) => p.interval === "year");
 
   const handleProCheckout = async () => {
     if (!isSignedIn) {
@@ -55,8 +60,8 @@ export default function PricingPage() {
     }
   };
 
-  const monthlyPrice = 12;
-  const yearlyPrice = 108;
+  const monthlyPrice = monthlyPlan ? monthlyPlan.price / 100 : 12;
+  const yearlyPrice = yearlyPlan ? yearlyPlan.price / 100 : 108;
   const yearlySavings = monthlyPrice * 12 - yearlyPrice;
 
   return (

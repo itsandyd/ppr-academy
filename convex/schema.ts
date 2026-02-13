@@ -6781,8 +6781,20 @@ export default defineSchema({
     .index("by_dripEnrollmentId", ["dripEnrollmentId"])
     .index("by_status_nextRetryAt", ["status", "nextRetryAt"]),
 
-  // ===== PPR PRO CONSUMER SUBSCRIPTIONS =====
-  // Platform-level "PPR Pro" membership for learners (separate from creator plans)
+  // ===== PPR PRO CONSUMER MEMBERSHIP =====
+  // Platform-level plan configuration (prices, Stripe IDs created on-the-fly)
+  pprProPlans: defineTable({
+    name: v.string(), // "PPR Pro Monthly", "PPR Pro Yearly"
+    interval: v.union(v.literal("month"), v.literal("year")),
+    price: v.number(), // in cents (1200 = $12, 10800 = $108)
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
+    isActive: v.boolean(),
+  })
+    .index("by_interval", ["interval"])
+    .index("by_isActive", ["isActive"]),
+
+  // Platform-level "PPR Pro" subscriptions for learners (separate from creator plans)
   pprProSubscriptions: defineTable({
     userId: v.string(), // Clerk ID
     status: v.union(

@@ -8333,6 +8333,35 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  pprProPlans: {
+    document: {
+      interval: "month" | "year";
+      isActive: boolean;
+      name: string;
+      price: number;
+      stripePriceId?: string;
+      stripeProductId?: string;
+      _id: Id<"pprProPlans">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "interval"
+      | "isActive"
+      | "name"
+      | "price"
+      | "stripePriceId"
+      | "stripeProductId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_interval: ["interval", "_creationTime"];
+      by_isActive: ["isActive", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   pprProSubscriptions: {
     document: {
       cancelAtPeriodEnd: boolean;
