@@ -1571,6 +1571,253 @@ export async function sendCoachingReminderEmail(data: CoachingReminderEmailData)
   }
 }
 
+// ===== PPR PRO MEMBERSHIP EMAILS =====
+
+export interface PprProWelcomeEmailData {
+  customerEmail: string;
+  customerName: string;
+  plan: 'monthly' | 'yearly';
+}
+
+const getPprProWelcomeEmailTemplate = (data: PprProWelcomeEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to PPR Pro!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to PPR Pro!</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 16px;">Unlimited access to all courses</p>
+  </div>
+
+  <div style="background: #f5f3ff; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #ddd6fe;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      You're now a <strong>PPR Pro</strong> member! You have unlimited access to every course on PPR Academy.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #6366f1; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">Your PPR Pro Benefits:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Access ALL courses on the platform</li>
+        <li style="margin-bottom: 8px;">New courses added monthly</li>
+        <li style="margin-bottom: 8px;">Certificates of completion</li>
+        <li style="margin-bottom: 8px;">Cancel anytime</li>
+      </ul>
+    </div>
+
+    <div style="background: white; padding: 15px; border-radius: 8px; margin: 25px 0; text-align: center;">
+      <p style="margin: 0; color: #64748b; font-size: 14px;">Your plan</p>
+      <p style="margin: 5px 0 0; color: #1e293b; font-size: 20px; font-weight: bold;">
+        PPR Pro ${data.plan === 'yearly' ? 'Yearly' : 'Monthly'} — $${data.plan === 'yearly' ? '108/year' : '12/month'}
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+         style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        Start Learning Now
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #ddd6fe; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">
+      Best regards,<br>
+      <strong>PPR Academy</strong>
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendPprProWelcomeEmail(data: PprProWelcomeEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: 'Welcome to PPR Pro - Unlimited Course Access!',
+      html: getPprProWelcomeEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('Failed to send PPR Pro welcome email:', error);
+    throw new Error(`PPR Pro welcome email failed: ${error}`);
+  }
+}
+
+export interface PprProCancelledEmailData {
+  customerEmail: string;
+  customerName: string;
+  accessEndDate: string;
+}
+
+const getPprProCancelledEmailTemplate = (data: PprProCancelledEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your PPR Pro Membership</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #64748b 0%, #475569 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">We're Sorry to See You Go</h1>
+  </div>
+
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Your PPR Pro membership has been cancelled. You'll continue to have access to all courses until <strong>${data.accessEndDate}</strong>.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">What you'll lose:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Unlimited access to all courses</li>
+        <li style="margin-bottom: 8px;">New courses added monthly</li>
+        <li style="margin-bottom: 8px;">Your learning progress is saved</li>
+      </ul>
+    </div>
+
+    <p style="font-size: 14px; color: #64748b;">
+      Changed your mind? You can resubscribe anytime from the pricing page.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/pricing"
+         style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        Resubscribe to PPR Pro
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b;">
+      Best regards,<br>
+      <strong>PPR Academy</strong>
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendPprProCancelledEmail(data: PprProCancelledEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: 'Your PPR Pro Membership Has Been Cancelled',
+      html: getPprProCancelledEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('Failed to send PPR Pro cancelled email:', error);
+    throw new Error(`PPR Pro cancelled email failed: ${error}`);
+  }
+}
+
+export interface PprProPaymentFailedEmailData {
+  customerEmail: string;
+  customerName: string;
+}
+
+const getPprProPaymentFailedEmailTemplate = (data: PprProPaymentFailedEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Issue - PPR Pro</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Payment Issue</h1>
+  </div>
+
+  <div style="background: #fef2f2; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #fecaca;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      We were unable to process your PPR Pro membership payment. Please update your payment method to keep your unlimited course access.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">What you can do:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Update your payment method in Settings</li>
+        <li style="margin-bottom: 8px;">Ensure sufficient funds are available</li>
+        <li style="margin-bottom: 8px;">Contact your bank if the issue persists</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard/settings"
+         style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        Update Payment Method
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #fecaca; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b;">
+      Need help? Reply to this email and we'll assist you.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendPprProPaymentFailedEmail(data: PprProPaymentFailedEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured. Email simulation mode.');
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: 'Action Required: PPR Pro Payment Failed',
+      html: getPprProPaymentFailedEmailTemplate(data) + getEmailFooter(data.customerEmail),
+      headers: listHeaders,
+    });
+
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('Failed to send PPR Pro payment failed email:', error);
+    throw new Error(`PPR Pro payment failed email failed: ${error}`);
+  }
+}
+
 // Utility to verify email configuration
 export async function verifyEmailConfig() {
   if (!process.env.RESEND_API_KEY) {

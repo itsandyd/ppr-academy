@@ -13,6 +13,7 @@ export type AccessType =
   | "purchased"
   | "bundle"
   | "membership"
+  | "ppr_pro"
   | "free_preview"
   | "follow_gate"
   | "creator"
@@ -85,6 +86,12 @@ export const canAccessChapter = query({
     // Check if user is the course creator
     if (course.userId === userId || course.instructorId === userId) {
       return { hasAccess: true, accessType: "creator" };
+    }
+
+    // Check for PPR Pro membership (platform-level, grants access to ALL courses)
+    const pprProAccess = await checkPprProAccess(ctx, userId);
+    if (pprProAccess) {
+      return { hasAccess: true, accessType: "ppr_pro" };
     }
 
     // Check for direct purchase
@@ -185,6 +192,17 @@ export const canAccessCourse = query({
       return {
         hasAccess: true,
         accessType: "creator",
+        freeChaptersCount,
+        totalChapters,
+      };
+    }
+
+    // PPR Pro membership check (platform-level, grants access to ALL courses)
+    const pprProAccessCourse = await checkPprProAccess(ctx, userId);
+    if (pprProAccessCourse) {
+      return {
+        hasAccess: true,
+        accessType: "ppr_pro",
         freeChaptersCount,
         totalChapters,
       };
@@ -425,6 +443,26 @@ async function checkFollowGateCompletion(
 }
 
 /**
+ * Check if user has an active PPR Pro subscription
+ */
+async function checkPprProAccess(
+  ctx: any,
+  userId: string
+): Promise<boolean> {
+  const subscription = await ctx.db
+    .query("pprProSubscriptions")
+    .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+    .filter((q: any) =>
+      q.or(
+        q.eq(q.field("status"), "active"),
+        q.eq(q.field("status"), "trialing")
+      )
+    )
+    .first();
+  return !!subscription;
+}
+
+/**
  * Check if user has full access to a course
  */
 async function checkFullCourseAccess(
@@ -434,6 +472,12 @@ async function checkFullCourseAccess(
 ): Promise<boolean> {
   // Creator/instructor has full access
   if (course.userId === userId || course.instructorId === userId) {
+    return true;
+  }
+
+  // PPR Pro membership
+  const pprProFull = await checkPprProAccess(ctx, userId);
+  if (pprProFull) {
     return true;
   }
 

@@ -6780,4 +6780,27 @@ export default defineSchema({
     .index("by_workflowExecutionId", ["workflowExecutionId"])
     .index("by_dripEnrollmentId", ["dripEnrollmentId"])
     .index("by_status_nextRetryAt", ["status", "nextRetryAt"]),
+
+  // ===== PPR PRO CONSUMER SUBSCRIPTIONS =====
+  // Platform-level "PPR Pro" membership for learners (separate from creator plans)
+  pprProSubscriptions: defineTable({
+    userId: v.string(), // Clerk ID
+    status: v.union(
+      v.literal("active"),
+      v.literal("cancelled"),
+      v.literal("past_due"),
+      v.literal("expired"),
+      v.literal("trialing")
+    ),
+    plan: v.union(v.literal("monthly"), v.literal("yearly")),
+    stripeSubscriptionId: v.string(),
+    stripeCustomerId: v.string(),
+    currentPeriodStart: v.number(),
+    currentPeriodEnd: v.number(),
+    cancelAtPeriodEnd: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"])
+    .index("by_status", ["status"]),
 });

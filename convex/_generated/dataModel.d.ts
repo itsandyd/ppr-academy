@@ -8333,6 +8333,42 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  pprProSubscriptions: {
+    document: {
+      cancelAtPeriodEnd: boolean;
+      createdAt: number;
+      currentPeriodEnd: number;
+      currentPeriodStart: number;
+      plan: "monthly" | "yearly";
+      status: "active" | "cancelled" | "past_due" | "expired" | "trialing";
+      stripeCustomerId: string;
+      stripeSubscriptionId: string;
+      userId: string;
+      _id: Id<"pprProSubscriptions">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "cancelAtPeriodEnd"
+      | "createdAt"
+      | "currentPeriodEnd"
+      | "currentPeriodStart"
+      | "plan"
+      | "status"
+      | "stripeCustomerId"
+      | "stripeSubscriptionId"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_status: ["status", "_creationTime"];
+      by_stripeSubscriptionId: ["stripeSubscriptionId", "_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   productReviews: {
     document: {
       customerName?: string;

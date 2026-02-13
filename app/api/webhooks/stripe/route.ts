@@ -130,8 +130,58 @@ export async function POST(request: NextRequest) {
           status: "completed",
         });
 
+        // Handle PPR Pro subscription checkouts
+        if (session.mode === "subscription" && session.subscription && session.metadata?.productType === "ppr_pro") {
+          const { userId, plan, customerEmail, customerName } = session.metadata || {};
+
+          if (userId && plan) {
+            serverLogger.payment("Creating PPR Pro subscription", {
+              id: session.subscription as string,
+              type: "ppr_pro",
+              status: "creating",
+            });
+
+            const { fetchMutation: fetchMutationPprPro } = await import("convex/nextjs");
+            const { api: apiPprPro } = await import("@/convex/_generated/api");
+
+            const subscriptionResponse = await stripe.subscriptions.retrieve(
+              session.subscription as string
+            );
+            const subscription = subscriptionResponse as any;
+
+            try {
+              await fetchMutationPprPro(apiPprPro.pprPro.createSubscription, {
+                userId,
+                plan: plan as "monthly" | "yearly",
+                stripeSubscriptionId: subscription.id,
+                stripeCustomerId: subscription.customer as string,
+                currentPeriodStart: (subscription.current_period_start || Math.floor(Date.now() / 1000)) * 1000,
+                currentPeriodEnd: (subscription.current_period_end || Math.floor(Date.now() / 1000) + 30 * 86400) * 1000,
+                status: subscription.status === "trialing" ? "trialing" : "active",
+              });
+
+              serverLogger.info("PPR Pro", "Subscription created successfully");
+
+              // Send PPR Pro welcome email
+              try {
+                const { sendPprProWelcomeEmail } = await import("@/lib/email");
+                await sendPprProWelcomeEmail({
+                  customerEmail: customerEmail || session.customer_details?.email || "",
+                  customerName: customerName || session.customer_details?.name || "Member",
+                  plan: plan as "monthly" | "yearly",
+                });
+                serverLogger.debug("Email", "PPR Pro welcome email sent");
+              } catch (emailError) {
+                serverLogger.error("Failed to send PPR Pro welcome email", emailError);
+              }
+            } catch (error) {
+              serverLogger.error("Failed to create PPR Pro subscription", error);
+            }
+          }
+        }
+
         // Handle subscription checkouts
-        if (session.mode === "subscription" && session.subscription) {
+        if (session.mode === "subscription" && session.subscription && session.metadata?.productType !== "ppr_pro") {
           const { planId, userId, storeId, billingCycle, productType, plan } =
             session.metadata || {};
 
@@ -914,8 +964,27 @@ export async function POST(request: NextRequest) {
         const { fetchMutation: fetchMutationUpdate } = await import("convex/nextjs");
         const { api: apiUpdate } = await import("@/convex/_generated/api");
 
+        // Check if this is a PPR Pro subscription
+        if (updatedSubscription.metadata?.productType === "ppr_pro") {
+          const planInterval = updatedSubscription.items?.data?.[0]?.price?.recurring?.interval;
+          await fetchMutationUpdate(apiUpdate.pprPro.updateSubscriptionStatus, {
+            stripeSubscriptionId: updatedSubscription.id,
+            status: updatedSubscription.status === "canceled"
+              ? "cancelled" as const
+              : updatedSubscription.status as "active" | "past_due" | "expired" | "trialing",
+            currentPeriodStart: updatedSubscription.current_period_start
+              ? updatedSubscription.current_period_start * 1000
+              : undefined,
+            currentPeriodEnd: updatedSubscription.current_period_end
+              ? updatedSubscription.current_period_end * 1000
+              : undefined,
+            cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end || false,
+            plan: planInterval === "year" ? "yearly" as const : "monthly" as const,
+          });
+          serverLogger.info("PPR Pro", "Subscription updated");
+        }
         // Check if this is a creator plan subscription
-        if (updatedSubscription.metadata?.storeId && updatedSubscription.metadata?.plan) {
+        else if (updatedSubscription.metadata?.storeId && updatedSubscription.metadata?.plan) {
           await fetchMutationUpdate(apiUpdate.creatorPlans.updateSubscriptionStatus, {
             storeId: updatedSubscription.metadata.storeId as any,
             subscriptionStatus: updatedSubscription.status as
@@ -925,14 +994,12 @@ export async function POST(request: NextRequest) {
               | "canceled"
               | "incomplete",
           });
-          // console.log(...);
         } else {
           // Handle content subscriptions (existing)
           await fetchMutationUpdate(apiUpdate.subscriptions.updateSubscriptionStatus, {
             stripeSubscriptionId: updatedSubscription.id,
             status: updatedSubscription.status as "active" | "canceled" | "past_due" | "expired",
           });
-          // console.log(...);
         }
         break;
 
@@ -947,21 +1014,52 @@ export async function POST(request: NextRequest) {
         const { fetchMutation: fetchMutationDelete } = await import("convex/nextjs");
         const { api: apiDelete } = await import("@/convex/_generated/api");
 
+        // Check if this is a PPR Pro subscription
+        if (deletedSubscription.metadata?.productType === "ppr_pro") {
+          await fetchMutationDelete(apiDelete.pprPro.expireSubscription, {
+            stripeSubscriptionId: deletedSubscription.id,
+          });
+          serverLogger.info("PPR Pro", "Subscription expired/cancelled");
+
+          // Send cancellation email
+          try {
+            const { sendPprProCancelledEmail } = await import("@/lib/email");
+            const userId = deletedSubscription.metadata?.userId;
+            if (userId) {
+              const { fetchQuery: fetchQueryUser } = await import("convex/nextjs");
+              const { api: apiUser } = await import("@/convex/_generated/api");
+              const user = await fetchQueryUser(apiUser.users.getUserFromClerk, { clerkId: userId });
+              if (user?.email) {
+                await sendPprProCancelledEmail({
+                  customerEmail: user.email,
+                  customerName: user.name || "Member",
+                  accessEndDate: (deletedSubscription as any).current_period_end
+                    ? new Date((deletedSubscription as any).current_period_end * 1000).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "soon",
+                });
+              }
+            }
+          } catch (emailError) {
+            serverLogger.error("Failed to send PPR Pro cancellation email", emailError);
+          }
+        }
         // Check if this is a creator plan subscription
-        if (deletedSubscription.metadata?.storeId) {
+        else if (deletedSubscription.metadata?.storeId) {
           await fetchMutationDelete(apiDelete.creatorPlans.updateSubscriptionStatus, {
             storeId: deletedSubscription.metadata.storeId as any,
             subscriptionStatus: "canceled",
             downgradeToPlan: "free",
           });
-          // console.log(...);
         } else {
           // Handle content subscriptions (existing)
           await fetchMutationDelete(apiDelete.subscriptions.updateSubscriptionStatus, {
             stripeSubscriptionId: deletedSubscription.id,
             status: "canceled",
           });
-          // console.log(...);
         }
         break;
 
@@ -987,7 +1085,38 @@ export async function POST(request: NextRequest) {
             attemptCount: failedInvoice.attempt_count,
           });
 
-          // Optionally send email notification to user
+          // Check if this is a PPR Pro subscription
+          try {
+            const failedSub = await stripe.subscriptions.retrieve(failedInvoice.subscription);
+            if (failedSub.metadata?.productType === "ppr_pro") {
+              const { fetchMutation: fetchMutationFailed } = await import("convex/nextjs");
+              const { api: apiFailed } = await import("@/convex/_generated/api");
+
+              await fetchMutationFailed(apiFailed.pprPro.updateSubscriptionStatus, {
+                stripeSubscriptionId: failedInvoice.subscription,
+                status: "past_due",
+              });
+
+              // Send payment failed email
+              const failedUserId = failedSub.metadata?.userId;
+              if (failedUserId) {
+                const { fetchQuery: fetchQueryFailedUser } = await import("convex/nextjs");
+                const { api: apiFailedUser } = await import("@/convex/_generated/api");
+                const failedUser = await fetchQueryFailedUser(apiFailedUser.users.getUserFromClerk, {
+                  clerkId: failedUserId,
+                });
+                if (failedUser?.email) {
+                  const { sendPprProPaymentFailedEmail } = await import("@/lib/email");
+                  await sendPprProPaymentFailedEmail({
+                    customerEmail: failedUser.email,
+                    customerName: failedUser.name || "Member",
+                  });
+                }
+              }
+            }
+          } catch (pprProError) {
+            console.error("Failed to handle PPR Pro payment failure:", pprProError);
+          }
         }
         break;
 

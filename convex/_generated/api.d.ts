@@ -17386,6 +17386,59 @@ export declare const api: {
       }
     >;
   };
+  pprPro: {
+    createSubscription: FunctionReference<
+      "mutation",
+      "public",
+      {
+        currentPeriodEnd: number;
+        currentPeriodStart: number;
+        plan: "monthly" | "yearly";
+        status?: "active" | "trialing";
+        stripeCustomerId: string;
+        stripeSubscriptionId: string;
+        userId: string;
+      },
+      any
+    >;
+    expireSubscription: FunctionReference<
+      "mutation",
+      "public",
+      { stripeSubscriptionId: string },
+      any
+    >;
+    getByStripeSubscriptionId: FunctionReference<
+      "query",
+      "public",
+      { stripeSubscriptionId: string },
+      any
+    >;
+    getSubscription: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    isPprProMember: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      boolean
+    >;
+    updateSubscriptionStatus: FunctionReference<
+      "mutation",
+      "public",
+      {
+        cancelAtPeriodEnd?: boolean;
+        currentPeriodEnd?: number;
+        currentPeriodStart?: number;
+        plan?: "monthly" | "yearly";
+        status: "active" | "cancelled" | "past_due" | "expired" | "trialing";
+        stripeSubscriptionId: string;
+      },
+      any
+    >;
+  };
   presetPacks: {
     getBySlug: FunctionReference<"query", "public", { slug: string }, any>;
     getProductById: FunctionReference<
@@ -27762,6 +27815,14 @@ export declare const internal: {
         notificationIds: Array<Id<"notifications">>;
       },
       null
+    >;
+  };
+  pprPro: {
+    isPprProMemberInternal: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
+      boolean
     >;
   };
   rag: {

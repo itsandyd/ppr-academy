@@ -39,6 +39,7 @@ import { ReferralCard } from "@/components/referrals/ReferralCard";
 import { useApplyReferral } from "@/hooks/use-apply-referral";
 import { BeatLicenseCard } from "@/components/beats/BeatLicenseCard";
 import { BecomeCreatorCard } from "@/components/dashboard/BecomeCreatorCard";
+import { PprProUpsell, PprProBadge } from "@/components/ppr-pro-upsell";
 
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -254,6 +255,9 @@ export function LearnModeContent() {
           </div>
         </div>
 
+        {/* PPR Pro Upgrade for new users */}
+        <PprProUpsell variant="card" />
+
         {/* Show creator CTA prominently for new users without courses */}
         {userStores !== undefined && userStores.length === 0 && (
           <BecomeCreatorCard variant="banner" />
@@ -268,6 +272,9 @@ export function LearnModeContent() {
     <div className="space-y-6 md:space-y-8">
       {/* Learner Onboarding Modal (shows once) */}
       <LearnerOnboarding />
+
+      {/* PPR Pro Upgrade Banner (hidden for Pro members) */}
+      <PprProUpsell variant="banner" />
 
       {/* Continue Watching - THE PRIMARY CTA */}
       {continueWatching && (

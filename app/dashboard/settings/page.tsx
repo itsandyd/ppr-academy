@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { User, Bell, Shield, CreditCard, Palette, Save, Loader2, Globe, ArrowRight, Mail, ExternalLink } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Palette, Save, Loader2, Globe, ArrowRight, Mail, ExternalLink, Crown } from "lucide-react";
 import Link from "next/link";
+import { PprProBadge } from "@/components/ppr-pro-upsell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,10 @@ export default function SettingsPage() {
   const updateProfile = useMutation(api.users.updateMyProfile);
   const store = useQuery(
     api.stores.getUserStore,
+    user?.id ? { userId: user.id } : "skip"
+  );
+  const pprProSubscription = useQuery(
+    api.pprPro.getSubscription,
     user?.id ? { userId: user.id } : "skip"
   );
 
@@ -318,7 +323,125 @@ export default function SettingsPage() {
 
         <TabsContent value="billing">
           <div className="space-y-6">
-            {/* Current Plan */}
+            {/* PPR Pro Membership Section */}
+            <Card className={pprProSubscription?.status === "active" || pprProSubscription?.status === "trialing" ? "border-primary/30" : ""}>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-primary" />
+                  <CardTitle>PPR Pro Membership</CardTitle>
+                  {(pprProSubscription?.status === "active" || pprProSubscription?.status === "trialing") && (
+                    <PprProBadge />
+                  )}
+                </div>
+                <CardDescription>
+                  {pprProSubscription?.status === "active" || pprProSubscription?.status === "trialing"
+                    ? "Your unlimited course access membership"
+                    : "Get unlimited access to all courses"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {pprProSubscription?.status === "active" || pprProSubscription?.status === "trialing" ? (
+                  <>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <p className="font-semibold text-lg">
+                          PPR Pro {pprProSubscription?.plan === "yearly" ? "Yearly" : "Monthly"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {pprProSubscription?.status === "trialing" ? (
+                            <span className="text-blue-600">Trial period</span>
+                          ) : pprProSubscription?.cancelAtPeriodEnd ? (
+                            <span className="text-amber-600">Cancelling at end of period</span>
+                          ) : (
+                            <span className="text-green-600">Active</span>
+                          )}
+                          {pprProSubscription?.currentPeriodEnd && (
+                            <span className="ml-2">
+                              &middot; Next billing:{" "}
+                              {new Date(pprProSubscription.currentPeriodEnd).toLocaleDateString()}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const response = await fetch("/api/ppr-pro/billing-portal", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                stripeCustomerId: pprProSubscription?.stripeCustomerId,
+                              }),
+                            });
+                            const data = await response.json();
+                            if (data.url) {
+                              window.location.href = data.url;
+                            } else {
+                              toast.error(data.error || "Failed to open billing portal");
+                            }
+                          } catch {
+                            toast.error("Failed to open billing portal");
+                          }
+                        }}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Manage Subscription
+                      </Button>
+                    </div>
+                  </>
+                ) : pprProSubscription?.status === "past_due" ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
+                    <p className="font-semibold text-red-700 dark:text-red-400">Payment Past Due</p>
+                    <p className="text-sm text-red-600 dark:text-red-400/80">
+                      Your PPR Pro payment failed. Please update your payment method to continue access.
+                    </p>
+                    <Button
+                      className="mt-3"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch("/api/ppr-pro/billing-portal", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              stripeCustomerId: pprProSubscription?.stripeCustomerId,
+                            }),
+                          });
+                          const data = await response.json();
+                          if (data.url) {
+                            window.location.href = data.url;
+                          } else {
+                            toast.error("Failed to open billing portal");
+                          }
+                        } catch {
+                          toast.error("Failed to open billing portal");
+                        }
+                      }}
+                    >
+                      Update Payment Method
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-semibold">Not subscribed</p>
+                      <p className="text-sm text-muted-foreground">
+                        Get unlimited access to all courses for $12/month
+                      </p>
+                    </div>
+                    <Button asChild>
+                      <Link href="/pricing">
+                        Upgrade to Pro
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Current Plan (Creator) */}
             <Card>
               <CardHeader>
                 <CardTitle>Current Plan</CardTitle>
