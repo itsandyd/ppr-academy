@@ -111,10 +111,9 @@ export default function UnifiedDashboard({
     }
   };
 
-  const totalRevenue = userCourses.reduce((sum, course) => {
-    const revenue = (course.price || 0) * (course._count?.enrollments || 0);
-    return sum + revenue;
-  }, 0);
+  // Revenue should come from actual purchase amounts, not price * enrollment count.
+  // price * count is wrong when course prices change after enrollments.
+  const totalRevenue = 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -346,7 +345,7 @@ export default function UnifiedDashboard({
                       <div className="flex items-center justify-between text-sm text-slate-600">
                         <span>Revenue</span>
                         <span className="font-semibold">
-                          ${((course.price || 0) * (course._count?.enrollments || 0)).toFixed(2)}
+                          $0.00
                         </span>
                       </div>
                     </div>

@@ -2185,3 +2185,102 @@ export const updateConnectionApiKey = internalMutation({
     });
   },
 });
+
+// ============================================================================
+// RESEND FAILED ENROLLMENT EMAILS - Internal Query
+// ============================================================================
+
+/**
+ * Fetches recent course purchases with user email and course info.
+ * Used by the resendEnrollmentEmails action in emails.ts.
+ */
+export const getRecentCoursePurchases = internalQuery({
+  args: {
+    cutoffTime: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const results: Array<{
+      purchaseId: string;
+      userEmail: string | null;
+      userName: string | null;
+      userFirstName: string | null;
+      courseTitle: string | null;
+      courseSlug: string | null;
+      amount: number;
+      currency: string | null;
+      storeName: string | null;
+      createdAt: number;
+    }> = [];
+
+    // Scan purchases - we need to filter by _creationTime and productType
+    const PURCHASE_LIMIT = 5000;
+    let count = 0;
+
+    for await (const purchase of ctx.db.query("purchases").order("desc")) {
+      if (count >= PURCHASE_LIMIT) break;
+      count++;
+
+      // Only recent purchases
+      if (purchase._creationTime < args.cutoffTime) break;
+
+      // Only course purchases
+      if (purchase.productType !== "course") continue;
+      if (purchase.status !== "completed") continue;
+
+      // Look up user
+      let userEmail: string | null = null;
+      let userName: string | null = null;
+      let userFirstName: string | null = null;
+
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+        .unique();
+
+      if (user) {
+        userEmail = user.email || null;
+        userName = user.name || null;
+        userFirstName = user.firstName || null;
+      }
+
+      // Look up course
+      let courseTitle: string | null = null;
+      let courseSlug: string | null = null;
+
+      if (purchase.courseId) {
+        const course = await ctx.db.get(purchase.courseId);
+        if (course) {
+          courseTitle = course.title;
+          courseSlug = course.slug || null;
+        }
+      }
+
+      // Look up store name
+      let storeName: string | null = null;
+      if (purchase.storeId) {
+        const store = await ctx.db
+          .query("stores")
+          .withIndex("by_userId", (q) => q.eq("userId", purchase.storeId))
+          .first();
+        if (store) {
+          storeName = store.name;
+        }
+      }
+
+      results.push({
+        purchaseId: purchase._id,
+        userEmail,
+        userName,
+        userFirstName,
+        courseTitle,
+        courseSlug,
+        amount: purchase.amount,
+        currency: purchase.currency || null,
+        storeName,
+        createdAt: purchase._creationTime,
+      });
+    }
+
+    return results;
+  },
+});

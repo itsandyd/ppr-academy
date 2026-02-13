@@ -9751,7 +9751,12 @@ export declare const api: {
     getCreatorSubscribers: FunctionReference<
       "query",
       "public",
-      { search?: string; statusFilter?: string; storeId: string },
+      {
+        limit?: number;
+        search?: string;
+        statusFilter?: string;
+        storeId: string;
+      },
       any
     >;
     getCreatorSubscriberStats: FunctionReference<
@@ -11329,6 +11334,12 @@ export declare const api: {
         sentCount: number;
         status: string;
       }
+    >;
+    resendEnrollmentEmails: FunctionReference<
+      "action",
+      "public",
+      { daysBack?: number; dryRun?: boolean },
+      any
     >;
     resumeCampaign: FunctionReference<
       "action",
@@ -23890,6 +23901,12 @@ export declare const internal: {
       any
     >;
     getOldLogs: FunctionReference<
+      "query",
+      "internal",
+      { cutoffTime: number },
+      any
+    >;
+    getRecentCoursePurchases: FunctionReference<
       "query",
       "internal",
       { cutoffTime: number },

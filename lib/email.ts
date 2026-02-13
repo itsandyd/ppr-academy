@@ -10,8 +10,8 @@ const getResendClient = () => {
 };
 
 // Email configuration
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
-const DEFAULT_REPLY_TO = process.env.REPLY_TO_EMAIL || FROM_EMAIL;
+const FROM_EMAIL = 'PPR Academy <no-reply@mail.pauseplayrepeat.com>';
+const DEFAULT_REPLY_TO = 'no-reply@mail.pauseplayrepeat.com';
 
 // CAN-SPAM compliant footer with unsubscribe link and physical address
 function getEmailFooter(recipientEmail: string): string {
@@ -390,10 +390,13 @@ const getCourseEnrollmentEmailTemplate = (data: CourseEnrollmentEmailData) => `
           <td style="padding: 8px 0; font-weight: bold; color: #374151;">Course:</td>
           <td style="padding: 8px 0; color: #1f2937;">${data.courseTitle}</td>
         </tr>
-        <tr>
+        ${data.amount > 0 ? `<tr>
           <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
-          <td style="padding: 8px 0; color: #1f2937;">${data.amount > 0 ? `$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}` : 'FREE'}</td>
-        </tr>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>` : `<tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Access:</td>
+          <td style="padding: 8px 0; color: #1f2937;">Lifetime</td>
+        </tr>`}
         ${data.creatorName ? `
         <tr>
           <td style="padding: 8px 0; font-weight: bold; color: #374151;">Instructor:</td>

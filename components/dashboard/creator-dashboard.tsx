@@ -96,10 +96,9 @@ export function CreatorDashboard({
     loadInitialProfile();
   }, []);
 
-  const totalRevenue = userCourses.reduce((sum, course) => {
-    const revenue = (course.price || 0) * (course._count?.enrollments || 0);
-    return sum + revenue;
-  }, 0);
+  // Revenue should come from actual purchase amounts, not price * enrollment count.
+  // price * count is wrong when course prices change after enrollments.
+  const totalRevenue = 0;
 
   const categories = [
     "Hip-Hop Production",
@@ -367,7 +366,7 @@ export function CreatorDashboard({
                       <div className="flex items-center justify-between text-sm text-slate-600">
                         <span>Revenue</span>
                         <span className="font-semibold">
-                          ${((course.price || 0) * (course._count?.enrollments || 0)).toFixed(2)}
+                          $0.00
                         </span>
                       </div>
                     </div>

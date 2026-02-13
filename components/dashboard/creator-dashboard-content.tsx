@@ -81,6 +81,12 @@ export function CreatorDashboardContent() {
     storeId ? { storeId, includeUnpublished: true } : "skip"
   );
 
+  // Fetch store stats for accurate revenue (uses actual purchase amounts)
+  const storeStats = useQuery(
+    api.storeStats.getStoreStats,
+    stores?.[0]?.userId ? { storeId: stores[0].userId } : "skip"
+  );
+
   // Combine products for unified display
   const products = useMemo(() => {
     // Use userCourses if available, otherwise show all courses for testing
@@ -119,7 +125,7 @@ export function CreatorDashboardContent() {
   const metrics = useMemo(() => {
     const totalReleases = products.length;
     const totalDownloads = products.reduce((sum: number, p: any) => sum + (p.downloadCount || 0), 0);
-    const totalRevenue = products.reduce((sum: number, p: any) => sum + ((p.price || 0) * (p.downloadCount || 0)), 0);
+    const totalRevenue = storeStats?.totalRevenue ?? 0;
     const avgRating = 4.5; // Mock data for now
 
     return {
@@ -128,7 +134,7 @@ export function CreatorDashboardContent() {
       totalRevenue,
       avgRating
     };
-  }, [products]);
+  }, [products, storeStats]);
 
   // Quick actions for music creators
   const quickActions = useMemo(() => {

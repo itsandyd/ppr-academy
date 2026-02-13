@@ -442,9 +442,9 @@ export const sendCampaignBatch = internalAction({
       fromName = "PPR Academy";
       replyToEmail = emailCampaign.replyToEmail || emailCampaign.fromEmail;
     } else {
-      fromEmail = process.env.FROM_EMAIL || "noreply@yourdomain.com";
-      fromName = process.env.FROM_NAME || "PPR Academy";
-      replyToEmail = process.env.REPLY_TO_EMAIL || fromEmail;
+      fromEmail = "no-reply@mail.pauseplayrepeat.com";
+      fromName = "PPR Academy";
+      replyToEmail = fromEmail;
     }
 
     // Get email content
@@ -876,9 +876,9 @@ export const sendBroadcastEmail = action({
       };
     }
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = args.fromName || process.env.FROM_NAME || "PPR Academy";
-    const replyToEmail = process.env.REPLY_TO_EMAIL || fromEmail;
+    const fromEmail = "no-reply@mail.pauseplayrepeat.com";
+    const fromName = args.fromName || "PPR Academy";
+    const replyToEmail = fromEmail;
 
     let sent = 0;
     let failed = 0;
@@ -1104,3 +1104,140 @@ export const migrateApiKeysToEncrypted = internalAction({
 });
 
 // updateConnectionApiKey moved to emailQueries.ts
+
+// ============================================================================
+// RESEND FAILED ENROLLMENT EMAILS (One-off utility)
+// ============================================================================
+
+/**
+ * Finds recent course purchases and resends enrollment confirmation emails.
+ * Use this to recover from email delivery failures (e.g., wrong from domain).
+ *
+ * Run with: npx convex run emails:resendEnrollmentEmails '{"daysBack": 30, "dryRun": true}'
+ */
+export const resendEnrollmentEmails = action({
+  args: {
+    daysBack: v.optional(v.number()),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const daysBack = args.daysBack ?? 30;
+    const dryRun = args.dryRun ?? true;
+    const cutoffTime = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY && !dryRun) {
+      throw new Error("RESEND_API_KEY not configured");
+    }
+
+    // Query recent course purchases
+    const purchases = await ctx.runQuery(
+      internal.emailQueries.getRecentCoursePurchases,
+      { cutoffTime }
+    );
+
+    const results: Array<{
+      email: string;
+      course: string;
+      status: string;
+      messageId?: string;
+    }> = [];
+
+    const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
+    for (const purchase of purchases) {
+      if (!purchase.userEmail) {
+        results.push({
+          email: "unknown",
+          course: purchase.courseTitle || "unknown",
+          status: "skipped_no_email",
+        });
+        continue;
+      }
+
+      if (dryRun) {
+        results.push({
+          email: purchase.userEmail,
+          course: purchase.courseTitle || "unknown",
+          status: "dry_run",
+        });
+        continue;
+      }
+
+      try {
+        const customerName =
+          purchase.userName ||
+          purchase.userFirstName ||
+          "Valued Student";
+
+        const courseUrl = purchase.courseSlug
+          ? `https://academy.pauseplayrepeat.com/courses/${purchase.courseSlug}`
+          : "https://academy.pauseplayrepeat.com/dashboard/library";
+
+        const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🎓 You're Enrolled!</h1>
+  </div>
+  <div style="background: #f0fdf4; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #bbf7d0;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${customerName},</h2>
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Thank you for enrolling in <strong>${purchase.courseTitle}</strong>! You now have lifetime access to the course.
+    </p>
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📋 Enrollment Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr><td style="padding: 8px 0; font-weight: bold;">Course:</td><td>${purchase.courseTitle}</td></tr>
+        <tr><td style="padding: 8px 0; font-weight: bold;">Access:</td><td>Lifetime</td></tr>
+      </table>
+    </div>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${courseUrl}" style="display: inline-block; background: #10b981; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Start Learning →</a>
+    </div>
+    <p style="font-size: 14px; color: #64748b;">Best regards,<br><strong>${purchase.storeName || "PPR Academy"}</strong></p>
+  </div>
+</body>
+</html>`;
+
+        const result = await resend!.emails.send({
+          from: "PPR Academy <no-reply@mail.pauseplayrepeat.com>",
+          to: purchase.userEmail,
+          replyTo: "no-reply@mail.pauseplayrepeat.com",
+          subject: `🎓 Welcome to ${purchase.courseTitle} - You're Enrolled!`,
+          html,
+        });
+
+        results.push({
+          email: purchase.userEmail,
+          course: purchase.courseTitle || "unknown",
+          status: "sent",
+          messageId: result.data?.id,
+        });
+
+        // Small delay between sends to avoid rate limits
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } catch (error) {
+        results.push({
+          email: purchase.userEmail,
+          course: purchase.courseTitle || "unknown",
+          status: `error: ${error instanceof Error ? error.message : "unknown"}`,
+        });
+      }
+    }
+
+    const sent = results.filter((r) => r.status === "sent").length;
+    const skipped = results.filter((r) => r.status.startsWith("skipped")).length;
+    const errors = results.filter((r) => r.status.startsWith("error")).length;
+    const dryRunCount = results.filter((r) => r.status === "dry_run").length;
+
+    return {
+      summary: dryRun
+        ? `DRY RUN: Found ${dryRunCount} enrollments to resend (last ${daysBack} days)`
+        : `Sent: ${sent}, Skipped: ${skipped}, Errors: ${errors}`,
+      total: results.length,
+      results,
+    };
+  },
+});

@@ -201,15 +201,13 @@ export const getStoreStats = query({
       p.courseId && courseIds.includes(p.courseId)
     );
 
-    // Calculate total revenue
+    // Calculate total revenue from actual purchase amounts
     const productRevenue = productPurchases.reduce((sum, purchase) => {
-      const product = products.find(p => p._id === purchase.productId);
-      return sum + (product?.price || 0);
+      return sum + (purchase.amount || 0);
     }, 0);
 
     const courseRevenue = coursePurchases.reduce((sum, purchase) => {
-      const course = courses.find(c => c._id === purchase.courseId);
-      return sum + (course?.price || 0);
+      return sum + (purchase.amount || 0);
     }, 0);
 
     // Get unique users who have purchased/enrolled

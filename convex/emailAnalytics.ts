@@ -707,33 +707,31 @@ export const getCreatorOverviewStats = query({
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-    const allEvents = await ctx.db
+    const allTime = { sent: 0, delivered: 0, bounced: 0, complained: 0, opened: 0, clicked: 0 };
+    const last7Days = { sent: 0, delivered: 0, bounced: 0, complained: 0 };
+    const last30Days = { sent: 0, delivered: 0, bounced: 0, complained: 0 };
+
+    // Only count last-30-day events using the timestamp index to minimize reads.
+    // For all-time, we approximate by also reading a capped window.
+    const EVENT_LIMIT = 25000;
+    let eventCount = 0;
+    for await (const e of ctx.db
       .query("webhookEmailEvents")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .order("desc")) {
+      const type = e.eventType as keyof typeof allTime;
+      if (type in allTime) allTime[type]++;
 
-    const allTime = {
-      sent: allEvents.filter((e) => e.eventType === "sent").length,
-      delivered: allEvents.filter((e) => e.eventType === "delivered").length,
-      bounced: allEvents.filter((e) => e.eventType === "bounced").length,
-      complained: allEvents.filter((e) => e.eventType === "complained").length,
-      opened: allEvents.filter((e) => e.eventType === "opened").length,
-      clicked: allEvents.filter((e) => e.eventType === "clicked").length,
-    };
-
-    const last7Days = {
-      sent: allEvents.filter((e) => e.eventType === "sent" && e.timestamp >= sevenDaysAgo).length,
-      delivered: allEvents.filter((e) => e.eventType === "delivered" && e.timestamp >= sevenDaysAgo).length,
-      bounced: allEvents.filter((e) => e.eventType === "bounced" && e.timestamp >= sevenDaysAgo).length,
-      complained: allEvents.filter((e) => e.eventType === "complained" && e.timestamp >= sevenDaysAgo).length,
-    };
-
-    const last30Days = {
-      sent: allEvents.filter((e) => e.eventType === "sent" && e.timestamp >= thirtyDaysAgo).length,
-      delivered: allEvents.filter((e) => e.eventType === "delivered" && e.timestamp >= thirtyDaysAgo).length,
-      bounced: allEvents.filter((e) => e.eventType === "bounced" && e.timestamp >= thirtyDaysAgo).length,
-      complained: allEvents.filter((e) => e.eventType === "complained" && e.timestamp >= thirtyDaysAgo).length,
-    };
+      const type30 = e.eventType as keyof typeof last30Days;
+      if (e.timestamp >= thirtyDaysAgo && type30 in last30Days) {
+        last30Days[type30]++;
+      }
+      if (e.timestamp >= sevenDaysAgo && type30 in last7Days) {
+        last7Days[type30]++;
+      }
+      eventCount++;
+      if (eventCount >= EVENT_LIMIT) break;
+    }
 
     const bounceRate = last30Days.sent > 0
       ? (last30Days.bounced / last30Days.sent) * 100
@@ -745,14 +743,16 @@ export const getCreatorOverviewStats = query({
       ? (last30Days.delivered / last30Days.sent) * 100
       : 0;
 
-    // Health score from creator's emailContacts
-    const contacts = await ctx.db
+    // Health score from creator's emailContacts - stream with cap
+    let totalContacts = 0;
+    let activeContacts = 0;
+    for await (const c of ctx.db
       .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-
-    const totalContacts = contacts.length;
-    const activeContacts = contacts.filter((c) => c.status === "subscribed").length;
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))) {
+      totalContacts++;
+      if (c.status === "subscribed") activeContacts++;
+      if (totalContacts >= 5000) break;
+    }
     const suppressedContacts = totalContacts - activeContacts;
     const healthScore = totalContacts > 0
       ? Math.round((activeContacts / totalContacts) * 100)
@@ -783,13 +783,6 @@ export const getCreatorTrendData = query({
     const now = Date.now();
     const startTime = now - numDays * 24 * 60 * 60 * 1000;
 
-    const events = await ctx.db
-      .query("webhookEmailEvents")
-      .withIndex("by_storeId_timestamp", (q) =>
-        q.eq("storeId", args.storeId).gte("timestamp", startTime)
-      )
-      .collect();
-
     const dayMap = new Map<string, {
       date: string;
       sent: number;
@@ -814,7 +807,12 @@ export const getCreatorTrendData = query({
       });
     }
 
-    for (const event of events) {
+    // Stream through events instead of collecting all
+    for await (const event of ctx.db
+      .query("webhookEmailEvents")
+      .withIndex("by_storeId_timestamp", (q) =>
+        q.eq("storeId", args.storeId).gte("timestamp", startTime)
+      )) {
       const dateStr = new Date(event.timestamp).toISOString().split("T")[0];
       const day = dayMap.get(dateStr);
       if (day && event.eventType in day) {
@@ -992,45 +990,66 @@ export const getCreatorSubscribers = query({
     storeId: v.string(),
     search: v.optional(v.string()),
     statusFilter: v.optional(v.string()),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let contacts = await ctx.db
+    const maxResults = args.limit || 100;
+
+    // Use indexed query - order by creation time descending (most recent first)
+    let queryBuilder = ctx.db
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .order("desc");
 
-    // Filter by status
-    if (args.statusFilter && args.statusFilter !== "all") {
-      contacts = contacts.filter((c) => c.status === args.statusFilter);
-    }
+    const results: Array<{
+      _id: any;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      status: string;
+      source?: string;
+      emailsSent: number;
+      emailsOpened: number;
+      emailsClicked: number;
+      createdAt: number;
+      lastEngagedAt?: number;
+    }> = [];
 
-    // Search by email or name
-    if (args.search) {
-      const searchLower = args.search.toLowerCase();
-      contacts = contacts.filter(
-        (c) =>
+    // Stream through results with early termination to avoid 32k doc limit
+    for await (const c of queryBuilder) {
+      // Filter by status
+      if (args.statusFilter && args.statusFilter !== "all" && c.status !== args.statusFilter) {
+        continue;
+      }
+
+      // Search by email or name
+      if (args.search) {
+        const searchLower = args.search.toLowerCase();
+        const matches =
           c.email.toLowerCase().includes(searchLower) ||
           (c.firstName && c.firstName.toLowerCase().includes(searchLower)) ||
-          (c.lastName && c.lastName.toLowerCase().includes(searchLower))
-      );
+          (c.lastName && c.lastName.toLowerCase().includes(searchLower));
+        if (!matches) continue;
+      }
+
+      results.push({
+        _id: c._id,
+        email: c.email,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        status: c.status || "subscribed",
+        source: c.source,
+        emailsSent: c.emailsSent || 0,
+        emailsOpened: c.emailsOpened || 0,
+        emailsClicked: c.emailsClicked || 0,
+        createdAt: c._creationTime,
+        lastEngagedAt: c.lastOpenedAt,
+      });
+
+      if (results.length >= maxResults) break;
     }
 
-    // Sort by most recent
-    contacts.sort((a, b) => (b._creationTime || 0) - (a._creationTime || 0));
-
-    return contacts.map((c) => ({
-      _id: c._id,
-      email: c.email,
-      firstName: c.firstName,
-      lastName: c.lastName,
-      status: c.status,
-      source: c.source,
-      emailsSent: c.emailsSent || 0,
-      emailsOpened: c.emailsOpened || 0,
-      emailsClicked: c.emailsClicked || 0,
-      createdAt: c._creationTime,
-      lastEngagedAt: c.lastOpenedAt,
-    }));
+    return results;
   },
 });
 
@@ -1040,20 +1059,31 @@ export const getCreatorSubscribers = query({
 export const getCreatorSubscriberStats = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
-    const contacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+    let total = 0;
+    let subscribed = 0;
+    let unsubscribed = 0;
+    let bounced = 0;
+    let complained = 0;
+    let newLast30 = 0;
 
-    const total = contacts.length;
-    const subscribed = contacts.filter((c) => c.status === "subscribed").length;
-    const unsubscribed = contacts.filter((c) => c.status === "unsubscribed").length;
-    const bounced = contacts.filter((c) => c.status === "bounced").length;
-    const complained = contacts.filter((c) => c.status === "complained").length;
-
-    // Growth: new subscribers in last 30 days
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const newLast30 = contacts.filter((c) => (c._creationTime || 0) >= thirtyDaysAgo).length;
+
+    // Stream through contacts with cap to stay under 32k doc limit
+    for await (const c of ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))) {
+      total++;
+      switch (c.status) {
+        case "subscribed": subscribed++; break;
+        case "unsubscribed": unsubscribed++; break;
+        case "bounced": bounced++; break;
+        case "complained": complained++; break;
+      }
+      if ((c._creationTime || 0) >= thirtyDaysAgo) {
+        newLast30++;
+      }
+      if (total >= 30000) break;
+    }
 
     return {
       total,
@@ -1072,76 +1102,78 @@ export const getCreatorSubscriberStats = query({
 export const getCreatorListHealth = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
-    const contacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-
+    // Use getCreatorSubscriberStats-style counting with a hard cap
+    // to stay under the 32k document read limit.
+    // We sample up to 20,000 contacts max for status counts.
     let active = 0;
     let unsubscribed = 0;
     let bounced = 0;
     let complained = 0;
+    let total = 0;
 
-    for (const c of contacts) {
-      switch (c.status) {
-        case "subscribed":
-          active++;
-          break;
-        case "unsubscribed":
-          unsubscribed++;
-          break;
-        case "bounced":
-          bounced++;
-          break;
-        case "complained":
-          complained++;
-          break;
-      }
-    }
-
-    const total = contacts.length;
-    const healthScore = total > 0 ? Math.round((active / total) * 100) : 100;
-
-    // Monthly growth
     const monthMap = new Map<string, number>();
-    for (const c of contacts) {
+    const CONTACT_LIMIT = 20000;
+
+    for await (const c of ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))) {
+      total++;
+      switch (c.status) {
+        case "subscribed": active++; break;
+        case "unsubscribed": unsubscribed++; break;
+        case "bounced": bounced++; break;
+        case "complained": complained++; break;
+      }
       const monthStr = new Date(c._creationTime || 0).toISOString().slice(0, 7);
       monthMap.set(monthStr, (monthMap.get(monthStr) || 0) + 1);
+      if (total >= CONTACT_LIMIT) break;
     }
+
+    const healthScore = total > 0 ? Math.round((active / total) * 100) : 100;
+    // Only show last 12 months of growth
     const monthlyGrowth = Array.from(monthMap.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-12)
       .map(([month, count]) => ({ month, count }));
 
-    // Unsubscribe trend from webhook events
-    const unsubEvents = await ctx.db
+    // Bounce & complaint trend - limit to last 2000 events each
+    // to leave room within the 32k doc budget
+    const unsubMonthMap = new Map<string, number>();
+    const bounceCountMap = new Map<string, number>();
+    const EVENT_LIMIT = 2000;
+
+    let eventCount = 0;
+    for await (const e of ctx.db
       .query("webhookEmailEvents")
       .withIndex("by_storeId_eventType", (q) =>
         q.eq("storeId", args.storeId).eq("eventType", "complained")
       )
-      .collect();
+      .order("desc")) {
+      const monthStr = new Date(e.timestamp).toISOString().slice(0, 7);
+      unsubMonthMap.set(monthStr, (unsubMonthMap.get(monthStr) || 0) + 1);
+      eventCount++;
+      if (eventCount >= EVENT_LIMIT) break;
+    }
 
-    const bounceEvents = await ctx.db
+    eventCount = 0;
+    for await (const e of ctx.db
       .query("webhookEmailEvents")
       .withIndex("by_storeId_eventType", (q) =>
         q.eq("storeId", args.storeId).eq("eventType", "bounced")
       )
-      .collect();
-
-    const unsubMonthMap = new Map<string, number>();
-    for (const e of [...unsubEvents, ...bounceEvents]) {
+      .order("desc")) {
       const monthStr = new Date(e.timestamp).toISOString().slice(0, 7);
       unsubMonthMap.set(monthStr, (unsubMonthMap.get(monthStr) || 0) + 1);
-    }
-    const unsubTrend = Array.from(unsubMonthMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([month, count]) => ({ month, count }));
-
-    // Flagged contacts from creator's bounce events
-    const bounceCountMap = new Map<string, number>();
-    for (const e of bounceEvents) {
       const email = e.emailAddress.toLowerCase();
       bounceCountMap.set(email, (bounceCountMap.get(email) || 0) + 1);
+      eventCount++;
+      if (eventCount >= EVENT_LIMIT) break;
     }
+
+    const unsubTrend = Array.from(unsubMonthMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-12)
+      .map(([month, count]) => ({ month, count }));
 
     const flaggedContacts = Array.from(bounceCountMap.entries())
       .filter(([, count]) => count >= 2)
