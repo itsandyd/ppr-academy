@@ -13,6 +13,7 @@ import {
   Settings,
   Terminal,
   Home,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -59,6 +60,12 @@ const navItems: NavItem[] = [
     href: "/admin/communications",
     icon: MessageSquare,
     color: "text-orange-500",
+  },
+  {
+    title: "Email Analytics",
+    href: "/admin/email-analytics",
+    icon: BarChart3,
+    color: "text-cyan-500",
   },
   {
     title: "AI Platform",

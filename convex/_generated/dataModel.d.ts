@@ -4545,6 +4545,55 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  emailAlerts: {
+    document: {
+      acknowledgedAt?: number;
+      acknowledgedBy?: string;
+      alertType:
+        | "high_bounce_rate"
+        | "high_complaint_rate"
+        | "delivery_degradation";
+      campaignId?: Id<"resendCampaigns">;
+      campaignName?: string;
+      createdAt: number;
+      isActive: boolean;
+      message: string;
+      metric: number;
+      recommendation: string;
+      severity: "warning" | "critical";
+      storeId?: string;
+      threshold: number;
+      _id: Id<"emailAlerts">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "acknowledgedAt"
+      | "acknowledgedBy"
+      | "alertType"
+      | "campaignId"
+      | "campaignName"
+      | "createdAt"
+      | "isActive"
+      | "message"
+      | "metric"
+      | "recommendation"
+      | "severity"
+      | "storeId"
+      | "threshold";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_alertType: ["alertType", "_creationTime"];
+      by_campaignId: ["campaignId", "_creationTime"];
+      by_createdAt: ["createdAt", "_creationTime"];
+      by_isActive: ["isActive", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   emailCampaignRecipients: {
     document: {
       campaignId: Id<"emailCampaigns">;
@@ -12055,6 +12104,53 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
       by_webhookEndpointId: ["webhookEndpointId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  webhookEmailEvents: {
+    document: {
+      campaignId?: Id<"resendCampaigns">;
+      emailAddress: string;
+      emailId: string;
+      eventType:
+        | "sent"
+        | "delivered"
+        | "bounced"
+        | "complained"
+        | "opened"
+        | "clicked"
+        | "delivery_delayed";
+      metadata: any;
+      storeId?: string;
+      subject?: string;
+      timestamp: number;
+      _id: Id<"webhookEmailEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "campaignId"
+      | "emailAddress"
+      | "emailId"
+      | "eventType"
+      | "metadata"
+      | "storeId"
+      | "subject"
+      | "timestamp";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_campaignId: ["campaignId", "_creationTime"];
+      by_emailAddress: ["emailAddress", "_creationTime"];
+      by_emailId: ["emailId", "_creationTime"];
+      by_eventType: ["eventType", "_creationTime"];
+      by_eventType_timestamp: ["eventType", "timestamp", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_eventType: ["storeId", "eventType", "_creationTime"];
+      by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
+      by_timestamp: ["timestamp", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

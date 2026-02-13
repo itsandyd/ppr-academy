@@ -757,6 +757,65 @@ export const contactsTable = defineTable({
   .index("by_score", ["score"])
   .index("by_activeCampaignId", ["activeCampaignId"]);
 
+// ============================================================================
+// EMAIL ANALYTICS - Raw webhook event storage & alerts
+// ============================================================================
+
+// Raw webhook events for analytics (every event from Resend)
+export const webhookEmailEventsTable = defineTable({
+  eventType: v.union(
+    v.literal("sent"),
+    v.literal("delivered"),
+    v.literal("bounced"),
+    v.literal("complained"),
+    v.literal("opened"),
+    v.literal("clicked"),
+    v.literal("delivery_delayed")
+  ),
+  emailAddress: v.string(), // Recipient email
+  emailId: v.string(), // Resend email ID
+  campaignId: v.optional(v.id("resendCampaigns")),
+  storeId: v.optional(v.string()), // Creator's Clerk user ID (matches emailContacts.storeId)
+  subject: v.optional(v.string()),
+  timestamp: v.number(),
+  metadata: v.any(), // Raw event data from webhook
+})
+  .index("by_eventType", ["eventType"])
+  .index("by_emailAddress", ["emailAddress"])
+  .index("by_emailId", ["emailId"])
+  .index("by_campaignId", ["campaignId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_storeId_eventType", ["storeId", "eventType"])
+  .index("by_storeId_timestamp", ["storeId", "timestamp"])
+  .index("by_timestamp", ["timestamp"])
+  .index("by_eventType_timestamp", ["eventType", "timestamp"]);
+
+// Alerts for email health issues
+export const emailAlertsTable = defineTable({
+  alertType: v.union(
+    v.literal("high_bounce_rate"),
+    v.literal("high_complaint_rate"),
+    v.literal("delivery_degradation")
+  ),
+  severity: v.union(v.literal("warning"), v.literal("critical")),
+  campaignId: v.optional(v.id("resendCampaigns")),
+  campaignName: v.optional(v.string()),
+  storeId: v.optional(v.string()), // Creator's Clerk user ID
+  message: v.string(),
+  metric: v.number(), // The actual rate that triggered the alert
+  threshold: v.number(), // The threshold that was exceeded
+  recommendation: v.string(),
+  isActive: v.boolean(),
+  acknowledgedAt: v.optional(v.number()),
+  acknowledgedBy: v.optional(v.string()), // Clerk ID
+  createdAt: v.number(),
+})
+  .index("by_isActive", ["isActive"])
+  .index("by_campaignId", ["campaignId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_alertType", ["alertType"])
+  .index("by_createdAt", ["createdAt"]);
+
 // Contact Activity Log (track all interactions)
 export const contactActivityTable = defineTable({
   contactId: v.id("contacts"),

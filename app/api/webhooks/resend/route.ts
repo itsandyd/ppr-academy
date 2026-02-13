@@ -141,6 +141,33 @@ export async function POST(req: NextRequest) {
       metadata: eventData,
     });
 
+    // Log raw event to emailEvents table for analytics
+    const eventTypeMap: Record<string, string> = {
+      "email.sent": "sent",
+      "email.delivered": "delivered",
+      "email.bounced": "bounced",
+      "email.complained": "complained",
+      "email.opened": "opened",
+      "email.clicked": "clicked",
+      "email.delivery_delayed": "delivery_delayed",
+    };
+    const mappedEventType = eventTypeMap[type];
+    if (mappedEventType) {
+      const recipientEmail = Array.isArray(data.to) ? data.to[0] : data.to;
+      try {
+        await fetchMutation(api.emailAnalytics.logEmailEvent, {
+          eventType: mappedEventType as "sent" | "delivered" | "bounced" | "complained" | "opened" | "clicked" | "delivery_delayed",
+          emailAddress: recipientEmail || "",
+          emailId: data.email_id,
+          subject: data.subject || undefined,
+          timestamp: eventData.timestamp,
+          metadata: eventData,
+        });
+      } catch (err) {
+        console.error("[Resend Webhook] Failed to log email event:", err);
+      }
+    }
+
     // Auto-suppress on spam complaint
     if (type === "email.complained" && data.to) {
       const recipientEmail = Array.isArray(data.to) ? data.to[0] : data.to;

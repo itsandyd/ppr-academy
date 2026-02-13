@@ -38,6 +38,7 @@ import {
   Megaphone,
   UserCog,
   Crown,
+  HeartPulse,
 } from "lucide-react";
 import {
   Sidebar,
@@ -212,6 +213,24 @@ const createCategories: SidebarCategory[] = [
         href: "/dashboard/emails?mode=create",
         label: "Email Campaigns",
         icon: Mail,
+        color: "text-cyan-500",
+      },
+      {
+        href: "/dashboard/emails/campaigns?mode=create",
+        label: "Campaign Analytics",
+        icon: BarChart3,
+        color: "text-cyan-500",
+      },
+      {
+        href: "/dashboard/emails/subscribers?mode=create",
+        label: "Subscribers",
+        icon: Users,
+        color: "text-cyan-500",
+      },
+      {
+        href: "/dashboard/emails/health?mode=create",
+        label: "List Health",
+        icon: HeartPulse,
         color: "text-cyan-500",
       },
     ],

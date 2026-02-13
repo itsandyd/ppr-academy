@@ -9684,6 +9684,124 @@ export declare const api: {
       { message: string; success: boolean }
     >;
   };
+  emailAnalytics: {
+    acknowledgeAlert: FunctionReference<
+      "mutation",
+      "public",
+      { alertId: Id<"emailAlerts">; clerkId: string },
+      any
+    >;
+    addSuppression: FunctionReference<
+      "mutation",
+      "public",
+      { email: string; reason?: string },
+      any
+    >;
+    getActiveAlerts: FunctionReference<"query", "public", {}, any>;
+    getAllAlerts: FunctionReference<"query", "public", {}, any>;
+    getCampaignAnalytics: FunctionReference<
+      "query",
+      "public",
+      {
+        sortBy?: "date" | "bounceRate" | "complaintRate" | "name";
+        sortOrder?: "asc" | "desc";
+      },
+      any
+    >;
+    getCampaignDetail: FunctionReference<
+      "query",
+      "public",
+      { campaignId: Id<"resendCampaigns"> },
+      any
+    >;
+    getCreatorActiveAlerts: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getCreatorCampaignAnalytics: FunctionReference<
+      "query",
+      "public",
+      {
+        sortBy?: "date" | "bounceRate" | "complaintRate" | "name";
+        sortOrder?: "asc" | "desc";
+        storeId: string;
+      },
+      any
+    >;
+    getCreatorCampaignDetail: FunctionReference<
+      "query",
+      "public",
+      { campaignId: Id<"resendCampaigns">; storeId: string },
+      any
+    >;
+    getCreatorListHealth: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getCreatorOverviewStats: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getCreatorSubscribers: FunctionReference<
+      "query",
+      "public",
+      { search?: string; statusFilter?: string; storeId: string },
+      any
+    >;
+    getCreatorSubscriberStats: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getCreatorTrendData: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeId: string },
+      any
+    >;
+    getListHealth: FunctionReference<"query", "public", {}, any>;
+    getOverviewStats: FunctionReference<"query", "public", {}, any>;
+    getSuppressionList: FunctionReference<
+      "query",
+      "public",
+      { reasonFilter?: string; search?: string },
+      any
+    >;
+    getTrendData: FunctionReference<"query", "public", { days?: number }, any>;
+    logEmailEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        emailAddress: string;
+        emailId: string;
+        eventType:
+          | "sent"
+          | "delivered"
+          | "bounced"
+          | "complained"
+          | "opened"
+          | "clicked"
+          | "delivery_delayed";
+        metadata: any;
+        subject?: string;
+        timestamp: number;
+      },
+      any
+    >;
+    removeSuppression: FunctionReference<
+      "mutation",
+      "public",
+      { prefId: Id<"resendPreferences"> },
+      any
+    >;
+  };
   emailCampaigns: {
     addAllCustomersAsRecipients: FunctionReference<
       "mutation",
@@ -23445,6 +23563,18 @@ export declare const internal: {
         isStatisticallySignificant: boolean;
         winner?: string;
       }
+    >;
+  };
+  emailAnalytics: {
+    checkAlertThresholds: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        campaignId?: Id<"resendCampaigns">;
+        eventType: "bounced" | "complained";
+        storeId?: string;
+      },
+      any
     >;
   };
   emailAnalyticsRollup: {

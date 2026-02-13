@@ -4528,6 +4528,11 @@ export default defineSchema({
 
   listHygieneActions: emailSchema.listHygieneActionsTable,
 
+  // Email Analytics (raw webhook events & alerts)
+  webhookEmailEvents: emailSchema.webhookEmailEventsTable,
+
+  emailAlerts: emailSchema.emailAlertsTable,
+
   // Gamification - Achievements
   userAchievements: defineTable({
     userId: v.string(), // Clerk ID
