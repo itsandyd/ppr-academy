@@ -10,8 +10,8 @@ const getResendClient = () => {
 };
 
 // Email configuration
-const FROM_EMAIL = 'PPR Academy <no-reply@mail.pauseplayrepeat.com>';
-const DEFAULT_REPLY_TO = 'no-reply@mail.pauseplayrepeat.com';
+const FROM_EMAIL = 'PPR Academy <no-reply@pauseplayrepeat.com>';
+const DEFAULT_REPLY_TO = 'no-reply@pauseplayrepeat.com';
 
 // CAN-SPAM compliant footer with unsubscribe link and physical address
 function getEmailFooter(recipientEmail: string): string {

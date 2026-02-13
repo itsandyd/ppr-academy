@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       leadMagnetTitle: product.title,
       downloadUrl,
       adminName: store?.name || "Creator",
-      adminEmail: "no-reply@mail.pauseplayrepeat.com",
+      adminEmail: "no-reply@pauseplayrepeat.com",
       storeName: store?.name,
     });
 

@@ -1122,12 +1122,12 @@ export default function AdminEmailMonitoringPage() {
               <Label htmlFor="domain">Domain Name *</Label>
               <Input
                 id="domain"
-                placeholder="mail.pauseplayrepeat.com"
+                placeholder="pauseplayrepeat.com"
                 value={newDomainName}
                 onChange={(e) => setNewDomainName(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Example: mail.pauseplayrepeat.com or yourdomain.com
+                Example: pauseplayrepeat.com or yourdomain.com
               </p>
             </div>
 

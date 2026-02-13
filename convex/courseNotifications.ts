@@ -226,7 +226,7 @@ export const sendCourseUpdateEmails = internalAction({
         // If Resend is configured, send email
         if (resendApiKey) {
           // Use verified sending domain
-          const fromEmail = process.env.RESEND_FROM_EMAIL || "PPR Academy <no-reply@mail.pauseplayrepeat.com>";
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "PPR Academy <no-reply@pauseplayrepeat.com>";
 
           const response = await fetch("https://api.resend.com/emails", {
             method: "POST",

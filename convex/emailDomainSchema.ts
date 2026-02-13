@@ -12,9 +12,9 @@ import { v } from "convex/values";
  */
 
 export const emailDomainTables = {
-  // Platform sending domains (mail.pauseplayrepeat.com, etc.)
+  // Platform sending domains (pauseplayrepeat.com, etc.)
   emailDomains: defineTable({
-    domain: v.string(), // e.g., "mail.pauseplayrepeat.com"
+    domain: v.string(), // e.g., "pauseplayrepeat.com"
     type: v.union(
       v.literal("shared"),    // Shared by all creators
       v.literal("dedicated"), // Dedicated to specific creator(s)

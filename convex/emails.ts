@@ -442,7 +442,7 @@ export const sendCampaignBatch = internalAction({
       fromName = "PPR Academy";
       replyToEmail = emailCampaign.replyToEmail || emailCampaign.fromEmail;
     } else {
-      fromEmail = "no-reply@mail.pauseplayrepeat.com";
+      fromEmail = "no-reply@pauseplayrepeat.com";
       fromName = "PPR Academy";
       replyToEmail = fromEmail;
     }
@@ -876,7 +876,7 @@ export const sendBroadcastEmail = action({
       };
     }
 
-    const fromEmail = "no-reply@mail.pauseplayrepeat.com";
+    const fromEmail = "no-reply@pauseplayrepeat.com";
     const fromName = args.fromName || "PPR Academy";
     const replyToEmail = fromEmail;
 
@@ -1202,9 +1202,9 @@ export const resendEnrollmentEmails = action({
 </html>`;
 
         const result = await resend!.emails.send({
-          from: "PPR Academy <no-reply@mail.pauseplayrepeat.com>",
+          from: "PPR Academy <no-reply@pauseplayrepeat.com>",
           to: purchase.userEmail,
-          replyTo: "no-reply@mail.pauseplayrepeat.com",
+          replyTo: "no-reply@pauseplayrepeat.com",
           subject: `🎓 Welcome to ${purchase.courseTitle} - You're Enrolled!`,
           html,
         });

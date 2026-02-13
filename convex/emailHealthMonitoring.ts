@@ -117,7 +117,7 @@ export const getDomainHealthStats = query({
       .withIndex("by_type", (q) => q.eq("type", "admin"))
       .first();
 
-    const domain = adminConnection?.fromEmail?.split("@")[1] || "mail.pauseplayrepeat.com";
+    const domain = adminConnection?.fromEmail?.split("@")[1] || "pauseplayrepeat.com";
     const status = adminConnection?.isActive ? "active" : "pending";
 
     return {
