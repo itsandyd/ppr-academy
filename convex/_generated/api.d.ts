@@ -11624,6 +11624,12 @@ export declare const api: {
     >;
   };
   emailUnsubscribe: {
+    bulkSuppressBounced: FunctionReference<
+      "mutation",
+      "public",
+      { emails: Array<string>; reason?: string },
+      { alreadySuppressed: number; newlySuppressed: number; processed: number }
+    >;
     checkSuppression: FunctionReference<
       "query",
       "public",

@@ -259,6 +259,73 @@ export const markBounced = internalMutation({
   },
 });
 
+/**
+ * Bulk suppress bounced emails - for one-time list cleanup
+ * Processes up to 100 emails per call (Convex mutation limits)
+ */
+export const bulkSuppressBounced = mutation({
+  args: {
+    emails: v.array(v.string()),
+    reason: v.optional(v.string()),
+  },
+  returns: v.object({
+    processed: v.number(),
+    newlySuppressed: v.number(),
+    alreadySuppressed: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let newlySuppressed = 0;
+    let alreadySuppressed = 0;
+
+    for (const rawEmail of args.emails) {
+      const email = rawEmail.toLowerCase().trim();
+      if (!email) continue;
+
+      const existingPref = await ctx.db
+        .query("resendPreferences")
+        .filter((q) => q.eq(q.field("userId"), email))
+        .first();
+
+      if (existingPref) {
+        if (existingPref.isUnsubscribed) {
+          alreadySuppressed++;
+          continue;
+        }
+        await ctx.db.patch(existingPref._id, {
+          isUnsubscribed: true,
+          unsubscribedAt: Date.now(),
+          unsubscribeReason: args.reason || "Historical bounce - bulk suppression",
+          platformEmails: false,
+          courseEmails: false,
+          marketingEmails: false,
+          weeklyDigest: false,
+          updatedAt: Date.now(),
+        });
+      } else {
+        await ctx.db.insert("resendPreferences", {
+          userId: email,
+          platformEmails: false,
+          courseEmails: false,
+          marketingEmails: false,
+          weeklyDigest: false,
+          isUnsubscribed: true,
+          unsubscribedAt: Date.now(),
+          unsubscribeReason: args.reason || "Historical bounce - bulk suppression",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+      newlySuppressed++;
+    }
+
+    return {
+      processed: args.emails.length,
+      newlySuppressed,
+      alreadySuppressed,
+    };
+  },
+});
+
 export const markComplained = internalMutation({
   args: {
     email: v.string(),
