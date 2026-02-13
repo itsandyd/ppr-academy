@@ -52,8 +52,25 @@ export async function POST(request: NextRequest) {
     }
 
     let stripePriceId = billingCycle === "yearly" ? stripePriceIdYearly : stripePriceIdMonthly;
+    const expectedAmountCents = Math.round(price * 100);
+    let needsNewPrice = !stripePriceId;
 
-    if (!stripePriceId) {
+    // If we have a cached Stripe price, verify it still matches the current price
+    if (stripePriceId) {
+      try {
+        const existingPrice = await stripe.prices.retrieve(stripePriceId);
+        if (existingPrice.unit_amount !== expectedAmountCents) {
+          // Price changed — Stripe prices are immutable, so create a new one
+          needsNewPrice = true;
+          await stripe.prices.update(stripePriceId, { active: false });
+        }
+      } catch {
+        // Price doesn't exist in Stripe anymore — recreate
+        needsNewPrice = true;
+      }
+    }
+
+    if (needsNewPrice) {
       const product = await stripe.products.create({
         name: tierName,
         metadata: {
@@ -65,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       const stripePrice = await stripe.prices.create({
         product: product.id,
-        unit_amount: Math.round(price * 100),
+        unit_amount: expectedAmountCents,
         currency: "usd",
         recurring: {
           interval: billingCycle === "yearly" ? "year" : "month",

@@ -48,11 +48,26 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     let stripePriceId = incomingStripePriceId;
+    let stripeProductId = incomingStripeProductId;
+    const expectedAmountCents = Math.round(coursePrice * 100);
+    let needsNewPrice = !stripePriceId;
 
-    // Create Stripe product and price on the fly if missing
-    if (!stripePriceId) {
-      let stripeProductId = incomingStripeProductId;
+    // If we have a cached Stripe price, verify it still matches the current price
+    if (stripePriceId) {
+      try {
+        const existingPrice = await stripe.prices.retrieve(stripePriceId);
+        if (existingPrice.unit_amount !== expectedAmountCents) {
+          // Price changed — Stripe prices are immutable, so create a new one
+          needsNewPrice = true;
+          await stripe.prices.update(stripePriceId, { active: false });
+        }
+      } catch {
+        // Price doesn't exist in Stripe anymore — recreate
+        needsNewPrice = true;
+      }
+    }
 
+    if (needsNewPrice) {
       if (!stripeProductId) {
         const product = await stripe.products.create({
           name: courseTitle || "Course",
@@ -67,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       const stripePrice = await stripe.prices.create({
         product: stripeProductId,
-        unit_amount: Math.round(coursePrice * 100),
+        unit_amount: expectedAmountCents,
         currency: "usd",
         metadata: {
           courseId,

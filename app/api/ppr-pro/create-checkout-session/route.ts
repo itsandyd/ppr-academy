@@ -45,12 +45,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get or create Stripe price (same pattern as membership/course checkout)
+    // Get or create Stripe price, and detect price changes
     let stripePriceId = dbPlan.stripePriceId;
+    let stripeProductId = dbPlan.stripeProductId;
+    let needsNewPrice = !stripePriceId;
 
-    if (!stripePriceId) {
-      let stripeProductId = dbPlan.stripeProductId;
+    // If we have a cached Stripe price, verify it still matches the database price
+    if (stripePriceId) {
+      try {
+        const existingPrice = await stripe.prices.retrieve(stripePriceId);
+        if (existingPrice.unit_amount !== dbPlan.price) {
+          // Price changed in the database — Stripe prices are immutable, so create a new one
+          needsNewPrice = true;
+          // Deactivate the old price
+          await stripe.prices.update(stripePriceId, { active: false });
+        }
+      } catch {
+        // Price doesn't exist in Stripe anymore — recreate
+        needsNewPrice = true;
+      }
+    }
 
+    if (needsNewPrice) {
       // Create Stripe product if needed
       if (!stripeProductId) {
         const product = await stripe.products.create({
@@ -63,7 +79,7 @@ export async function POST(request: NextRequest) {
         stripeProductId = product.id;
       }
 
-      // Create Stripe price
+      // Create new Stripe price with current database amount
       const stripePrice = await stripe.prices.create({
         product: stripeProductId,
         unit_amount: dbPlan.price,
