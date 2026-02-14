@@ -9,6 +9,8 @@ import { SaturationCourseV2 } from "./SaturationCourseV2";
 import { HarmonicsLessonVideo } from "./HarmonicsLessonVideo";
 import { HarmonicsLessonLong } from "./HarmonicsLessonLong";
 import { HarmonicsFullLesson } from "./HarmonicsFullLesson";
+import { ExcalidrawEmailVideo } from "./ExcalidrawEmailVideo";
+import { ExcalidrawGamificationVideo } from "./ExcalidrawGamificationVideo";
 import { DynamicVideo } from "./DynamicVideo";
 
 type DynamicVideoProps = {
@@ -72,7 +74,7 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
       />
       {/* Dynamic Video — executes LLM-generated code at render time */}
-      <Composition<DynamicVideoProps>
+      <Composition<any, DynamicVideoProps>
         id="DynamicVideo"
         component={DynamicVideo}
         durationInFrames={1800}
@@ -117,6 +119,22 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1920}
         height={1080}
+      />
+      <Composition
+        id="ExcalidrawEmail"
+        component={ExcalidrawEmailVideo}
+        durationInFrames={2280}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="ExcalidrawGamification"
+        component={ExcalidrawGamificationVideo}
+        durationInFrames={2010}
+        fps={30}
+        width={1080}
+        height={1920}
       />
     </>
   );

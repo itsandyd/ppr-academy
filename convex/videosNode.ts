@@ -86,10 +86,8 @@ export const runPipeline = internalAction({
 
       // Resolve image storage IDs to URLs for the code generator
       const imageUrls: string[] = [];
-      const validImageIds = imageResult.storageIds.filter(
-        (id: any): id is string => id !== null
-      );
-      for (const storageId of validImageIds) {
+      for (const storageId of imageResult.storageIds) {
+        if (!storageId) continue;
         const url = await ctx.storage.getUrl(storageId);
         if (url) imageUrls.push(url);
       }
@@ -118,11 +116,12 @@ export const runPipeline = internalAction({
 
       const fps = 30;
       const totalFrames = context.targetDuration * fps;
-      const dimensions = {
+      const dimensionMap: Record<string, { width: number; height: number }> = {
         "9:16": { width: 1080, height: 1920 },
         "16:9": { width: 1920, height: 1080 },
         "1:1": { width: 1080, height: 1080 },
-      }[context.aspectRatio] || { width: 1080, height: 1920 };
+      };
+      const dimensions = dimensionMap[context.aspectRatio] || { width: 1080, height: 1920 };
 
       // Check if this is an iteration — fetch parent's code if available
       const currentJob = await ctx.runQuery(internal.videos.getJobInternal, { jobId });
