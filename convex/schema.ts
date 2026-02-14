@@ -6815,4 +6815,121 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"])
     .index("by_status", ["status"]),
+
+  // ===== VIDEO GENERATION PIPELINE =====
+  // Video generation jobs (queue + status tracking)
+  videoJobs: defineTable({
+    creatorId: v.id("users"),
+    storeId: v.optional(v.id("stores")),
+    courseId: v.optional(v.id("courses")),
+    productId: v.optional(v.id("digitalProducts")),
+
+    // Input
+    prompt: v.string(),
+    style: v.optional(v.string()),
+    targetDuration: v.number(), // seconds
+    aspectRatio: v.string(), // "9:16", "16:9", "1:1"
+    voiceId: v.optional(v.string()),
+
+    // Pipeline status
+    status: v.union(
+      v.literal("queued"),
+      v.literal("gathering_context"),
+      v.literal("generating_script"),
+      v.literal("generating_assets"),
+      v.literal("generating_voice"),
+      v.literal("generating_code"),
+      v.literal("rendering"),
+      v.literal("post_processing"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    progress: v.number(), // 0-100
+
+    // Generated artifacts
+    scriptId: v.optional(v.id("videoScripts")),
+    generatedCode: v.optional(v.string()),
+    imageIds: v.optional(v.array(v.id("_storage"))),
+    audioId: v.optional(v.id("_storage")),
+    videoId: v.optional(v.id("_storage")),
+    thumbnailId: v.optional(v.id("_storage")),
+    srtContent: v.optional(v.string()),
+    caption: v.optional(v.string()),
+
+    // Metadata
+    renderDuration: v.optional(v.number()), // seconds to render
+    videoDuration: v.optional(v.number()), // duration of output video
+    fileSize: v.optional(v.number()), // bytes
+
+    // Iteration
+    parentJobId: v.optional(v.id("videoJobs")), // previous version
+    iterationPrompt: v.optional(v.string()),
+    version: v.number(),
+
+    // Error handling
+    error: v.optional(v.string()),
+    retryCount: v.number(),
+  })
+    .index("by_creator", ["creatorId"])
+    .index("by_store", ["storeId"])
+    .index("by_status", ["status"])
+    .index("by_course", ["courseId"]),
+
+  // Structured video scripts (scene-by-scene)
+  videoScripts: defineTable({
+    jobId: v.id("videoJobs"),
+    totalDuration: v.number(),
+    voiceoverScript: v.string(),
+    scenes: v.array(
+      v.object({
+        id: v.string(),
+        duration: v.number(),
+        voiceover: v.optional(v.string()),
+        onScreenText: v.object({
+          headline: v.optional(v.string()),
+          subhead: v.optional(v.string()),
+          bulletPoints: v.optional(v.array(v.string())),
+          emphasis: v.optional(v.array(v.string())),
+        }),
+        visualDirection: v.string(),
+        mood: v.string(),
+      })
+    ),
+    colorPalette: v.object({
+      primary: v.string(),
+      secondary: v.string(),
+      accent: v.string(),
+      background: v.string(),
+    }),
+    imagePrompts: v.array(v.string()),
+  }).index("by_job", ["jobId"]),
+
+  // Creator video library (finished videos)
+  videoLibrary: defineTable({
+    creatorId: v.id("users"),
+    storeId: v.optional(v.id("stores")),
+    jobId: v.id("videoJobs"),
+
+    title: v.string(),
+    description: v.optional(v.string()),
+    videoUrl: v.string(),
+    thumbnailUrl: v.string(),
+    duration: v.number(),
+    aspectRatio: v.string(),
+
+    // Social media
+    caption: v.optional(v.string()),
+    hashtags: v.optional(v.array(v.string())),
+    srtUrl: v.optional(v.string()),
+
+    // Publishing
+    publishedTo: v.optional(v.array(v.string())),
+    scheduledAt: v.optional(v.number()),
+
+    // Analytics
+    views: v.optional(v.number()),
+    shares: v.optional(v.number()),
+  })
+    .index("by_creator", ["creatorId"])
+    .index("by_store", ["storeId"]),
 });

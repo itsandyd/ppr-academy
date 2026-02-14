@@ -98,6 +98,7 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
       if (pathname.includes("/customers")) return "Customers";
       if (pathname.includes("/email-campaigns")) return "Emails";
       if (pathname.includes("/inbox")) return "Customer Inbox";
+      if (pathname.includes("/videos")) return "Video Studio";
       if (pathname.includes("/social")) return "Socials";
       if (pathname.includes("/automations")) return "Automations";
       if (pathname.includes("/plan")) return "Plan & Billing";

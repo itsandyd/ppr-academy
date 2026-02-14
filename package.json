@@ -18,7 +18,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "echo 'Using Convex for database'"
+    "postinstall": "echo 'Using Convex for database'",
+    "remotion:studio": "npx remotion studio remotion/index.ts",
+    "remotion:deploy": "npx tsx remotion/lambda/deploy.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.21.0",
@@ -62,6 +64,9 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-email/components": "^0.5.6",
     "@react-email/render": "^1.3.2",
+    "@remotion/cli": "4.0.332",
+    "@remotion/lambda": "4.0.332",
+    "@remotion/player": "4.0.332",
     "@stripe/react-stripe-js": "^3.9.2",
     "@stripe/stripe-js": "^7.9.0",
     "@tailwindcss/typography": "^0.5.16",
@@ -108,6 +113,7 @@
     "recharts": "^3.2.1",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
+    "remotion": "4.0.332",
     "resend": "^4.7.0",
     "sonner": "^2.0.7",
     "stripe": "^18.5.0",

@@ -12078,6 +12078,187 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  videoJobs: {
+    document: {
+      aspectRatio: string;
+      audioId?: Id<"_storage">;
+      caption?: string;
+      courseId?: Id<"courses">;
+      creatorId: Id<"users">;
+      error?: string;
+      fileSize?: number;
+      generatedCode?: string;
+      imageIds?: Array<Id<"_storage">>;
+      iterationPrompt?: string;
+      parentJobId?: Id<"videoJobs">;
+      productId?: Id<"digitalProducts">;
+      progress: number;
+      prompt: string;
+      renderDuration?: number;
+      retryCount: number;
+      scriptId?: Id<"videoScripts">;
+      srtContent?: string;
+      status:
+        | "queued"
+        | "gathering_context"
+        | "generating_script"
+        | "generating_assets"
+        | "generating_voice"
+        | "generating_code"
+        | "rendering"
+        | "post_processing"
+        | "completed"
+        | "failed";
+      storeId?: Id<"stores">;
+      style?: string;
+      targetDuration: number;
+      thumbnailId?: Id<"_storage">;
+      version: number;
+      videoDuration?: number;
+      videoId?: Id<"_storage">;
+      voiceId?: string;
+      _id: Id<"videoJobs">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "aspectRatio"
+      | "audioId"
+      | "caption"
+      | "courseId"
+      | "creatorId"
+      | "error"
+      | "fileSize"
+      | "generatedCode"
+      | "imageIds"
+      | "iterationPrompt"
+      | "parentJobId"
+      | "productId"
+      | "progress"
+      | "prompt"
+      | "renderDuration"
+      | "retryCount"
+      | "scriptId"
+      | "srtContent"
+      | "status"
+      | "storeId"
+      | "style"
+      | "targetDuration"
+      | "thumbnailId"
+      | "version"
+      | "videoDuration"
+      | "videoId"
+      | "voiceId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_course: ["courseId", "_creationTime"];
+      by_creator: ["creatorId", "_creationTime"];
+      by_status: ["status", "_creationTime"];
+      by_store: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  videoLibrary: {
+    document: {
+      aspectRatio: string;
+      caption?: string;
+      creatorId: Id<"users">;
+      description?: string;
+      duration: number;
+      hashtags?: Array<string>;
+      jobId: Id<"videoJobs">;
+      publishedTo?: Array<string>;
+      scheduledAt?: number;
+      shares?: number;
+      srtUrl?: string;
+      storeId?: Id<"stores">;
+      thumbnailUrl: string;
+      title: string;
+      videoUrl: string;
+      views?: number;
+      _id: Id<"videoLibrary">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "aspectRatio"
+      | "caption"
+      | "creatorId"
+      | "description"
+      | "duration"
+      | "hashtags"
+      | "jobId"
+      | "publishedTo"
+      | "scheduledAt"
+      | "shares"
+      | "srtUrl"
+      | "storeId"
+      | "thumbnailUrl"
+      | "title"
+      | "videoUrl"
+      | "views";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_creator: ["creatorId", "_creationTime"];
+      by_store: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  videoScripts: {
+    document: {
+      colorPalette: {
+        accent: string;
+        background: string;
+        primary: string;
+        secondary: string;
+      };
+      imagePrompts: Array<string>;
+      jobId: Id<"videoJobs">;
+      scenes: Array<{
+        duration: number;
+        id: string;
+        mood: string;
+        onScreenText: {
+          bulletPoints?: Array<string>;
+          emphasis?: Array<string>;
+          headline?: string;
+          subhead?: string;
+        };
+        visualDirection: string;
+        voiceover?: string;
+      }>;
+      totalDuration: number;
+      voiceoverScript: string;
+      _id: Id<"videoScripts">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "colorPalette"
+      | "colorPalette.accent"
+      | "colorPalette.background"
+      | "colorPalette.primary"
+      | "colorPalette.secondary"
+      | "imagePrompts"
+      | "jobId"
+      | "scenes"
+      | "totalDuration"
+      | "voiceoverScript";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_job: ["jobId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   webAnalyticsEvents: {
     document: {
       city?: string;

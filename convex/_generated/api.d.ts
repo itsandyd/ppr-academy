@@ -21271,6 +21271,68 @@ export declare const api: {
       { message: string; success: boolean }
     >;
   };
+  videos: {
+    generate: FunctionReference<
+      "mutation",
+      "public",
+      {
+        aspectRatio?: string;
+        courseId?: Id<"courses">;
+        productId?: Id<"digitalProducts">;
+        prompt: string;
+        storeId?: Id<"stores">;
+        style?: string;
+        targetDuration?: number;
+        voiceId?: string;
+      },
+      Id<"videoJobs">
+    >;
+    getCreatorCourses: FunctionReference<"query", "public", {}, any>;
+    getJob: FunctionReference<
+      "query",
+      "public",
+      { jobId: Id<"videoJobs"> },
+      any
+    >;
+    getJobsByStore: FunctionReference<
+      "query",
+      "public",
+      { storeId: Id<"stores"> },
+      any
+    >;
+    getProgress: FunctionReference<
+      "query",
+      "public",
+      { jobId: Id<"videoJobs"> },
+      {
+        error?: string;
+        progress: number;
+        scriptId?: Id<"videoScripts">;
+        status: string;
+        thumbnailUrl?: string;
+        videoUrl?: string;
+      }
+    >;
+    getScript: FunctionReference<
+      "query",
+      "public",
+      { scriptId: Id<"videoScripts"> },
+      any
+    >;
+    getVersionHistory: FunctionReference<
+      "query",
+      "public",
+      { jobId: Id<"videoJobs"> },
+      any
+    >;
+    iterate: FunctionReference<
+      "mutation",
+      "public",
+      { feedback: string; jobId: Id<"videoJobs"> },
+      Id<"videoJobs">
+    >;
+    listJobs: FunctionReference<"query", "public", {}, any>;
+  };
   webAnalytics: {
     debugSessionIds: FunctionReference<"query", "public", {}, any>;
     getCountryBreakdown: FunctionReference<
@@ -28385,6 +28447,249 @@ export declare const internal: {
         name?: string;
       } | null
     >;
+  };
+  videos: {
+    getJobInternal: FunctionReference<
+      "query",
+      "internal",
+      { jobId: Id<"videoJobs"> },
+      any
+    >;
+    getScriptInternal: FunctionReference<
+      "query",
+      "internal",
+      { scriptId: Id<"videoScripts"> },
+      any
+    >;
+  };
+  videosNode: {
+    runPipeline: FunctionReference<
+      "action",
+      "internal",
+      { jobId: Id<"videoJobs"> },
+      any
+    >;
+  };
+  videosPipeline: {
+    gatherContext: {
+      gatherContext: FunctionReference<
+        "query",
+        "internal",
+        { jobId: Id<"videoJobs"> },
+        any
+      >;
+    };
+    generateCode: {
+      generateCode: FunctionReference<
+        "action",
+        "internal",
+        {
+          aspectRatio: string;
+          audioData?: {
+            audioUrl: string;
+            duration: number;
+            words?: Array<{ end: number; start: number; word: string }>;
+          };
+          imageUrls: Array<string>;
+          iterationFeedback?: string;
+          jobId: Id<"videoJobs">;
+          previousCode?: string;
+          scriptId: Id<"videoScripts">;
+          targetDuration: number;
+        },
+        { code: string; usedFallback: boolean }
+      >;
+    };
+    generateImages: {
+      generateImages: FunctionReference<
+        "action",
+        "internal",
+        {
+          aspectRatio: string;
+          imagePrompts: Array<string>;
+          jobId: Id<"videoJobs">;
+        },
+        {
+          failCount: number;
+          storageIds: Array<Id<"_storage"> | null>;
+          successCount: number;
+        }
+      >;
+    };
+    generateScript: {
+      generateScript: FunctionReference<
+        "action",
+        "internal",
+        { context: any; jobId: Id<"videoJobs"> },
+        {
+          imagePrompts: Array<string>;
+          scriptId: Id<"videoScripts">;
+          voiceoverScript: string;
+        }
+      >;
+    };
+    generateVoice: {
+      generateVoice: FunctionReference<
+        "action",
+        "internal",
+        { jobId: Id<"videoJobs">; voiceId?: string; voiceoverScript: string },
+        {
+          audioStorageId?: Id<"_storage">;
+          duration?: number;
+          skipReason?: string;
+          skipped: boolean;
+          words?: Array<{ end: number; start: number; word: string }>;
+        }
+      >;
+    };
+    jobMutations: {
+      generateUploadUrl: FunctionReference<"mutation", "internal", {}, any>;
+      updateJobAudio: FunctionReference<
+        "mutation",
+        "internal",
+        { audioId: Id<"_storage">; jobId: Id<"videoJobs"> },
+        any
+      >;
+      updateJobCode: FunctionReference<
+        "mutation",
+        "internal",
+        { generatedCode: string; jobId: Id<"videoJobs"> },
+        any
+      >;
+      updateJobCompleted: FunctionReference<
+        "mutation",
+        "internal",
+        { jobId: Id<"videoJobs"> },
+        any
+      >;
+      updateJobError: FunctionReference<
+        "mutation",
+        "internal",
+        { error: string; jobId: Id<"videoJobs">; retryCount: number },
+        any
+      >;
+      updateJobImages: FunctionReference<
+        "mutation",
+        "internal",
+        { imageIds: Array<Id<"_storage">>; jobId: Id<"videoJobs"> },
+        any
+      >;
+      updateJobPostProcess: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          caption?: string;
+          jobId: Id<"videoJobs">;
+          srtContent?: string;
+          thumbnailId?: Id<"_storage">;
+        },
+        any
+      >;
+      updateJobStatus: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          jobId: Id<"videoJobs">;
+          progress: number;
+          status:
+            | "queued"
+            | "gathering_context"
+            | "generating_script"
+            | "generating_assets"
+            | "generating_voice"
+            | "generating_code"
+            | "rendering"
+            | "post_processing"
+            | "completed"
+            | "failed";
+        },
+        any
+      >;
+      updateJobVideo: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          fileSize?: number;
+          jobId: Id<"videoJobs">;
+          renderDuration?: number;
+          videoDuration?: number;
+          videoId: Id<"_storage">;
+        },
+        any
+      >;
+    };
+    postProcess: {
+      postProcess: FunctionReference<
+        "action",
+        "internal",
+        {
+          audioUrl?: string;
+          audioWords?: Array<{ end: number; start: number; word: string }>;
+          generatedCode: string;
+          height: number;
+          imageUrls: Array<string>;
+          jobId: Id<"videoJobs">;
+          scriptId: Id<"videoScripts">;
+          totalFrames: number;
+          width: number;
+        },
+        { caption?: string; srtContent?: string; thumbnailId?: Id<"_storage"> }
+      >;
+    };
+    renderVideo: {
+      renderVideo: FunctionReference<
+        "action",
+        "internal",
+        {
+          audioUrl?: string;
+          generatedCode: string;
+          height: number;
+          imageUrls: Array<string>;
+          jobId: Id<"videoJobs">;
+          totalFrames: number;
+          width: number;
+        },
+        { renderDurationSeconds: number; videoStorageId: Id<"_storage"> }
+      >;
+    };
+    scriptMutations: {
+      linkScriptToJob: FunctionReference<
+        "mutation",
+        "internal",
+        { jobId: Id<"videoJobs">; scriptId: Id<"videoScripts"> },
+        any
+      >;
+      storeScript: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          colorPalette: {
+            accent: string;
+            background: string;
+            primary: string;
+            secondary: string;
+          };
+          imagePrompts: Array<string>;
+          jobId: Id<"videoJobs">;
+          scenes: Array<{
+            duration: number;
+            id: string;
+            mood: string;
+            onScreenText: {
+              bulletPoints?: Array<string>;
+              emphasis?: Array<string>;
+              headline?: string;
+              subhead?: string;
+            };
+            visualDirection: string;
+            voiceover?: string;
+          }>;
+          totalDuration: number;
+          voiceoverScript: string;
+        },
+        any
+      >;
+    };
   };
   webAnalytics: {
     backfillSlugs: FunctionReference<"mutation", "internal", {}, any>;

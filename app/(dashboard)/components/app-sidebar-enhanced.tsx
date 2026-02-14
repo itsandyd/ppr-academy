@@ -2,14 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Home, 
-  TrendingUp, 
-  Users, 
-  Package, 
-  Store, 
-  Settings, 
-  User, 
+import {
+  Home,
+  TrendingUp,
+  Users,
+  Package,
+  Store,
+  Settings,
+  User,
   Mail,
   Music,
   Headphones,
@@ -31,7 +31,8 @@ import {
   Inbox,
   MessageSquare,
   CreditCard,
-  BookOpen
+  BookOpen,
+  Video,
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -178,9 +179,17 @@ export function AppSidebarEnhanced() {
           label: "Inbox",
           gradient: "from-pink-500 to-rose-500"
         },
-        { 
-          icon: Share2, 
-          href: `/store/${storeId || 'setup'}/social`, 
+        {
+          icon: Video,
+          href: `/store/${storeId || 'setup'}/videos`,
+          label: "Video Studio",
+          badge: "AI",
+          isNew: true,
+          gradient: "from-rose-500 to-orange-500"
+        },
+        {
+          icon: Share2,
+          href: `/store/${storeId || 'setup'}/social`,
           label: "Social Media",
           isNew: true,
           gradient: "from-blue-500 to-cyan-500"
