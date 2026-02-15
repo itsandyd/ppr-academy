@@ -672,17 +672,8 @@ export const analyzeCoursesForFeatures = action({
   handler: async (ctx, args) => {
     const analysisRunId = `analysis_${Date.now()}`;
     
-    console.log(`🔍 Starting feature analysis for ${args.courseData.length} courses...`);
-    
-    // Log course details
-    for (const course of args.courseData) {
-      const totalContent = course.chapters.reduce((acc, ch) => acc + (ch.content?.length || 0), 0);
-      console.log(`  📚 "${course.title}" - ${course.chapters.length} chapters, ${totalContent} chars of content`);
-    }
-    
     // Check if we have any courses to analyze
     if (args.courseData.length === 0) {
-      console.log("⚠️ No courses provided for analysis");
       return {
         suggestions: [],
         tokensUsed: undefined,
@@ -777,10 +768,7 @@ Return a JSON array of feature suggestions. Focus on gaps - concepts taught in c
 
 Be thorough - analyze the chapter content, not just titles. Each suggestion should include a detailed cursorPrompt that could be pasted into Cursor to start building.`;
 
-    console.log(`📝 Prepared prompt with ${courseContent.length} chars of course content`);
-
     try {
-      console.log("🤖 Calling Gemini 2.5 Pro (1M context) for analysis...");
       // Use Gemini 2.5 Pro via OpenRouter for 1M context window
       const response = await callLLM({
         model: "gemini-2.5-pro",
@@ -793,9 +781,6 @@ Be thorough - analyze the chapter content, not just titles. Each suggestion shou
         responseFormat: "json",
       });
 
-      console.log(`✅ Received response from GPT-4o (${response.tokensUsed?.total || 'unknown'} tokens)`);
-      console.log(`📄 FULL RAW RESPONSE:\n${response.content}`);
-
       // Parse response
       let suggestions: FeatureSuggestion[] = [];
       try {
@@ -804,47 +789,32 @@ Be thorough - analyze the chapter content, not just titles. Each suggestion shou
           .replace(/^```\s*/i, "")
           .replace(/\s*```$/i, "")
           .trim();
-        console.log(`📄 Cleaned response (${cleaned.length} chars): ${cleaned.slice(0, 200)}...`);
-        
         const parsed = JSON.parse(cleaned);
-        console.log(`📄 Parsed type: ${typeof parsed}, isArray: ${Array.isArray(parsed)}`);
         
         // Handle various response formats
         if (Array.isArray(parsed)) {
           suggestions = parsed;
-          console.log(`✅ Response is array with ${suggestions.length} items`);
         } else if (parsed && typeof parsed === 'object') {
-          console.log(`📄 Response is object with keys: ${Object.keys(parsed).join(", ")}`);
-          
           // Check if it's a single suggestion object (has 'name' and 'description')
           if (parsed.name && parsed.description) {
-            console.log(`✅ Response is a single suggestion object, wrapping in array`);
             suggestions = [parsed];
-          } 
+          }
           // GPT might return { suggestions: [...] } or { features: [...] }
           else if (parsed.suggestions || parsed.features || parsed.data || parsed.results) {
             suggestions = parsed.suggestions || parsed.features || parsed.data || parsed.results || [];
           }
           
           if (!Array.isArray(suggestions)) {
-            console.log("❌ Couldn't find array, trying first array property");
             // Try to find any array property
             for (const key of Object.keys(parsed)) {
               if (Array.isArray(parsed[key])) {
                 suggestions = parsed[key];
-                console.log(`✅ Found array in property "${key}" with ${suggestions.length} items`);
                 break;
               }
             }
           }
         }
         
-        console.log(`✅ Final parsed suggestions count: ${suggestions.length}`);
-        if (suggestions.length > 0) {
-          console.log(`📋 First suggestion:`, JSON.stringify(suggestions[0], null, 2));
-        } else {
-          console.log(`⚠️ No suggestions parsed! Raw content was: ${response.content.slice(0, 500)}`);
-        }
       } catch (e) {
         console.error("❌ Failed to parse feature suggestions:", e);
         console.error("📄 Raw response:\n", response.content);
@@ -852,14 +822,10 @@ Be thorough - analyze the chapter content, not just titles. Each suggestion shou
       }
 
       // Validate and normalize suggestions - be more lenient
-      console.log(`🔍 Validating ${suggestions.length} suggestions...`);
       const validSuggestions = suggestions
         .filter(s => {
           // Be more lenient - only require name and description
           const isValid = s && s.name && s.description;
-          if (!isValid) {
-            console.log(`  ❌ Invalid suggestion:`, JSON.stringify(s).slice(0, 100));
-          }
           return isValid;
         })
         .map(s => {
@@ -898,8 +864,6 @@ Be thorough - analyze the chapter content, not just titles. Each suggestion shou
         });
       }
 
-      console.log(`✅ Feature analysis complete: ${validSuggestions.length} suggestions found`);
-      
       return {
         suggestions: validSuggestions,
         tokensUsed: response.tokensUsed?.total,

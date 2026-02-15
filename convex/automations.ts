@@ -25,7 +25,7 @@ export const getUserAutomations = query({
       .query("automations")
       .filter((q) => q.eq(q.field("userId"), user._id))
       .order("desc")
-      .collect();
+      .take(10000);
 
     // Fetch related data for each automation
     const automationsWithData = await Promise.all(
@@ -34,7 +34,7 @@ export const getUserAutomations = query({
           ctx.db
             .query("keywords")
             .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-            .collect(),
+            .take(200),
           ctx.db
             .query("triggers")
             .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
@@ -46,7 +46,7 @@ export const getUserAutomations = query({
           ctx.db
             .query("posts")
             .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-            .collect(),
+            .take(200),
         ]);
 
         return {
@@ -80,7 +80,7 @@ export const getAutomationById = query({
       ctx.db
         .query("keywords")
         .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .collect(),
+        .take(200),
       ctx.db
         .query("triggers")
         .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
@@ -92,7 +92,7 @@ export const getAutomationById = query({
       ctx.db
         .query("posts")
         .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .collect(),
+        .take(200),
       ctx.db.get(automation.userId),
     ]);
 
@@ -131,7 +131,7 @@ export const findAutomationByKeyword = query({
     const textLower = args.keyword.toLowerCase();
 
     // Get all keywords and check if any are contained in the text
-    const allKeywords = await ctx.db.query("keywords").collect();
+    const allKeywords = await ctx.db.query("keywords").take(10000);
 
     // Find a keyword that's contained in the text
     const keywordMatch = allKeywords.find((kw) => textLower.includes(kw.word.toLowerCase()));
@@ -159,12 +159,12 @@ export const findAutomationByKeyword = query({
       ctx.db
         .query("posts")
         .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .collect(),
+        .take(200),
       ctx.db.get(automation.userId),
       ctx.db
         .query("keywords")
         .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .collect(),
+        .take(200),
     ]);
 
     // Get user's Instagram integration
@@ -322,7 +322,7 @@ export const deleteAutomation = mutation({
       const keywords = await ctx.db
         .query("keywords")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
-        .collect();
+        .take(200);
 
       for (const keyword of keywords) {
         await ctx.db.delete(keyword._id);
@@ -332,7 +332,7 @@ export const deleteAutomation = mutation({
       const triggers = await ctx.db
         .query("triggers")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
-        .collect();
+        .take(200);
 
       for (const trigger of triggers) {
         await ctx.db.delete(trigger._id);
@@ -342,7 +342,7 @@ export const deleteAutomation = mutation({
       const listeners = await ctx.db
         .query("listeners")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
-        .collect();
+        .take(200);
 
       for (const listener of listeners) {
         await ctx.db.delete(listener._id);
@@ -433,7 +433,7 @@ export const saveTrigger = mutation({
       const existingTriggers = await ctx.db
         .query("triggers")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
-        .collect();
+        .take(200);
 
       for (const trigger of existingTriggers) {
         await ctx.db.delete(trigger._id);
@@ -542,7 +542,7 @@ export const savePosts = mutation({
       const existingPosts = await ctx.db
         .query("posts")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
-        .collect();
+        .take(200);
 
       for (const post of existingPosts) {
         await ctx.db.delete(post._id);
@@ -572,8 +572,6 @@ export const savePosts = mutation({
         });
       }
 
-      console.log(`✅ Attached ${args.posts.length} posts to automation ${args.automationId}`);
-
       // Schedule embedding generation for the posts
       // This transcribes videos and creates AI-searchable embeddings
       if (userClerkId) {
@@ -582,7 +580,6 @@ export const savePosts = mutation({
           automationId: args.automationId,
           userId: userClerkId,
         });
-        console.log(`📊 Scheduled embedding generation for ${args.posts.length} posts`);
       }
 
       return {
@@ -646,7 +643,7 @@ export const createChatHistory = internalMutation({
       .withIndex("by_automationId_and_sender", (q) =>
         q.eq("automationId", args.automationId).eq("senderId", args.senderId)
       )
-      .collect();
+      .take(1000);
 
     return await ctx.db.insert("chatHistory", {
       automationId: args.automationId,
@@ -827,7 +824,7 @@ export const getKeywordAutomation = internalQuery({
             q.eq(q.field("isConnected"), true)
           )
         )
-        .collect();
+        .take(10000);
     }
 
     let posts = null;
@@ -835,7 +832,7 @@ export const getKeywordAutomation = internalQuery({
       posts = await ctx.db
         .query("posts")
         .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .collect();
+        .take(200);
     }
 
     return {
@@ -923,7 +920,7 @@ export const findAutomationByChatHistory = internalQuery({
         q.eq("automationId", recentChat.automationId).eq("senderId", args.senderId)
       )
       .order("asc")
-      .collect();
+      .take(1000);
 
     return {
       automationId: recentChat.automationId,

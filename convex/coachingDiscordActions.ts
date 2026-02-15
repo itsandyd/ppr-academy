@@ -34,7 +34,6 @@ export const setupDiscordForSession = internalAction({
       );
 
       if (!guild || !guild.isActive) {
-        console.log("No active Discord guild for store");
         return null;
       }
 
@@ -126,10 +125,6 @@ export const setupDiscordForSession = internalAction({
         discordRoleId: roleId,
       });
 
-      console.log(
-        `Session setup complete: Channel ${channelResult.channelId}, Role ${roleId}`
-      );
-
       return null;
     } catch (error) {
       console.error("Error setting up Discord for session:", error);
@@ -154,12 +149,10 @@ export const cleanupSessionDiscord = internalAction({
       );
 
       if (!session) {
-        console.log("Session not found for cleanup");
         return null;
       }
 
       if (!session.discordChannelId || !session.discordRoleId) {
-        console.log("No Discord resources to clean up");
         return null;
       }
 
@@ -180,7 +173,6 @@ export const cleanupSessionDiscord = internalAction({
       );
 
       if (!guild || !guild.isActive) {
-        console.log("No active Discord guild for cleanup");
         return null;
       }
 
@@ -204,7 +196,6 @@ export const cleanupSessionDiscord = internalAction({
       // Delete role
       await deleteRole(guild.guildId, guildData.botToken, session.discordRoleId);
 
-      console.log(`Cleaned up Discord resources for session ${args.sessionId}`);
       return null;
     } catch (error) {
       console.error("Error cleaning up Discord:", error);
@@ -326,7 +317,6 @@ async function deleteChannel(
         },
       }
     );
-    console.log(`Deleted channel ${channelId}`);
   } catch (error) {
     console.error("Error deleting channel:", error);
   }
@@ -348,7 +338,6 @@ async function deleteRole(
         },
       }
     );
-    console.log(`Deleted role ${roleId}`);
   } catch (error) {
     console.error("Error deleting role:", error);
   }

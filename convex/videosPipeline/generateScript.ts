@@ -40,7 +40,6 @@ export const generateScript = internalAction({
         console.error(`Script generation attempt ${attempt + 1} failed:`, err.message);
         if (attempt === 1) {
           // Both attempts failed — use fallback
-          console.log("Falling back to default script structure");
           scriptData = buildFallbackScript(context);
         }
       }

@@ -33,7 +33,7 @@ export const getCoachingProductsByStore = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Filter for coaching products (we'll add productType field)
     return products.map((p) => ({
@@ -76,7 +76,7 @@ export const getPublishedCoachingProductsByStore = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(100);
 
     // Filter for published coaching products
     return products
@@ -116,7 +116,7 @@ export const getCoachingProductsByCoach = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_userId", (q) => q.eq("userId", args.coachId))
-      .collect();
+      .take(500);
 
     return products
       .filter((p) => (p as any).productType === "coaching")
@@ -555,7 +555,7 @@ export const getCoachSessions = query({
     let sessions = await ctx.db
       .query("coachingSessions")
       .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
-      .collect();
+      .take(1000);
 
     if (args.status) {
       sessions = sessions.filter((s) => s.status === args.status);
@@ -651,7 +651,7 @@ export const getStudentSessions = query({
     const sessions = await ctx.db
       .query("coachingSessions")
       .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
-      .collect();
+      .take(1000);
 
     const enriched = await Promise.all(
       sessions.map(async (session) => {
@@ -701,7 +701,7 @@ export const getCoachSessionStats = query({
     const sessions = await ctx.db
       .query("coachingSessions")
       .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
-      .collect();
+      .take(1000);
 
     const now = Date.now();
     return {
@@ -750,7 +750,7 @@ export const getAvailableSlots = query({
     const existingSessions = await ctx.db
       .query("coachingSessions")
       .withIndex("by_productId", (q) => q.eq("productId", args.productId))
-      .collect();
+      .take(1000);
 
     const dateStart = new Date(args.date);
     dateStart.setHours(0, 0, 0, 0);
@@ -794,7 +794,7 @@ export const getBookedSessions = query({
     const sessions = await ctx.db
       .query("coachingSessions")
       .withIndex("by_productId", (q) => q.eq("productId", args.productId))
-      .collect();
+      .take(1000);
 
     return sessions
       .filter(
@@ -1032,7 +1032,7 @@ export const backfillCoachingSlugs = mutation({
     skipped: v.number(),
   }),
   handler: async (ctx) => {
-    const products = await ctx.db.query("digitalProducts").collect();
+    const products = await ctx.db.query("digitalProducts").take(10000);
 
     const coachingProducts = products.filter(
       (p) => (p as any).productType === "coaching" && !(p as any).slug

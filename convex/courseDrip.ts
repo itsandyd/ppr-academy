@@ -26,7 +26,7 @@ export const getCourseDripSettings = query({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     return modules.map((module) => ({
       moduleId: module._id,
@@ -57,7 +57,7 @@ export const getStudentDripAccess = query({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId as string))
-      .collect();
+      .take(200);
 
     // Get drip access records for this user
     const dripAccess = await ctx.db
@@ -65,7 +65,7 @@ export const getStudentDripAccess = query({
       .withIndex("by_user_course", (q) =>
         q.eq("userId", args.userId).eq("courseId", args.courseId)
       )
-      .collect();
+      .take(500);
 
     const accessMap = new Map(
       dripAccess.map((a) => [a.moduleId.toString(), a])
@@ -276,7 +276,7 @@ export const initializeDripAccess = mutation({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId as string))
-      .collect();
+      .take(200);
 
     const sortedModules = modules.sort((a, b) => a.position - b.position);
 
@@ -391,7 +391,7 @@ export const grantFullAccess = mutation({
       .withIndex("by_user_course", (q) =>
         q.eq("userId", args.userId).eq("courseId", args.courseId)
       )
-      .collect();
+      .take(500);
 
     for (const access of accessRecords) {
       if (!access.isUnlocked) {
@@ -438,7 +438,7 @@ export const restoreDripSchedule = mutation({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId as string))
-      .collect();
+      .take(200);
 
     const sortedModules = modules.sort((a, b) => a.position - b.position);
 
@@ -481,7 +481,7 @@ export const restoreDripSchedule = mutation({
                 .withIndex("by_user_course", (q) =>
                   q.eq("userId", args.userId).eq("courseId", args.courseId)
                 )
-                .collect();
+                .take(500);
 
               // Find if all chapters in previous module are complete
               // This is simplified - real implementation would check chapter completion
@@ -552,10 +552,6 @@ export const processPendingDripUnlocks = internalMutation({
       }
     }
 
-    if (unlocked > 0) {
-      console.log(`[Drip] Unlocked ${unlocked} modules`);
-    }
-
     return { unlocked };
   },
 });
@@ -577,7 +573,7 @@ export const recalculateDripAccessForModule = internalMutation({
       .withIndex("by_course_module", (q) =>
         q.eq("courseId", module.courseId as Id<"courses">).eq("moduleId", args.moduleId)
       )
-      .collect();
+      .take(5000);
 
     for (const access of accessRecords) {
       if (access.manuallyUnlocked) continue; // Don't override manual unlocks
@@ -623,7 +619,7 @@ export const recalculateDripAccessForCourse = internalMutation({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     for (const module of modules) {
       await ctx.scheduler.runAfter(0, internal.courseDrip.recalculateDripAccessForModule, {
@@ -672,13 +668,7 @@ export const sendDripUnlockNotification = internalMutation({
     // Log notification - email integration can be added when needed
     // This can integrate with the existing email workflow system
     if (user.email && store) {
-      console.log(`[Drip] Content unlocked notification for ${user.email}:`, {
-        courseTitle: course.title,
-        moduleTitle: module.title,
-        userId: args.userId,
-      });
-      // TODO: Integrate with email workflows when email system is configured
-      // The email would notify the student that new content is available
+      // POST-LAUNCH: Send drip unlock notification email via emailWorkflows when ready
     }
   },
 });
@@ -703,7 +693,7 @@ export const onModuleCompleted = internalMutation({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId as string))
-      .collect();
+      .take(200);
 
     const sortedModules = modules.sort((a, b) => a.position - b.position);
     const nextModule = sortedModules.find(

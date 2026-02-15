@@ -25,7 +25,7 @@ export const getSegments = query({
       let segments = await ctx.db
         .query("emailSegments")
         .withIndex("by_isDynamic", (q) => q.eq("isDynamic", args.isDynamic as boolean))
-        .collect();
+        .take(1000);
       
       if (args.connectionId !== undefined) {
         segments = segments.filter(s => s.connectionId === args.connectionId);
@@ -38,10 +38,10 @@ export const getSegments = query({
       return await ctx.db
         .query("emailSegments")
         .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId as Id<"resendConnections">))
-        .collect();
+        .take(1000);
     }
     
-    return await ctx.db.query("emailSegments").collect();
+    return await ctx.db.query("emailSegments").take(1000);
   },
 });
 
@@ -100,7 +100,7 @@ export const getSegmentMembers = query({
     }
     
     // Otherwise, evaluate segment for all users
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query("users").take(10000);
     const matchingUsers: string[] = [];
     
     for (const user of allUsers) {
@@ -207,19 +207,19 @@ export const updateSegmentMembers = internalMutation({
     }
     
     // Get all users
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query("users").take(10000);
     const matchingUserIds: string[] = [];
-    
+
     // Evaluate each user
     for (const user of allUsers) {
       if (!user.clerkId) continue;
-      
+
       const result = await evaluateSegmentForUser(ctx, user.clerkId, segment);
       if (result.matches) {
         matchingUserIds.push(user.clerkId);
       }
     }
-    
+
     // Update segment
     await ctx.db.patch(args.segmentId, {
       memberCount: matchingUserIds.length,
@@ -248,7 +248,7 @@ export const refreshAllDynamicSegments = internalMutation({
     const dynamicSegments = await ctx.db
       .query("emailSegments")
       .withIndex("by_isDynamic", (q) => q.eq("isDynamic", true))
-      .collect();
+      .take(1000);
     
     let processed = 0;
     let updated = 0;
@@ -257,7 +257,7 @@ export const refreshAllDynamicSegments = internalMutation({
       processed++;
       
       // Get all users
-      const allUsers = await ctx.db.query("users").collect();
+      const allUsers = await ctx.db.query("users").take(10000);
       const matchingUserIds: string[] = [];
       
       // Evaluate each user
@@ -320,13 +320,13 @@ async function evaluateSegmentForUser(
   const emailLogs = await ctx.db
     .query("resendLogs")
     .withIndex("by_user", (q: any) => q.eq("recipientUserId", userId))
-    .collect();
+    .take(5000);
   
   // Get course enrollments
   const enrollments = await ctx.db
     .query("courseEnrollments")
     .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
-    .collect();
+    .take(5000);
   
   // Build user context for evaluation
   const userContext = {

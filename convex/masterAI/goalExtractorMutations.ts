@@ -24,7 +24,6 @@ export const saveConversationGoal = internalMutation({
     await ctx.db.patch(args.conversationId, {
       conversationGoal: args.goal,
     });
-    console.log(`💾 Saved conversation goal to ${args.conversationId}`);
     return null;
   },
 });

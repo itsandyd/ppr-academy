@@ -32,9 +32,6 @@ export const renderVideo = internalAction({
   }),
   handler: async (ctx, args) => {
     const mode = isLambdaMode() ? "lambda" : "local";
-    console.log(
-      `🎬 Starting ${mode} render: ${args.totalFrames} frames at ${args.width}x${args.height}`
-    );
 
     if (mode === "lambda") {
       return await renderViaLambda(ctx, args);
@@ -96,8 +93,6 @@ async function renderViaLambda(
     },
   });
 
-  console.log(`☁️ Lambda render started: renderId=${renderId}`);
-
   // Poll for completion
   let lastReportedProgress = 0;
   let outputFile: string | null = null;
@@ -123,7 +118,6 @@ async function renderViaLambda(
     const pct = Math.round(progress.overallProgress * 100);
     if (pct >= lastReportedProgress + 10) {
       lastReportedProgress = pct;
-      console.log(`   Lambda render progress: ${pct}%`);
       // Map render progress (0-100) to pipeline progress (70-95)
       const pipelineProgress = 70 + Math.round(progress.overallProgress * 25);
       await ctx.runMutation(
@@ -141,8 +135,6 @@ async function renderViaLambda(
   if (!outputFile) {
     throw new Error("Lambda render completed but no output file URL was returned.");
   }
-
-  console.log("✅ Lambda render complete, downloading to upload to Convex storage...");
 
   // Download the rendered MP4 from S3 and re-upload to Convex storage
   const videoResponse = await fetch(outputFile);
@@ -184,10 +176,6 @@ async function renderViaLambda(
     }
   );
 
-  console.log(
-    `✅ Video uploaded: ${videoStorageId} (${(fileSize / 1024 / 1024).toFixed(1)}MB, rendered in ${renderDurationSeconds.toFixed(1)}s via Lambda)`
-  );
-
   return { videoStorageId, renderDurationSeconds };
 }
 
@@ -220,8 +208,6 @@ async function renderLocally(
 
   try {
     // Bundle the Remotion project
-    console.log("📦 Bundling Remotion project...");
-
     const entryPoint = path.resolve(process.cwd(), "..", "remotion", "index.ts");
     const alternatePaths = [
       path.resolve("remotion", "index.ts"),
@@ -237,10 +223,7 @@ async function renderLocally(
       }
     }
 
-    console.log(`   Entry point: ${resolvedEntry}`);
-
     const bundleLocation = await bundle({ entryPoint: resolvedEntry });
-    console.log(`   Bundle complete: ${bundleLocation}`);
 
     // Select the composition
     const inputProps = {
@@ -259,8 +242,6 @@ async function renderLocally(
     });
 
     // Render the video
-    console.log("🎥 Rendering video locally...");
-
     let lastProgress = 0;
     await renderMedia({
       composition,
@@ -272,7 +253,6 @@ async function renderLocally(
         const pct = Math.round(progress * 100);
         if (pct >= lastProgress + 10) {
           lastProgress = pct;
-          console.log(`   Render progress: ${pct}%`);
           const pipelineProgress = 70 + Math.round(progress * 25);
           await ctx.runMutation(
             internal.videosPipeline.jobMutations.updateJobStatus,
@@ -282,11 +262,7 @@ async function renderLocally(
       },
     });
 
-    console.log("✅ Local render complete");
-
     // Upload the MP4 to Convex storage
-    console.log("📤 Uploading video to storage...");
-
     const videoBuffer = fs.readFileSync(outputPath);
     const fileSize = videoBuffer.length;
 
@@ -319,10 +295,6 @@ async function renderLocally(
         fileSize,
         renderDuration: renderDurationSeconds,
       }
-    );
-
-    console.log(
-      `✅ Video uploaded: ${videoStorageId} (${(fileSize / 1024 / 1024).toFixed(1)}MB, rendered in ${renderDurationSeconds.toFixed(1)}s locally)`
     );
 
     return { videoStorageId, renderDurationSeconds };

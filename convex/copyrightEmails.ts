@@ -34,7 +34,6 @@ export const sendClaimReceivedEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 
@@ -112,7 +111,6 @@ export const sendClaimNoticeEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 
@@ -207,7 +205,6 @@ export const sendStrikeEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 
@@ -321,7 +318,6 @@ export const sendClaimResolvedEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 

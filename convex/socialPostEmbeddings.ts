@@ -33,8 +33,6 @@ export const transcribeVideoAudio = internalAction({
         return { success: false, error: "ElevenLabs API key not configured" };
       }
 
-      console.log(`🎙️ Transcribing video for post: ${args.postId}`);
-
       const elevenlabs = new ElevenLabsClient({ apiKey });
 
       // Use cloudStorageUrl to transcribe directly from Instagram CDN
@@ -60,11 +58,9 @@ export const transcribeVideoAudio = internalAction({
       }
 
       if (!transcript || transcript.trim().length === 0) {
-        console.log(`📝 No speech detected in video: ${args.postId}`);
         return { success: true, transcript: "" };
       }
 
-      console.log(`✅ Transcribed ${transcript.length} characters for post: ${args.postId}`);
       return { success: true, transcript };
     } catch (error: any) {
       console.error(`❌ Transcription failed for post ${args.postId}:`, error);
@@ -114,7 +110,6 @@ export const processSocialPostEmbedding = internalAction({
     try {
       // Skip GLOBAL marker posts (they're not real content)
       if (args.mediaType === "GLOBAL" || args.postId === "ALL_POSTS_AND_FUTURE") {
-        console.log("⏭️ Skipping GLOBAL marker post");
         return { success: true };
       }
 
@@ -122,8 +117,6 @@ export const processSocialPostEmbedding = internalAction({
 
       // Transcribe video posts
       if (args.mediaType === "VIDEO" && args.mediaUrl) {
-        console.log(`🎬 Processing video post: ${args.postId}`);
-
         const transcriptionResult = await ctx.runAction(
           internal.socialPostEmbeddings.transcribeVideoAudio,
           {
@@ -156,7 +149,6 @@ export const processSocialPostEmbedding = internalAction({
 
       // Skip if no meaningful content
       if (contentParts.length === 0) {
-        console.log(`⏭️ No meaningful content for post: ${args.postId}`);
         return { success: true };
       }
 
@@ -164,10 +156,6 @@ export const processSocialPostEmbedding = internalAction({
 
       // Generate a descriptive title
       const title = generatePostTitle(args.caption, args.mediaType);
-
-      console.log(
-        `📊 Creating embedding for post ${args.postId} (${combinedContent.length} chars)`
-      );
 
       // Create the embedding record and schedule generation
       const embeddingId = await ctx.runMutation(
@@ -190,7 +178,6 @@ export const processSocialPostEmbedding = internalAction({
         content: combinedContent,
       });
 
-      console.log(`✅ Embedding created for post: ${args.postId}`);
       return { success: true, embeddingId };
     } catch (error: any) {
       console.error(`❌ Failed to process post ${args.postId}:`, error);
@@ -224,8 +211,6 @@ export const processAutomationPosts = internalAction({
     const posts = await ctx.runQuery(internal.socialPostEmbeddingsMutations.getPostsForAutomation, {
       automationId: args.automationId,
     });
-
-    console.log(`📦 Processing ${posts.length} posts for automation ${args.automationId}`);
 
     let processed = 0;
     let failed = 0;
@@ -264,7 +249,6 @@ export const processAutomationPosts = internalAction({
       }
     }
 
-    console.log(`✅ Processed: ${processed}, Failed: ${failed}, Skipped: ${skipped}`);
     return { processed, failed, skipped };
   },
 });
@@ -303,13 +287,8 @@ export const searchSocialPostContext = internalAction({
       );
 
       if (embeddings.length === 0) {
-        console.log("📭 No social post embeddings found for user");
         return { context: "", matchCount: 0 };
       }
-
-      console.log(
-        `🔍 Searching ${embeddings.length} social post embeddings for: "${args.query.substring(0, 50)}..."`
-      );
 
       // Generate embedding for the query
       const queryEmbedding = await generateQueryEmbedding(args.query);
@@ -331,13 +310,8 @@ export const searchSocialPostContext = internalAction({
         .slice(0, limit);
 
       if (withSimilarity.length === 0) {
-        console.log("📭 No relevant social post context found above threshold");
         return { context: "", matchCount: 0 };
       }
-
-      console.log(
-        `✅ Found ${withSimilarity.length} relevant posts (top similarity: ${withSimilarity[0].similarity.toFixed(3)})`
-      );
 
       // Build context string from top matches
       const contextParts = withSimilarity.map((item: any, index: number) => {

@@ -309,12 +309,12 @@ export const createUniversalProduct = mutation({
         ctx.db
           .query("courses")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect()
+          .take(500)
           .then((courses) => courses.length),
         ctx.db
           .query("digitalProducts")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect()
+          .take(500)
           .then((products) => products.length),
       ]);
 
@@ -649,7 +649,7 @@ export const getUniversalProduct = query({
     }
 
     // Get creator info
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(100);
     const store = stores.find((s) => s._id === product.storeId);
 
     if (store) {
@@ -706,7 +706,7 @@ export const getProductsByCategory = query({
     let products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_productCategory", (q) => q.eq("productCategory", args.productCategory))
-      .collect();
+      .take(100);
 
     // Filter by store if provided
     if (args.storeId) {
@@ -801,7 +801,7 @@ export const canAccessProduct = query({
 
     // Check if paid and user has purchased
     if (!product.followGateEnabled && args.userId) {
-      const purchases = await ctx.db.query("purchases").collect();
+      const purchases = await ctx.db.query("purchases").take(5000);
       const purchase = purchases.find(
         (p) => p.userId === args.userId && p.productId === product._id
       );
@@ -848,7 +848,7 @@ export const getUniversalProductsByStore = query({
     let products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     if (args.publishedOnly) {
       products = products.filter((p) => p.isPublished);
@@ -885,7 +885,7 @@ export const generateMissingSlugs = mutation({
     // Get all products without slugs
     const products = await ctx.db
       .query("digitalProducts")
-      .collect();
+      .take(10000);
 
     const productsWithoutSlugs = products.filter((p) => !p.slug);
 
@@ -1218,12 +1218,12 @@ export const saveDraft = mutation({
         ctx.db
           .query("courses")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect()
+          .take(500)
           .then((courses) => courses.length),
         ctx.db
           .query("digitalProducts")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect()
+          .take(500)
           .then((products) => products.length),
       ]);
 

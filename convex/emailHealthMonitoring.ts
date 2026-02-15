@@ -48,7 +48,7 @@ export const getDomainHealthStats = query({
     const oneMonthAgo = now - (30 * 24 * 60 * 60 * 1000);
 
     // Get all email logs from the last 30 days
-    const allLogs = await ctx.db.query("resendLogs").collect();
+    const allLogs = await ctx.db.query("resendLogs").take(5000);
     const recentLogs = allLogs.filter(log => log.createdAt >= oneMonthAgo);
 
     // Count by status
@@ -214,9 +214,9 @@ export const getEmailHealthHistory = query({
       metrics = await ctx.db
         .query("emailHealthMetrics")
         .withIndex("by_connectionId", (q) => q.eq("connectionId", args.connectionId as Id<"resendConnections">))
-        .collect();
+        .take(1000);
     } else {
-      metrics = await ctx.db.query("emailHealthMetrics").collect();
+      metrics = await ctx.db.query("emailHealthMetrics").take(1000);
     }
     
     // Filter by date and sort
@@ -253,18 +253,18 @@ export const calculateEmailHealthMetrics = internalMutation({
       allLogs = await ctx.db
         .query("resendLogs")
         .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId as Id<"resendConnections">))
-        .collect();
+        .take(5000);
     } else {
-      allLogs = await ctx.db.query("resendLogs").collect();
+      allLogs = await ctx.db.query("resendLogs").take(5000);
     }
     const recentLogs = allLogs.filter(log => log.createdAt >= thirtyDaysAgo);
     
     // Get all users (subscribers)
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query("users").take(5000);
     const totalSubscribers = allUsers.length;
     
     // Get lead scores to determine active subscribers
-    const leadScores = await ctx.db.query("leadScores").collect();
+    const leadScores = await ctx.db.query("leadScores").take(5000);
     const activeSubscribers = leadScores.filter(score => {
       const daysSinceActivity = (now - score.lastActivity) / (24 * 60 * 60 * 1000);
       return daysSinceActivity <= 30;
@@ -284,7 +284,7 @@ export const calculateEmailHealthMetrics = internalMutation({
     const unsubscribed = await ctx.db
       .query("resendPreferences")
       .filter(q => q.eq(q.field("isUnsubscribed"), true))
-      .collect();
+      .take(5000);
     
     // Calculate rates
     const engagementRate = totalSubscribers > 0 ? (activeSubscribers / totalSubscribers) * 100 : 0;

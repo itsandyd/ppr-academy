@@ -12,7 +12,7 @@ import { internal } from "./_generated/api";
 export const debugCountCampaigns = query({
   args: {},
   handler: async (ctx) => {
-    const campaigns = await ctx.db.query("resendCampaigns").collect();
+    const campaigns = await ctx.db.query("resendCampaigns").take(10000);
     return {
       count: campaigns.length,
       names: campaigns.slice(0, 5).map(c => c.name || c.subject || "unnamed"),
@@ -52,7 +52,7 @@ export const getEmailAnalytics = query({
     const allLogs = await ctx.db
       .query("resendLogs")
       .filter((q) => q.gte(q.field("sentAt"), cutoffTime))
-      .collect();
+      .take(10000);
 
     // Calculate metrics
     const totalSent = allLogs.length;
@@ -109,7 +109,7 @@ export const getCampaigns = query({
     const campaigns = await ctx.db
       .query("resendCampaigns")
       .filter((q) => q.eq(q.field("connectionId"), undefined))
-      .collect();
+      .take(10000);
     return campaigns;
   },
 });
@@ -158,7 +158,7 @@ export const getTemplates = query({
     const templates = await ctx.db
       .query("resendTemplates")
       .filter((q) => q.eq(q.field("connectionId"), undefined))
-      .collect();
+      .take(500);
 
     if (args.activeOnly) {
       return templates.filter((t) => t.isActive);
@@ -394,7 +394,7 @@ export const getStoreTemplates = query({
     const templates = await ctx.db
       .query("resendTemplates")
       .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
-      .collect();
+      .take(500);
 
     if (args.activeOnly) {
       return templates.filter((t) => t.isActive);
@@ -475,7 +475,7 @@ export const getStoreCampaigns = query({
     const campaigns = await ctx.db
       .query("resendCampaigns")
       .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
-      .collect();
+      .take(5000);
 
     if (args.status) {
       return campaigns.filter((c) => c.status === args.status);
@@ -592,7 +592,7 @@ export const getCampaignRecipients = internalQuery({
     // Return all recipients at once for backwards compatibility
     const resendCampaign = campaign as any;
 
-    let recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> =
+    let recipients: Array<{ email: string; userId: string | undefined; name: string | undefined; storeName?: string; storeSlug?: string }> =
       [];
 
     // Custom recipients (specific users)
@@ -613,88 +613,205 @@ export const getCampaignRecipients = internalQuery({
       return { recipients, isDone: true, continueCursor: null };
     }
 
-    const allUsers = await ctx.db.query("users").collect();
-
     switch (resendCampaign.targetAudience) {
-      case "all_users":
-        recipients = allUsers
-          .filter((u) => u.email)
-          .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
-        break;
+      case "all_users": {
+        // Use emailContacts scoped to the campaign's store instead of loading all platform users
+        if (resendCampaign.targetStoreId) {
+          const contacts = await ctx.db
+            .query("emailContacts")
+            .withIndex("by_storeId_and_status", (q) =>
+              q.eq("storeId", resendCampaign.targetStoreId).eq("status", "subscribed")
+            )
+            .take(50000);
+          recipients = contacts
+            .filter((c) => c.email)
+            .map((c) => ({ email: c.email, userId: undefined, name: c.firstName }));
+        } else {
+          // Platform-wide campaign: query users with safety limit, check suppression per-user via index
+          const users = await ctx.db
+            .query("users")
+            .withIndex("by_email")
+            .take(50000);
 
-      case "course_students":
+          for (const u of users) {
+            if (!u.email) continue;
+            const emailLower = u.email.toLowerCase();
+
+            // Check suppression via resendPreferences index (O(1) per user)
+            const pref = await ctx.db
+              .query("resendPreferences")
+              .withIndex("by_user", (q) => q.eq("userId", emailLower))
+              .first();
+            if (pref?.isUnsubscribed) continue;
+
+            // Check emailContacts for unsubscribed status via index
+            const unsubContact = await ctx.db
+              .query("emailContacts")
+              .withIndex("by_email", (q) => q.eq("email", emailLower))
+              .filter((q) =>
+                q.or(
+                  q.eq(q.field("status"), "unsubscribed"),
+                  q.eq(q.field("status"), "complained")
+                )
+              )
+              .first();
+            if (unsubContact) continue;
+
+            recipients.push({ email: u.email, userId: u.clerkId, name: u.name });
+          }
+        }
+        break;
+      }
+
+      case "course_students": {
         if (resendCampaign.targetCourseId) {
           const courseIdStr = resendCampaign.targetCourseId as string;
           const enrollments = await ctx.db
             .query("enrollments")
             .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
-            .collect();
-          const userIds = new Set(enrollments.map((e) => e.userId));
-          recipients = allUsers
-            .filter((u) => u.email && u.clerkId && userIds.has(u.clerkId))
-            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+            .take(10000);
+          // Look up each enrolled user individually by clerkId instead of loading all users
+          for (const enrollment of enrollments) {
+            const user = await ctx.db
+              .query("users")
+              .withIndex("by_clerkId", (q) => q.eq("clerkId", enrollment.userId))
+              .first();
+            if (user?.email && user.clerkId) {
+              recipients.push({ email: user.email, userId: user.clerkId, name: user.name });
+            }
+          }
         }
         break;
+      }
 
-      case "store_students":
+      case "store_students": {
         if (resendCampaign.targetStoreId) {
           const courses = await ctx.db
             .query("courses")
             .withIndex("by_storeId", (q) => q.eq("storeId", resendCampaign.targetStoreId))
-            .collect();
-          const courseIds = courses.map((c) => c._id);
-          const enrollments = await ctx.db.query("enrollments").collect();
-          const storeStudentIds = new Set(
-            enrollments.filter((e) => courseIds.includes(e.courseId as any)).map((e) => e.userId)
-          );
-          recipients = allUsers
-            .filter((u) => u.email && u.clerkId && storeStudentIds.has(u.clerkId))
-            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+            .take(500);
+          // Query enrollments per course (scoped) instead of loading all enrollments
+          const seenUserIds = new Set<string>();
+          for (const course of courses) {
+            const enrollments = await ctx.db
+              .query("enrollments")
+              .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
+              .take(10000);
+            for (const enrollment of enrollments) {
+              if (seenUserIds.has(enrollment.userId)) continue;
+              seenUserIds.add(enrollment.userId);
+              const user = await ctx.db
+                .query("users")
+                .withIndex("by_clerkId", (q) => q.eq("clerkId", enrollment.userId))
+                .first();
+              if (user?.email && user.clerkId) {
+                recipients.push({ email: user.email, userId: user.clerkId, name: user.name });
+              }
+            }
+          }
         }
         break;
+      }
 
-      case "inactive_users":
+      case "inactive_users": {
         if (resendCampaign.inactiveDays) {
           const cutoff = Date.now() - resendCampaign.inactiveDays * 24 * 60 * 60 * 1000;
-          recipients = allUsers
-            .filter((u) => u.email && u._creationTime < cutoff)
+          // Query users created before the cutoff date using default _creationTime order.
+          // Filter server-side for _creationTime < cutoff (Convex default index is by _creationTime).
+          const users = await ctx.db
+            .query("users")
+            .filter((q) =>
+              q.and(
+                q.lt(q.field("_creationTime"), cutoff),
+                q.neq(q.field("email"), undefined)
+              )
+            )
+            .take(50000);
+          recipients = users
+            .filter((u) => u.email)
             .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
         }
         break;
+      }
 
-      case "completed_course":
+      case "completed_course": {
         if (resendCampaign.targetCourseId) {
           const courseIdStr = resendCampaign.targetCourseId as string;
           const enrollments = await ctx.db
             .query("enrollments")
             .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
-            .collect();
-          const completedIds = new Set(
-            enrollments.filter((e) => e.progress === 100).map((e) => e.userId)
-          );
-          recipients = allUsers
-            .filter((u) => u.email && u.clerkId && completedIds.has(u.clerkId))
-            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+            .take(10000);
+          // Only look up users who completed the course
+          const completedEnrollments = enrollments.filter((e) => e.progress === 100);
+          for (const enrollment of completedEnrollments) {
+            const user = await ctx.db
+              .query("users")
+              .withIndex("by_clerkId", (q) => q.eq("clerkId", enrollment.userId))
+              .first();
+            if (user?.email && user.clerkId) {
+              recipients.push({ email: user.email, userId: user.clerkId, name: user.name });
+            }
+          }
         }
         break;
+      }
 
-      case "creators":
-        // Get all users who have stores (creators) - include store name and slug
-        const stores = await ctx.db.query("stores").collect();
-        const storesByUserId = new Map(stores.map((s) => [s.userId, s]));
-        recipients = allUsers
-          .filter((u) => u.email && u.clerkId && storesByUserId.has(u.clerkId))
-          .map((u) => {
-            const store = storesByUserId.get(u.clerkId!);
-            return {
-              email: u.email!,
-              userId: u.clerkId!,
-              name: u.name,
-              storeName: store?.name,
-              storeSlug: store?.slug,
-            };
+      case "creators": {
+        // Query users flagged as creators instead of loading all stores + all users
+        const creatorUsers = await ctx.db
+          .query("users")
+          .withIndex("by_isCreator", (q) => q.eq("isCreator", true))
+          .take(10000);
+        for (const u of creatorUsers) {
+          if (!u.email || !u.clerkId) continue;
+          const store = await ctx.db
+            .query("stores")
+            .withIndex("by_userId", (q) => q.eq("userId", u.clerkId!))
+            .first();
+          recipients.push({
+            email: u.email,
+            userId: u.clerkId,
+            name: u.name,
+            storeName: store?.name,
+            storeSlug: store?.slug,
           });
+        }
         break;
+      }
+    }
+
+    // CAN-SPAM: Filter out unsubscribed recipients for all audience types
+    // (store-scoped "all_users" already filters via emailContacts status index,
+    //  and platform-wide "all_users" checks suppression per-user above)
+    if (resendCampaign.targetAudience !== "all_users" && recipients.length > 0) {
+      // Check suppression per-recipient using indexes instead of loading all prefs/contacts
+      const filtered: typeof recipients = [];
+      for (const r of recipients) {
+        const emailLower = r.email.toLowerCase();
+
+        // Check resendPreferences via index
+        const pref = await ctx.db
+          .query("resendPreferences")
+          .withIndex("by_user", (q) => q.eq("userId", emailLower))
+          .first();
+        if (pref?.isUnsubscribed) continue;
+
+        // Check emailContacts for unsubscribed/complained status via index
+        const unsubContact = await ctx.db
+          .query("emailContacts")
+          .withIndex("by_email", (q) => q.eq("email", emailLower))
+          .filter((q) =>
+            q.or(
+              q.eq(q.field("status"), "unsubscribed"),
+              q.eq(q.field("status"), "complained")
+            )
+          )
+          .first();
+        if (unsubContact) continue;
+
+        filtered.push(r);
+      }
+      recipients = filtered;
     }
 
     return { recipients, isDone: true, continueCursor: null };
@@ -756,17 +873,23 @@ export const patchCampaignContent = internalMutation({
   handler: async (ctx, args) => {
     let campaign;
 
-    // Find by name
-    const campaigns = await ctx.db.query("resendCampaigns").collect();
-    console.log(`Found ${campaigns.length} campaigns in resendCampaigns table`);
-    console.log(`Campaign names: ${campaigns.map(c => c.name).join(", ")}`);
+    if (args.campaignId) {
+      // Direct lookup by ID is O(1)
+      campaign = await ctx.db.get(args.campaignId as any);
+    }
 
-    if (args.campaignName) {
+    if (!campaign && args.campaignName) {
+      // Substring search requires scanning, but resendCampaigns is a small table (not users)
+      const campaigns = await ctx.db.query("resendCampaigns").take(10000);
       campaign = campaigns.find(c => c.name?.includes(args.campaignName!) || c.subject?.includes(args.campaignName!));
+
+      if (!campaign) {
+        throw new Error(`Campaign not found: ${args.campaignName}. Available: ${campaigns.map(c => c.name).slice(0, 5).join(", ")}`);
+      }
     }
 
     if (!campaign) {
-      throw new Error(`Campaign not found: ${args.campaignName || args.campaignId}. Available: ${campaigns.map(c => c.name).slice(0, 5).join(", ")}`);
+      throw new Error(`Campaign not found: ${args.campaignName || args.campaignId}`);
     }
 
     await ctx.db.patch(campaign._id, {
@@ -947,11 +1070,11 @@ export const handleWebhookEvent = mutation({
       recipientEmailNormalized &&
       (args.event === "email.opened" || args.event === "email.clicked")
     ) {
-      // Find all contacts with this email across all stores
+      // Find all contacts with this email across all stores using index
       const contacts = await ctx.db
         .query("emailContacts")
-        .filter((q) => q.eq(q.field("email"), recipientEmailNormalized))
-        .collect();
+        .withIndex("by_email", (q) => q.eq("email", recipientEmailNormalized))
+        .take(5000);
 
       for (const contact of contacts) {
         const now = Date.now();
@@ -975,7 +1098,6 @@ export const handleWebhookEvent = mutation({
             timestamp: now,
           });
 
-          console.log(`[Webhook] Email opened by contact ${contact._id} (${contact.email})`);
         } else if (args.event === "email.clicked") {
           await ctx.db.patch(contact._id, {
             emailsClicked: (contact.emailsClicked || 0) + 1,
@@ -996,7 +1118,6 @@ export const handleWebhookEvent = mutation({
             timestamp: now,
           });
 
-          console.log(`[Webhook] Email clicked by contact ${contact._id} (${contact.email})`);
         }
 
         await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactEngagement, {
@@ -1126,7 +1247,7 @@ export const getAutomations = query({
     const automations = await ctx.db
       .query("resendAutomations")
       .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
-      .collect();
+      .take(5000);
 
     if (args.activeOnly) {
       return automations.filter((a) => a.isActive);
@@ -1161,7 +1282,7 @@ export const getActiveAutomations = internalQuery({
     return await ctx.db
       .query("resendAutomations")
       .withIndex("by_active", (q) => q.eq("isActive", true))
-      .collect();
+      .take(5000);
   },
 });
 
@@ -1186,7 +1307,7 @@ export const getStoreEmailAnalytics = query({
       .query("resendLogs")
       .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
       .filter((q) => q.gte(q.field("createdAt"), cutoff))
-      .collect();
+      .take(5000);
 
     const totalSent = logs.length;
     const delivered = logs.filter((l) =>
@@ -1270,7 +1391,7 @@ export const getEmailLogs = query({
       return await orderedQuery.take(args.limit);
     }
 
-    return await orderedQuery.collect();
+    return await orderedQuery.take(5000);
   },
 });
 
@@ -1518,7 +1639,7 @@ export const getScheduledCampaigns = internalQuery({
           q.lte(q.field("scheduledFor"), args.beforeTimestamp)
         )
       )
-      .collect();
+      .take(5000);
   },
 });
 
@@ -1533,7 +1654,7 @@ export const getOldLogs = internalQuery({
     return await ctx.db
       .query("resendLogs")
       .filter((q) => q.lt(q.field("createdAt"), args.cutoffTime))
-      .collect();
+      .take(10000);
   },
 });
 
@@ -1615,9 +1736,8 @@ export const processContactBatch = mutation({
     let duplicateCount = 0;
     const errors: Array<{ email: string; error: string }> = [];
 
-    // Get existing users
-    const allUsers = await ctx.db.query("users").collect();
-    const existingEmails = new Set(allUsers.map((u) => u.email?.toLowerCase()));
+    // Track emails seen in this import batch for intra-batch deduplication
+    const seenInBatch = new Set<string>();
 
     for (const contact of args.contacts) {
       try {
@@ -1630,9 +1750,21 @@ export const processContactBatch = mutation({
 
         const emailLower = contact.email.toLowerCase();
 
-        // Check if already exists
-        if (existingEmails.has(emailLower)) {
+        // Check intra-batch duplicate
+        if (seenInBatch.has(emailLower)) {
           duplicateCount++;
+          continue;
+        }
+
+        // Check if user already exists using the by_email index (O(1) per lookup)
+        const existingUser = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", emailLower))
+          .first();
+
+        if (existingUser) {
+          duplicateCount++;
+          seenInBatch.add(emailLower);
           continue;
         }
 
@@ -1642,7 +1774,7 @@ export const processContactBatch = mutation({
         // 3. Add to an audience list
         // For now, we just count it as success
         successCount++;
-        existingEmails.add(emailLower);
+        seenInBatch.add(emailLower);
       } catch (error: any) {
         errorCount++;
         errors.push({
@@ -1711,7 +1843,7 @@ export const getImports = query({
       return await query.take(args.limit);
     }
 
-    return await query.collect();
+    return await query.take(5000);
   },
 });
 
@@ -1776,7 +1908,7 @@ export const getAudienceLists = query({
     return await ctx.db
       .query("resendAudienceLists")
       .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
-      .collect();
+      .take(5000);
   },
 });
 
@@ -1915,7 +2047,7 @@ export const getUsersForWeeklyDigest = internalQuery({
     for (const pref of preferences) {
       const user = await ctx.db
         .query("users")
-        .filter((q) => q.eq(q.field("clerkId"), pref.userId))
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", pref.userId))
         .first();
 
       if (user && user.email && user.clerkId) {
@@ -1945,7 +2077,7 @@ export const getUserDigestData = internalQuery({
     // Get user's enrolled courses
     const enrollments = await ctx.db
       .query("enrollments")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
 
     const courseIds = enrollments.map((e) => e.courseId);

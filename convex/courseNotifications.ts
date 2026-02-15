@@ -192,8 +192,6 @@ export const sendCourseUpdateEmails = internalAction({
     let skipped = 0;
     let failed = 0;
 
-    console.log(`📧 Processing course update emails for ${args.studentIds.length} students`);
-
     for (const studentId of args.studentIds) {
       try {
         // Check if user has email notifications enabled for course updates
@@ -206,7 +204,6 @@ export const sendCourseUpdateEmails = internalAction({
         );
 
         if (!shouldSend) {
-          console.log(`⏭️ Skipping email for ${studentId} - course update emails disabled`);
           skipped++;
           continue;
         }
@@ -218,7 +215,6 @@ export const sendCourseUpdateEmails = internalAction({
         );
 
         if (!user?.email) {
-          console.log(`⚠️ No email found for user ${studentId}`);
           skipped++;
           continue;
         }
@@ -258,7 +254,6 @@ export const sendCourseUpdateEmails = internalAction({
           });
 
           if (response.ok) {
-            console.log(`✅ Email sent to ${user.email}`);
             sent++;
           } else {
             const error = await response.text();
@@ -266,7 +261,6 @@ export const sendCourseUpdateEmails = internalAction({
             failed++;
           }
         } else {
-          console.log(`📧 Would send to ${user.email}: ${args.emailSubject}`);
           sent++;
         }
       } catch (error) {
@@ -274,8 +268,6 @@ export const sendCourseUpdateEmails = internalAction({
         failed++;
       }
     }
-
-    console.log(`📊 Email summary: ${sent} sent, ${skipped} skipped (preferences), ${failed} failed`);
 
     return { sent, skipped, failed };
   },

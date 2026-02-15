@@ -39,16 +39,10 @@ export const generateImages = internalAction({
     const falClient = createFalClient();
     const size = ASPECT_RATIO_SIZES[args.aspectRatio] || ASPECT_RATIO_SIZES["9:16"];
 
-    console.log(
-      `🎨 Generating ${args.imagePrompts.length} images at ${size.width}x${size.height}`
-    );
-
     // Generate all images in parallel
     const results = await Promise.allSettled(
       args.imagePrompts.map(async (prompt, index) => {
         const enhancedPrompt = `${prompt}, high quality, cinematic lighting, dark moody atmosphere, professional, 8k`;
-        console.log(`   [${index + 1}/${args.imagePrompts.length}] Generating: "${prompt.substring(0, 60)}..."`);
-
         const result = await falClient.run("fal-ai/flux/dev", {
           input: {
             prompt: enhancedPrompt,
@@ -79,7 +73,6 @@ export const generateImages = internalAction({
           const storageId = await uploadImageToStorage(ctx, result.value);
           storageIds.push(storageId);
           successCount++;
-          console.log(`   ✅ Image ${i + 1} uploaded: ${storageId}`);
         } catch (uploadErr: any) {
           console.error(`   ❌ Image ${i + 1} upload failed:`, uploadErr.message);
           storageIds.push(null);
@@ -98,8 +91,6 @@ export const generateImages = internalAction({
       jobId: args.jobId,
       imageIds: validIds,
     });
-
-    console.log(`🎨 Image generation complete: ${successCount} succeeded, ${failCount} failed`);
 
     return { storageIds, successCount, failCount };
   },

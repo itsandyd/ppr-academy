@@ -33,7 +33,7 @@ export const getAllNotifications = query({
     return await ctx.db
       .query("notifications")
       .order("desc")
-      .collect();
+      .take(10000);
   },
 });
 
@@ -94,8 +94,8 @@ export const getUnreadCount = query({
     const notifications = await ctx.db
       .query("notifications")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
-    
+      .take(1000);
+
     return notifications.filter(n => !n.read).length;
   },
 });
@@ -149,19 +149,19 @@ export const createNotification = mutation({
     
     // Determine target users based on targetType
     if (args.targetType === "all") {
-      const users = await ctx.db.query("users").collect();
+      const users = await ctx.db.query("users").take(10000);
       targetUsers = users
         .map(u => u.clerkId)
         .filter((id): id is string => id !== undefined);
     } else if (args.targetType === "students") {
       // Get users who have enrollments (students)
-      const enrollments = await ctx.db.query("enrollments").collect();
+      const enrollments = await ctx.db.query("enrollments").take(10000);
       const studentIds = new Set(enrollments.map(e => e.userId));
       targetUsers = Array.from(studentIds).filter((id): id is string => id !== undefined);
     } else if (args.targetType === "creators") {
       // Get users who have created courses or stores
-      const courses = await ctx.db.query("courses").collect();
-      const stores = await ctx.db.query("stores").collect();
+      const courses = await ctx.db.query("courses").take(10000);
+      const stores = await ctx.db.query("stores").take(500);
       const creatorIds = new Set([
         ...courses.map(c => c.userId),
         ...stores.map(s => s.userId)
@@ -241,8 +241,8 @@ export const markAllAsRead = mutation({
     const notifications = await ctx.db
       .query("notifications")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
-    
+      .take(1000);
+
     for (const notification of notifications) {
       if (!notification.read) {
         await ctx.db.patch(notification._id, {
@@ -290,7 +290,7 @@ export const getNotificationStats = query({
   handler: async (ctx, args) => {
     await verifyAdmin(ctx, args.clerkId);
     
-    const notifications = await ctx.db.query("notifications").collect();
+    const notifications = await ctx.db.query("notifications").take(10000);
     
     return {
       total: notifications.length,

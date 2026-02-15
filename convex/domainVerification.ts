@@ -32,21 +32,19 @@ export const verifyDomainDNS = action({
       try {
         const aRecords = await dns.resolve4(args.domain);
         aRecordValid = aRecords.includes(targetIP);
-        console.log("A record check:", { domain: args.domain, records: aRecords, valid: aRecordValid });
       } catch (error) {
-        console.log("A record not found or error:", error);
+        // A record not found
       }
 
       // Check CNAME for www subdomain
       try {
         const cnameRecords = await dns.resolveCname(`www.${args.domain}`);
-        cnameRecordValid = cnameRecords.some(record => 
-          record.toLowerCase().includes('vercel') || 
+        cnameRecordValid = cnameRecords.some(record =>
+          record.toLowerCase().includes('vercel') ||
           record.toLowerCase().includes(targetCNAME.toLowerCase())
         );
-        console.log("CNAME check:", { domain: `www.${args.domain}`, records: cnameRecords, valid: cnameRecordValid });
       } catch (error) {
-        console.log("CNAME not found or error:", error);
+        // CNAME not found
       }
 
       // Determine status

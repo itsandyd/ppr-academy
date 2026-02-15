@@ -93,11 +93,11 @@ export const getCreatorsByStage = query({
       );
     }
 
-    // For other stages, derive from actual data
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    // For other stages, derive from actual data (bounded)
+    const stores = await ctx.db.query("stores").take(500);
+    const courses = await ctx.db.query("courses").take(1000);
+    const products = await ctx.db.query("digitalProducts").take(1000);
+    const purchases = await ctx.db.query("purchases").take(5000);
 
     const now = Date.now();
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -445,13 +445,13 @@ export const getCreatorLeaderboard = query({
     })
   ),
   handler: async (ctx, { limit = 50, sortBy = "revenue" }) => {
-    // Get all stores (creators)
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const purchases = await ctx.db.query("purchases").collect();
-    const enrollments = await ctx.db.query("enrollments").collect();
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
+    // Get all stores (creators) — bounded
+    const stores = await ctx.db.query("stores").take(500);
+    const courses = await ctx.db.query("courses").take(1000);
+    const products = await ctx.db.query("digitalProducts").take(1000);
+    const purchases = await ctx.db.query("purchases").take(5000);
+    const enrollments = await ctx.db.query("enrollments").take(5000);
+    const courseAnalytics = await ctx.db.query("courseAnalytics").take(1000);
 
     const now = Date.now();
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -617,9 +617,9 @@ export const getCreatorsNeedingAttention = query({
     })
   ),
   handler: async (ctx) => {
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    const stores = await ctx.db.query("stores").take(500);
+    const courses = await ctx.db.query("courses").take(1000);
+    const purchases = await ctx.db.query("purchases").take(5000);
 
     const now = Date.now();
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -743,10 +743,8 @@ export const getCreatorOnboardingStatus = query({
     const purchases = store
       ? await ctx.db
           .query("purchases")
-          .filter((q) =>
-            q.and(q.eq(q.field("storeId"), store._id), q.eq(q.field("status"), "completed"))
-          )
-          .collect()
+          .withIndex("by_store_status", (q) => q.eq("storeId", store._id).eq("status", "completed"))
+          .take(500)
       : [];
 
     const steps = [
@@ -832,10 +830,10 @@ export const getCreatorsForBulkEmail = query({
     })
   ),
   handler: async (ctx, { filter = "all" }) => {
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    const stores = await ctx.db.query("stores").take(500);
+    const courses = await ctx.db.query("courses").take(1000);
+    const products = await ctx.db.query("digitalProducts").take(1000);
+    const purchases = await ctx.db.query("purchases").take(5000);
 
     const now = Date.now();
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -918,11 +916,11 @@ export const getPipelineStats = query({
     churn_risk: v.number(),
   }),
   handler: async (ctx) => {
-    // Get all relevant data
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    // Get all relevant data (bounded)
+    const stores = await ctx.db.query("stores").take(500);
+    const courses = await ctx.db.query("courses").take(1000);
+    const products = await ctx.db.query("digitalProducts").take(1000);
+    const purchases = await ctx.db.query("purchases").take(5000);
 
     const now = Date.now();
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -977,7 +975,7 @@ export const getPipelineStats = query({
     }
 
     // Prospect and invited are manual stages (from creatorPipeline table if exists)
-    const pipelineEntries = await ctx.db.query("creatorPipeline").collect();
+    const pipelineEntries = await ctx.db.query("creatorPipeline").take(500);
     for (const entry of pipelineEntries) {
       if (entry.stage === "prospect") stats.prospect++;
       if (entry.stage === "invited") stats.invited++;

@@ -31,19 +31,15 @@ export const backfillCourseCustomers = internalMutation({
         .filter((q) => q.eq(q.field("status"), "completed"))
         .collect();
 
-      console.log(`Found ${coursePurchases.length} course purchases to process`);
-
       for (const purchase of coursePurchases) {
         try {
           if (!purchase.courseId) {
-            console.log(`Skipping purchase ${purchase._id} - no courseId`);
             continue;
           }
 
           // Get course details
           const course = await ctx.db.get(purchase.courseId);
           if (!course) {
-            console.log(`Course not found for purchase ${purchase._id}`);
             continue;
           }
 
@@ -54,7 +50,6 @@ export const backfillCourseCustomers = internalMutation({
             .unique();
 
           if (!user) {
-            console.log(`User not found for purchase ${purchase._id}, userId: ${purchase.userId}`);
             continue;
           }
 
@@ -109,8 +104,6 @@ export const backfillCourseCustomers = internalMutation({
         }
       }
 
-      console.log(`Backfill complete: ${customersCreated} created, ${customersUpdated} updated, ${errors} errors`);
-
       return {
         success: true,
         customersCreated,
@@ -155,8 +148,6 @@ export const backfillSubscriptionCustomers = internalMutation({
         .filter((q) => q.eq(q.field("status"), "active"))
         .collect();
 
-      console.log(`Found ${subscriptions.length} active subscriptions to process`);
-
       for (const subscription of subscriptions) {
         try {
           // Get user details
@@ -166,7 +157,6 @@ export const backfillSubscriptionCustomers = internalMutation({
             .unique();
 
           if (!user) {
-            console.log(`User not found for subscription ${subscription._id}`);
             continue;
           }
 
@@ -220,8 +210,6 @@ export const backfillSubscriptionCustomers = internalMutation({
           errors++;
         }
       }
-
-      console.log(`Subscription backfill complete: ${customersCreated} created, ${customersUpdated} updated, ${errors} errors`);
 
       return {
         success: true,

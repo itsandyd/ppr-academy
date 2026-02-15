@@ -51,8 +51,6 @@ export const generateScriptIllustrations = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args): Promise<GenerateScriptIllustrationsResult> => {
-    console.log(`🎨 Starting script illustration generation for user ${args.userId}`);
-
     try {
       // Check FAL API key is configured (it's read from FAL_KEY env var automatically)
       const falApiKey = process.env.FAL_KEY;
@@ -62,7 +60,6 @@ export const generateScriptIllustrations = action({
 
       // Split script into sentences
       const sentences = splitIntoSentences(args.scriptText, args.skipEmptySentences ?? true);
-      console.log(`📝 Split script into ${sentences.length} sentences`);
 
       if (sentences.length === 0) {
         return {
@@ -86,8 +83,6 @@ export const generateScriptIllustrations = action({
           totalSentences: sentences.length,
         }
       );
-
-      console.log(`📋 Created job ${jobId}`);
 
       // Process each sentence (run in background)
       ctx.scheduler.runAfter(0, internal.scriptIllustrations.processSentences, {
@@ -138,8 +133,6 @@ export const processSentences = internalAction({
     generateEmbeddings: v.boolean(),
   },
   handler: async (ctx, args) => {
-    console.log(`🔄 Processing ${args.sentences.length} sentences for job ${args.jobId}`);
-
     // Update job status to processing
     await ctx.runMutation(internal.scriptIllustrationMutations.updateJobStatus, {
       jobId: args.jobId,
@@ -154,13 +147,8 @@ export const processSentences = internalAction({
       const sentence = args.sentences[i];
 
       try {
-        console.log(
-          `\n📸 [${i + 1}/${args.sentences.length}] Processing: "${sentence.substring(0, 50)}..."`
-        );
-
         // Generate illustration prompt from sentence
         const prompt = await generateIllustrationPrompt(sentence);
-        console.log(`   Prompt: "${prompt.substring(0, 80)}..."`);
 
         // Create illustration record (pending)
         const illustrationId = await ctx.runMutation(
@@ -180,7 +168,6 @@ export const processSentences = internalAction({
         // Generate image using FAL
         try {
           const imageResult = await generateImageWithFAL(prompt, args.imageModel);
-          console.log(`   ✅ Image generated successfully`);
 
           // Upload to Convex storage
           const storageId = await uploadImageToConvex(ctx, imageResult.url);
@@ -191,8 +178,6 @@ export const processSentences = internalAction({
           if (!imageUrl) {
             throw new Error("Failed to get storage URL for image");
           }
-
-          console.log(`   ☁️ Uploaded to storage: ${storageId}`);
 
           // Update illustration with image
           await ctx.runMutation(internal.scriptIllustrationMutations.updateIllustrationImage, {
@@ -214,7 +199,6 @@ export const processSentences = internalAction({
                   embeddingModel: "clip-vit-base-patch32",
                 }
               );
-              console.log(`   🧮 Embedding generated (${embedding.length} dimensions)`);
             } catch (embError: any) {
               console.error(`   ⚠️ Failed to generate embedding: ${embError.message}`);
               errors.push(`Sentence ${i + 1} embedding: ${embError.message}`);
@@ -258,9 +242,6 @@ export const processSentences = internalAction({
       errors,
     });
 
-    console.log(
-      `\n🎉 Job complete! Processed: ${processed}/${args.sentences.length}, Errors: ${errors.length}`
-    );
   },
 });
 
@@ -332,8 +313,6 @@ async function generateImageWithFAL(
   prompt: string,
   model: string
 ): Promise<{ url: string; seed?: number }> {
-  console.log(`   🎨 Calling FAL API with model: ${model}`);
-
   try {
     // Create FAL client - it reads FAL_KEY from environment automatically
     const falClient = createFalClient();
@@ -367,8 +346,6 @@ async function generateImageWithFAL(
  * Upload image to Convex storage from URL
  */
 async function uploadImageToConvex(ctx: any, imageUrl: string): Promise<Id<"_storage">> {
-  console.log(`   📥 Downloading image from: ${imageUrl}`);
-
   // Fetch the image
   const response = await fetch(imageUrl);
   if (!response.ok) {

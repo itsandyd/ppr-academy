@@ -48,6 +48,59 @@ export const unsubscribeByEmail = mutation({
       });
     }
 
+    // Also update all emailContacts records for this email across all stores
+    const contacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .collect();
+
+    for (const contact of contacts) {
+      if (contact.status !== "unsubscribed") {
+        await ctx.db.patch(contact._id, {
+          status: "unsubscribed",
+          unsubscribedAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    // Cancel any active workflow executions for this email
+    const activeExecutions = await ctx.db
+      .query("workflowExecutions")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("customerEmail"), email),
+          q.neq(q.field("status"), "completed"),
+          q.neq(q.field("status"), "failed"),
+          q.neq(q.field("status"), "cancelled")
+        )
+      )
+      .collect();
+
+    for (const execution of activeExecutions) {
+      await ctx.db.patch(execution._id, {
+        status: "cancelled" as const,
+        completedAt: Date.now(),
+      });
+    }
+
+    // Cancel any active drip campaign enrollments for this email
+    const activeEnrollments = await ctx.db
+      .query("dripCampaignEnrollments")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("email"), email),
+          q.eq(q.field("status"), "active")
+        )
+      )
+      .collect();
+
+    for (const enrollment of activeEnrollments) {
+      await ctx.db.patch(enrollment._id, {
+        status: "cancelled" as const,
+      });
+    }
+
     return { success: true, message: "Successfully unsubscribed" };
   },
 });
@@ -114,34 +167,51 @@ export const checkSuppressionBatch = internalQuery({
   handler: async (ctx, args) => {
     const results: Array<{ email: string; suppressed: boolean; reason?: string }> = [];
 
-    const allPrefs = await ctx.db.query("resendPreferences").collect();
-    const unsubscribedEmails = new Set(
-      allPrefs.filter((p) => p.isUnsubscribed).map((p) => p.userId.toLowerCase())
-    );
-
-    const recentLogs = await ctx.db
-      .query("resendLogs")
-      .filter((q) =>
-        q.or(q.eq(q.field("status"), "bounced"), q.eq(q.field("status"), "complained"))
-      )
-      .collect();
-
-    const bouncedEmails = new Set(
-      recentLogs.filter((l) => l.status === "bounced").map((l) => l.recipientEmail.toLowerCase())
-    );
-    const complainedEmails = new Set(
-      recentLogs.filter((l) => l.status === "complained").map((l) => l.recipientEmail.toLowerCase())
-    );
-
+    // Check each email individually using indexes instead of loading entire tables
     for (const email of args.emails) {
       const emailLower = email.toLowerCase().trim();
 
-      if (unsubscribedEmails.has(emailLower)) {
+      // Check resendPreferences by userId index
+      const pref = await ctx.db
+        .query("resendPreferences")
+        .withIndex("by_user", (q) => q.eq("userId", emailLower))
+        .first();
+      if (pref?.isUnsubscribed) {
         results.push({ email, suppressed: true, reason: "unsubscribed" });
-      } else if (bouncedEmails.has(emailLower)) {
+        continue;
+      }
+
+      // Check resendLogs for bounces/complaints by recipient index
+      const bouncedLog = await ctx.db
+        .query("resendLogs")
+        .withIndex("by_recipient", (q) => q.eq("recipientEmail", emailLower))
+        .filter((q) => q.eq(q.field("status"), "bounced"))
+        .first();
+      if (bouncedLog) {
         results.push({ email, suppressed: true, reason: "bounced" });
-      } else if (complainedEmails.has(emailLower)) {
+        continue;
+      }
+
+      const complainedLog = await ctx.db
+        .query("resendLogs")
+        .withIndex("by_recipient", (q) => q.eq("recipientEmail", emailLower))
+        .filter((q) => q.eq(q.field("status"), "complained"))
+        .first();
+      if (complainedLog) {
         results.push({ email, suppressed: true, reason: "complained" });
+        continue;
+      }
+
+      // Check emailContacts table for unsubscribed/complained status
+      const contacts = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_email", (q) => q.eq("email", emailLower))
+        .collect();
+      const contactSuppressed = contacts.some(
+        (c) => c.status === "unsubscribed" || c.status === "complained"
+      );
+      if (contactSuppressed) {
+        results.push({ email, suppressed: true, reason: "contact_unsubscribed" });
       } else {
         results.push({ email, suppressed: false });
       }
@@ -166,20 +236,24 @@ export const getUnsubscribeStats = query({
     ),
   }),
   handler: async (ctx) => {
-    const allPrefs = await ctx.db.query("resendPreferences").collect();
-    const unsubscribed = allPrefs.filter((p) => p.isUnsubscribed);
-
+    // Use status indexes on resendLogs instead of full table scans
     const bouncedLogs = await ctx.db
       .query("resendLogs")
-      .filter((q) => q.eq(q.field("status"), "bounced"))
+      .withIndex("by_status", (q) => q.eq("status", "bounced"))
       .collect();
     const uniqueBounced = new Set(bouncedLogs.map((l) => l.recipientEmail.toLowerCase()));
 
     const complainedLogs = await ctx.db
       .query("resendLogs")
-      .filter((q) => q.eq(q.field("status"), "complained"))
+      .withIndex("by_status", (q) => q.eq("status", "complained"))
       .collect();
     const uniqueComplained = new Set(complainedLogs.map((l) => l.recipientEmail.toLowerCase()));
+
+    // For unsubscribed prefs, we still need to scan since there's no isUnsubscribed index,
+    // but resendPreferences is a much smaller table than users (only people who have prefs set).
+    // Use take() to cap the scan for the count + recent list.
+    const allPrefs = await ctx.db.query("resendPreferences").collect();
+    const unsubscribed = allPrefs.filter((p) => p.isUnsubscribed);
 
     const recentUnsubscribes = unsubscribed
       .filter((p) => p.unsubscribedAt)

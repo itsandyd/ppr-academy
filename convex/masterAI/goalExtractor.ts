@@ -45,8 +45,6 @@ export const extractGoalFromMessage = internalAction({
   },
   returns: goalValidator,
   handler: async (ctx, args): Promise<ConversationGoal> => {
-    console.log("🎯 Extracting conversation goal from first message...");
-
     const systemPrompt = `You are a goal extraction system. Your job is to identify the CORE INTENT of what a user wants to accomplish from their initial message.
 
 This extracted goal will be used to keep an AI assistant on track throughout a long conversation. Even after many back-and-forth exchanges about details, corrections, and refinements, the AI needs to remember the original purpose.
@@ -92,10 +90,6 @@ RESPOND ONLY WITH VALID JSON:
         keyConstraints: Array.isArray(parsed.keyConstraints) ? parsed.keyConstraints : undefined,
         extractedAt: Date.now(),
       };
-
-      console.log(`   ✅ Goal extracted: "${goal.originalIntent}"`);
-      console.log(`   📦 Deliverable: ${goal.deliverableType || "none"}`);
-      console.log(`   🔒 Constraints: ${goal.keyConstraints?.join(", ") || "none"}`);
 
       // If we have a conversationId, save the goal
       if (args.conversationId) {

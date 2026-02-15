@@ -39,7 +39,6 @@ export const updatePackageStripeIds = internalMutation({
     await ctx.db.patch(args.packageId, {
       stripePriceId: args.stripePriceId,
     });
-    console.log(`Updated ${args.packageId} with Stripe price: ${args.stripePriceId}`);
     return null;
   },
 });

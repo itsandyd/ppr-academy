@@ -41,7 +41,7 @@ export const getAllPublishedPlugins = query({
     const plugins = await ctx.db
       .query("plugins")
       .withIndex("by_published", (q) => q.eq("isPublished", true))
-      .collect();
+      .take(100);
 
     // Enrich with category and type names
     const enrichedPlugins = await Promise.all(
@@ -125,7 +125,7 @@ export const getAllPlugins = query({
       throw new Error("Unauthorized: Admin access required");
     }
 
-    const plugins = await ctx.db.query("plugins").collect();
+    const plugins = await ctx.db.query("plugins").take(5000);
 
     // Enrich with category and type names
     const enrichedPlugins = await Promise.all(
@@ -221,7 +221,7 @@ export const getPluginTypes = query({
     updatedAt: v.number(),
   })),
   handler: async (ctx) => {
-    return await ctx.db.query("pluginTypes").collect();
+    return await ctx.db.query("pluginTypes").take(1000);
   },
 });
 
@@ -236,7 +236,7 @@ export const getPluginCategories = query({
     updatedAt: v.number(),
   })),
   handler: async (ctx) => {
-    return await ctx.db.query("pluginCategories").collect();
+    return await ctx.db.query("pluginCategories").take(1000);
   },
 });
 
@@ -248,8 +248,8 @@ export const getPluginTags = query({
     const plugins = await ctx.db
       .query("plugins")
       .withIndex("by_published", (q) => q.eq("isPublished", true))
-      .collect();
-    
+      .take(100);
+
     // Collect all tags and get unique values
     const allTags = new Set<string>();
     plugins.forEach(plugin => {
@@ -283,9 +283,9 @@ export const getEffectCategories = query({
         .withIndex("by_pluginTypeId", (q) =>
           q.eq("pluginTypeId", args.pluginTypeId)
         )
-        .collect();
+        .take(500);
     }
-    return await ctx.db.query("pluginEffectCategories").collect();
+    return await ctx.db.query("pluginEffectCategories").take(1000);
   },
 });
 
@@ -309,9 +309,9 @@ export const getInstrumentCategories = query({
         .withIndex("by_pluginTypeId", (q) =>
           q.eq("pluginTypeId", args.pluginTypeId)
         )
-        .collect();
+        .take(500);
     }
-    return await ctx.db.query("pluginInstrumentCategories").collect();
+    return await ctx.db.query("pluginInstrumentCategories").take(1000);
   },
 });
 
@@ -335,9 +335,9 @@ export const getStudioToolCategories = query({
         .withIndex("by_pluginTypeId", (q) =>
           q.eq("pluginTypeId", args.pluginTypeId)
         )
-        .collect();
+        .take(500);
     }
-    return await ctx.db.query("pluginStudioToolCategories").collect();
+    return await ctx.db.query("pluginStudioToolCategories").take(1000);
   },
 });
 
@@ -351,9 +351,9 @@ export const getAllSpecificCategories = query({
   })),
   handler: async (ctx) => {
     const [effects, instruments, studioTools] = await Promise.all([
-      ctx.db.query("pluginEffectCategories").collect(),
-      ctx.db.query("pluginInstrumentCategories").collect(),
-      ctx.db.query("pluginStudioToolCategories").collect(),
+      ctx.db.query("pluginEffectCategories").take(1000),
+      ctx.db.query("pluginInstrumentCategories").take(1000),
+      ctx.db.query("pluginStudioToolCategories").take(1000),
     ]);
     
     const allCategories = [
@@ -716,7 +716,7 @@ export const deleteAllPlugins = mutation({
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
     if (!user?.admin) throw new Error("Unauthorized");
     
-    const plugins = await ctx.db.query("plugins").collect();
+    const plugins = await ctx.db.query("plugins").take(5000);
     for (const plugin of plugins) {
       await ctx.db.delete(plugin._id);
     }
@@ -731,7 +731,7 @@ export const deleteAllEffectCategories = mutation({
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
     if (!user?.admin) throw new Error("Unauthorized");
     
-    const categories = await ctx.db.query("pluginEffectCategories").collect();
+    const categories = await ctx.db.query("pluginEffectCategories").take(5000);
     for (const cat of categories) {
       await ctx.db.delete(cat._id);
     }
@@ -746,7 +746,7 @@ export const deleteAllInstrumentCategories = mutation({
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
     if (!user?.admin) throw new Error("Unauthorized");
     
-    const categories = await ctx.db.query("pluginInstrumentCategories").collect();
+    const categories = await ctx.db.query("pluginInstrumentCategories").take(5000);
     for (const cat of categories) {
       await ctx.db.delete(cat._id);
     }
@@ -761,7 +761,7 @@ export const deleteAllStudioToolCategories = mutation({
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
     if (!user?.admin) throw new Error("Unauthorized");
     
-    const categories = await ctx.db.query("pluginStudioToolCategories").collect();
+    const categories = await ctx.db.query("pluginStudioToolCategories").take(5000);
     for (const cat of categories) {
       await ctx.db.delete(cat._id);
     }
@@ -776,7 +776,7 @@ export const deleteAllPluginCategories = mutation({
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
     if (!user?.admin) throw new Error("Unauthorized");
     
-    const categories = await ctx.db.query("pluginCategories").collect();
+    const categories = await ctx.db.query("pluginCategories").take(5000);
     for (const cat of categories) {
       await ctx.db.delete(cat._id);
     }
@@ -791,7 +791,7 @@ export const deleteAllPluginTypes = mutation({
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
     if (!user?.admin) throw new Error("Unauthorized");
     
-    const types = await ctx.db.query("pluginTypes").collect();
+    const types = await ctx.db.query("pluginTypes").take(5000);
     for (const type of types) {
       await ctx.db.delete(type._id);
     }

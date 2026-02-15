@@ -34,12 +34,8 @@ export const debugTokenPermissions = action({
 
     const debugUrl = `https://graph.facebook.com/debug_token?input_token=${tokenData.token}&access_token=${appAccessToken}`;
 
-    console.log("🔍 Debugging token for:", args.username);
-
     const response = await fetch(debugUrl);
     const data = await response.json();
-
-    console.log("📋 Token debug result:", JSON.stringify(data, null, 2));
 
     return {
       username: args.username,
@@ -98,18 +94,11 @@ export const getAccountData = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    console.log("🔍 Looking for account:", args.accountId);
-
     const account = (await ctx.db.get(args.accountId as any)) as any;
 
     if (!account) {
-      console.log("❌ Account not found");
       return null;
     }
-
-    console.log("✅ Account found:", account.platformUsername);
-    console.log("📱 Platform:", account.platform);
-    console.log("🔗 Instagram Business ID:", account.platformData?.instagramBusinessAccountId);
 
     return {
       accountId: String(account._id),

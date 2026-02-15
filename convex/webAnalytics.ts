@@ -125,7 +125,7 @@ export const debugSessionIds = query({
 export const backfillSlugs = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const events = await ctx.db.query("webAnalyticsEvents").collect();
+    const events = await ctx.db.query("webAnalyticsEvents").take(10000);
 
     let updated = 0;
     for (const event of events) {
@@ -161,7 +161,7 @@ export const getPageViews = query({
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.eq(q.field("eventType"), "pageview"))
-      .collect();
+      .take(10000);
 
     return { total: events.length, days };
   },
@@ -180,7 +180,7 @@ export const getUniqueVisitors = query({
     const events = await ctx.db
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .collect();
+      .take(10000);
 
     const uniqueDevices = new Set(events.map((e) => e.deviceId).filter(Boolean));
     return { total: uniqueDevices.size, days };
@@ -202,7 +202,7 @@ export const getTopPages = query({
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.eq(q.field("eventType"), "pageview"))
-      .collect();
+      .take(10000);
 
     // Aggregate by path
     const pathCounts: Record<string, number> = {};
@@ -233,7 +233,7 @@ export const getTopReferrers = query({
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("referrer"), undefined))
-      .collect();
+      .take(10000);
 
     // Aggregate by referrer domain
     const referrerCounts: Record<string, number> = {};
@@ -268,7 +268,7 @@ export const getDeviceBreakdown = query({
     const events = await ctx.db
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .collect();
+      .take(10000);
 
     // Aggregate by device type
     const deviceCounts: Record<string, number> = {
@@ -305,7 +305,7 @@ export const getCountryBreakdown = query({
     const events = await ctx.db
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .collect();
+      .take(10000);
 
     // Aggregate by country
     const countryCounts: Record<string, number> = {};
@@ -335,7 +335,7 @@ export const getTrafficOverTime = query({
       .query("webAnalyticsEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.eq(q.field("eventType"), "pageview"))
-      .collect();
+      .take(10000);
 
     // Group by day
     const dayBuckets: Record<string, { views: number; visitors: Set<number | undefined> }> = {};
@@ -379,7 +379,7 @@ export const getStoreTraffic = query({
       .query("webAnalyticsEvents")
       .withIndex("by_store_slug", (q) => q.eq("storeSlug", storeSlug))
       .filter((q) => q.gte(q.field("timestamp"), cutoff))
-      .collect();
+      .take(5000);
 
     const pageviews = events.filter((e) => e.eventType === "pageview").length;
     const uniqueDevices = new Set(events.map((e) => e.deviceId).filter(Boolean));
@@ -410,7 +410,7 @@ export const getStoreTopPages = query({
       .filter((q) =>
         q.and(q.gte(q.field("timestamp"), cutoff), q.eq(q.field("eventType"), "pageview"))
       )
-      .collect();
+      .take(5000);
 
     // Aggregate by path
     const pathCounts: Record<string, number> = {};

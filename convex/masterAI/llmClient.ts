@@ -88,20 +88,12 @@ export async function callLLM(options: LLMOptions): Promise<LLMResponse> {
   const provider = modelConfig.provider === "openai" ? "OpenAI" : "OpenRouter";
   const apiModel = modelConfig.apiId;
   
-  console.log(`🤖 LLM Call: ${options.model} (${apiModel}) via ${provider}`);
-  
-  const startTime = Date.now();
   let response: LLMResponse;
-  
   if (modelConfig.provider === "openai") {
     response = await callOpenAI(options);
   } else {
     response = await callOpenRouter(options);
   }
-  
-  const duration = Date.now() - startTime;
-  console.log(`   ✓ ${options.model}: ${response.tokensUsed?.total || '?'} tokens in ${duration}ms`);
-  
   return response;
 }
 
@@ -211,7 +203,6 @@ async function callOpenRouter(options: LLMOptions): Promise<LLMResponse> {
       order: ["Anthropic", "Google Vertex"], // Prefer providers with 64K output limit
       allow_fallbacks: true, // Fall back to Bedrock if needed
     };
-    console.log(`   🔄 Routing ${apiModelId} to high-output providers (Anthropic/Vertex)`);
   }
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {

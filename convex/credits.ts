@@ -499,7 +499,6 @@ export const addCreditsFromWebhook = mutation({
       .first();
 
     if (existingTransaction) {
-      console.log("⚠️ Credits already added for this payment:", args.stripePaymentId);
       return {
         success: true,
         newBalance: existingTransaction.balance,

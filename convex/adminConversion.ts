@@ -46,24 +46,28 @@ export const getPurchaseFunnel = query({
     const now = Date.now();
     const startTime = now - days * 24 * 60 * 60 * 1000;
 
-    // Get all users created in period
-    const users = await ctx.db.query("users").collect();
-    const recentUsers = users.filter((u) => u._creationTime >= startTime);
+    // Get recent users (scoped by _creationTime)
+    const allUsers = await ctx.db.query("users").take(10000);
+    const recentUsers = allUsers.filter((u) => u._creationTime >= startTime);
 
-    // Get enrollments in period
-    const enrollments = await ctx.db.query("enrollments").collect();
-    const recentEnrollments = enrollments.filter((e) => e._creationTime >= startTime);
+    // Get recent enrollments (scoped by _creationTime)
+    const allEnrollments = await ctx.db.query("enrollments").take(10000);
+    const recentEnrollments = allEnrollments.filter((e) => e._creationTime >= startTime);
 
-    // Get purchases in period
-    const purchases = await ctx.db.query("purchases").collect();
-    const recentPurchases = purchases.filter(
+    // Get recent completed purchases (scoped)
+    const allPurchases = await ctx.db.query("purchases").take(10000);
+    const recentPurchases = allPurchases.filter(
       (p) => p._creationTime >= startTime && p.status === "completed"
     );
 
-    // Get course views (from analytics events if available)
-    const analyticsEvents = await ctx.db.query("analyticsEvents").collect();
+    // Get course views from analytics events (scoped by timestamp index)
+    const analyticsEvents = await ctx.db
+      .query("analyticsEvents")
+      .withIndex("by_timestamp")
+      .filter((q) => q.gte(q.field("timestamp"), startTime))
+      .take(10000);
     const courseViews = analyticsEvents.filter(
-      (e) => e.timestamp >= startTime && e.eventType === "course_view"
+      (e) => e.eventType === "course_view"
     );
 
     // Calculate funnel steps
@@ -133,39 +137,32 @@ export const getConversionMetrics = query({
   handler: async (ctx, { clerkId }) => {
     await verifyAdmin(ctx, clerkId);
 
-    const users = await ctx.db.query("users").collect();
-    const enrollments = await ctx.db.query("enrollments").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    // Use pre-aggregated metrics for AOV, repeat rate, and cart abandonment
+    const metrics = await ctx.db.query("adminMetrics").first();
+
+    if (!metrics) {
+      return {
+        visitToSignup: 0,
+        signupToEnroll: 0,
+        enrollToPurchase: 0,
+        overallConversion: 0,
+        averageOrderValue: 0,
+        cartAbandonmentRate: 0,
+        repeatPurchaseRate: 0,
+      };
+    }
+
+    // For signup-to-enroll and enroll-to-purchase, we still need unique user counts
+    // from enrollments and purchases, but we can use the aggregated totals
+    const totalUsers = metrics.totalUsers;
+
+    // We need unique enrolling/purchasing users — load only enrollments + purchases
+    const enrollments = await ctx.db.query("enrollments").take(10000);
+    const purchases = await ctx.db.query("purchases").take(10000);
     const completedPurchases = purchases.filter((p) => p.status === "completed");
 
-    const totalUsers = users.length;
     const usersWithEnrollments = new Set(enrollments.map((e) => e.userId)).size;
     const usersWithPurchases = new Set(completedPurchases.map((p) => p.userId)).size;
-
-    // Calculate average order value
-    const totalRevenue = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
-    const averageOrderValue = completedPurchases.length > 0
-      ? totalRevenue / completedPurchases.length
-      : 0;
-
-    // Calculate repeat purchase rate
-    const purchasesByUser = new Map<string, number>();
-    for (const purchase of completedPurchases) {
-      const count = purchasesByUser.get(purchase.userId) || 0;
-      purchasesByUser.set(purchase.userId, count + 1);
-    }
-    const repeatBuyers = Array.from(purchasesByUser.values()).filter((c) => c > 1).length;
-    const repeatPurchaseRate = usersWithPurchases > 0
-      ? (repeatBuyers / usersWithPurchases) * 100
-      : 0;
-
-    // Estimate cart abandonment (non-completed purchases vs completed)
-    const incompletePurchases = purchases.filter(
-      (p) => p.status !== "completed" && p.status !== "refunded"
-    );
-    const cartAbandonmentRate = purchases.length > 0
-      ? (incompletePurchases.length / purchases.length) * 100
-      : 0;
 
     return {
       visitToSignup: 100, // Would need analytics tracking
@@ -174,9 +171,9 @@ export const getConversionMetrics = query({
         ? (usersWithPurchases / usersWithEnrollments) * 100
         : 0,
       overallConversion: totalUsers > 0 ? (usersWithPurchases / totalUsers) * 100 : 0,
-      averageOrderValue,
-      cartAbandonmentRate,
-      repeatPurchaseRate,
+      averageOrderValue: (metrics.averageOrderValue || 0) / 100,
+      cartAbandonmentRate: metrics.cartAbandonmentRate || 0,
+      repeatPurchaseRate: metrics.repeatPurchaseRate || 0,
     };
   },
 });
@@ -207,13 +204,13 @@ export const getAbandonedCarts = query({
     const now = Date.now();
     const startTime = now - days * 24 * 60 * 60 * 1000;
 
-    // Get non-completed purchases as "abandoned carts"
-    const purchases = await ctx.db.query("purchases").collect();
-    const abandonedPurchases = purchases.filter(
-      (p) =>
-        p.status !== "completed" &&
-        p.status !== "refunded" &&
-        p._creationTime >= startTime
+    // Get non-completed purchases as "abandoned carts" — scope by status index
+    const pendingPurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .take(10000);
+    const abandonedPurchases = pendingPurchases.filter(
+      (p) => p._creationTime >= startTime
     );
 
     const results = [];
@@ -286,8 +283,8 @@ export const getCouponPerformance = query({
   handler: async (ctx, { clerkId }) => {
     await verifyAdmin(ctx, clerkId);
 
-    const coupons = await ctx.db.query("coupons").collect();
-    const couponUsages = await ctx.db.query("couponUsages").collect();
+    const coupons = await ctx.db.query("coupons").take(10000);
+    const couponUsages = await ctx.db.query("couponUsages").take(10000);
 
     const totalCoupons = coupons.length;
     const activeCoupons = coupons.filter((c) => c.isActive).length;
@@ -379,9 +376,12 @@ export const getConversionBySource = query({
     const now = Date.now();
     const startTime = now - days * 24 * 60 * 60 * 1000;
 
-    // Get analytics events with UTM data
-    const events = await ctx.db.query("analyticsEvents").collect();
-    const recentEvents = events.filter((e) => e.timestamp >= startTime);
+    // Get analytics events with UTM data — scoped by timestamp index
+    const recentEvents = await ctx.db
+      .query("analyticsEvents")
+      .withIndex("by_timestamp")
+      .filter((q) => q.gte(q.field("timestamp"), startTime))
+      .take(10000);
 
     // Group by source (using metadata if available)
     const sourceData = new Map<

@@ -30,7 +30,7 @@ export const getUserEnrolledCourses = query({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     // Method 2: Get from purchases table (more reliable)
     const coursePurchases = await ctx.db
@@ -39,7 +39,7 @@ export const getUserEnrolledCourses = query({
       .filter((q) =>
         q.and(q.eq(q.field("productType"), "course"), q.eq(q.field("status"), "completed"))
       )
-      .collect();
+      .take(5000);
 
     // Combine both sources (purchases are authoritative)
     const allCourseIds = new Set([
@@ -65,12 +65,12 @@ export const getUserEnrolledCourses = query({
           .withIndex("by_user_course", (q) =>
             q.eq("userId", args.userId).eq("courseId", courseId as any)
           )
-          .collect();
+          .take(500);
 
         const totalChapters = await ctx.db
           .query("courseChapters")
           .withIndex("by_courseId", (q) => q.eq("courseId", courseId as any))
-          .collect();
+          .take(200);
 
         const completedChapters = userProgress.filter((p) => p.isCompleted).length;
         const calculatedProgress =
@@ -118,7 +118,7 @@ export const getUserLibraryStats = query({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     // Count completed courses (progress >= 100)
     const completedCourses = enrollments.filter((e) => (e.progress || 0) >= 100).length;
@@ -127,7 +127,7 @@ export const getUserLibraryStats = query({
     const progressRecords = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     // Calculate total time spent (sum of timeSpent in minutes, convert to hours)
     const totalMinutes = progressRecords.reduce((acc, p) => acc + (p.timeSpent || 0), 0);
@@ -159,7 +159,7 @@ export const getUserLibraryStats = query({
     const certificates = await ctx.db
       .query("certificates")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     // Get sample/midi/preset pack purchases
     const packPurchases = await ctx.db
@@ -171,7 +171,7 @@ export const getUserLibraryStats = query({
           q.eq(q.field("productType"), "digitalProduct")
         )
       )
-      .collect();
+      .take(5000);
 
     // Count packs by checking product category
     let samplePacksOwned = 0;
@@ -318,7 +318,7 @@ export const getContinueWatching = query({
     const allProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     if (allProgress.length === 0) return null;
 
@@ -352,7 +352,7 @@ export const getContinueWatching = query({
       const chapters = await ctx.db
         .query("courseChapters")
         .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr as any))
-        .collect();
+        .take(200);
 
       if (chapters.length === 0) continue;
 

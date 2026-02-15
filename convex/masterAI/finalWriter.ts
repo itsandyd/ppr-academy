@@ -348,7 +348,6 @@ Generate a comprehensive, well-structured response with inline citations. If web
 
     // Estimate total context length (rough token estimate: ~4 chars per token)
     const estimatedInputTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
-    console.log(`   📊 Estimated input tokens: ~${estimatedInputTokens}`);
 
     try {
       // Build messages array with conversation context
@@ -377,7 +376,6 @@ Generate a comprehensive, well-structured response with inline citations. If web
       // Get the model's max output token limit
       const modelConfig = AVAILABLE_MODELS[modelId];
       const maxOutputTokens = modelConfig?.maxOutputTokens ?? 16000;
-      console.log(`   🎯 Using model ${modelId} with max output tokens: ${maxOutputTokens}`);
 
       const response = await callLLM({
         model: modelId,
@@ -416,11 +414,10 @@ Generate a comprehensive, well-structured response with inline citations. If web
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : "";
       
-      // Log with console.log to ensure it appears in Convex logs
-      console.log("❌ Error generating final response:", errorMessage);
-      console.log("   Stack trace:", errorStack);
-      console.log("   Model:", modelId);
-      console.log("   Estimated input tokens:", estimatedInputTokens);
+      console.error("Error generating final response:", errorMessage);
+      console.error("   Stack trace:", errorStack);
+      console.error("   Model:", modelId);
+      console.error("   Estimated input tokens:", estimatedInputTokens);
       
       // Return a fallback response with actual error info for debugging
       const processingTimeMs = Date.now() - startTime;

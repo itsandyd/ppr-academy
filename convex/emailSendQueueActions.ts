@@ -30,8 +30,6 @@ export const processEmailSendQueue = internalAction({
       return null;
     }
 
-    console.log(`[SendQueue] Processing queue for ${storeIds.length} stores`);
-
     // Round-robin: claim emails from each store fairly
     // With Resend batch API at 2 req/s and 30s cron interval,
     // we can do ~50 batch requests per cycle = 5,000 emails max
@@ -68,11 +66,8 @@ export const processEmailSendQueue = internalAction({
     }
 
     if (allClaimed.length === 0) {
-      console.log(`[SendQueue] No emails claimed`);
       return null;
     }
-
-    console.log(`[SendQueue] Claimed ${allClaimed.length} emails across ${storeIds.length} stores`);
 
     // Group into Resend batch API calls (max 100 per batch)
     const BATCH_SIZE = 100;
@@ -120,7 +115,6 @@ export const processEmailSendQueue = internalAction({
         // Check for rate limit
         if (error?.statusCode === 429) {
           const retryAfter = error?.headers?.["retry-after"] || 2;
-          console.log(`[SendQueue] Rate limited, waiting ${retryAfter}s`);
           await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
 
           // Retry this batch once
@@ -160,11 +154,6 @@ export const processEmailSendQueue = internalAction({
         await new Promise((resolve) => setTimeout(resolve, 600));
       }
     }
-
-    console.log(
-      `[SendQueue] Cycle complete: ${totalSent} sent, ${totalFailed} failed, ` +
-        `${batches.length} batches, ${storeIds.length} stores`
-    );
 
     return null;
   },

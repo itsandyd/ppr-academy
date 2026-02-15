@@ -36,8 +36,6 @@ export const generateCourseFromNotes: any = action({
   }),
   handler: async (ctx, args): Promise<any> => {
     try {
-      console.log("🎯 Starting notes-to-course generation...");
-      
       // Validate user has access to notes
       const notes = await ctx.runQuery(internal.notes.validateNotesAccess, {
         noteIds: args.noteIds,
@@ -51,12 +49,9 @@ export const generateCourseFromNotes: any = action({
         };
       }
       
-      console.log(`📚 Processing ${notes.length} notes for course generation`);
-      
       // Get user's existing courses for style analysis (if requested)
       let existingCoursesAnalysis = "";
       if (args.matchExistingStyle) {
-        console.log("🎨 Analyzing existing courses to match style...");
         const existingCourses = await ctx.runQuery(api.courses.getCoursesByStore, {
           storeId: args.storeId,
         });
@@ -64,7 +59,6 @@ export const generateCourseFromNotes: any = action({
         if (existingCourses && existingCourses.length > 0) {
           // Analyze the structure and style of existing courses
           existingCoursesAnalysis = await analyzeExistingCoursesStyle(ctx, existingCourses, args.userId);
-          console.log(`✅ Analyzed ${existingCourses.length} existing courses`);
         }
       }
       
@@ -79,9 +73,8 @@ export const generateCourseFromNotes: any = action({
           threshold: 0.6,
         });
         ragContext = ragResults || [];
-        console.log(`🔍 Found ${ragContext.length} related notes via RAG`);
       } catch (error) {
-        console.log("⚠️ RAG search failed, continuing without additional context:", error);
+        console.error("RAG search failed, continuing without additional context:", error);
         ragContext = [];
       }
       
@@ -98,8 +91,6 @@ export const generateCourseFromNotes: any = action({
         includeQuizzes: args.includeQuizzes || true,
         existingCoursesStyle: existingCoursesAnalysis, // NEW: Pass style analysis
       });
-      
-      console.log("🧠 AI course structure generated, creating in database...");
       
       // Create the course in the database
       const courseResult: any = await ctx.runMutation(api.courses.createCourseWithData, {
@@ -129,8 +120,6 @@ export const generateCourseFromNotes: any = action({
         noteIds: args.noteIds,
         courseId: courseResult.courseId,
       });
-      
-      console.log(`✅ Course created successfully: ${courseResult.courseId}`);
       
       return {
         success: true,
@@ -252,7 +241,6 @@ async function analyzeExistingCoursesStyle(ctx: any, courses: any[], userId: str
   });
 
   if (!process.env.OPENAI_API_KEY) {
-    console.log("⚠️ OpenAI API key not configured, skipping style analysis");
     return "";
   }
 
@@ -279,7 +267,7 @@ Sample Modules: ${sampleModules.join(", ")}
 `);
       }
     } catch (error) {
-      console.log(`⚠️ Could not analyze course ${course._id}`);
+      // Could not analyze course, skip
     }
   }
 
@@ -458,8 +446,6 @@ Please analyze these notes and create a comprehensive course structure. Focus on
 4. Including practical examples and exercises where possible
 5. Making the content accessible for ${skillLevel} level learners`;
 
-  console.log("🤖 Calling OpenAI to generate course structure...");
-
   // STEP 1: Generate course outline (modules + lessons only, no chapters yet)
   const outlineCompletion = await openai.chat.completions.create({
     model: "gpt-5",
@@ -471,14 +457,6 @@ Please analyze these notes and create a comprehensive course structure. Focus on
     max_completion_tokens: 16000,
   });
 
-  console.log("📊 OpenAI Response:", {
-    hasChoices: !!outlineCompletion.choices,
-    choicesLength: outlineCompletion.choices?.length,
-    hasMessage: !!outlineCompletion.choices?.[0]?.message,
-    hasContent: !!outlineCompletion.choices?.[0]?.message?.content,
-    finishReason: outlineCompletion.choices?.[0]?.finish_reason,
-  });
-
   const responseText = outlineCompletion.choices[0].message.content;
   if (!responseText) {
     console.error("❌ No content in OpenAI response. Full completion:", JSON.stringify(outlineCompletion, null, 2));
@@ -488,15 +466,12 @@ Please analyze these notes and create a comprehensive course structure. Focus on
   let courseStructure;
   try {
     courseStructure = JSON.parse(responseText);
-    console.log("✅ Course outline parsed successfully");
   } catch (error) {
     console.error("❌ Failed to parse OpenAI response:", error);
     throw new Error("Failed to parse AI response");
   }
 
   // STEP 2: Generate chapters for each lesson separately (to avoid token limits)
-  console.log("📚 Generating chapters for all lessons in parallel...");
-  
   if (courseStructure.modules && Array.isArray(courseStructure.modules)) {
     // Collect all chapter generation promises to run in parallel
     const chapterPromises: Promise<void>[] = [];
@@ -510,8 +485,6 @@ Please analyze these notes and create a comprehensive course structure. Focus on
           
           // Create a promise for this lesson's chapter generation
           const chapterPromise = (async () => {
-            console.log(`  🔄 Generating chapters for: Module ${moduleIndex + 1}, Lesson ${lessonIndex + 1}: "${lesson.title}"`);
-            
             const chapterPrompt = `Generate 2-4 chapters for this lesson based on the notes content:
 
 Lesson Title: ${lesson.title}
@@ -552,7 +525,6 @@ Return ONLY a JSON array of chapters:
                 const chaptersData = JSON.parse(chapterResponse);
                 // Handle both array and object with chapters property
                 lesson.chapters = Array.isArray(chaptersData) ? chaptersData : (chaptersData.chapters || []);
-                console.log(`    ✅ Generated ${lesson.chapters.length} chapters for "${lesson.title}"`);
               }
             } catch (error) {
               console.error(`    ❌ Failed to generate chapters for lesson "${lesson.title}":`, error);
@@ -572,11 +544,9 @@ Return ONLY a JSON array of chapters:
     }
     
     // Wait for all chapter generation to complete
-    console.log(`⏳ Waiting for ${chapterPromises.length} chapter generations to complete...`);
     await Promise.all(chapterPromises);
   }
 
-  console.log("✅ All chapters generated successfully");
   return courseStructure;
 }
 

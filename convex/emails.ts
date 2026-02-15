@@ -266,12 +266,6 @@ export const processCampaign = internalAction({
     resumeFromCursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    console.log("=== STARTING CAMPAIGN PROCESSING ===");
-    console.log("Campaign ID:", args.campaignId);
-    if (args.resumeFromCursor) {
-      console.log("📍 Resuming from cursor:", args.resumeFromCursor);
-    }
-
     try {
       const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
         campaignId: args.campaignId,
@@ -281,8 +275,6 @@ export const processCampaign = internalAction({
         console.error("❌ Campaign not found!");
         throw new Error("Campaign not found");
       }
-      console.log("✅ Campaign found:", campaign.name);
-
       // Validate campaign has required fields
       if (!campaign.subject) {
         throw new Error("Campaign is missing a subject line");
@@ -294,7 +286,6 @@ export const processCampaign = internalAction({
           campaignId: args.campaignId,
           status: "sending",
         });
-        console.log("✅ Status updated to 'sending'");
       }
 
       // Track progress
@@ -331,12 +322,7 @@ export const processCampaign = internalAction({
         const isDone = recipientBatch.isDone;
         cursor = recipientBatch.continueCursor || null;
 
-        console.log(
-          `📧 Processing batch ${batchesProcessed + 1} of ${recipients.length} recipients (total sent so far: ${totalSent})`
-        );
-
         if (recipients.length === 0) {
-          console.log("✅ No more recipients to process");
           break;
         }
 
@@ -358,11 +344,8 @@ export const processCampaign = internalAction({
           lastProcessedCursor: cursor || undefined,
         });
 
-        console.log(`✅ Batch ${batchesProcessed} complete: ${batchResult.sent} sent, ${batchResult.failed} failed`);
-
         // Check if we're done
         if (isDone) {
-          console.log("✅ All recipients processed!");
           break;
         }
 
@@ -372,7 +355,6 @@ export const processCampaign = internalAction({
 
       // Check if there are more batches to process
       if (cursor && batchesProcessed >= MAX_BATCHES_PER_INVOCATION) {
-        console.log(`📅 Scheduling next batch processing (cursor: ${cursor})`);
         // Schedule the next batch processing via scheduler
         await ctx.scheduler.runAfter(1000, internal.emails.processCampaign, {
           campaignId: args.campaignId,
@@ -381,16 +363,12 @@ export const processCampaign = internalAction({
         return; // Don't mark as complete yet
       }
 
-      console.log(`✅ Campaign processing complete: ${totalSent} sent, ${totalFailed} failed`);
-
       // Update campaign status to complete
       await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
         campaignId: args.campaignId,
         status: totalFailed === 0 ? "sent" : totalSent > 0 ? "partial" : "failed",
         sentAt: Date.now(),
       });
-
-      console.log("=== CAMPAIGN PROCESSING COMPLETE ===");
     } catch (error) {
       console.error("❌ Campaign processing failed:", error);
       // Don't immediately mark as failed - allow resume
@@ -513,7 +491,6 @@ export const sendCampaignBatch = internalAction({
       try {
         const suppression = suppressionMap.get(recipient.email.toLowerCase());
         if (suppression?.suppressed) {
-          console.log(`Skipping ${recipient.email}: ${suppression.reason}`);
           skipped++;
           continue;
         }
@@ -581,7 +558,6 @@ export const sendCampaignBatch = internalAction({
 
         // Check if this is a rate limit error
         if (error?.statusCode === 429 || error?.message?.includes("rate limit")) {
-          console.log("⚠️ Rate limit hit, waiting 5 seconds before continuing...");
           await sleep(5000);
           // Retry this recipient
           i--; // Decrement to retry
@@ -656,8 +632,6 @@ export const resumeCampaign = action({
 
     // Get the cursor to resume from
     const resumeCursor = campaignData.lastProcessedCursor;
-
-    console.log(`📍 Resuming campaign ${args.campaignId} from cursor: ${resumeCursor || "start"}`);
 
     // Schedule the processing to continue
     await ctx.scheduler.runAfter(0, internal.emails.processCampaign, {
@@ -1083,7 +1057,6 @@ export const migrateApiKeysToEncrypted = internalAction({
           encryptedApiKey: encryptedKey,
         });
         migratedCount++;
-        console.log("Migrated admin connection API key");
       } catch (error) {
         errors.push(`Failed to migrate admin connection: ${error}`);
       }

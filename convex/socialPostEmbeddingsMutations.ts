@@ -45,7 +45,6 @@ export const createSocialPostEmbedding = internalMutation({
           updatedAt: Date.now(),
         },
       });
-      console.log(`📝 Updated existing embedding for post: ${args.postId}`);
       return existing._id;
     }
 
@@ -144,7 +143,6 @@ export const deleteSocialPostEmbedding = internalMutation({
 
     if (embedding) {
       await ctx.db.delete(embedding._id);
-      console.log(`🗑️ Deleted embedding for post: ${args.postId}`);
     }
 
     return null;

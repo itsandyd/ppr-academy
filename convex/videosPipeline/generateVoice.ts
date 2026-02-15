@@ -36,20 +36,16 @@ export const generateVoice = internalAction({
   handler: async (ctx, args) => {
     // Skip if no voice ID provided
     if (!args.voiceId) {
-      console.log("⏭️ Voice generation skipped: no voiceId provided");
       return { skipped: true, skipReason: "no_voice_id" };
     }
 
     // Skip if no API key
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
-      console.log("⏭️ Voice generation skipped: ELEVENLABS_API_KEY not configured");
       return { skipped: true, skipReason: "no_api_key" };
     }
 
     const elevenlabs = new ElevenLabsClient({ apiKey });
-
-    console.log(`🎙️ Generating voiceover (${args.voiceoverScript.length} chars, voice: ${args.voiceId})`);
 
     try {
       // Generate audio with timestamps for word-level sync
@@ -132,8 +128,6 @@ export const generateVoice = internalAction({
           audioId: storageId,
         });
 
-        console.log(`🎙️ Voice generated: ${audioDuration.toFixed(1)}s, ${words.length} words`);
-
         return {
           audioStorageId: storageId,
           duration: audioDuration,
@@ -143,7 +137,6 @@ export const generateVoice = internalAction({
       }
 
       // Fallback: generate audio without timestamps using convert()
-      console.log("🎙️ Falling back to basic TTS (no timestamps)");
       const basicAudio = await elevenlabs.textToSpeech.convert(args.voiceId, {
         text: args.voiceoverScript,
         modelId: "eleven_multilingual_v2",
@@ -182,8 +175,6 @@ export const generateVoice = internalAction({
         jobId: args.jobId,
         audioId: storageId,
       });
-
-      console.log(`🎙️ Voice generated (basic, no word timestamps)`);
 
       return {
         audioStorageId: storageId,

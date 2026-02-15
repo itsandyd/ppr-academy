@@ -48,14 +48,11 @@ export const backfillCustomersToContacts = internalMutation({
       
       const customers = customersResult.page;
 
-      console.log(`Found ${customers.length} customers to process for store ${args.storeId}`);
-
       for (const customer of customers) {
         customersProcessed++;
 
         try {
           if (!customer.email) {
-            console.log(`Skipping customer ${customer._id} - no email`);
             continue;
           }
 
@@ -144,8 +141,6 @@ export const backfillCustomersToContacts = internalMutation({
       }
 
       const isDone = customersResult.isDone;
-      console.log(`Backfill batch complete: ${contactsCreated} created, ${contactsUpdated} updated, ${alreadyExisted} already existed, ${errors} errors. Done: ${isDone}`);
-
       return {
         success: true,
         contactsCreated,

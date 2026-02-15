@@ -26,8 +26,6 @@ export const backfillCustomersFromPurchases = internalMutation({
         .withIndex("by_status", (q) => q.eq("status", "completed"))
         .collect();
 
-      console.log(`Found ${purchases.length} completed purchases to process`);
-
       for (const purchase of purchases) {
         try {
           // Get user info
@@ -37,7 +35,6 @@ export const backfillCustomersFromPurchases = internalMutation({
             .unique();
 
           if (!user || !user.email) {
-            console.log(`Skipping purchase ${purchase._id} - no user or email found`);
             continue;
           }
 

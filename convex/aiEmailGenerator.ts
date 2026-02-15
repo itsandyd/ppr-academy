@@ -152,8 +152,6 @@ ${contextInfo}
 
 Generate an email that feels personal and authentic to the creator's brand.`;
 
-    console.log(`🤖 Generating workflow email with ${EMAIL_MODEL}...`);
-
     const response = await callLLM({
       model: EMAIL_MODEL,
       messages: [
@@ -213,9 +211,6 @@ Return your response as a JSON object with these exact fields:
       ? `Create a ${args.templateType} email template. ${args.prompt}`
       : args.prompt;
 
-    console.log(`🤖 Generating email template with ${EMAIL_MODEL}...`);
-    console.log("Prompt:", userPrompt);
-
     const response = await callLLM({
       model: EMAIL_MODEL,
       messages: [
@@ -225,8 +220,6 @@ Return your response as a JSON object with these exact fields:
       responseFormat: "json",
       temperature: 0.8,
     });
-
-    console.log("✅ Template generated successfully");
 
     const result = safeParseJson<{ name?: string; subject?: string; htmlContent?: string; textContent?: string }>(response.content, {});
     
@@ -308,26 +301,15 @@ export const generateWorkflowSequence = action({
     let productUrl = ""; // The actual URL to link to
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
-    // Debug logging
-    console.log("🔍 generateWorkflowSequence args:", {
-      contextType: args.contextType,
-      courseId: args.courseId,
-      productId: args.productId,
-      storeId: args.storeId,
-    });
-
     // Get store info for URL building
     const store = await ctx.runQuery(api.stores.getUserStore, { userId: args.storeId });
     const storeSlug = store?.slug || store?.name?.toLowerCase().replace(/\s+/g, "-") || "store";
 
     if (args.contextType === "course" && args.courseId) {
-      console.log("📚 Fetching course data for:", args.courseId);
       const courseData = await ctx.runQuery(api.courses.getCourseWithInstructor, { courseId: args.courseId });
-      console.log("📚 Course data received:", courseData?.course?.title);
       if (courseData?.course) {
         const course = courseData.course;
         productName = course.title || "Course";
-        console.log("📚 productName set to:", productName);
         productPrice = course.price ? `$${course.price}` : "Free";
         const courseSlug = course.slug || course.title?.toLowerCase().replace(/\s+/g, "-") || "course";
         productUrl = `${baseUrl}/${storeSlug}/courses/${courseSlug}`;
@@ -409,8 +391,6 @@ STORE/BRAND INFORMATION:
       .replace(/-+/g, "-") // Remove duplicate hyphens
       .substring(0, 30) // Limit length
       .replace(/-$/, ""); // Remove trailing hyphen
-
-    console.log("🏷️ productSlug calculated:", productSlug, "from productName:", productName);
 
     // Voice guidelines per tone
     const voiceGuidelines: Record<string, string> = {
@@ -1216,8 +1196,6 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
 
 ⚠️ REMINDER: ONLY mention what's in the curriculum above. Do NOT invent bonuses, communities, cheat sheets, or extras that aren't listed. This is critical.`;
 
-    console.log(`🤖 Generating ${actualSequenceLength} template-based emails with ${EMAIL_MODEL}...`);
-
     // Lower temperature to reduce hallucination while maintaining some creativity
     const temperature = args.campaignType === "lead_nurture" ? 0.5 : 0.6;
 
@@ -1233,7 +1211,6 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
     });
 
     const result = safeParseJson<{ emails?: Array<{ subject?: string; previewText?: string; body?: string }> }>(response.content, { emails: [] });
-    console.log("✅ Workflow sequence generated with", result.emails?.length, "emails");
 
     // Convert AI response to workflow nodes and edges
     const nodes: Array<{

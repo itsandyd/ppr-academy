@@ -22,11 +22,6 @@ export const processEmailWorkflowExecutions = internalAction({
       executionIds: execIds,
     });
 
-    console.log(
-      `[EmailWorkflows] Bulk: ${bulkResult.advanced} advanced, ${bulkResult.completed} completed, ` +
-      `${bulkResult.skipped} skipped, ${bulkResult.emailNodeIds.length} emails need action`
-    );
-
     // Phase 2: Process email nodes via actions (need Resend API)
     let emailProcessed = 0;
     let emailFailed = 0;
@@ -49,10 +44,6 @@ export const processEmailWorkflowExecutions = internalAction({
           // Ignore
         }
       }
-    }
-
-    if (bulkResult.emailNodeIds.length > 0) {
-      console.log(`[EmailWorkflows] Emails: ${emailProcessed} sent, ${emailFailed} failed`);
     }
 
     return null;
@@ -93,14 +84,11 @@ export const executeWorkflowNode = internalAction({
     // Find current node
     const currentNode = workflow.nodes.find((n: any) => n.id === execution.currentNodeId);
     if (!currentNode) {
-      console.log(`[EmailWorkflows] No current node, completing execution`);
       await ctx.runMutation(internal.emailWorkflows.completeExecution, {
         executionId: args.executionId,
       });
       return null;
     }
-
-    console.log(`[EmailWorkflows] Executing node ${currentNode.id} (${currentNode.type}) for ${execution.customerEmail}`);
 
     // Execute based on node type
     if (currentNode.type === "email") {
@@ -110,15 +98,7 @@ export const executeWorkflowNode = internalAction({
       // Check both 'content' and 'body' fields (editor might use either)
       const customContent = currentNode.data?.content || currentNode.data?.body;
 
-      console.log(`[EmailWorkflows] Email node data:`, JSON.stringify({
-        templateId,
-        subject: customSubject,
-        hasContent: !!customContent,
-        allData: currentNode.data,
-      }));
-
       if (templateId) {
-        console.log(`[EmailWorkflows] Enqueuing template email ${templateId} for ${execution.customerEmail}`);
         await ctx.runAction(internal.emailWorkflowActions.resolveAndEnqueueTemplateEmail, {
           contactId: execution.contactId,
           templateId,
@@ -126,9 +106,7 @@ export const executeWorkflowNode = internalAction({
           customerEmail: execution.customerEmail,
           workflowExecutionId: args.executionId,
         });
-        console.log(`[EmailWorkflows] Template email enqueued`);
       } else if (customSubject && customContent) {
-        console.log(`[EmailWorkflows] Enqueuing custom email "${customSubject}" for ${execution.customerEmail}`);
         await ctx.runAction(internal.emailWorkflowActions.resolveAndEnqueueCustomEmail, {
           contactId: execution.contactId,
           subject: customSubject,
@@ -137,20 +115,13 @@ export const executeWorkflowNode = internalAction({
           customerEmail: execution.customerEmail,
           workflowExecutionId: args.executionId,
         });
-        console.log(`[EmailWorkflows] Custom email enqueued`);
       } else {
         console.error(`[EmailWorkflows] Email node has no template or custom content! Node data:`, currentNode.data);
       }
     } else if (currentNode.type === "delay") {
       // Delay is handled by scheduling - just log
-      console.log(`[EmailWorkflows] Processing delay node for ${execution.customerEmail}`);
     } else if (currentNode.type === "condition") {
       // Evaluate the condition to determine which path to take
-      console.log(`[EmailWorkflows] Processing condition node for ${execution.customerEmail}`, {
-        conditionType: currentNode.data?.conditionType,
-        nodeData: currentNode.data,
-      });
-
       // Evaluate the condition
       const conditionResult = await ctx.runQuery(internal.emailWorkflows.evaluateWorkflowCondition, {
         contactId: execution.contactId,
@@ -159,8 +130,6 @@ export const executeWorkflowNode = internalAction({
         conditionType: currentNode.data?.conditionType,
         conditionData: currentNode.data,
       });
-
-      console.log(`[EmailWorkflows] Condition "${currentNode.data?.conditionType}" evaluated to: ${conditionResult}`);
 
       // Find the correct outgoing edge based on condition result
       const sourceHandle = conditionResult ? "yes" : "no";
@@ -177,43 +146,32 @@ export const executeWorkflowNode = internalAction({
             nextNodeId: nextConditionNode.id,
             scheduledFor: Date.now(),
           });
-          console.log(`[EmailWorkflows] Condition branched to ${sourceHandle} path, node ${nextConditionNode.id}`);
           return null;
         }
       }
 
       // If no matching edge, try default connection (backwards compatibility)
-      console.log(`[EmailWorkflows] No ${sourceHandle} edge found, falling through to default`);
     } else if (currentNode.type === "action") {
       // Handle action nodes (add tag, etc.)
       const actionType = currentNode.data?.actionType;
-      console.log(`[EmailWorkflows] Processing action node (${actionType}) for ${execution.customerEmail}`, {
-        nodeData: currentNode.data,
-        contactId: execution.contactId,
-      });
-
       if (actionType === "add_tag" && execution.contactId) {
         // Get tag ID - either from tagId field or look up by name from value field
         let tagId = currentNode.data?.tagId;
 
         if (!tagId && currentNode.data?.value) {
           // Backwards compatibility: look up tag by name
-          console.log(`[EmailWorkflows] Looking up tag by name: ${currentNode.data.value}`);
           const tag = await ctx.runQuery(internal.emailWorkflows.getTagByNameInternal, {
             storeId: execution.storeId,
             name: currentNode.data.value,
           });
           if (tag) {
             tagId = tag._id;
-            console.log(`[EmailWorkflows] Found tag ID: ${tagId}`);
           } else {
             // Auto-create the tag if it doesn't exist
-            console.log(`[EmailWorkflows] Tag not found, creating: ${currentNode.data.value}`);
             tagId = await ctx.runMutation(internal.emailWorkflows.createTagInternal, {
               storeId: execution.storeId,
               name: currentNode.data.value,
             });
-            console.log(`[EmailWorkflows] Created tag ID: ${tagId}`);
           }
         }
 
@@ -222,9 +180,7 @@ export const executeWorkflowNode = internalAction({
             contactId: execution.contactId,
             tagId,
           });
-          console.log(`[EmailWorkflows] Added tag ${tagId} to contact`);
         } else {
-          console.log(`[EmailWorkflows] No tag ID found for add_tag action`);
         }
       } else if (actionType === "remove_tag" && execution.contactId) {
         // Get tag ID - either from tagId field or look up by name from value field
@@ -246,19 +202,15 @@ export const executeWorkflowNode = internalAction({
             contactId: execution.contactId,
             tagId,
           });
-          console.log(`[EmailWorkflows] Removed tag ${tagId} from contact`);
         } else {
-          console.log(`[EmailWorkflows] No tag ID found for remove_tag action`);
         }
       } else if (!execution.contactId) {
-        console.log(`[EmailWorkflows] Cannot add/remove tag: no contactId on execution`);
+        // No contactId on execution - cannot add/remove tag
       }
     } else if (currentNode.type === "notify") {
       // Notify node - send notification to team via email, Slack, or Discord
       const notifyMethod = currentNode.data?.notifyMethod || "email";
       const message = currentNode.data?.message || "Workflow notification triggered";
-
-      console.log(`[EmailWorkflows] Processing notify node (${notifyMethod}) for ${execution.customerEmail}`);
 
       await ctx.runAction(internal.emailWorkflowActions.sendTeamNotification, {
         storeId: execution.storeId,
@@ -270,11 +222,8 @@ export const executeWorkflowNode = internalAction({
         triggerType: execution.executionData?.triggerType,
       });
 
-      console.log(`[EmailWorkflows] Team notification sent via ${notifyMethod}`);
     } else if (currentNode.type === "goal") {
       // Goal node - complete the workflow and optionally chain to next workflow
-      console.log(`[EmailWorkflows] Goal node reached for ${execution.customerEmail}`);
-
       // Complete this workflow
       await ctx.runMutation(internal.emailWorkflows.completeExecution, {
         executionId: args.executionId,
@@ -283,8 +232,6 @@ export const executeWorkflowNode = internalAction({
       // Check if there's a next workflow to chain to
       const nextWorkflowId = currentNode.data?.nextWorkflowId;
       if (nextWorkflowId) {
-        console.log(`[EmailWorkflows] Chaining to next workflow: ${nextWorkflowId}`);
-
         // Get the next workflow
         const nextWorkflow = await ctx.runQuery(internal.emailWorkflows.getWorkflowInternal, {
           workflowId: nextWorkflowId,
@@ -304,28 +251,22 @@ export const executeWorkflowNode = internalAction({
               currentNodeId: firstNode.id,
               scheduledFor: Date.now(),
             });
-            console.log(`[EmailWorkflows] Contact ${execution.customerEmail} enrolled in next workflow: ${nextWorkflow.name}`);
           }
         } else {
-          console.log(`[EmailWorkflows] Next workflow ${nextWorkflowId} not found or not active`);
         }
       }
 
       return null;
     } else if (currentNode.type === "stop") {
       // Stop node - complete the workflow execution
-      console.log(`[EmailWorkflows] Stop node reached, completing workflow for ${execution.customerEmail}`);
       await ctx.runMutation(internal.emailWorkflows.completeExecution, {
         executionId: args.executionId,
       });
       return null;
     } else if (currentNode.type === "trigger") {
       // Trigger nodes don't need processing, just continue to next node
-      console.log(`[EmailWorkflows] Skipping trigger node, moving to next`);
     } else if (currentNode.type === "courseCycle") {
       // Course Cycle node - select next unpurchased course and initialize cycle state
-      console.log(`[EmailWorkflows] Processing courseCycle node for ${execution.customerEmail}`);
-
       const configId = currentNode.data?.courseCycleConfigId;
       if (!configId) {
         console.error(`[EmailWorkflows] No courseCycleConfigId configured`);
@@ -381,7 +322,6 @@ export const executeWorkflowNode = internalAction({
 
       if (nextCourseIndex === -1) {
         // All courses purchased - complete the cycle
-        console.log(`[EmailWorkflows] All courses purchased, completing cycle for ${execution.customerEmail}`);
         await ctx.runMutation(internal.emailWorkflows.completeExecution, {
           executionId: args.executionId,
         });
@@ -402,12 +342,8 @@ export const executeWorkflowNode = internalAction({
           purchasedCourseIds,
         },
       });
-
-      console.log(`[EmailWorkflows] Cycle state: course ${nextCourseIndex + 1}/${config.courseIds.length}, cycle #${newCycleNumber}`);
     } else if (currentNode.type === "courseEmail") {
       // Course Email node - send nurture or pitch email for current course
-      console.log(`[EmailWorkflows] Processing courseEmail node for ${execution.customerEmail}`);
-
       const cycleData = execution.executionData || {};
       const configId = cycleData.courseCycleConfigId;
       const courseIndex = cycleData.currentCourseIndex ?? 0;
@@ -464,9 +400,8 @@ export const executeWorkflowNode = internalAction({
           emailId: email._id,
         });
 
-        console.log(`[EmailWorkflows] Enqueued ${emailPhase} email #${emailIndex + 1} for course ${courseIndex + 1}`);
       } else {
-        console.log(`[EmailWorkflows] No email found for ${emailPhase} #${emailIndex}, course ${courseIndex}`);
+        // No email content found for this phase/index
       }
 
       // Increment email index
@@ -480,8 +415,6 @@ export const executeWorkflowNode = internalAction({
       });
     } else if (currentNode.type === "purchaseCheck") {
       // Purchase Check node - check if user purchased current course and branch
-      console.log(`[EmailWorkflows] Processing purchaseCheck node for ${execution.customerEmail}`);
-
       const cycleData = execution.executionData || {};
       const configId = cycleData.courseCycleConfigId;
       const courseIndex = cycleData.currentCourseIndex ?? 0;
@@ -515,8 +448,6 @@ export const executeWorkflowNode = internalAction({
       );
 
       if (hasPurchased) {
-        console.log(`[EmailWorkflows] User purchased course ${courseIndex + 1}`);
-
         // Add tag if configured
         const tagPrefix = currentNode.data?.purchaseTagPrefix || "purchased_course_";
         if (execution.contactId) {
@@ -533,7 +464,7 @@ export const executeWorkflowNode = internalAction({
               tagName,
             });
           } catch (e) {
-            console.log(`[EmailWorkflows] Could not add tag: ${e}`);
+            // Tag addition failed
           }
         }
 
@@ -546,8 +477,6 @@ export const executeWorkflowNode = internalAction({
             purchasedCourseIds: updatedPurchased,
           },
         });
-      } else {
-        console.log(`[EmailWorkflows] User has NOT purchased course ${courseIndex + 1}`);
       }
 
       // Branch to appropriate path
@@ -564,8 +493,6 @@ export const executeWorkflowNode = internalAction({
       }
     } else if (currentNode.type === "cycleLoop") {
       // Cycle Loop node - advance to next course or loop back
-      console.log(`[EmailWorkflows] Processing cycleLoop node for ${execution.customerEmail}`);
-
       const cycleData = execution.executionData || {};
       const configId = cycleData.courseCycleConfigId;
       const currentIndex = cycleData.currentCourseIndex ?? 0;
@@ -603,7 +530,6 @@ export const executeWorkflowNode = internalAction({
 
       if (nextCourseIndex === -1) {
         // All courses purchased - complete
-        console.log(`[EmailWorkflows] All courses in cycle purchased, completing`);
         await ctx.runMutation(internal.emailWorkflows.completeExecution, {
           executionId: args.executionId,
         });
@@ -612,7 +538,6 @@ export const executeWorkflowNode = internalAction({
 
       // Check if we should loop
       if (loopedBack && !config.loopOnCompletion) {
-        console.log(`[EmailWorkflows] Reached end of cycle, looping disabled`);
         await ctx.runMutation(internal.emailWorkflows.completeExecution, {
           executionId: args.executionId,
         });
@@ -632,9 +557,8 @@ export const executeWorkflowNode = internalAction({
         },
       });
 
-      console.log(`[EmailWorkflows] Moving to course ${nextCourseIndex + 1}, cycle #${newCycleNumber}`);
     } else {
-      console.log(`[EmailWorkflows] Unknown node type: ${currentNode.type}`);
+      // Unknown node type
     }
 
     // Find next node - when a node has multiple outgoing edges (e.g., email -> tag AND email -> delay),
@@ -673,7 +597,6 @@ export const executeWorkflowNode = internalAction({
           });
           if (sequenceSibling) {
             connection = sequenceSibling;
-            console.log(`[EmailWorkflows] Action node ${currentNode.id} is a leaf - following sibling edge from parent ${parentNode.id} to ${sequenceSibling.target}`);
           }
         }
       }
@@ -681,7 +604,6 @@ export const executeWorkflowNode = internalAction({
 
     if (!connection) {
       // No more nodes - complete the workflow
-      console.log(`[EmailWorkflows] No next node, completing workflow for ${execution.customerEmail}`);
       await ctx.runMutation(internal.emailWorkflows.completeExecution, {
         executionId: args.executionId,
       });
@@ -728,7 +650,6 @@ export const executeWorkflowNode = internalAction({
         scheduledFor,
       });
 
-      console.log(`[EmailWorkflows] Contact entering delay node ${nextNode.id}, will continue at ${new Date(scheduledFor).toISOString()}`);
       return null;
     }
 
@@ -740,7 +661,6 @@ export const executeWorkflowNode = internalAction({
         scheduledFor: Date.now(), // Execute immediately
       });
 
-      console.log(`[EmailWorkflows] Exiting delay, advancing to node ${nextNode.id}`);
       return null;
     }
 
@@ -750,8 +670,6 @@ export const executeWorkflowNode = internalAction({
       nextNodeId: nextNode.id,
       scheduledFor: Date.now(),
     });
-
-    console.log(`[EmailWorkflows] Advanced to node ${nextNode.id}`);
 
     return null;
   },
@@ -775,6 +693,15 @@ export const resolveAndEnqueueCustomEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // CAN-SPAM: Check suppression before doing any work
+    const suppressionResults = await ctx.runQuery(
+      internal.emailUnsubscribe.checkSuppressionBatch,
+      { emails: [args.customerEmail] }
+    );
+    if (suppressionResults[0]?.suppressed) {
+      return null;
+    }
+
     const crypto = await import("crypto");
 
     // Get contact info if available
@@ -802,7 +729,7 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         senderName = store.name || "";
       }
     } catch (e) {
-      console.log(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
+      console.error(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
     }
 
     // Get user stats for personalization
@@ -826,7 +753,7 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         };
       }
     } catch (e) {
-      console.log(`[WorkflowEmail] Could not fetch user stats for ${args.customerEmail}:`, e);
+      console.error(`[WorkflowEmail] Could not fetch user stats for ${args.customerEmail}:`, e);
     }
 
     // Get platform stats
@@ -847,7 +774,7 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         };
       }
     } catch (e) {
-      console.log(`[WorkflowEmail] Could not fetch platform stats:`, e);
+      console.error(`[WorkflowEmail] Could not fetch platform stats:`, e);
     }
 
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
@@ -932,8 +859,6 @@ ${bodyContent}
       },
       priority: args.priority,
     });
-
-    console.log(`[WorkflowEmail] Enqueued custom email for ${args.customerEmail}: ${finalSubject}`);
     return null;
   },
 });
@@ -952,6 +877,15 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // CAN-SPAM: Check suppression before doing any work
+    const suppressionResults = await ctx.runQuery(
+      internal.emailUnsubscribe.checkSuppressionBatch,
+      { emails: [args.customerEmail] }
+    );
+    if (suppressionResults[0]?.suppressed) {
+      return null;
+    }
+
     const crypto = await import("crypto");
 
     // Get the template
@@ -1020,7 +954,6 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
       },
     });
 
-    console.log(`[WorkflowEmail] Enqueued template email for ${args.customerEmail}: ${subject}`);
     return null;
   },
 });
@@ -1039,6 +972,15 @@ export const sendCustomWorkflowEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // CAN-SPAM: Check suppression before doing any work
+    const suppressionResults = await ctx.runQuery(
+      internal.emailUnsubscribe.checkSuppressionBatch,
+      { emails: [args.customerEmail] }
+    );
+    if (suppressionResults[0]?.suppressed) {
+      return null;
+    }
+
     const { Resend } = await import("resend");
     const crypto = await import("crypto");
 
@@ -1067,7 +1009,7 @@ export const sendCustomWorkflowEmail = internalAction({
         senderName = store.name || "";
       }
     } catch (e) {
-      console.log(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
+      console.error(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
     }
 
     // Get user stats for personalization (level, XP, courses, etc.)
@@ -1099,7 +1041,7 @@ export const sendCustomWorkflowEmail = internalAction({
         };
       }
     } catch (e) {
-      console.log(`[WorkflowEmail] Could not fetch user stats for ${args.customerEmail}:`, e);
+      console.error(`[WorkflowEmail] Could not fetch user stats for ${args.customerEmail}:`, e);
     }
 
     // Get platform stats for dynamic content
@@ -1123,7 +1065,7 @@ export const sendCustomWorkflowEmail = internalAction({
         };
       }
     } catch (e) {
-      console.log(`[WorkflowEmail] Could not fetch platform stats:`, e);
+      console.error(`[WorkflowEmail] Could not fetch platform stats:`, e);
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -1197,7 +1139,6 @@ ${bodyContent}
         html: htmlContent,
       });
 
-      console.log(`[WorkflowEmail] Sent custom email to ${args.customerEmail}: ${finalSubject}`);
     } catch (error) {
       console.error(`[WorkflowEmail] Failed to send custom email:`, error);
       throw error;
@@ -1281,7 +1222,6 @@ export const sendWorkflowEmail = internalAction({
         html: htmlContent,
       });
 
-      console.log(`[WorkflowEmail] Sent email to ${args.customerEmail}: ${subject}`);
     } catch (error) {
       console.error(`[WorkflowEmail] Failed to send email:`, error);
       throw error;
@@ -1332,7 +1272,6 @@ export const sendTeamNotification = internalAction({
     if (args.notifyMethod === "slack") {
       const webhookUrl = store.notificationIntegrations?.slackWebhookUrl;
       if (!webhookUrl || !store.notificationIntegrations?.slackEnabled) {
-        console.log(`[Notify] Slack not configured for store ${args.storeId}`);
         return null;
       }
 
@@ -1391,8 +1330,6 @@ export const sendTeamNotification = internalAction({
 
         if (!response.ok) {
           console.error(`[Notify] Slack webhook failed: ${response.status}`);
-        } else {
-          console.log(`[Notify] Slack notification sent for ${args.contactEmail}`);
         }
       } catch (error) {
         console.error(`[Notify] Slack webhook error:`, error);
@@ -1400,7 +1337,6 @@ export const sendTeamNotification = internalAction({
     } else if (args.notifyMethod === "discord") {
       const webhookUrl = store.notificationIntegrations?.discordWebhookUrl;
       if (!webhookUrl || !store.notificationIntegrations?.discordEnabled) {
-        console.log(`[Notify] Discord not configured for store ${args.storeId}`);
         return null;
       }
 
@@ -1446,8 +1382,6 @@ export const sendTeamNotification = internalAction({
 
         if (!response.ok) {
           console.error(`[Notify] Discord webhook failed: ${response.status}`);
-        } else {
-          console.log(`[Notify] Discord notification sent for ${args.contactEmail}`);
         }
       } catch (error) {
         console.error(`[Notify] Discord webhook error:`, error);
@@ -1464,7 +1398,6 @@ export const sendTeamNotification = internalAction({
         process.env.ADMIN_EMAIL;
 
       if (!ownerEmail) {
-        console.log(`[Notify] No admin email configured for store ${args.storeId}`);
         return null;
       }
 
@@ -1505,7 +1438,6 @@ export const sendTeamNotification = internalAction({
           `,
         });
 
-        console.log(`[Notify] Email notification sent to ${ownerEmail}`);
       } catch (error) {
         console.error(`[Notify] Email notification error:`, error);
       }

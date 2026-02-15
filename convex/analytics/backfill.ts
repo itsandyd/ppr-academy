@@ -257,7 +257,7 @@ export const backfillAll = internalMutation({
 
     // 1. Backfill signup events from users
     try {
-      const users = await ctx.db.query("users").collect();
+      const users = await ctx.db.query("users").take(10000);
       for (const user of users) {
         // Check if signup event already exists
         const existing = await ctx.db
@@ -286,7 +286,7 @@ export const backfillAll = internalMutation({
 
     // 2. Backfill creator_started events from stores
     try {
-      const stores = await ctx.db.query("stores").collect();
+      const stores = await ctx.db.query("stores").take(500);
       for (const store of stores) {
         // Check if creator_started event already exists
         const existing = await ctx.db
@@ -316,7 +316,7 @@ export const backfillAll = internalMutation({
 
     // 3. Backfill creator_published events from published courses/products
     try {
-      const courses = await ctx.db.query("courses").collect();
+      const courses = await ctx.db.query("courses").take(500);
       const publishedCourses = courses.filter((c: any) => c.isPublished);
 
       for (const course of publishedCourses) {
@@ -355,7 +355,7 @@ export const backfillAll = internalMutation({
       }
 
       // Also check digital products
-      const products = await ctx.db.query("digitalProducts").collect();
+      const products = await ctx.db.query("digitalProducts").take(500);
       const publishedProducts = products.filter((p: any) => p.isPublished);
 
       for (const product of publishedProducts) {
@@ -397,7 +397,7 @@ export const backfillAll = internalMutation({
 
     // 4. Backfill purchase events
     try {
-      const purchases = await ctx.db.query("purchases").collect();
+      const purchases = await ctx.db.query("purchases").take(5000);
       for (const purchase of purchases) {
         const purchaseData = purchase as any;
         if (!purchaseData.userId) continue;
@@ -448,7 +448,7 @@ export const backfillAll = internalMutation({
 
     // 5. Backfill enrollment events (from enrollments table)
     try {
-      const enrollments = await ctx.db.query("enrollments").collect();
+      const enrollments = await ctx.db.query("enrollments").take(10000);
       for (const enrollment of enrollments) {
         const enrollmentData = enrollment as any;
         if (!enrollmentData.userId) continue;
@@ -510,7 +510,7 @@ export const backfillAll = internalMutation({
 export const getEventCounts = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const events = await ctx.db.query("analyticsEvents").collect();
+    const events = await ctx.db.query("analyticsEvents").take(10000);
 
     const counts: Record<string, number> = {};
     const now = Date.now();
@@ -547,7 +547,7 @@ export const clearAllEvents = internalMutation({
       throw new Error("Must confirm deletion");
     }
 
-    const events = await ctx.db.query("analyticsEvents").collect();
+    const events = await ctx.db.query("analyticsEvents").take(10000);
     let deleted = 0;
 
     for (const event of events) {

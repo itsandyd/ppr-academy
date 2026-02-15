@@ -66,8 +66,6 @@ async function sendInstagramDM(options: {
     }
 
     const data = await response.json();
-    console.log("Instagram DM sent successfully");
-
     return {
       success: true,
       messageId: (data as any)?.message_id,
@@ -132,8 +130,6 @@ async function sendTwitterDM(options: {
     }
 
     const data = await response.json();
-    console.log("Twitter DM sent successfully");
-
     return {
       success: true,
       messageId: (data as any)?.data?.dm_event_id,
@@ -228,8 +224,6 @@ async function sendFacebookDM(options: {
     }
 
     const data = await response.json();
-    console.log("Facebook DM sent successfully");
-
     return {
       success: true,
       messageId: (data as any)?.message_id,

@@ -496,8 +496,6 @@ User: "Generate an outline for a course on Sound Design"
         }
       }
 
-      console.log(`📋 Planner result: intentType=${intentType}, isAction=${isActionRequest}, tools=${result.toolCalls?.length || 0}`);
-      
       return result;
     } catch (error) {
       console.error("Enhanced planner error:", error);

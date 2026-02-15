@@ -102,7 +102,7 @@ export const listCourseCycleConfigs = query({
     const configs = await ctx.db
       .query("courseCycleConfigs")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Enrich with course counts and email generation status
     return Promise.all(
@@ -112,7 +112,7 @@ export const listCourseCycleConfigs = query({
           .withIndex("by_courseCycleConfigId", (q) =>
             q.eq("courseCycleConfigId", config._id)
           )
-          .collect();
+          .take(500);
 
         return {
           ...config,
@@ -181,7 +181,7 @@ export const deleteCourseCycleConfig = mutation({
       .withIndex("by_courseCycleConfigId", (q) =>
         q.eq("courseCycleConfigId", args.configId)
       )
-      .collect();
+      .take(500);
 
     for (const email of emails) {
       await ctx.db.delete(email._id);
@@ -266,7 +266,7 @@ export const getCycleEmail = internalQuery({
           .eq("emailType", args.emailType)
           .eq("cycleNumber", args.cycleNumber)
       )
-      .collect();
+      .take(500);
 
     // Find the email with matching config and index
     return emails.find(
@@ -291,7 +291,7 @@ export const listCycleEmails = query({
       .withIndex("by_courseCycleConfigId", (q) =>
         q.eq("courseCycleConfigId", args.courseCycleConfigId)
       )
-      .collect();
+      .take(500);
 
     // Group by course
     const courseGroups: Record<string, typeof emails> = {};
@@ -409,7 +409,7 @@ export const deleteCourseEmails = mutation({
         q.eq("courseCycleConfigId", args.courseCycleConfigId)
       )
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
 
     for (const email of emails) {
       await ctx.db.delete(email._id);
@@ -510,7 +510,7 @@ export const getAvailableCoursesForCycle = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(500);
 
     // Get module counts for each course
     return Promise.all(
@@ -518,7 +518,7 @@ export const getAvailableCoursesForCycle = query({
         const modules = await ctx.db
           .query("courseModules")
           .filter((q) => q.eq(q.field("courseId"), c._id))
-          .collect();
+          .take(200);
 
         return {
           _id: c._id,
@@ -571,7 +571,7 @@ export const getCourseContentForAI = internalQuery({
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(200);
 
     // Sort by position
     modules.sort((a, b) => a.position - b.position);
@@ -582,7 +582,7 @@ export const getCourseContentForAI = internalQuery({
         const lessons = await ctx.db
           .query("courseLessons")
           .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
-          .collect();
+          .take(200);
 
         lessons.sort((a, b) => a.position - b.position);
 
@@ -591,7 +591,7 @@ export const getCourseContentForAI = internalQuery({
             const chapters = await ctx.db
               .query("courseChapters")
               .filter((q) => q.eq(q.field("lessonId"), lesson._id))
-              .collect();
+              .take(200);
 
             chapters.sort((a, b) => a.position - b.position);
 
@@ -646,7 +646,7 @@ export const deleteEmailsForCycle = internalMutation({
           q.eq(q.field("cycleNumber"), args.cycleNumber)
         )
       )
-      .collect();
+      .take(500);
 
     for (const email of emails) {
       await ctx.db.delete(email._id);

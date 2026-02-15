@@ -32,9 +32,6 @@ export const importPluginsFromJSON = action({
     // Handle nested data structure (data.data.pluginTypes) or flat structure (data.pluginTypes)
     const data = parsed.data || parsed;
     const errors: string[] = [];
-    
-    console.log("Starting plugin data import...");
-    
     // Track mapping from old UUIDs to new Convex IDs
     const typeIdMap = new Map<string, Id<"pluginTypes">>();
     const categoryIdMap = new Map<string, Id<"pluginCategories">>();
@@ -44,7 +41,6 @@ export const importPluginsFromJSON = action({
     
     try {
       // 1. Import Plugin Types
-      console.log(`Importing ${data.pluginTypes?.length || 0} plugin types...`);
       for (const type of data.pluginTypes || []) {
         try {
           const newId = await ctx.runMutation(api.plugins.createPluginType, {
@@ -58,7 +54,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 2. Import Plugin Categories (general categories)
-      console.log(`Importing ${data.pluginCategories?.length || 0} plugin categories...`);
       for (const category of data.pluginCategories || []) {
         try {
           const newId = await ctx.runMutation(api.plugins.createPluginCategory, {
@@ -72,7 +67,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 3. Import Effect Categories
-      console.log(`Importing ${data.effectCategories?.length || 0} effect categories...`);
       for (const category of data.effectCategories || []) {
         try {
           const pluginTypeId = category.pluginTypeId ? typeIdMap.get(category.pluginTypeId) : undefined;
@@ -88,7 +82,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 4. Import Instrument Categories
-      console.log(`Importing ${data.instrumentCategories?.length || 0} instrument categories...`);
       for (const category of data.instrumentCategories || []) {
         try {
           const pluginTypeId = category.pluginTypeId ? typeIdMap.get(category.pluginTypeId) : undefined;
@@ -104,7 +97,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 5. Import Studio Tool Categories
-      console.log(`Importing ${data.studioToolCategories?.length || 0} studio tool categories...`);
       for (const category of data.studioToolCategories || []) {
         try {
           const pluginTypeId = category.pluginTypeId ? typeIdMap.get(category.pluginTypeId) : undefined;
@@ -120,7 +112,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 6. Import Plugins with proper category mapping
-      console.log(`Importing ${data.plugins?.length || 0} plugins...`);
       let successCount = 0;
       let errorCount = 0;
       
@@ -171,7 +162,6 @@ export const importPluginsFromJSON = action({
         }
       }
       
-      console.log("Import complete!");
       return {
         success: true,
         stats: {
@@ -285,8 +275,6 @@ export const clearAllPlugins: any = action({
       throw new Error("Unauthorized: Admin access required");
     }
 
-    console.log("Clearing all plugin data...");
-
     // Delete in reverse order of dependencies
     // @ts-ignore - Type instantiation is excessively deep
     const plugins = await ctx.runMutation(api.plugins.deleteAllPlugins, {
@@ -312,8 +300,6 @@ export const clearAllPlugins: any = action({
     const pluginTypes = await ctx.runMutation(api.plugins.deleteAllPluginTypes, {
       clerkId: args.clerkId,
     });
-
-    console.log("All plugin data cleared!");
 
     return {
       success: true,
@@ -354,9 +340,6 @@ export const updatePluginCategories: any = action({
     const parsed = JSON.parse(args.jsonData);
     const data = parsed.data || parsed;
     const errors: string[] = [];
-    
-    console.log("Starting category update...");
-    
     // Track mapping from old UUIDs to new Convex IDs
     const effectCategoryIdMap = new Map<string, Id<"pluginEffectCategories">>();
     const instrumentCategoryIdMap = new Map<string, Id<"pluginInstrumentCategories">>();
@@ -364,7 +347,6 @@ export const updatePluginCategories: any = action({
     
     try {
       // 1. Import Effect Categories (if not already imported)
-      console.log(`Importing ${data.effectCategories?.length || 0} effect categories...`);
       for (const category of data.effectCategories || []) {
         try {
           // Check if category already exists by name
@@ -387,7 +369,6 @@ export const updatePluginCategories: any = action({
       }
       
       // 2. Import Instrument Categories
-      console.log(`Importing ${data.instrumentCategories?.length || 0} instrument categories...`);
       for (const category of data.instrumentCategories || []) {
         try {
           const existing = await ctx.runQuery(api.plugins.getInstrumentCategories, {});
@@ -409,7 +390,6 @@ export const updatePluginCategories: any = action({
       }
       
       // 3. Import Studio Tool Categories
-      console.log(`Importing ${data.studioToolCategories?.length || 0} studio tool categories...`);
       for (const category of data.studioToolCategories || []) {
         try {
           const existing = await ctx.runQuery(api.plugins.getStudioToolCategories, {});
@@ -431,7 +411,6 @@ export const updatePluginCategories: any = action({
       }
       
       // 4. Update existing plugins with specific category IDs
-      console.log(`Updating ${data.plugins?.length || 0} plugins...`);
       let updatedCount = 0;
       let skippedCount = 0;
       let errorCount = 0;
@@ -476,17 +455,12 @@ export const updatePluginCategories: any = action({
           
           updatedCount++;
           
-          // Log progress every 50 plugins
-          if (updatedCount % 50 === 0) {
-            console.log(`Updated ${updatedCount} plugins...`);
-          }
         } catch (error: any) {
           errors.push(`Failed to update plugin ${plugin.name}: ${error.message}`);
           errorCount++;
         }
       }
       
-      console.log("Update complete!");
       return {
         success: true,
         stats: {

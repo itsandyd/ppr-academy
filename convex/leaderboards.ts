@@ -33,17 +33,17 @@ export const getTopCreators = query({
     }
 
     // Get all stores
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(10000);
 
     // Get all purchases (filtered by period if needed)
-    const allPurchases = await ctx.db.query("purchases").collect();
+    const allPurchases = await ctx.db.query("purchases").take(10000);
     const filteredPurchases = period === "all-time"
       ? allPurchases
       : allPurchases.filter(p => p._creationTime >= periodStart);
 
     // Get all products and courses to map to stores
-    const products = await ctx.db.query("digitalProducts").collect();
-    const courses = await ctx.db.query("courses").collect();
+    const products = await ctx.db.query("digitalProducts").take(10000);
+    const courses = await ctx.db.query("courses").take(10000);
 
     // Aggregate revenue by store
     const storeRevenue: Record<string, { revenue: number; students: Set<string>; productCount: number }> = {};
@@ -81,7 +81,7 @@ export const getTopCreators = query({
     }
 
     // Get user details and build leaderboard
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
     const leaderboard = Object.entries(storeRevenue)
       .filter(([_, data]) => data.revenue > 0 || data.productCount > 0)
       .map(([userId, data]) => {
@@ -146,7 +146,7 @@ export const getTopStudents = query({
           .query("enrollments")
           .withIndex("by_userId", (q) => q.eq("userId", xp.userId))
           .filter((q) => q.gte(q.field("progress"), 100))
-          .collect();
+          .take(500);
 
         return {
           userId: xp.userId,
@@ -190,7 +190,7 @@ export const getMostActive = query({
       .take(limit * 2); // Get extra in case some users don't exist
 
     // Get user details for each streak
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
 
     const leaderboard = streaks
       .filter(streak => streak.currentStreak > 0)
@@ -234,7 +234,7 @@ export const getUserPosition = query({
   handler: async (ctx, args) => {
     if (args.leaderboardType === "students") {
       // Get all XP records sorted by totalXP
-      const allXP = await ctx.db.query("userXP").collect();
+      const allXP = await ctx.db.query("userXP").take(10000);
       const sorted = allXP.sort((a, b) => b.totalXP - a.totalXP);
       const userIndex = sorted.findIndex(xp => xp.userId === args.userId);
 
@@ -249,7 +249,7 @@ export const getUserPosition = query({
 
     if (args.leaderboardType === "active") {
       // Get all streaks sorted by currentStreak
-      const allStreaks = await ctx.db.query("learningStreaks").collect();
+      const allStreaks = await ctx.db.query("learningStreaks").take(10000);
       const sorted = allStreaks.sort((a, b) => b.currentStreak - a.currentStreak);
       const userIndex = sorted.findIndex(s => s.userId === args.userId);
 
@@ -263,7 +263,7 @@ export const getUserPosition = query({
     }
 
     // For creators, calculate based on store revenue
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(10000);
     const userStore = stores.find(s => s.userId === args.userId);
 
     if (!userStore) {
@@ -271,9 +271,9 @@ export const getUserPosition = query({
     }
 
     // Get all purchases and calculate revenue per store
-    const purchases = await ctx.db.query("purchases").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const courses = await ctx.db.query("courses").collect();
+    const purchases = await ctx.db.query("purchases").take(10000);
+    const products = await ctx.db.query("digitalProducts").take(10000);
+    const courses = await ctx.db.query("courses").take(10000);
 
     const storeRevenues = stores.map(store => {
       const storeProducts = products.filter(p => p.storeId === store._id);

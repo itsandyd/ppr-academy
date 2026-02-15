@@ -55,7 +55,6 @@ export async function updatePostStatusHelper(
 ): Promise<void> {
   const post = await ctx.db.get(args.postId as Id<"scheduledPosts">);
   if (!post) {
-    console.log("📊 Post not found:", args.postId);
     return;
   }
 
@@ -67,5 +66,4 @@ export async function updatePostStatusHelper(
     ...(args.status === "published" && { publishedAt: Date.now() }),
   });
 
-  console.log("📊 Post status updated:", args.postId, args.status);
 }

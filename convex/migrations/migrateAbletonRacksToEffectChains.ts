@@ -19,8 +19,6 @@ export const migrateAbletonRacksToEffectChains = internalMutation({
     errors: v.number(),
   }),
   handler: async (ctx, args) => {
-    console.log("🔄 Starting migration: Ableton Racks → Effect Chains");
-    
     let total = 0;
     let migrated = 0;
     let errors = 0;
@@ -37,7 +35,6 @@ export const migrateAbletonRacksToEffectChains = internalMutation({
     );
 
     total = productsToMigrate.length;
-    console.log(`Found ${total} Ableton rack products to migrate`);
 
     for (const product of productsToMigrate) {
       try {
@@ -62,16 +59,12 @@ export const migrateAbletonRacksToEffectChains = internalMutation({
         }
 
         await ctx.db.patch(product._id, updates);
-        
         migrated++;
-        console.log(`✅ Migrated: ${product.title} (${product._id})`);
       } catch (error) {
         errors++;
         console.error(`❌ Failed to migrate ${product.title}:`, error);
       }
     }
-
-    console.log(`✅ Migration complete: ${migrated}/${total} migrated, ${errors} errors`);
 
     return {
       total,
@@ -93,8 +86,6 @@ export const rollbackEffectChainMigration = internalMutation({
     errors: v.number(),
   }),
   handler: async (ctx, args) => {
-    console.log("🔄 Rolling back: Effect Chains → Ableton Racks");
-    
     let total = 0;
     let reverted = 0;
     let errors = 0;
@@ -130,8 +121,6 @@ export const rollbackEffectChainMigration = internalMutation({
         console.error(`❌ Failed to revert ${product.title}:`, error);
       }
     }
-
-    console.log(`✅ Rollback complete: ${reverted}/${total} reverted`);
 
     return {
       total,

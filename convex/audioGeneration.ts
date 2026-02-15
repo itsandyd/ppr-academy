@@ -518,8 +518,6 @@ export const saveSampleToMarketplace = action({
         licenseType: args.licenseType,
       });
       
-      console.log(`✅ Sample published: ${args.title} (${sampleId})`);
-      
       // Get the created sample
       const sample: any = await ctx.runQuery(internal.audioGeneration.getSampleById, {
         sampleId,
@@ -564,8 +562,6 @@ export const generateAISample = action({
   returns: v.any(),
   handler: async (ctx, args): Promise<any> => {
     try {
-      console.log("🎵 Generating AI sample:", args.title);
-      
       // Generate sound effect using ElevenLabs via Node.js action
       const elevenlabsResult: { success: boolean; filePath?: string; error?: string } = 
         await ctx.runAction(internal.sampleGeneration.generateSoundEffectFromText, {
@@ -625,8 +621,6 @@ export const generateAISample = action({
       await fs.unlink(elevenlabsResult.filePath).catch((err: Error) => 
         console.warn("Failed to delete temp file:", err)
       );
-      
-      console.log("✅ AI sample created:", sampleId);
       
       // Get the created sample
       const sample: any = await ctx.runQuery(internal.audioGeneration.getSampleById, {

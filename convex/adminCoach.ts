@@ -58,11 +58,16 @@ export const getActiveCoachProfilesByUserId = query({
  * Admin Coach Profile Management
  */
 
-// Helper to verify admin status
-async function verifyAdmin(ctx: any, clerkId: string) {
+// Helper to verify admin status via auth token
+async function verifyAdmin(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
   const user = await ctx.db
     .query("users")
-    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", clerkId))
+    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
     .unique();
 
   if (!user || !user.admin) {
@@ -75,9 +80,7 @@ async function verifyAdmin(ctx: any, clerkId: string) {
  * Get all coach profiles for admin review
  */
 export const getAllCoachProfiles = query({
-  args: {
-    clerkId: v.string(),
-  },
+  args: {},
   returns: v.array(
     v.object({
       _id: v.id("coachProfiles"),
@@ -106,8 +109,8 @@ export const getAllCoachProfiles = query({
       userEmail: v.optional(v.string()),
     })
   ),
-  handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+  handler: async (ctx) => {
+    await verifyAdmin(ctx);
 
     const profiles = await ctx.db.query("coachProfiles").collect();
 
@@ -136,7 +139,6 @@ export const getAllCoachProfiles = query({
  */
 export const approveCoachProfile = mutation({
   args: {
-    clerkId: v.string(),
     profileId: v.id("coachProfiles"),
   },
   returns: v.object({
@@ -144,7 +146,7 @@ export const approveCoachProfile = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx);
 
     const profile = await ctx.db.get(args.profileId);
     if (!profile) {
@@ -159,13 +161,8 @@ export const approveCoachProfile = mutation({
     });
 
     // Log admin activity
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
-
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "coach_profile_approved",
@@ -176,8 +173,6 @@ export const approveCoachProfile = mutation({
       details: `Approved coach profile for ${profile.title}`,
       timestamp: Date.now(),
     });
-
-    console.log(`✅ Coach profile ${args.profileId} approved`);
 
     return {
       success: true,
@@ -191,7 +186,6 @@ export const approveCoachProfile = mutation({
  */
 export const rejectCoachProfile = mutation({
   args: {
-    clerkId: v.string(),
     profileId: v.id("coachProfiles"),
   },
   returns: v.object({
@@ -199,7 +193,7 @@ export const rejectCoachProfile = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx);
 
     const profile = await ctx.db.get(args.profileId);
     if (!profile) {
@@ -214,13 +208,8 @@ export const rejectCoachProfile = mutation({
     });
 
     // Log admin activity
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
-
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "coach_profile_rejected",
@@ -231,8 +220,6 @@ export const rejectCoachProfile = mutation({
       details: `Rejected/deactivated coach profile for ${profile.title}`,
       timestamp: Date.now(),
     });
-
-    console.log(`❌ Coach profile ${args.profileId} rejected/deactivated`);
 
     return {
       success: true,
@@ -246,7 +233,6 @@ export const rejectCoachProfile = mutation({
  */
 export const deleteCoachProfile = mutation({
   args: {
-    clerkId: v.string(),
     profileId: v.id("coachProfiles"),
   },
   returns: v.object({
@@ -254,7 +240,7 @@ export const deleteCoachProfile = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx);
 
     const profile = await ctx.db.get(args.profileId);
     if (!profile) {
@@ -268,13 +254,8 @@ export const deleteCoachProfile = mutation({
     await ctx.db.delete(args.profileId);
 
     // Log admin activity
-    const admin = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
-
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "coach_profile_deleted",
@@ -285,8 +266,6 @@ export const deleteCoachProfile = mutation({
       details: `Permanently deleted coach profile "${profileTitle}"`,
       timestamp: Date.now(),
     });
-
-    console.log(`🗑️ Coach profile ${args.profileId} deleted`);
 
     return {
       success: true,
@@ -299,9 +278,7 @@ export const deleteCoachProfile = mutation({
  * Get coach profiles for debugging (includes all details)
  */
 export const getCoachProfilesDebug = query({
-  args: {
-    clerkId: v.string(),
-  },
+  args: {},
   returns: v.array(
     v.object({
       _id: v.id("coachProfiles"),
@@ -315,8 +292,8 @@ export const getCoachProfilesDebug = query({
       _creationTime: v.number(),
     })
   ),
-  handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+  handler: async (ctx) => {
+    await verifyAdmin(ctx);
 
     const profiles = await ctx.db.query("coachProfiles").collect();
 
@@ -350,7 +327,6 @@ export const getCoachProfilesDebug = query({
  */
 export const cleanupOrphanedProfiles = mutation({
   args: {
-    clerkId: v.string(),
     dryRun: v.optional(v.boolean()),
   },
   returns: v.object({
@@ -360,7 +336,7 @@ export const cleanupOrphanedProfiles = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+    await verifyAdmin(ctx);
 
     const profiles = await ctx.db.query("coachProfiles").collect();
     const orphanedIds: string[] = [];
@@ -379,9 +355,6 @@ export const cleanupOrphanedProfiles = mutation({
         }
       }
     }
-
-    const action = args.dryRun ? "Found" : "Deleted";
-    console.log(`🧹 ${action} ${orphanedIds.length} orphaned coach profiles`);
 
     return {
       success: true,

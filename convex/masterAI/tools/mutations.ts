@@ -90,8 +90,8 @@ export const addModuleInternal = internalMutation({
     const existingModules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
-    
+      .take(500);
+
     const position = args.position ?? existingModules.length;
 
     return await ctx.db.insert("courseModules", {
@@ -115,8 +115,8 @@ export const addLessonInternal = internalMutation({
     const existingLessons = await ctx.db
       .query("courseLessons")
       .filter((q) => q.eq(q.field("moduleId"), args.moduleId))
-      .collect();
-    
+      .take(500);
+
     const position = args.position ?? existingLessons.length;
 
     return await ctx.db.insert("courseLessons", {
@@ -141,8 +141,8 @@ export const addChapterInternal = internalMutation({
     const existingChapters = await ctx.db
       .query("courseChapters")
       .filter((q) => q.eq(q.field("lessonId"), args.lessonId))
-      .collect();
-    
+      .take(500);
+
     const position = args.position ?? existingChapters.length;
 
     return await ctx.db.insert("courseChapters", {
@@ -195,7 +195,7 @@ export const duplicateCourseInternal = internalMutation({
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
 
     for (const module of modules) {
       const newModuleId = await ctx.db.insert("courseModules", {
@@ -209,7 +209,7 @@ export const duplicateCourseInternal = internalMutation({
       const lessons = await ctx.db
         .query("courseLessons")
         .filter((q) => q.eq(q.field("moduleId"), module._id))
-        .collect();
+        .take(500);
 
       for (const lesson of lessons) {
         const newLessonId = await ctx.db.insert("courseLessons", {
@@ -223,7 +223,7 @@ export const duplicateCourseInternal = internalMutation({
         const chapters = await ctx.db
           .query("courseChapters")
           .filter((q) => q.eq(q.field("lessonId"), lesson._id))
-          .collect();
+          .take(500);
 
         for (const chapter of chapters) {
           await ctx.db.insert("courseChapters", {
@@ -258,7 +258,7 @@ export const deleteCourseInternal = internalMutation({
     const chapters = await ctx.db
       .query("courseChapters")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
     for (const chapter of chapters) {
       await ctx.db.delete(chapter._id);
     }
@@ -267,13 +267,13 @@ export const deleteCourseInternal = internalMutation({
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
 
     for (const module of modules) {
       const lessons = await ctx.db
         .query("courseLessons")
         .filter((q) => q.eq(q.field("moduleId"), module._id))
-        .collect();
+        .take(500);
       for (const lesson of lessons) {
         await ctx.db.delete(lesson._id);
       }
@@ -358,14 +358,14 @@ export const getCourseDetailsInternal = internalQuery({
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
 
     const modulesWithCount = await Promise.all(
       modules.map(async (m) => {
         const lessons = await ctx.db
           .query("courseLessons")
           .filter((q) => q.eq(q.field("moduleId"), m._id))
-          .collect();
+          .take(500);
         return {
           _id: m._id,
           title: m.title,
@@ -439,26 +439,26 @@ export const getCourseStatsInternal = internalQuery({
     const enrollments = await ctx.db
       .query("enrollments")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(5000);
 
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
 
     let lessonCount = 0;
     for (const module of modules) {
       const lessons = await ctx.db
         .query("courseLessons")
         .filter((q) => q.eq(q.field("moduleId"), module._id))
-        .collect();
+        .take(500);
       lessonCount += lessons.length;
     }
 
     const chapters = await ctx.db
       .query("courseChapters")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(500);
 
     return {
       enrollmentCount: enrollments.length,
@@ -485,7 +485,7 @@ export const searchUserCourses = internalQuery({
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("userId"), args.userId))
-      .collect();
+      .take(500);
 
     const queryLower = args.query.toLowerCase();
     const filtered = courses.filter(

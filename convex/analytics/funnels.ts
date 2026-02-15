@@ -40,8 +40,8 @@ export const getLearnerFunnel = query({
           q.lte(q.field("timestamp"), endTime)
         )
       )
-      .collect();
-    
+      .take(5000);
+
     const visits = storeId
       ? allVisits.filter((e) => e.storeId === storeId && e.eventType === "page_view")
       : allVisits.filter((e) => e.eventType === "page_view");
@@ -61,8 +61,8 @@ export const getLearnerFunnel = query({
           q.eq(q.field("eventType"), "signup")
         )
       )
-      .collect();
-    
+      .take(5000);
+
     const signups = storeId
       ? allSignups.filter((e) => e.storeId === storeId)
       : allSignups;
@@ -79,8 +79,8 @@ export const getLearnerFunnel = query({
           q.eq(q.field("eventType"), "enrollment")
         )
       )
-      .collect();
-    
+      .take(5000);
+
     let enrolledUsers: Set<string>;
     
     if (storeId) {
@@ -94,7 +94,7 @@ export const getLearnerFunnel = query({
         const storeCourses = await ctx.db
           .query("courses")
           .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-          .collect();
+          .take(500);
 
         const storeCourseIds = new Set(storeCourses.map((c) => c._id));
 
@@ -128,8 +128,8 @@ export const getLearnerFunnel = query({
           q.eq(q.field("eventType"), "page_view")
         )
       )
-      .collect();
-    
+      .take(5000);
+
     const returnedUsers = new Set(
       week2Events
         .filter((v) => signupUserIds.has(v.userId))
@@ -264,8 +264,8 @@ export const getCreatorFunnel = query({
           q.lte(q.field("timestamp"), endTime)
         )
       )
-      .collect();
-    
+      .take(5000);
+
     // Step 1: Visits
     const visits = events.filter((e) => e.eventType === "page_view");
     const uniqueVisitors = new Set(
@@ -424,13 +424,13 @@ export const getStuckUsers = query({
           .query("analyticsEvents")
           .withIndex("by_eventType", (q) => q.eq("eventType", "creator_started"))
           .filter((q) => q.lt(q.field("timestamp"), cutoffTime))
-          .collect();
-        
+          .take(5000);
+
         const published = await ctx.db
           .query("analyticsEvents")
           .withIndex("by_eventType", (q) => q.eq("eventType", "creator_published"))
-          .collect();
-        
+          .take(5000);
+
         const publishedUserIds = new Set(published.map((e) => e.userId));
         
         return starts

@@ -15,10 +15,19 @@ export async function requireStoreOwner(
     throw new Error("Not authenticated");
   }
 
-  const store = await ctx.db
+  // Try lookup by document _id first
+  let store = await ctx.db
     .query("stores")
     .filter((q) => q.eq(q.field("_id"), storeId))
     .first();
+
+  // Fall back to lookup by userId (Clerk ID) since many callers pass the Clerk user ID
+  if (!store) {
+    store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", storeId))
+      .first();
+  }
 
   if (!store) {
     throw new Error("Store not found");

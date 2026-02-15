@@ -224,8 +224,6 @@ export const searchWeb = internalAction({
         publishedDate: r.published_date,
       }));
 
-      console.log(`🔍 Tavily search: "${args.query}" - ${results.length} results in ${Date.now() - startTime}ms`);
-
       return {
         success: true,
         results,
@@ -304,7 +302,6 @@ export const researchTopic = internalAction({
             maxQueriesPerFacet: 2,
           }
         );
-        console.log(`🔍 Smart query extraction: ${facetQueries.map(f => f.queries.join(', ')).join(' | ')}`);
       } catch (error) {
         console.warn("Smart extraction failed, using basic queries:", error);
         // Fallback to basic extraction
@@ -372,8 +369,6 @@ export const researchTopic = internalAction({
       }
     }
 
-    console.log(`🌐 Web research complete: ${totalResults} results across ${args.facets.length} facets in ${Date.now() - startTime}ms`);
-
     return {
       research,
       totalResults,
@@ -430,8 +425,6 @@ export const saveResearchToEmbeddings = internalAction({
         errors.push(`Failed to save "${item.title}": ${error}`);
       }
     }
-
-    console.log(`💾 Saved ${embeddingsCreated} web research results to embeddings`);
 
     return {
       success: errors.length === 0,

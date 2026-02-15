@@ -39,11 +39,8 @@ export const processWebhook = internalAction({
 
       // Verify this is a page subscription
       if (payload.object !== "page") {
-        console.log("⚠️ Not a page webhook:", payload.object);
         return null;
       }
-
-      console.log("📘 Facebook Messenger webhook received");
 
       // Process each entry
       for (const entry of payload.entry || []) {
@@ -58,11 +55,8 @@ export const processWebhook = internalAction({
 
             // Don't respond to echo messages (messages sent by the page)
             if (event.message.is_echo) {
-              console.log("⏭️ Ignoring echo message");
               continue;
             }
-
-            console.log("💬 Facebook message received:", messageText.substring(0, 50) + "...");
 
             // Find automation by keyword
             const matcher = await ctx.runQuery(
@@ -71,7 +65,6 @@ export const processWebhook = internalAction({
             );
 
             if (!matcher || !matcher.trigger) {
-              console.log("❌ No automation found for keyword:", messageText.substring(0, 30));
               continue;
             }
 
@@ -105,7 +98,6 @@ export const processWebhook = internalAction({
 
           // Handle postbacks (button clicks)
           if (event.postback) {
-            console.log("📢 Facebook postback received:", event.postback.payload);
             // Could handle button click automations here
           }
         }
@@ -135,7 +127,6 @@ async function executeFacebookAutomation(
   const { automation, senderId, pageId, messageText, pageAccessToken } = options;
 
   if (!automation.listener) {
-    console.log("❌ No listener configured");
     return;
   }
 
@@ -143,8 +134,6 @@ async function executeFacebookAutomation(
 
   // MESSAGE type - send static response
   if (listener.listener === "MESSAGE") {
-    console.log("📤 Processing MESSAGE automation for Facebook");
-
     const dmMessage = listener.prompt || "Thanks for reaching out!";
 
     // Send the message
@@ -159,10 +148,8 @@ async function executeFacebookAutomation(
       }
     );
 
-    if (result.success) {
-      console.log("✅ Facebook message sent successfully");
-    } else {
-      console.error("❌ Facebook message failed:", result.error);
+    if (!result.success) {
+      console.error("Facebook message failed:", result.error);
     }
 
     // Track the response
@@ -174,8 +161,6 @@ async function executeFacebookAutomation(
 
   // SMART_AI type - generate AI response
   if (listener.listener === "SMART_AI" || listener.listener === "SMARTAI") {
-    console.log("🤖 Processing Smart AI automation for Facebook");
-
     const systemPrompt = buildFacebookAIPrompt(listener.prompt);
 
     // Generate AI response
@@ -198,10 +183,8 @@ async function executeFacebookAutomation(
       }
     );
 
-    if (result.success) {
-      console.log("✅ Facebook Smart AI response sent");
-    } else {
-      console.error("❌ Facebook message failed:", result.error);
+    if (!result.success) {
+      console.error("Facebook message failed:", result.error);
     }
 
     // Track the response
@@ -279,11 +262,9 @@ export const verifyWebhook = internalAction({
     const verifyToken = process.env.FACEBOOK_VERIFY_TOKEN || "ppr_academy_webhook_token";
 
     if (args.mode === "subscribe" && args.token === verifyToken) {
-      console.log("✅ Facebook webhook verified");
       return args.challenge;
     }
 
-    console.log("❌ Facebook webhook verification failed");
     return null;
   },
 });

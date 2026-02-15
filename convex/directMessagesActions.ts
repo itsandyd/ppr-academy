@@ -44,13 +44,11 @@ export const sendNewMessageEmail = internalAction({
     });
 
     if (!recipient?.email) {
-      console.log("Recipient has no email, skipping notification");
       return { success: true };
     }
 
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 
@@ -102,7 +100,6 @@ export const sendNewMessageEmail = internalAction({
 </html>`,
       });
 
-      console.log(`DM notification email sent to ${recipient.email}`);
       return { success: true };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

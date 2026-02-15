@@ -35,7 +35,7 @@ export const getAllCourses = internalQuery({
     })
   ),
   handler: async (ctx) => {
-    return await ctx.db.query("courses").collect();
+    return await ctx.db.query("courses").take(500);
   },
 });
 
@@ -83,7 +83,7 @@ export const getCourseChapters = internalQuery({
     return await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -106,7 +106,7 @@ export const checkExistingEmbeddings = internalQuery({
       .query("embeddings")
       .withIndex("by_sourceId", (q) => q.eq("sourceId", args.sourceId))
       .filter((q) => q.eq(q.field("sourceType"), args.sourceType))
-      .collect();
+      .take(5000);
 
     return existing.length;
   },
@@ -119,7 +119,7 @@ export const getModuleLessons = internalQuery({
     const lessons = await ctx.db
       .query("courseLessons")
       .withIndex("by_moduleId", (q) => q.eq("moduleId", args.moduleId))
-      .collect();
+      .take(500);
     return lessons.map((l) => ({
       _id: l._id,
       title: l.title,
@@ -137,7 +137,7 @@ export const getCourseModules = internalQuery({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(500);
     return modules.map((m) => ({
       _id: m._id,
       title: m.title,
@@ -152,7 +152,7 @@ export const getCourseModules = internalQuery({
 export const getAllDigitalProducts = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const products = await ctx.db.query("digitalProducts").collect();
+    const products = await ctx.db.query("digitalProducts").take(500);
     // Return only the fields we need for embedding
     return products.map((p) => ({
       _id: p._id,
@@ -173,7 +173,7 @@ export const getAllDigitalProducts = internalQuery({
 export const getAllNotes = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const notes = await ctx.db.query("notes").collect();
+    const notes = await ctx.db.query("notes").take(500);
     // Return only the fields we need for embedding
     return notes.map((n) => ({
       _id: n._id,
@@ -208,7 +208,7 @@ export const deleteEmbeddingsBySource = internalMutation({
       .query("embeddings")
       .withIndex("by_sourceId", (q) => q.eq("sourceId", args.sourceId))
       .filter((q) => q.eq(q.field("sourceType"), args.sourceType))
-      .collect();
+      .take(5000);
 
     for (const embedding of embeddings) {
       await ctx.db.delete(embedding._id);

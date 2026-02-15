@@ -39,7 +39,6 @@ export const migrateToNewEmbeddingModel = action({
 
     try {
       // Step 1: Delete ALL existing embeddings in batches
-      console.log("🗑️ Deleting all existing embeddings in batches...");
       let hasMore = true;
       let batchCount = 0;
 
@@ -54,20 +53,13 @@ export const migrateToNewEmbeddingModel = action({
         hasMore = batchResult.hasMore;
         batchCount++;
 
-        console.log(
-          `   Batch ${batchCount}: Deleted ${batchResult.deleted} embeddings (total: ${results.deleted})`
-        );
-
         // Small delay between batches to prevent overwhelming the system
         if (hasMore) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
 
-      console.log(`   ✅ Total deleted: ${results.deleted} embeddings`);
-
       // Step 2: Regenerate all embeddings with the new model
-      console.log("🚀 Regenerating embeddings with text-embedding-3-small...");
       const regenerateResult = await ctx.runAction(
         // @ts-ignore Convex type instantiation too deep
         api.embeddingActions.generateAllCourseEmbeddings,
@@ -80,10 +72,6 @@ export const migrateToNewEmbeddingModel = action({
       results.processed = regenerateResult.processed;
       results.errors = regenerateResult.errors;
       results.success = regenerateResult.success;
-
-      console.log(
-        `🎉 Migration complete! Deleted: ${results.deleted}, Regenerated: ${results.processed}`
-      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Migration failed: ${error}`);
@@ -141,7 +129,6 @@ export const generateCourseContentEmbeddings = action({
 
     try {
       const courses = await ctx.runQuery(internal.embeddings.getAllCourses, {});
-      console.log(`📚 Starting course content embedding for ${courses.length} courses`);
 
       for (const course of courses) {
         try {
@@ -179,7 +166,6 @@ export const generateCourseContentEmbeddings = action({
             });
 
             results.processed++;
-            console.log(`✅ Course: ${course.title}`);
           } else {
             results.skipped++;
           }
@@ -225,7 +211,6 @@ export const generateCourseContentEmbeddings = action({
                 });
 
                 results.processed++;
-                console.log(`✅ Chapter: ${chapter.title}`);
               } else {
                 results.skipped++;
               }
@@ -283,7 +268,6 @@ export const generateCourseContentEmbeddings = action({
                   });
 
                   results.processed++;
-                  console.log(`✅ Lesson: ${lesson.title}`);
                 } else {
                   results.skipped++;
                 }
@@ -301,9 +285,6 @@ export const generateCourseContentEmbeddings = action({
         }
       }
 
-      console.log(
-        `📚 Course content complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
-      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -344,9 +325,6 @@ export const generateProductEmbeddings = action({
 
       // Filter out plugins - those go in the plugins embedding action
       const products = allProducts.filter((p: any) => !PLUGIN_TYPES.includes(p.productType || ""));
-      console.log(
-        `🎹 Starting product embedding for ${products.length} products (excluding ${allProducts.length - products.length} plugins)`
-      );
 
       for (const product of products) {
         try {
@@ -388,7 +366,6 @@ Price: $${product.price}`;
             });
 
             results.processed++;
-            console.log(`✅ Product: ${product.title} (${productType})`);
           } else {
             results.skipped++;
           }
@@ -399,9 +376,6 @@ Price: $${product.price}`;
         }
       }
 
-      console.log(
-        `🎹 Product embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
-      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -442,7 +416,6 @@ export const generatePluginEmbeddings = action({
 
       // Filter for plugins only
       const plugins = allProducts.filter((p: any) => PLUGIN_TYPES.includes(p.productType || ""));
-      console.log(`⚡ Starting plugin embedding for ${plugins.length} plugins/effect chains`);
 
       for (const plugin of plugins) {
         try {
@@ -490,7 +463,6 @@ Price: $${plugin.price}`;
             });
 
             results.processed++;
-            console.log(`✅ Plugin: ${plugin.title} (${typeName})`);
           } else {
             results.skipped++;
           }
@@ -501,9 +473,6 @@ Price: $${plugin.price}`;
         }
       }
 
-      console.log(
-        `⚡ Plugin embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
-      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -538,7 +507,6 @@ export const generateNoteEmbeddings = action({
 
     try {
       const notes = await ctx.runQuery(internal.embeddings.getAllNotes, {});
-      console.log(`📝 Starting note embedding generation for ${notes.length} notes`);
 
       for (const note of notes) {
         try {
@@ -582,7 +550,6 @@ export const generateNoteEmbeddings = action({
             });
 
             results.processed++;
-            console.log(`✅ Note: ${note.title}`);
           } else {
             results.skipped++;
           }
@@ -593,9 +560,6 @@ export const generateNoteEmbeddings = action({
         }
       }
 
-      console.log(
-        `📝 Note embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
-      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -643,14 +607,7 @@ export const generateAllContentEmbeddings = action({
       totalErrors: [] as string[],
     };
 
-    console.log(
-      `🚀 Starting comprehensive embedding generation for: ${args.contentTypes.join(", ")}`
-    );
-
     for (const contentType of args.contentTypes) {
-      const config = CONTENT_TYPES[contentType];
-      console.log(`\n${config.icon} Processing ${config.name}...`);
-
       let result;
       switch (contentType) {
         case "courseContent":
@@ -693,10 +650,6 @@ export const generateAllContentEmbeddings = action({
         }
       }
     }
-
-    console.log(`\n🎉 All content embedding complete!`);
-    console.log(`   Total processed: ${finalResults.totalProcessed}`);
-    console.log(`   Total errors: ${finalResults.totalErrors.length}`);
 
     return finalResults;
   },

@@ -85,24 +85,6 @@ export const askMasterAI = action({
     const { MODEL_PRESETS, AVAILABLE_MODELS } = await import("./types");
     const presetConfig = MODEL_PRESETS[settings.preset];
 
-    console.log(`🚀 Master AI Pipeline starting with preset: ${settings.preset}`);
-    console.log(`📊 Models for this request:`);
-    console.log(
-      `   • Planner: ${presetConfig.planner} (${AVAILABLE_MODELS[presetConfig.planner]?.apiId || presetConfig.planner})`
-    );
-    console.log(
-      `   • Summarizer: ${presetConfig.summarizer} (${AVAILABLE_MODELS[presetConfig.summarizer]?.apiId || presetConfig.summarizer})`
-    );
-    console.log(
-      `   • Idea Generator: ${presetConfig.ideaGenerator} (${AVAILABLE_MODELS[presetConfig.ideaGenerator]?.apiId || presetConfig.ideaGenerator})`
-    );
-    console.log(
-      `   • Critic: ${presetConfig.critic} (${AVAILABLE_MODELS[presetConfig.critic]?.apiId || presetConfig.critic})`
-    );
-    console.log(
-      `   • Final Writer: ${presetConfig.finalWriter} (${AVAILABLE_MODELS[presetConfig.finalWriter]?.apiId || presetConfig.finalWriter})`
-    );
-
     // ========================================================================
     // GOAL EXTRACTION (prevents context drift in long conversations)
     // ========================================================================
@@ -117,7 +99,6 @@ export const askMasterAI = action({
         });
         if (conversation?.conversationGoal) {
           conversationGoal = conversation.conversationGoal;
-          console.log(`🎯 Using existing conversation goal: "${conversationGoal?.originalIntent}"`);
         }
       } catch (err) {
         console.warn("Failed to fetch conversation goal:", err);
@@ -127,7 +108,6 @@ export const askMasterAI = action({
     // If still no goal and this looks like a new conversation, extract it from the first message
     if (!conversationGoal && (!args.conversationContext || args.conversationContext.length === 0)) {
       try {
-        console.log("🎯 Extracting conversation goal from first message...");
         conversationGoal = await ctx.runAction(
           internal.masterAI.goalExtractor.extractGoalFromMessage,
           {
@@ -135,7 +115,6 @@ export const askMasterAI = action({
             conversationId: args.conversationId as Id<"aiConversations"> | undefined,
           }
         );
-        console.log(`   ✅ Goal: "${conversationGoal?.originalIntent}"`);
       } catch (err) {
         console.warn("Failed to extract conversation goal:", err);
       }
@@ -152,9 +131,6 @@ export const askMasterAI = action({
           userId: args.userId,
           limit: 10,
         })) as MemoryForPipeline[];
-        if (userMemories.length > 0) {
-          console.log(`🧠 Loaded ${userMemories.length} user memories`);
-        }
       } catch (err) {
         console.warn("Failed to load user memories:", err);
       }
@@ -166,8 +142,6 @@ export const askMasterAI = action({
     // ========================================================================
     // STAGE 1: PLANNER
     // ========================================================================
-    console.log("📋 Stage 1: Planning...");
-
     const plannerOutput: PlannerOutput = await ctx.runAction(
       internal.masterAI.planner.analyzeQuestion,
       {
@@ -178,13 +152,9 @@ export const askMasterAI = action({
       }
     );
 
-    console.log(`   Intent: ${plannerOutput.intent}`);
-    console.log(`   Facets: ${plannerOutput.facets.map((f) => f.name).join(", ")}`);
-
     // ========================================================================
     // STAGE 2 + 2.5: RETRIEVER + WEB RESEARCH (IN PARALLEL)
     // ========================================================================
-    console.log("🔍 Stage 2: Retrieving content + Web research (parallel)...");
 
     // Run retriever and web research in parallel - they both only need planner output
     const [retrieverOutput, webResearchResult] = await Promise.all([
@@ -207,11 +177,6 @@ export const askMasterAI = action({
         : Promise.resolve(null),
     ]);
 
-    console.log(`   Total chunks retrieved: ${retrieverOutput.totalChunksRetrieved}`);
-    for (const bucket of retrieverOutput.buckets) {
-      console.log(`   - ${bucket.facetName}: ${bucket.chunks.length} chunks`);
-    }
-
     // Process web research results
     let webResearchResults:
       | Array<{
@@ -229,12 +194,10 @@ export const askMasterAI = action({
     let webResearchCount = 0;
     if (webResearchResult) {
       webResearchCount = webResearchResult.totalResults;
-      console.log(`   🌐 Web results: ${webResearchCount}`);
       webResearchResults = webResearchResult.research;
 
       // Optionally save to embeddings for future queries (scheduled to run after this action completes)
       if (settings.autoSaveWebResearch && webResearchResult.totalResults > 0 && args.userId) {
-        console.log("   💾 Scheduling web research save to embeddings...");
         const researchToSave = webResearchResult.research.flatMap((r: any) =>
           r.results.map((result: any) => ({
             title: result.title,
@@ -274,8 +237,6 @@ export const askMasterAI = action({
     // ========================================================================
     // STAGE 3: SUMMARIZER
     // ========================================================================
-    console.log("📝 Stage 3: Summarizing...");
-
     const summarizerOutput: SummarizerOutput = await ctx.runAction(
       internal.masterAI.summarizer.summarizeContent,
       {
@@ -285,12 +246,9 @@ export const askMasterAI = action({
       }
     );
 
-    console.log(`   Summaries generated: ${summarizerOutput.summaries.length}`);
-
     // ========================================================================
     // STAGES 4-6: IDEA GEN + FACT VERIFY + CRITIC (IN PARALLEL)
     // ========================================================================
-    console.log("⚡ Stages 4-6: Running Idea Gen, Fact Verify, Critic in parallel...");
 
     // Prepare claims for verification
     const claimsToVerify = summarizerOutput.summaries.flatMap((s) => s.keyTechniques).slice(0, 10);
@@ -306,9 +264,6 @@ export const askMasterAI = action({
               originalQuestion: args.question,
             })
             .then((result: any) => {
-              console.log(
-                `   💡 Ideas: ${result.ideas.length}, Cross-facet: ${result.crossFacetInsights.length}`
-              );
               return result as IdeaGeneratorOutput;
             })
         : Promise.resolve(undefined),
@@ -336,9 +291,6 @@ export const askMasterAI = action({
               })),
             })
             .then((result: any) => {
-              console.log(
-                `   🔍 Verified: ${result.verifiedClaims.length}, Confidence: ${(result.overallConfidence * 100).toFixed(0)}%`
-              );
               return result as FactVerificationOutput;
             })
         : Promise.resolve(undefined),
@@ -353,9 +305,6 @@ export const askMasterAI = action({
               originalQuestion: args.question,
             })
             .then((result: any) => {
-              console.log(
-                `   🔬 Critic: ${result.approved ? "✓" : "✗"}, Quality: ${result.overallQuality}`
-              );
               return result as CriticOutput;
             })
         : Promise.resolve(undefined),
@@ -378,13 +327,6 @@ export const askMasterAI = action({
       retryCount < maxRetries
     ) {
       retryCount++;
-      console.log(
-        `⚠️ Quality score ${currentCriticOutput.overallQuality} below threshold ${qualityThreshold}, retry ${retryCount}/${maxRetries}...`
-      );
-      console.log(
-        `   Issues identified: ${currentCriticOutput.issues.map((i) => `${i.type}: ${i.description}`).join("; ")}`
-      );
-
       // Re-run summarizer with critic feedback
       const enhancedQuestion = `${args.question}
 
@@ -406,22 +348,11 @@ ${currentCriticOutput.issues.map((i) => `- Fix ${i.type}: ${i.description}`).joi
         originalQuestion: args.question,
       });
       currentCriticOutput = newCriticOutput as CriticOutput;
-      console.log(
-        `   🔬 Retry ${retryCount} Critic: ${currentCriticOutput.approved ? "✓" : "✗"}, Quality: ${currentCriticOutput.overallQuality}`
-      );
-    }
-
-    if (retryCount > 0) {
-      console.log(
-        `   ✅ After ${retryCount} retries, quality: ${currentCriticOutput?.overallQuality ?? "N/A"}`
-      );
     }
 
     // ========================================================================
     // STAGE 7: FINAL WRITER
     // ========================================================================
-    console.log("✍️ Stage 7: Writing final response...");
-
     // Collect all source chunks for citation building
     const allSourceChunks = retrieverOutput.buckets.flatMap((bucket: any) =>
       bucket.chunks.map((chunk: any) => ({
@@ -451,8 +382,6 @@ ${currentCriticOutput.issues.map((i) => `- Fix ${i.type}: ${i.description}`).joi
     );
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Pipeline complete in ${totalTime}ms`);
-
     const fullResponse = {
       ...finalResponse,
       pipelineMetadata: {
@@ -675,22 +604,13 @@ export const askAgenticAI = action({
     const startTime = Date.now();
     const userRole = args.userRole || "creator";
 
-    console.log(`🤖 Agentic AI starting for user: ${args.userId}`);
-    if (args.agentId) {
-      console.log(`   Agent ID: ${args.agentId}`);
-      console.log(`   Enabled Tools: ${args.agentEnabledTools?.join(", ") || "all"}`);
-    }
-
     // Get available tools for this user role + agent
     const availableTools = getToolsForAgent(userRole, args.agentEnabledTools);
-    console.log(`   Available tools: ${availableTools.length}`);
 
     // ========================================================================
     // EXECUTION MODE: Execute confirmed actions
     // ========================================================================
     if (args.executeActions && args.confirmedActions && args.confirmedActions.length > 0) {
-      console.log(`⚡ Executing ${args.confirmedActions.length} confirmed actions...`);
-
       const result = await ctx.runAction(internal.masterAI.tools.executor.executeTools, {
         toolCalls: args.confirmedActions,
         userId: args.userId,
@@ -722,8 +642,6 @@ export const askAgenticAI = action({
     // ========================================================================
     // STAGE 1: Enhanced Planner (with tool awareness)
     // ========================================================================
-    console.log("📋 Stage 1: Analyzing intent with tool awareness...");
-
     const planResult = await ctx.runAction(internal.masterAI.planner.analyzeQuestionWithTools, {
       question: args.question,
       settings,
@@ -732,15 +650,10 @@ export const askAgenticAI = action({
       conversationContext: args.conversationContext,
     });
 
-    console.log(`   Intent Type: ${planResult.intentType}`);
-    console.log(`   Is Action: ${planResult.isActionRequest}`);
-    console.log(`   Tool Calls: ${planResult.toolCalls?.length || 0}`);
-
     // ========================================================================
     // BRANCH: Action Request -> Return proposal
     // ========================================================================
     if (planResult.isActionRequest && planResult.toolCalls && planResult.toolCalls.length > 0) {
-      console.log("🔧 Detected action request, preparing proposal...");
 
       const proposedActions = planResult.toolCalls.map((tc: ToolCall) => ({
         tool: tc.tool,
@@ -803,8 +716,6 @@ export const askAgenticAI = action({
 
       if (!needsConfirmation) {
         // Auto-execute if no confirmation needed
-        console.log("⚡ Auto-executing non-confirmation actions...");
-
         const result = await ctx.runAction(internal.masterAI.tools.executor.executeTools, {
           toolCalls: planResult.toolCalls.map((tc: any) => ({
             tool: tc.tool,
@@ -834,8 +745,6 @@ export const askAgenticAI = action({
     // ========================================================================
     // BRANCH: Question -> Run Q&A Pipeline
     // ========================================================================
-    console.log("💬 Processing as question, running Q&A pipeline...");
-
     // Convert the enhanced plan back to standard planner output
     const plannerOutput: PlannerOutput = {
       intent: planResult.intent,
@@ -929,8 +838,6 @@ export const askAgenticAI = action({
     );
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Agentic AI complete in ${totalTime}ms`);
-
     return {
       ...finalResponse,
       pipelineMetadata: {
@@ -958,8 +865,6 @@ export const executeConfirmedActions = action({
   returns: actionsExecutedValidator,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: async (ctx, args): Promise<any> => {
-    console.log(`⚡ Executing ${args.actions.length} confirmed actions...`);
-
     const result = await ctx.runAction(internal.masterAI.tools.executor.executeTools, {
       toolCalls: args.actions,
       userId: args.userId,

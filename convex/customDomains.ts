@@ -44,8 +44,6 @@ export const connectCustomDomain = action({
         storeId: args.storeId,
       });
     } catch (error) {
-      // Fallback if vercelDomainManager not registered yet
-      console.log("Vercel API not available, skipping auto-add");
       vercelResult = { success: true, message: "Manual Vercel setup required" };
     }
 
@@ -227,7 +225,7 @@ async function performDNSLookup(domain: string): Promise<{ cname?: string; aReco
       }
     }
   } catch (e) {
-    console.log("CNAME lookup failed:", e);
+    // CNAME lookup failed
   }
 
   try {
@@ -248,7 +246,7 @@ async function performDNSLookup(domain: string): Promise<{ cname?: string; aReco
       }
     }
   } catch (e) {
-    console.log("A record lookup failed:", e);
+    // A record lookup failed
   }
 
   return result;
@@ -278,7 +276,7 @@ export const removeCustomDomain = action({
           domain: store.customDomain,
         });
       } catch (error) {
-        console.log("Vercel API not available, skipping auto-remove");
+        // Vercel API not available
       }
     }
 

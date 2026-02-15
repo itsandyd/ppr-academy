@@ -48,7 +48,7 @@ export const getCreatorSegments = query({
     return await ctx.db
       .query("creatorEmailSegments")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -96,13 +96,13 @@ export const previewSegment = query({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     // Get tags for lookups
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
     const tagMap = new Map(tags.map((t) => [t._id, t.name]));
 
     // Filter contacts that match conditions
@@ -180,12 +180,12 @@ export const getSegmentContacts = query({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
-      .collect();
+      .take(5000);
     const tagMap = new Map(tags.map((t) => [t._id, t.name]));
 
     const matchingContacts = allContacts.filter((contact) =>
@@ -222,12 +222,12 @@ export const getSegmentContactIds = query({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
-      .collect();
+      .take(5000);
     const tagMap = new Map(tags.map((t) => [t._id, t.name]));
 
     return allContacts
@@ -261,12 +261,12 @@ export const createSegment = mutation({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
     const tagMap = new Map(tags.map((t) => [t._id, t.name]));
 
     const matchingContactIds = allContacts
@@ -321,12 +321,12 @@ export const updateSegment = mutation({
         .query("emailContacts")
         .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
         .filter((q) => q.eq(q.field("status"), "subscribed"))
-        .collect();
+        .take(5000);
 
       const tags = await ctx.db
         .query("emailTags")
         .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
-        .collect();
+        .take(5000);
       const tagMap = new Map(tags.map((t) => [t._id, t.name]));
 
       const matchingContactIds = allContacts
@@ -384,12 +384,12 @@ export const refreshSegment = mutation({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", segment.storeId))
-      .collect();
+      .take(5000);
     const tagMap = new Map(tags.map((t) => [t._id, t.name]));
 
     const matchingContactIds = allContacts

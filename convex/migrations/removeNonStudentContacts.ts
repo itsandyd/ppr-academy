@@ -60,10 +60,6 @@ export const removeNonStudentContacts = internalMutation({
       }
     }
 
-    console.log(
-      `${dryRun ? "[DRY RUN] " : ""}Processed ${contacts.length} contacts: ${deleted} deleted, ${kept} kept`
-    );
-
     return {
       success: true,
       deleted,

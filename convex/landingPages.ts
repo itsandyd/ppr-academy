@@ -56,7 +56,7 @@ export const getLandingPages = query({
     let pages = await ctx.db
       .query("landingPages")
       .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     if (!args.includeUnpublished) {
       pages = pages.filter((p) => p.isPublished);
@@ -71,7 +71,7 @@ export const getLandingPages = query({
         const variants = await ctx.db
           .query("landingPages")
           .withIndex("by_parent", (q) => q.eq("parentPageId", page._id))
-          .collect();
+          .take(200);
 
         return {
           ...page,
@@ -121,7 +121,7 @@ export const getLandingPage = query({
       : await ctx.db
           .query("landingPages")
           .withIndex("by_parent", (q) => q.eq("parentPageId", page._id))
-          .collect();
+          .take(200);
 
     return {
       ...page,
@@ -160,7 +160,7 @@ export const getLandingPageBySlug = query({
         .query("landingPages")
         .withIndex("by_parent", (q) => q.eq("parentPageId", page._id))
         .filter((q) => q.eq(q.field("isPublished"), true))
-        .collect();
+        .take(200);
 
       if (variants.length > 0) {
         const random = Math.random() * 100;
@@ -215,7 +215,7 @@ export const getLandingPageByStoreSlug = query({
         .query("landingPages")
         .withIndex("by_parent", (q) => q.eq("parentPageId", page._id))
         .filter((q) => q.eq(q.field("isPublished"), true))
-        .collect();
+        .take(200);
 
       if (variants.length > 0) {
         // Calculate which page to show based on traffic split
@@ -259,7 +259,7 @@ export const getLandingPageAnalytics = query({
     let analytics = await ctx.db
       .query("landingPageAnalytics")
       .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
-      .collect();
+      .take(5000);
 
     if (args.startDate) {
       analytics = analytics.filter((a) => a.date >= args.startDate!);
@@ -303,7 +303,7 @@ export const getTemplates = query({
     )),
   },
   handler: async (ctx, args) => {
-    let templates = await ctx.db.query("landingPageTemplates").collect();
+    let templates = await ctx.db.query("landingPageTemplates").take(100);
 
     if (args.category) {
       templates = templates.filter((t) => t.category === args.category);
@@ -783,7 +783,7 @@ export const createVariant = mutation({
     const variants = await ctx.db
       .query("landingPages")
       .withIndex("by_parent", (q) => q.eq("parentPageId", args.parentPageId))
-      .collect();
+      .take(200);
 
     const totalVariantSplit = variants.reduce((sum, v) => sum + (v.trafficSplit || 0), 0) + args.trafficSplit;
     const parentSplit = Math.max(0, 100 - totalVariantSplit);
@@ -815,7 +815,7 @@ export const deletePage = mutation({
       const variants = await ctx.db
         .query("landingPages")
         .withIndex("by_parent", (q) => q.eq("parentPageId", args.pageId))
-        .collect();
+        .take(200);
 
       for (const variant of variants) {
         await ctx.db.delete(variant._id);
@@ -826,7 +826,7 @@ export const deletePage = mutation({
     const analytics = await ctx.db
       .query("landingPageAnalytics")
       .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
-      .collect();
+      .take(5000);
 
     for (const record of analytics) {
       await ctx.db.delete(record._id);

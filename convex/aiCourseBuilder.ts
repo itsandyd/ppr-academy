@@ -142,8 +142,6 @@ Please research this topic thoroughly and provide:
 
 This research will be used to structure a ${targetModules}-module course.`;
 
-      console.log(`🎓 Step 1: Gathering knowledge with masterAI pipeline (preset: ${settings.preset})`);
-      
       // Call the FULL masterAI pipeline for research and knowledge gathering
       const pipelineResult = await (ctx as any).runAction(
         api.masterAI.index.askMasterAI,
@@ -154,14 +152,9 @@ This research will be used to structure a ${targetModules}-module course.`;
         }
       ) as { answer: string; citations?: any[]; facetsUsed?: string[]; pipelineMetadata?: any };
       
-      console.log(`   ✅ Pipeline research complete. Got ${pipelineResult.answer.length} chars of context`);
-      console.log(`   📊 Chunks: ${pipelineResult.pipelineMetadata?.totalChunksProcessed || 0}, Facets: ${pipelineResult.facetsUsed?.join(", ") || "none"}`);
-
       // =======================================================================
       // STEP 2: Generate structured JSON outline using direct OpenAI call
       // =======================================================================
-      console.log(`🎓 Step 2: Generating structured course outline with JSON mode`);
-      
       const outline = await generateStructuredOutline({
         topic,
         skillLevel,
@@ -227,9 +220,7 @@ This research will be used to structure a ${targetModules}-module course.`;
         { queueId: args.queueId, outlineId }
       );
       
-      console.log(`✅ Course outline generated in ${Date.now() - startTime}ms using full pipeline`);
-      
-      return { 
+      return {
         success: true, 
         outlineId,
         outline,
@@ -381,20 +372,14 @@ Generate the COMPLETE outline with ALL ${params.targetModules + 1} modules, ${pa
       });
     });
     
-    // Log summary
-    console.log(`   📚 Generated outline: "${parsed.course.title}"`);
-    console.log(`   📦 ${parsed.modules.length}/${expectedModules} modules, ${totalLessons} lessons, ${totalChapters} chapters`);
-    
     if (structureIssues.length > 0) {
       console.warn(`   ⚠️ STRUCTURE ISSUES (${structureIssues.length}):`);
       structureIssues.slice(0, 10).forEach(issue => console.warn(`      - ${issue}`));
       if (structureIssues.length > 10) {
         console.warn(`      ... and ${structureIssues.length - 10} more issues`);
       }
-    } else {
-      console.log(`   ✅ Outline structure meets all requirements`);
     }
-    
+
     return parsed as CourseOutline;
   } catch (parseError) {
     console.error("Failed to parse outline JSON:", parseError);
@@ -622,8 +607,6 @@ export const expandAllChapters = action({
     const outlineData = outline.outline as CourseOutline;
     const totalChapters = outline.totalChapters;
     
-    console.log(`📚 Expanding chapters BY LESSON using FULL masterAI pipeline (preset: ${settings.preset})`);
-    
     let expandedCount = 0;
     let failedCount = 0;
     let lessonCount = 0;
@@ -654,11 +637,8 @@ export const expandAllChapters = action({
         }
         
         if (lessonChapters.length === 0) {
-          console.log(`  ✓ Lesson "${lesson.title}" - all chapters already expanded`);
           continue;
         }
-        
-        console.log(`📖 Module ${mi + 1}, Lesson ${li + 1}: "${lesson.title}" - expanding ${lessonChapters.length} chapters in parallel`);
         
         // Update progress
         await (ctx as any).runMutation(
@@ -710,10 +690,8 @@ export const expandAllChapters = action({
           for (const result of batchResults) {
             if (result.status === "fulfilled" && result.value.success) {
               expandedCount++;
-              console.log(`    ✓ ${result.value.chapter}`);
             } else {
               failedCount++;
-              console.log(`    ✗ Failed: ${result.status === "fulfilled" ? result.value.chapter : "unknown"}`);
             }
           }
         }
@@ -722,8 +700,6 @@ export const expandAllChapters = action({
         await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
-    
-    console.log(`✅ Expansion complete: ${expandedCount} expanded, ${failedCount} failed across ${lessonCount} lessons`);
     
     // Update queue status
     await (ctx as any).runMutation(
@@ -781,28 +757,7 @@ export const createCourseFromOutline = action({
     
     try {
       const outlineData = outline.outline as CourseOutline;
-      
-      // Debug logging
-      console.log("=== CREATE COURSE FROM OUTLINE ===");
-      console.log("📋 Outline data received:");
-      console.log("   Title:", outlineData.course?.title);
-      console.log("   Description:", outlineData.course?.description?.substring(0, 100) + "...");
-      console.log("   Category:", outlineData.course?.category);
-      console.log("   Skill Level:", outlineData.course?.skillLevel);
-      console.log("   Modules count:", outlineData.modules?.length);
-      
-      if (outlineData.modules && outlineData.modules.length > 0) {
-        console.log("   First module:", outlineData.modules[0]?.title);
-        console.log("   First module lessons:", outlineData.modules[0]?.lessons?.length);
-        if (outlineData.modules[0]?.lessons?.[0]) {
-          console.log("   First lesson:", outlineData.modules[0].lessons[0].title);
-          console.log("   First lesson chapters:", outlineData.modules[0].lessons[0].chapters?.length);
-        }
-      } else {
-        console.log("⚠️ NO MODULES IN OUTLINE DATA!");
-        console.log("   Raw outline:", JSON.stringify(outline.outline).substring(0, 500));
-      }
-      
+
       // Create course using existing mutation
       const result = await (ctx as any).runMutation(
         api.courses.createCourseWithData,
@@ -820,8 +775,6 @@ export const createCourseFromOutline = action({
           },
         }
       ) as { success: boolean; courseId?: Id<"courses">; slug?: string; message?: string };
-      
-      console.log("✅ Course creation result:", result);
       
       if (result.success && result.courseId) {
         // Link course to queue item
@@ -1084,8 +1037,7 @@ Write the content directly - no introductions like "In this chapter..." or concl
       );
       
       const wordCount = result.answer.split(/\s+/).length;
-      console.log(`✓ Expanded chapter "${chapter.title}" (${wordCount} words, converted to HTML)`);
-      
+
       return {
         success: true,
         content: result.answer,
@@ -1157,9 +1109,6 @@ export const expandExistingCourseChapters = action({
         };
       }
       
-      console.log(`\n🚀 Starting chapter expansion for: ${structure.course.title}`);
-      console.log(`   Total chapters: ${structure.totalChapters}, with content: ${structure.chaptersWithContent}`);
-      
       let expandedCount = 0;
       let skippedCount = 0;
       let failedCount = 0;
@@ -1179,8 +1128,6 @@ export const expandExistingCourseChapters = action({
             skippedCount += lesson.chapters.length;
             continue;
           }
-          
-          console.log(`\n📖 Processing: ${mod.title} → ${lesson.title} (${chaptersToExpand.length} chapters)`);
           
           // Process in batches
           for (let i = 0; i < chaptersToExpand.length; i += maxBatchSize) {
@@ -1218,15 +1165,13 @@ export const expandExistingCourseChapters = action({
         }
       }
       
-      console.log(`\n✅ Expansion complete: ${expandedCount} expanded, ${skippedCount} skipped, ${failedCount} failed`);
-      
       return {
         success: failedCount === 0,
         expandedCount,
         skippedCount,
         failedCount,
       };
-      
+
     } catch (error) {
       console.error("Error expanding course chapters:", error);
       return { 
@@ -1305,8 +1250,6 @@ ${chapter.description}
 
 Remember: Keep all the original content, just add markdown formatting to make it well-structured and readable.`;
 
-      console.log(`🔄 Reformatting: "${args.chapterTitle}" (${chapter.description.length} chars)`);
-
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini", // Fast and cheap for formatting tasks
         messages: [
@@ -1333,7 +1276,6 @@ Remember: Keep all the original content, just add markdown formatting to make it
       );
 
       const wordCount = formattedContent.split(/\s+/).length;
-      console.log(`✓ Reformatted "${args.chapterTitle}" (${wordCount} words, converted to HTML)`);
 
       return {
         success: true,
@@ -1401,8 +1343,6 @@ export const reformatCourseChapters = action({
         };
       }
       
-      console.log(`\n📝 Starting reformat for: ${structure.course.title}`);
-      
       let reformattedCount = 0;
       let skippedCount = 0;
       let failedCount = 0;
@@ -1430,13 +1370,9 @@ export const reformatCourseChapters = action({
         }
       }
       
-      console.log(`   Found ${chaptersToReformat.length} chapters to reformat, ${skippedCount} skipped (no content)`);
-      
       // Process in batches
       for (let i = 0; i < chaptersToReformat.length; i += maxBatchSize) {
         const batch = chaptersToReformat.slice(i, i + maxBatchSize);
-        
-        console.log(`\n   Batch ${Math.floor(i / maxBatchSize) + 1}/${Math.ceil(chaptersToReformat.length / maxBatchSize)}`);
         
         const results = await Promise.allSettled(
           batch.map(ch =>
@@ -1453,13 +1389,8 @@ export const reformatCourseChapters = action({
           
           if (result.status === "fulfilled" && result.value.success) {
             reformattedCount++;
-            console.log(`   ✓ ${ch.title}`);
           } else {
             failedCount++;
-            const error = result.status === "rejected" 
-              ? result.reason?.message 
-              : result.value?.error;
-            console.log(`   ✗ ${ch.title}: ${error}`);
           }
         }
         
@@ -1468,8 +1399,6 @@ export const reformatCourseChapters = action({
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
-      
-      console.log(`\n✅ Reformat complete: ${reformattedCount} reformatted, ${skippedCount} skipped, ${failedCount} failed`);
       
       return {
         success: failedCount === 0,
@@ -1505,8 +1434,6 @@ export const processOutlineInBackground = internalAction({
     settings: v.optional(chatSettingsValidator),
   },
   handler: async (ctx, args) => {
-    console.log(`\n🚀 [Background] Starting outline generation for queue ${args.queueId}`);
-    
     try {
       // Update status to generating
       await (ctx as any).runMutation(
@@ -1538,15 +1465,9 @@ export const processOutlineInBackground = internalAction({
         
         success = result.success;
         errorMessage = result.error || "";
-        
-        if (success) {
-          console.log(`✅ [Background] Outline generation completed: ${result.outlineId}`);
-        }
       } catch (actionError) {
         // The action might have succeeded but the response was too large
         // Check the queue item status to see if it actually worked
-        console.log(`⚠️ [Background] Action call error, checking queue status...`);
-        
         const queueItem = await (ctx as any).runQuery(
           internal.aiCourseBuilderQueries.getQueueItemInternal,
           { queueId: args.queueId }
@@ -1554,7 +1475,6 @@ export const processOutlineInBackground = internalAction({
         
         if (queueItem?.status === "outline_ready" && queueItem?.outlineId) {
           // The action actually succeeded! The error was just in returning the result
-          console.log(`✅ [Background] Outline generation actually succeeded (status check): ${queueItem.outlineId}`);
           success = true;
         } else if (queueItem?.status === "failed") {
           success = false;
@@ -1608,8 +1528,6 @@ export const processChapterExpansionInBackground = internalAction({
     parallelBatchSize: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    console.log(`\n🚀 [Background] Starting chapter expansion for queue ${args.queueId}`);
-    
     try {
       // Update status
       await (ctx as any).runMutation(
@@ -1646,8 +1564,6 @@ export const processChapterExpansionInBackground = internalAction({
         errorMessage = result.error || "";
       } catch (actionError) {
         // Check if expansion actually worked despite the error
-        console.log(`⚠️ [Background] Action call error, checking outline status...`);
-        
         const outline = await (ctx as any).runQuery(
           internal.aiCourseBuilderQueries.getOutlineInternal,
           { outlineId: args.outlineId }
@@ -1656,14 +1572,12 @@ export const processChapterExpansionInBackground = internalAction({
         if (outline && outline.expandedChapters && outline.expandedChapters > 0) {
           success = true;
           expandedCount = outline.expandedChapters;
-          console.log(`✅ [Background] Expansion actually succeeded: ${expandedCount} chapters`);
         } else {
           throw actionError;
         }
       }
 
       if (success) {
-        console.log(`✅ [Background] Chapter expansion completed: ${expandedCount} chapters`);
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
@@ -1716,8 +1630,6 @@ export const processExistingCourseExpansionInBackground = internalAction({
     parallelBatchSize: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    console.log(`\n🚀 [Background] Starting existing course expansion for queue ${args.queueId}`);
-
     try {
       // Update status
       await (ctx as any).runMutation(
@@ -1756,8 +1668,6 @@ export const processExistingCourseExpansionInBackground = internalAction({
         errorMessage = result.error || "";
       } catch (actionError) {
         // Check if expansion actually worked
-        console.log(`⚠️ [Background] Action call error, checking queue status...`);
-
         const queueItem = await (ctx as any).runQuery(
           internal.aiCourseBuilderQueries.getQueueItemInternal,
           { queueId: args.queueId }
@@ -1766,14 +1676,12 @@ export const processExistingCourseExpansionInBackground = internalAction({
         if (queueItem?.progress?.completedSteps && queueItem.progress.completedSteps > 0) {
           success = true;
           expandedCount = queueItem.progress.completedSteps;
-          console.log(`✅ [Background] Expansion actually succeeded: ${expandedCount} chapters`);
         } else {
           throw actionError;
         }
       }
 
       if (success) {
-        console.log(`✅ [Background] Existing course expansion completed: ${expandedCount} expanded, ${skippedCount} skipped`);
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
@@ -1838,9 +1746,6 @@ export const processReformattingInBackground = internalAction({
     let reformattedCount = args.reformattedCount || 0;
     let skippedCount = args.skippedCount || 0;
     let failedCount = args.failedCount || 0;
-
-    console.log(`\n📝 [Background] Reformatting chapters for queue ${args.queueId}`);
-    console.log(`   Already processed: ${processedIds.size}, reformatted: ${reformattedCount}, skipped: ${skippedCount}, failed: ${failedCount}`);
 
     try {
       // Get course structure
@@ -1915,8 +1820,6 @@ export const processReformattingInBackground = internalAction({
         totalChapters = totalChapters; // Keep the calculated value
       }
 
-      console.log(`   Found ${chaptersToReformat.length} chapters remaining to reformat`);
-
       // Update progress
       await (ctx as any).runMutation(
         internal.aiCourseBuilderQueries.updateQueueStatus,
@@ -1933,9 +1836,7 @@ export const processReformattingInBackground = internalAction({
 
       // If no more chapters to process, we're done!
       if (chaptersToReformat.length === 0) {
-        console.log(`✅ [Background] Reformatting complete: ${reformattedCount} reformatted, ${skippedCount} skipped, ${failedCount} failed`);
-
-        await (ctx as any).runMutation(
+          await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
             queueId: args.queueId,
@@ -1952,13 +1853,9 @@ export const processReformattingInBackground = internalAction({
 
       // Process up to maxChaptersPerRun in this invocation
       const chaptersThisRun = chaptersToReformat.slice(0, maxChaptersPerRun);
-      console.log(`   Processing ${chaptersThisRun.length} chapters in this run`);
-
       // Process in batches of maxBatchSize
       for (let i = 0; i < chaptersThisRun.length; i += maxBatchSize) {
         const batch = chaptersThisRun.slice(i, i + maxBatchSize);
-
-        console.log(`   Batch ${Math.floor(i / maxBatchSize) + 1}/${Math.ceil(chaptersThisRun.length / maxBatchSize)}`);
 
         const results = await Promise.allSettled(
           batch.map(ch =>
@@ -1977,13 +1874,8 @@ export const processReformattingInBackground = internalAction({
 
           if (result.status === "fulfilled" && result.value.success) {
             reformattedCount++;
-            console.log(`   ✓ ${ch.title}`);
           } else {
             failedCount++;
-            const error = result.status === "rejected"
-              ? result.reason?.message
-              : result.value?.error;
-            console.log(`   ✗ ${ch.title}: ${error}`);
           }
         }
 
@@ -2011,8 +1903,6 @@ export const processReformattingInBackground = internalAction({
       const remainingChapters = chaptersToReformat.length - chaptersThisRun.length;
 
       if (remainingChapters > 0) {
-        console.log(`📅 [Background] Scheduling continuation: ${remainingChapters} chapters remaining`);
-
         // Schedule the next batch
         await ctx.scheduler.runAfter(100, internal.aiCourseBuilder.processReformattingInBackground, {
           queueId: args.queueId,
@@ -2026,8 +1916,6 @@ export const processReformattingInBackground = internalAction({
         });
       } else {
         // We're done!
-        console.log(`✅ [Background] Reformatting complete: ${reformattedCount} reformatted, ${skippedCount} skipped, ${failedCount} failed`);
-
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {

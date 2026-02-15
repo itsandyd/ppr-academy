@@ -45,7 +45,7 @@ export const detectCourseChanges = query({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     let totalLessons = 0;
     let totalChapters = 0;
@@ -53,20 +53,20 @@ export const detectCourseChanges = query({
 
     for (const module of modules) {
       modulesList.push(module.title);
-      
+
       const lessons = await ctx.db
         .query("courseLessons")
         .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
-        .collect();
-      
+        .take(200);
+
       totalLessons += lessons.length;
 
       for (const lesson of lessons) {
         const chapters = await ctx.db
           .query("courseChapters")
           .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
-          .collect();
-        
+          .take(200);
+
         totalChapters += chapters.length;
       }
     }
@@ -81,13 +81,13 @@ export const detectCourseChanges = query({
     // Get enrolled students (who will receive the notification)
     const enrollments = await ctx.db
       .query("purchases")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("courseId"), args.courseId),
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(5000);
 
     const uniqueStudentIds = Array.from(new Set(enrollments.map(e => e.userId)));
     const enrolledStudentCount = uniqueStudentIds.length;
@@ -174,7 +174,7 @@ export const sendCourseUpdateNotification = mutation({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     let totalLessons = 0;
     let totalChapters = 0;
@@ -182,20 +182,20 @@ export const sendCourseUpdateNotification = mutation({
 
     for (const module of modules) {
       modulesList.push(module.title);
-      
+
       const lessons = await ctx.db
         .query("courseLessons")
         .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
-        .collect();
-      
+        .take(200);
+
       totalLessons += lessons.length;
 
       for (const lesson of lessons) {
         const chapters = await ctx.db
           .query("courseChapters")
           .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
-          .collect();
-        
+          .take(200);
+
         totalChapters += chapters.length;
       }
     }
@@ -227,18 +227,16 @@ export const sendCourseUpdateNotification = mutation({
     // This ensures notifications are only sent to paying students who have access
     const enrollments = await ctx.db
       .query("purchases")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("courseId"), args.courseId),
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(5000);
 
     // Get unique student IDs (in case of duplicate purchases)
     const studentIds = Array.from(new Set(enrollments.map(e => e.userId)));
-
-    console.log(`📧 Sending notification to ${studentIds.length} enrolled students for course ${args.courseId}`);
 
     // Create course notification record
     const notificationId = await ctx.db.insert("courseNotifications", {
@@ -335,7 +333,7 @@ export const getCourseNotificationHistory = query({
       .query("courseNotifications")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .order("desc")
-      .collect();
+      .take(1000);
 
     return notifications.map(n => ({
       _id: n._id,
@@ -364,7 +362,7 @@ export const getCourseNotificationStats = query({
     const notifications = await ctx.db
       .query("courseNotifications")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(1000);
 
     const totalSent = notifications.length;
     const totalRecipients = notifications.reduce((sum, n) => sum + n.recipientCount, 0);

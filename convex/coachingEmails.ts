@@ -32,7 +32,6 @@ export const sendBookingConfirmationEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 
@@ -92,7 +91,6 @@ export const sendNewBookingNotificationEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 
@@ -153,7 +151,6 @@ export const sendSessionReminderEmail = internalAction({
   handler: async (_ctx, args) => {
     const resend = getResendClient();
     if (!resend) {
-      console.log("Resend not configured, skipping email");
       return { success: true };
     }
 

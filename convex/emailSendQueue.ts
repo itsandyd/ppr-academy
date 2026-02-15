@@ -29,6 +29,68 @@ export const enqueueEmail = internalMutation({
   },
   returns: v.id("emailSendQueue"),
   handler: async (ctx, args) => {
+    // CAN-SPAM compliance: check suppression before enqueueing any non-transactional email
+    if (args.source !== "transactional") {
+      const emailLower = args.toEmail.toLowerCase().trim();
+
+      // Check resendPreferences (global unsubscribe)
+      const pref = await ctx.db
+        .query("resendPreferences")
+        .filter((q) => q.eq(q.field("userId"), emailLower))
+        .first();
+      if (pref?.isUnsubscribed) {
+        // Return a dummy ID — the email will not be sent.
+        // We insert with status "blocked" so it's visible in logs but never processed.
+        const blockedId = await ctx.db.insert("emailSendQueue", {
+          storeId: args.storeId,
+          source: args.source,
+          workflowExecutionId: args.workflowExecutionId,
+          dripEnrollmentId: args.dripEnrollmentId,
+          toEmail: args.toEmail,
+          fromName: args.fromName,
+          fromEmail: args.fromEmail,
+          subject: args.subject,
+          htmlContent: "",
+          status: "failed" as const,
+          priority: args.priority ?? 5,
+          attempts: 0,
+          maxAttempts: 0,
+          queuedAt: Date.now(),
+          lastError: "Blocked: recipient is unsubscribed",
+        });
+        return blockedId;
+      }
+
+      // Check emailContacts status across all stores
+      const contacts = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_email", (q) => q.eq("email", emailLower))
+        .collect();
+      const isContactUnsubscribed = contacts.some(
+        (c) => c.status === "unsubscribed" || c.status === "complained"
+      );
+      if (isContactUnsubscribed) {
+        const blockedId = await ctx.db.insert("emailSendQueue", {
+          storeId: args.storeId,
+          source: args.source,
+          workflowExecutionId: args.workflowExecutionId,
+          dripEnrollmentId: args.dripEnrollmentId,
+          toEmail: args.toEmail,
+          fromName: args.fromName,
+          fromEmail: args.fromEmail,
+          subject: args.subject,
+          htmlContent: "",
+          status: "failed" as const,
+          priority: args.priority ?? 5,
+          attempts: 0,
+          maxAttempts: 0,
+          queuedAt: Date.now(),
+          lastError: "Blocked: contact is unsubscribed",
+        });
+        return blockedId;
+      }
+    }
+
     const id = await ctx.db.insert("emailSendQueue", {
       storeId: args.storeId,
       source: args.source,
@@ -82,8 +144,58 @@ export const enqueueEmailBatch = internalMutation({
   },
   returns: v.array(v.id("emailSendQueue")),
   handler: async (ctx, args) => {
+    // Build suppression set for non-transactional emails
+    const nonTransactionalEmails = args.emails
+      .filter((e) => e.source !== "transactional")
+      .map((e) => e.toEmail.toLowerCase().trim());
+    const uniqueEmails = [...new Set(nonTransactionalEmails)];
+
+    const suppressedSet = new Set<string>();
+    for (const emailAddr of uniqueEmails) {
+      // Check resendPreferences
+      const pref = await ctx.db
+        .query("resendPreferences")
+        .filter((q) => q.eq(q.field("userId"), emailAddr))
+        .first();
+      if (pref?.isUnsubscribed) {
+        suppressedSet.add(emailAddr);
+        continue;
+      }
+      // Check emailContacts
+      const contacts = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_email", (q) => q.eq("email", emailAddr))
+        .collect();
+      if (contacts.some((c) => c.status === "unsubscribed" || c.status === "complained")) {
+        suppressedSet.add(emailAddr);
+      }
+    }
+
     const ids: Id<"emailSendQueue">[] = [];
     for (const email of args.emails) {
+      // Block suppressed non-transactional emails
+      if (email.source !== "transactional" && suppressedSet.has(email.toEmail.toLowerCase().trim())) {
+        const blockedId = await ctx.db.insert("emailSendQueue", {
+          storeId: email.storeId,
+          source: email.source,
+          workflowExecutionId: email.workflowExecutionId,
+          dripEnrollmentId: email.dripEnrollmentId,
+          toEmail: email.toEmail,
+          fromName: email.fromName,
+          fromEmail: email.fromEmail,
+          subject: email.subject,
+          htmlContent: "",
+          status: "failed" as const,
+          priority: email.priority ?? 5,
+          attempts: 0,
+          maxAttempts: 0,
+          queuedAt: Date.now(),
+          lastError: "Blocked: recipient is unsubscribed",
+        });
+        ids.push(blockedId);
+        continue;
+      }
+
       const id = await ctx.db.insert("emailSendQueue", {
         storeId: email.storeId,
         source: email.source,

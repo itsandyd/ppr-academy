@@ -45,8 +45,6 @@ export const syncStudentsToContacts = internalMutation({
         .paginate(paginationOpts);
 
       const purchases = purchasesResult.page;
-      console.log(`Processing ${purchases.length} purchases for store ${args.storeId}`);
-
       // Get unique user IDs from this batch
       const userIdsInBatch = [...new Set(purchases.map((p) => p.userId))];
 
@@ -162,8 +160,6 @@ export const syncStudentsToContacts = internalMutation({
       }
 
       const isDone = purchasesResult.isDone;
-      console.log(`Batch complete: ${synced} synced, ${skipped} skipped, ${errors.length} errors. Done: ${isDone}`);
-
       return {
         success: true,
         synced,

@@ -23,11 +23,11 @@ export const getCourseSocialProof = query({
     const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
     const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-    // Get all purchases for this course
+    // Get purchases for this course using index
     const coursePurchases = await ctx.db
       .query("purchases")
-      .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .take(5000);
 
     const completedPurchases = coursePurchases.filter(p => p.status === "completed");
     const weeklyPurchases = completedPurchases.filter(p => p._creationTime >= oneWeekAgo);
@@ -57,7 +57,7 @@ export const getCourseSocialProof = query({
       .query("courseReviews")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(1000);
 
     const totalReviews = reviews.length;
     const averageRating = totalReviews > 0
@@ -96,11 +96,11 @@ export const getProductSocialProof = query({
     const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
     const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-    // Get all purchases for this product
+    // Get purchases for this product using index
     const productPurchases = await ctx.db
       .query("purchases")
-      .filter((q) => q.eq(q.field("productId"), args.productId))
-      .collect();
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .take(5000);
 
     const completedPurchases = productPurchases.filter(p => p.status === "completed");
     const weeklyPurchases = completedPurchases.filter(p => p._creationTime >= oneWeekAgo);
@@ -125,11 +125,11 @@ export const getProductSocialProof = query({
       })
     );
 
-    // Get reviews for this product
+    // Get reviews for this product using index
     const reviews = await ctx.db
       .query("productReviews")
-      .filter((q) => q.eq(q.field("productId"), args.productId))
-      .collect();
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .take(1000);
 
     const avgRating = reviews.length > 0
       ? reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length
@@ -168,18 +168,14 @@ export const getStoreStats = query({
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
 
-    // Get all published courses for this store
-    const courses = await ctx.db
+    // Get all published courses for this store using index
+    const allStoreCourses = await ctx.db
       .query("courses")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("storeId"), args.storeId),
-          q.eq(q.field("isPublished"), true)
-        )
-      )
-      .collect();
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(500);
+    const courses = allStoreCourses.filter((c) => c.isPublished === true);
 
     // Count free and paid products
     const freeProducts = products.filter(p => (p.price || 0) === 0).length;
@@ -187,17 +183,20 @@ export const getStoreStats = query({
     const freeCourses = courses.filter(c => (c.price || 0) === 0).length;
     const paidCourses = courses.filter(c => (c.price || 0) > 0).length;
 
-    // Get all purchases for products in this store
+    // Get purchases scoped to this store using index
+    const storePurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(2000);
+
     const productIds = products.map(p => p._id);
     const courseIds = courses.map(c => c._id);
-    
-    const allPurchases = await ctx.db.query("purchases").collect();
-    
+
     // Filter purchases for this store's products and courses
-    const productPurchases = allPurchases.filter(p => 
+    const productPurchases = storePurchases.filter(p =>
       p.productId && productIds.includes(p.productId)
     );
-    const coursePurchases = allPurchases.filter(p => 
+    const coursePurchases = storePurchases.filter(p =>
       p.courseId && courseIds.includes(p.courseId)
     );
 
@@ -221,7 +220,7 @@ export const getStoreStats = query({
       productIds.map(productId =>
         ctx.db.query("productReviews")
           .withIndex("by_productId", q => q.eq("productId", productId))
-          .collect()
+          .take(1000)
       )
     );
     const flatReviews = allReviews.flat().filter(r => r.rating !== undefined);
@@ -259,37 +258,30 @@ export const getQuickStoreStats = query({
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
 
-    // Get all published courses
-    const courses = await ctx.db
+    // Get all published courses using index
+    const allCourses = await ctx.db
       .query("courses")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("storeId"), args.storeId),
-          q.eq(q.field("isPublished"), true)
-        )
-      )
-      .collect();
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(500);
+    const courses = allCourses.filter((c) => c.isPublished === true);
 
     // Get all published bundles
     const bundles = await ctx.db
       .query("bundles")
       .withIndex("by_store", (q) => q.eq("storeId", args.storeId as any).eq("isPublished", true))
-      .collect();
+      .take(500);
 
-    // Get all purchases
+    // Get purchases scoped to this store using index
     const productIds = products.map(p => p._id);
     const courseIds = courses.map(c => c._id);
     const bundleIds = bundles.map(b => b._id);
 
-    const allPurchases = await ctx.db.query("purchases").collect();
-
-    const storePurchases = allPurchases.filter(p =>
-      (p.productId && productIds.includes(p.productId)) ||
-      (p.courseId && courseIds.includes(p.courseId)) ||
-      (p.bundleId && bundleIds.includes(p.bundleId))
-    );
+    const storePurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(2000);
 
     // Get unique students
     const uniqueStudents = new Set(storePurchases.map(p => p.userId));
@@ -332,7 +324,7 @@ export const getStoreStudents = query({
       .query("purchases")
       .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
+      .take(5000);
 
     // Group purchases by user
     const userPurchasesMap = new Map<string, typeof allPurchases>();
@@ -402,11 +394,11 @@ export const getStudentsWithProgress = query({
   handler: async (ctx, args) => {
     const limit = args.limit ?? 100;
 
-    // Get all courses for this store
+    // Get all courses for this store using index
     const storeCourses = await ctx.db
       .query("courses")
-      .filter((q) => q.eq(q.field("storeId"), args.storeId))
-      .collect();
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(500);
 
     const courseIds = storeCourses.map((c) => c._id);
 
@@ -415,21 +407,28 @@ export const getStudentsWithProgress = query({
       .query("purchases")
       .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
+      .take(2000);
 
-    // Get all chapters for the store's courses
-    const allChapters = await ctx.db.query("courseChapters").collect();
+    // Get chapter counts per course using index
     const courseChaptersMap = new Map<string, number>();
 
     for (const course of storeCourses) {
-      const chapterCount = allChapters.filter(
-        (ch) => ch.courseId === course._id
-      ).length;
-      courseChaptersMap.set(course._id, chapterCount);
+      const chapters = await ctx.db
+        .query("courseChapters")
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
+        .take(200);
+      courseChaptersMap.set(course._id, chapters.length);
     }
 
-    // Get all user progress for the store's courses
-    const allUserProgress = await ctx.db.query("userProgress").collect();
+    // Get user progress per course using index
+    const allUserProgress: Array<any> = [];
+    for (const course of storeCourses) {
+      const progress = await ctx.db
+        .query("userProgress")
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
+        .take(5000);
+      allUserProgress.push(...progress);
+    }
 
     // Group purchases by user
     const userPurchasesMap = new Map<string, typeof allPurchases>();
@@ -443,7 +442,7 @@ export const getStudentsWithProgress = query({
     const storeProducts = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Build student list with progress data
     const students: Array<{
@@ -633,11 +632,11 @@ export const getStudentDetailedProgress = query({
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId))
       .first();
 
-    // Get all courses for this store
+    // Get all courses for this store using index
     const storeCourses = await ctx.db
       .query("courses")
-      .filter((q) => q.eq(q.field("storeId"), args.storeId))
-      .collect();
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(500);
 
     // Get student's purchases for this store's courses
     const purchases = await ctx.db
@@ -646,7 +645,7 @@ export const getStudentDetailedProgress = query({
       .filter((q) =>
         q.and(q.eq(q.field("userId"), args.studentId), q.eq(q.field("status"), "completed"))
       )
-      .collect();
+      .take(2000);
 
     const coursePurchases = purchases.filter((p) => p.productType === "course" && p.courseId);
 
@@ -654,14 +653,11 @@ export const getStudentDetailedProgress = query({
       return null;
     }
 
-    // Get all chapters
-    const allChapters = await ctx.db.query("courseChapters").collect();
-
     // Get user's progress
     const userProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", args.studentId))
-      .collect();
+      .take(10000);
 
     const courses: Array<{
       courseId: string;
@@ -684,8 +680,11 @@ export const getStudentDetailedProgress = query({
       const course = storeCourses.find((c) => c._id === purchase.courseId);
       if (!course) continue;
 
-      // Get chapters for this course
-      const courseChapters = allChapters.filter((ch) => ch.courseId === course._id);
+      // Get chapters for this course using index
+      const courseChapters = await ctx.db
+        .query("courseChapters")
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
+        .take(200);
 
       let courseTimeSpent = 0;
       let courseChaptersCompleted = 0;

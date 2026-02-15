@@ -11,7 +11,7 @@ export const getMembershipTiersByStore = query({
     let tiers = await ctx.db
       .query("creatorSubscriptionTiers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(100);
 
     if (!args.includeInactive) {
       tiers = tiers.filter((t) => t.isActive);
@@ -23,7 +23,7 @@ export const getMembershipTiersByStore = query({
           .query("contentAccess")
           .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
           .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
-          .collect();
+          .take(5000);
 
         const courseIds = accessRules
           .filter((r) => r.resourceType === "course")
@@ -54,7 +54,7 @@ export const getMembershipTierDetails = query({
       .query("contentAccess")
       .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
       .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
-      .collect();
+      .take(5000);
 
     const courseIds = accessRules
       .filter((r) => r.resourceType === "course")
@@ -208,7 +208,7 @@ export const getStoreSubscribers = query({
     let subscriptions = await ctx.db
       .query("userCreatorSubscriptions")
       .withIndex("by_creatorId", (q) => q.eq("creatorId", store.userId))
-      .collect();
+      .take(5000);
 
     if (args.status) {
       subscriptions = subscriptions.filter((s) => s.status === args.status);
@@ -362,7 +362,7 @@ export const updateMembershipTier = mutation({
         .filter((q) =>
           q.and(q.eq(q.field("requiredTierId"), tierId), q.eq(q.field("resourceType"), "course"))
         )
-        .collect();
+        .take(5000);
 
       for (const access of existingCourseAccess) {
         await ctx.db.delete(access._id);
@@ -387,7 +387,7 @@ export const updateMembershipTier = mutation({
         .filter((q) =>
           q.and(q.eq(q.field("requiredTierId"), tierId), q.eq(q.field("resourceType"), "product"))
         )
-        .collect();
+        .take(5000);
 
       for (const access of existingProductAccess) {
         await ctx.db.delete(access._id);
@@ -452,7 +452,7 @@ export const deleteMembershipTier = mutation({
       .query("contentAccess")
       .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
       .filter((q) => q.eq(q.field("requiredTierId"), args.tierId))
-      .collect();
+      .take(5000);
 
     for (const rule of accessRules) {
       await ctx.db.delete(rule._id);
@@ -607,7 +607,7 @@ export const getAllPublishedMemberships = query({
     let tiers = await ctx.db
       .query("creatorSubscriptionTiers")
       .withIndex("by_active", (q) => q.eq("isActive", true))
-      .collect();
+      .take(10000);
 
     if (args.searchQuery) {
       const search = args.searchQuery.toLowerCase();
@@ -634,7 +634,7 @@ export const getAllPublishedMemberships = query({
           .query("contentAccess")
           .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
           .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
-          .collect();
+          .take(5000);
 
         const courseCount = accessRules.filter((r) => r.resourceType === "course").length;
         const productCount = accessRules.filter((r) => r.resourceType === "product").length;
@@ -693,13 +693,13 @@ export const getMembershipBySlug = query({
       const allCourses = await ctx.db
         .query("courses")
         .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
-        .collect();
+        .take(5000);
       courses = allCourses.filter((c) => c.isPublished);
 
       const allProducts = await ctx.db
         .query("digitalProducts")
         .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
-        .collect();
+        .take(5000);
       products = allProducts.filter((p) => p.isPublished);
     } else {
       // Fetch only content linked via contentAccess rules
@@ -707,7 +707,7 @@ export const getMembershipBySlug = query({
         .query("contentAccess")
         .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
         .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
-        .collect();
+        .take(5000);
 
       const courseIds = accessRules
         .filter((r) => r.resourceType === "course")
@@ -725,7 +725,7 @@ export const getMembershipBySlug = query({
       .query("creatorSubscriptionTiers")
       .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(100);
 
     return {
       ...tier,
@@ -746,7 +746,7 @@ export const getStoreMemberships = query({
     let tiers = await ctx.db
       .query("creatorSubscriptionTiers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(100);
 
     // Filter to active only
     tiers = tiers.filter((t) => t.isActive);
@@ -757,7 +757,7 @@ export const getStoreMemberships = query({
           .query("contentAccess")
           .withIndex("by_storeId", (q) => q.eq("storeId", tier.storeId))
           .filter((q) => q.eq(q.field("requiredTierId"), tier._id))
-          .collect();
+          .take(5000);
 
         return {
           ...tier,

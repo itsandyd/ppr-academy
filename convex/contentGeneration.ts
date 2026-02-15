@@ -64,8 +64,6 @@ export const generateViralVideoScript = action({
         }
       ];
 
-      console.log(`Found ${relevantContent.length} course templates for content generation`);
-
       if (!relevantContent || relevantContent.length === 0) {
         return {
           success: false,
@@ -228,8 +226,6 @@ export const generateCourseFromContent = action({
         }
       ];
 
-      console.log(`Found ${relevantContent.length} course templates for outline generation`);
-
       const contextContent: string = relevantContent
         .map((content: any) => content.content)
         .join("\n\n");
@@ -345,8 +341,6 @@ export const generateLandingPageCopy = action({
         skillLevel: "Intermediate",
         price: 97
       };
-
-      console.log("Using simplified course data for landing page generation");
 
       if (!course) {
         return {

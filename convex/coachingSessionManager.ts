@@ -28,15 +28,11 @@ export const manageCoachingSessions = internalAction({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    console.log("🔄 Running coaching session manager...");
-
     try {
       // Get sessions that need setup (starting in ~2 hours)
       const sessionsToSetup = await ctx.runQuery(
         internal.coachingSessionQueries.getSessionsNeedingSetup
       );
-
-      console.log(`Found ${sessionsToSetup.length} sessions needing setup`);
 
       // Setup each session
       for (const session of sessionsToSetup) {
@@ -52,8 +48,6 @@ export const manageCoachingSessions = internalAction({
         internal.coachingSessionQueries.getSessionsNeedingCleanup
       );
 
-      console.log(`Found ${sessionsToCleanup.length} sessions needing cleanup`);
-
       // Cleanup each session
       for (const session of sessionsToCleanup) {
         try {
@@ -63,7 +57,6 @@ export const manageCoachingSessions = internalAction({
         }
       }
 
-      console.log("✅ Session manager completed");
       return null;
     } catch (error) {
       console.error("❌ Session manager error:", error);
@@ -75,8 +68,6 @@ export const manageCoachingSessions = internalAction({
 // ==================== HELPER FUNCTIONS ====================
 
 async function setupSessionAccess(ctx: any, session: any) {
-  console.log(`⚙️ Setting up session ${session._id}`);
-
   // Get guild info
   const guildInfo = await ctx.runQuery(
     internal.coachingSessionQueries.getSessionGuildInfo,
@@ -155,15 +146,10 @@ async function setupSessionAccess(ctx: any, session: any) {
     discordChannelId: channelResult.channelId,
     discordRoleId: roleResult.roleId,
   });
-
-  console.log(`✅ Session ${session._id} setup complete`);
 }
 
 async function cleanupSessionAccess(ctx: any, session: any) {
-  console.log(`🧹 Cleaning up session ${session._id}`);
-
   if (!session.discordChannelId || !session.discordRoleId) {
-    console.log("No Discord resources to clean");
     return;
   }
 
@@ -181,7 +167,6 @@ async function cleanupSessionAccess(ctx: any, session: any) {
   // Delete channel
   try {
     await deleteChannel(guildInfo.guildId, guildInfo.botToken, session.discordChannelId);
-    console.log(`Deleted channel ${session.discordChannelId}`);
   } catch (error) {
     console.error("Error deleting channel:", error);
   }
@@ -189,7 +174,6 @@ async function cleanupSessionAccess(ctx: any, session: any) {
   // Delete role
   try {
     await deleteRole(guildInfo.guildId, guildInfo.botToken, session.discordRoleId);
-    console.log(`Deleted role ${session.discordRoleId}`);
   } catch (error) {
     console.error("Error deleting role:", error);
   }
@@ -198,8 +182,6 @@ async function cleanupSessionAccess(ctx: any, session: any) {
   await ctx.runMutation(internal.coachingSessionQueries.markSessionCleanedUp, {
     sessionId: session._id,
   });
-
-  console.log(`✅ Session ${session._id} cleaned up`);
 }
 
 // ==================== DISCORD API HELPERS ====================

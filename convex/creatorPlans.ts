@@ -342,7 +342,7 @@ export const checkFeatureAccess = query({
         const linkCount = await ctx.db
           .query("linkInBioLinks")
           .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-          .collect()
+          .take(5000)
           .then((links) => links.length);
 
         const requiresUpgrade = plan === "free" && linkCount >= limits.maxLinks;
@@ -362,12 +362,12 @@ export const checkFeatureAccess = query({
           ctx.db
             .query("courses")
             .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-            .collect()
+            .take(5000)
             .then((courses) => courses.length),
           ctx.db
             .query("digitalProducts")
             .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-            .collect()
+            .take(5000)
             .then((products) => products.length),
         ]);
 
@@ -635,17 +635,17 @@ export const getPlanUsageStats = query({
       ctx.db
         .query("linkInBioLinks")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-        .collect()
+        .take(5000)
         .then((links) => links.length),
       ctx.db
         .query("courses")
         .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-        .collect()
+        .take(5000)
         .then((courses) => courses.length),
       ctx.db
         .query("digitalProducts")
         .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-        .collect()
+        .take(5000)
         .then((products) => products.length),
     ]);
 
@@ -710,7 +710,7 @@ export const getEarlyAccessStores = query({
     const now = Date.now();
 
     // Get all early access stores
-    const allStores = await ctx.db.query("stores").collect();
+    const allStores = await ctx.db.query("stores").take(10000);
     const earlyAccessStores = allStores.filter(s => s.plan === "early_access");
 
     // Get stats for each store
@@ -724,15 +724,15 @@ export const getEarlyAccessStores = query({
         const products = await ctx.db
           .query("digitalProducts")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .collect();
+          .take(5000);
 
         const courses = await ctx.db
           .query("courses")
           .filter((q) => q.eq(q.field("storeId"), store._id))
-          .collect();
+          .take(10000);
 
         // Calculate revenue
-        const allPurchases = await ctx.db.query("purchases").collect();
+        const allPurchases = await ctx.db.query("purchases").take(10000);
         const productIds = products.map(p => p._id);
         const courseIds = courses.map(c => c._id);
         const storePurchases = allPurchases.filter(p =>
@@ -844,7 +844,7 @@ export const sunsetAllEarlyAccess = mutation({
     const expiresAt = Date.now() + (args.daysUntilExpiration * 24 * 60 * 60 * 1000);
 
     // Get all early access stores without expiration set
-    const allStores = await ctx.db.query("stores").collect();
+    const allStores = await ctx.db.query("stores").take(10000);
     const earlyAccessStores = allStores.filter(
       s => s.plan === "early_access" && !s.earlyAccessExpiresAt
     );
@@ -969,12 +969,12 @@ export const adminGetStoreByUserId = query({
       ctx.db
         .query("courses")
         .withIndex("by_userId", (q) => q.eq("userId", args.targetUserId))
-        .collect()
+        .take(5000)
         .then((c) => c.length),
       ctx.db
         .query("digitalProducts")
         .withIndex("by_userId", (q) => q.eq("userId", args.targetUserId))
-        .collect()
+        .take(5000)
         .then((p) => p.length),
     ]);
 

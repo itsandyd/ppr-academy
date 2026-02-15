@@ -105,8 +105,6 @@ export const emailDripWorkflow = workflow.define({
     executionData: v.optional(v.any()),
   },
   handler: async (ctx, args): Promise<{ completed: boolean; stoppedAt?: string }> => {
-    console.log(`[DripWorkflow] Starting for ${args.customerEmail}`);
-
     // Get workflow definition
     const workflowDef = await ctx.runQuery(
       internal.emailWorkflows.getWorkflowInternal,
@@ -124,14 +122,11 @@ export const emailDripWorkflow = workflow.define({
     // Find first non-trigger node
     let currentNode = nodes.find((n) => n.type !== "trigger");
     if (!currentNode) {
-      console.log(`[DripWorkflow] No nodes to process`);
       return { completed: true };
     }
 
     // Process nodes sequentially
     while (currentNode) {
-      console.log(`[DripWorkflow] Processing node: ${currentNode.type} (${currentNode.id})`);
-
       switch (currentNode.type) {
         case "email": {
           // Send email via the workflow email sender
@@ -142,7 +137,6 @@ export const emailDripWorkflow = workflow.define({
               storeId: args.storeId,
               customerEmail: args.customerEmail,
             });
-            console.log(`[DripWorkflow] Sent email to ${args.customerEmail}`);
           }
           break;
         }
@@ -151,7 +145,6 @@ export const emailDripWorkflow = workflow.define({
           // Schedule the next step with a delay using runAfter
           const delayMs = calculateDelayMs(currentNode);
           if (delayMs > 0) {
-            console.log(`[DripWorkflow] Scheduling delay of ${delayMs}ms (${delayMs / 3600000} hours)`);
             // Use runAfter to delay the next operation
             // The next runQuery/runMutation/runAction will respect this delay
             const nextNode = findNextNode(currentNode.id, nodes, edges);
@@ -167,7 +160,6 @@ export const emailDripWorkflow = workflow.define({
                 },
                 { runAfter: delayMs }
               );
-              console.log(`[DripWorkflow] Scheduled email to ${args.customerEmail} after ${delayMs}ms`);
               // Skip to the node after the email since we just processed it
               currentNode = findNextNode(nextNode.id, nodes, edges);
               continue;
@@ -193,7 +185,6 @@ export const emailDripWorkflow = workflow.define({
         }
 
         case "stop": {
-          console.log(`[DripWorkflow] Stop node reached`);
           return { completed: true, stoppedAt: currentNode.id };
         }
 
@@ -225,21 +216,19 @@ export const emailDripWorkflow = workflow.define({
           );
 
           if (goalAchieved) {
-            console.log(`[DripWorkflow] Goal achieved, stopping workflow`);
             return { completed: true, stoppedAt: `goal:${currentNode.id}` };
           }
           break;
         }
 
         default:
-          console.log(`[DripWorkflow] Unknown node type: ${currentNode.type}`);
+          break;
       }
 
       // Move to next node
       currentNode = findNextNode(currentNode.id, nodes, edges);
     }
 
-    console.log(`[DripWorkflow] Workflow completed for ${args.customerEmail}`);
     return { completed: true };
   },
 });
@@ -273,8 +262,6 @@ export const abTestWorkflow = workflow.define({
     const useVariantA = Math.abs(hash % 100) < args.splitPercentage;
     const variant = useVariantA ? args.variantA : args.variantB;
     const variantName = useVariantA ? "A" : "B";
-
-    console.log(`[ABTest] ${args.customerEmail} assigned to variant ${variantName}`);
 
     // Send the email (with delay if specified)
     await ctx.runAction(

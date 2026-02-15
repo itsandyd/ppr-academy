@@ -6942,4 +6942,40 @@ export default defineSchema({
     processedAt: v.number(),
     error: v.optional(v.string()),
   }).index("by_stripeEventId", ["stripeEventId"]),
+
+  // Admin Dashboard Metrics (pre-aggregated hourly)
+  adminMetrics: defineTable({
+    // Counts
+    totalUsers: v.number(),
+    totalCreators: v.number(),
+    totalCourses: v.number(),
+    totalPublishedCourses: v.number(),
+    totalProducts: v.number(),
+    totalStores: v.number(),
+    totalEnrollments: v.number(),
+    totalPurchases: v.number(),
+
+    // Financial (in cents)
+    totalRevenue: v.number(),
+    monthlyRevenue: v.number(),
+    platformFees: v.number(),
+
+    // Active users (last 30 days)
+    activeUsers: v.number(),
+    newUsersThisMonth: v.number(),
+
+    // Growth data (JSON objects: { "YYYY-MM-DD": number })
+    dailySignups: v.optional(v.any()),
+    dailyRevenue: v.optional(v.any()),
+    dailyPurchaseCounts: v.optional(v.any()),
+    dailyEnrollments: v.optional(v.any()),
+
+    // Conversion metrics
+    averageOrderValue: v.number(),
+    repeatPurchaseRate: v.number(),
+    cartAbandonmentRate: v.number(),
+
+    // Metadata
+    lastUpdated: v.number(),
+  }),
 });

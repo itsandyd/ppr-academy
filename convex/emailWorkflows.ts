@@ -26,7 +26,7 @@ export const listEmailTemplates = query({
     const templates = await ctx.db
       .query("emailTemplates")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     return templates.map((t) => ({
       _id: t._id,
@@ -206,7 +206,6 @@ export const preCreateWorkflowTags = mutation({
           updatedAt: now,
         });
         tagMap.push({ name, tagId });
-        console.log(`[EmailWorkflows] Pre-created tag "${name}" (ID: ${tagId})`);
       }
     }
 
@@ -639,14 +638,14 @@ export const listWorkflows = query({
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
-      .collect();
+      .take(5000);
 
     // Also check by userId in case storeId was stored incorrectly
     const workflowsByUserId = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
       .order("desc")
-      .collect();
+      .take(5000);
 
     // Merge and deduplicate
     const allWorkflows = [...workflowsByStoreId];
@@ -677,7 +676,7 @@ export const listWorkflowsBySequenceType = query({
         .query("emailWorkflows")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
         .order("desc")
-        .collect();
+        .take(5000);
     }
 
     // Use compound index to filter by both storeId and sequenceType
@@ -687,7 +686,7 @@ export const listWorkflowsBySequenceType = query({
         q.eq("storeId", args.storeId).eq("sequenceType", args.sequenceType)
       )
       .order("desc")
-      .collect();
+      .take(5000);
 
     return workflows;
   },
@@ -704,7 +703,7 @@ export const getWorkflowCountsByType = query({
     const workflows = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     const counts: Record<string, number> = {
       welcome: 0,
@@ -740,7 +739,7 @@ export const listAdminWorkflows = query({
       .query("emailWorkflows")
       .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
       .order("desc")
-      .collect();
+      .take(5000);
 
     return workflows;
   },
@@ -852,12 +851,11 @@ export const triggerLeadSignupWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(5000);
 
     const leadSignupWorkflows = activeWorkflows.filter((w) => w.trigger.type === "lead_signup");
 
     if (leadSignupWorkflows.length === 0) {
-      console.log(`[Workflows] No active lead_signup workflows for store ${args.storeId}`);
       return null;
     }
 
@@ -883,7 +881,6 @@ export const triggerLeadSignupWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[Workflows] ${args.customerEmail} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -909,8 +906,6 @@ export const triggerLeadSignupWorkflows = internalMutation({
         totalExecutions: (workflow.totalExecutions || 0) + 1,
         lastExecuted: now,
       });
-
-      console.log(`[Workflows] Enrolled ${args.customerEmail} in workflow "${workflow.name}"`);
     }
 
     return null;
@@ -936,12 +931,11 @@ export const triggerProductPurchaseWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(5000);
 
     const purchaseWorkflows = activeWorkflows.filter((w) => w.trigger.type === "product_purchase");
 
     if (purchaseWorkflows.length === 0) {
-      console.log(`[Workflows] No active product_purchase workflows for store ${args.storeId}`);
       return null;
     }
 
@@ -979,7 +973,6 @@ export const triggerProductPurchaseWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[Workflows] ${args.customerEmail} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -1010,9 +1003,6 @@ export const triggerProductPurchaseWorkflows = internalMutation({
         lastExecuted: now,
       });
 
-      console.log(
-        `[Workflows] Enrolled ${args.customerEmail} in purchase workflow "${workflow.name}"`
-      );
     }
 
     return null;
@@ -1033,7 +1023,7 @@ export const triggerTagAddedWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(5000);
 
     // Filter workflows with tag_added trigger
     // Optionally filter by specific tag if configured
@@ -1046,13 +1036,11 @@ export const triggerTagAddedWorkflows = internalMutation({
     });
 
     if (tagAddedWorkflows.length === 0) {
-      console.log(`[Workflows] No active tag_added workflows for store ${args.storeId}`);
       return null;
     }
 
     const contact = await ctx.db.get(args.contactId);
     if (!contact) {
-      console.log(`[Workflows] Contact ${args.contactId} not found`);
       return null;
     }
 
@@ -1072,7 +1060,6 @@ export const triggerTagAddedWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[Workflows] Contact ${contact.email} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -1098,9 +1085,6 @@ export const triggerTagAddedWorkflows = internalMutation({
         lastExecuted: now,
       });
 
-      console.log(
-        `[Workflows] Enrolled ${contact.email} in workflow "${workflow.name}" via tag "${args.tagName}"`
-      );
     }
 
     return null;
@@ -1123,12 +1107,11 @@ export const triggerAdminNewSignupWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(10000);
 
     const newSignupWorkflows = adminWorkflows.filter((w) => w.trigger.type === "new_signup");
 
     if (newSignupWorkflows.length === 0) {
-      console.log(`[AdminWorkflows] No active new_signup workflows`);
       return null;
     }
 
@@ -1148,7 +1131,6 @@ export const triggerAdminNewSignupWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -1172,8 +1154,6 @@ export const triggerAdminNewSignupWorkflows = internalMutation({
         totalExecutions: (workflow.totalExecutions || 0) + 1,
         lastExecuted: now,
       });
-
-      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in admin workflow "${workflow.name}"`);
     }
 
     return null;
@@ -1203,12 +1183,11 @@ export const triggerAdminPurchaseWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(10000);
 
     const purchaseWorkflows = adminWorkflows.filter((w) => w.trigger.type === "any_purchase");
 
     if (purchaseWorkflows.length === 0) {
-      console.log(`[AdminWorkflows] No active any_purchase workflows`);
       return null;
     }
 
@@ -1228,7 +1207,6 @@ export const triggerAdminPurchaseWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -1260,7 +1238,6 @@ export const triggerAdminPurchaseWorkflows = internalMutation({
         lastExecuted: now,
       });
 
-      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in admin workflow "${workflow.name}" (purchase trigger)`);
     }
 
     return null;
@@ -1286,12 +1263,11 @@ export const triggerAdminCourseCompleteWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(10000);
 
     const courseCompleteWorkflows = adminWorkflows.filter((w) => w.trigger.type === "any_course_complete");
 
     if (courseCompleteWorkflows.length === 0) {
-      console.log(`[AdminWorkflows] No active any_course_complete workflows`);
       return null;
     }
 
@@ -1310,7 +1286,6 @@ export const triggerAdminCourseCompleteWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -1338,7 +1313,6 @@ export const triggerAdminCourseCompleteWorkflows = internalMutation({
         lastExecuted: now,
       });
 
-      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in admin workflow "${workflow.name}" (course complete trigger)`);
     }
 
     return null;
@@ -1379,12 +1353,11 @@ export const triggerLearnerConversionWorkflows = internalMutation({
       .query("emailWorkflows")
       .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(10000);
 
     const conversionWorkflows = adminWorkflows.filter((w) => w.trigger.type === "learner_conversion");
 
     if (conversionWorkflows.length === 0) {
-      console.log(`[AdminWorkflows] No active learner_conversion workflows for context: ${args.conversionContext}`);
       return null;
     }
 
@@ -1394,7 +1367,6 @@ export const triggerLearnerConversionWorkflows = internalMutation({
       // Check if workflow is configured for this specific context (or all contexts)
       const triggerContexts = workflow.trigger.config?.contexts || [];
       if (triggerContexts.length > 0 && !triggerContexts.includes(args.conversionContext)) {
-        console.log(`[AdminWorkflows] Workflow "${workflow.name}" not configured for context: ${args.conversionContext}`);
         continue;
       }
 
@@ -1411,7 +1383,6 @@ export const triggerLearnerConversionWorkflows = internalMutation({
         .first();
 
       if (existingExecution) {
-        console.log(`[AdminWorkflows] ${args.userEmail} already in workflow ${workflow.name}`);
         continue;
       }
 
@@ -1428,7 +1399,6 @@ export const triggerLearnerConversionWorkflows = internalMutation({
         .first();
 
       if (completedExecution && !workflow.trigger.config?.allowReentry) {
-        console.log(`[AdminWorkflows] ${args.userEmail} already completed workflow ${workflow.name}`);
         continue;
       }
 
@@ -1455,7 +1425,6 @@ export const triggerLearnerConversionWorkflows = internalMutation({
         lastExecuted: now,
       });
 
-      console.log(`[AdminWorkflows] Enrolled ${args.userEmail} in learner conversion workflow "${workflow.name}" (context: ${args.conversionContext})`);
     }
 
     return null;
@@ -1821,8 +1790,6 @@ export const processBulkEnrollment = internalAction({
     let batchesProcessed = 0;
     let done = false;
 
-    console.log(`[BulkEnroll] Starting invocation #${Math.floor(batchNumber / MAX_BATCHES_PER_INVOCATION) + 1}, cursor: ${cursor || 'start'}, enrolled so far: ${totalEnrolled}`);
-
     // Type definitions for batch results
     type BatchResult = { contactIds: string[]; nextCursor: string | null; hasMore: boolean };
     type EnrollResult = { enrolled: number; skipped: number };
@@ -1861,17 +1828,10 @@ export const processBulkEnrollment = internalAction({
       if (!batch.hasMore) {
         done = true;
       }
-
-      // Log progress every 10 batches
-      if (batchesProcessed % 10 === 0) {
-        console.log(`[BulkEnroll] Progress: ${totalEnrolled} enrolled, ${totalSkipped} skipped (batch ${batchNumber})`);
-      }
     }
 
     // If there are more contacts to process, schedule the next invocation
     if (!done && cursor) {
-      console.log(`[BulkEnroll] Scheduling next invocation. Enrolled so far: ${totalEnrolled}, cursor: ${cursor}`);
-
       // Small delay to prevent overwhelming the scheduler
       await ctx.scheduler.runAfter(500, internal.emailWorkflows.processBulkEnrollment, {
         workflowId: args.workflowId,
@@ -1894,8 +1854,6 @@ export const processBulkEnrollment = internalAction({
     }
 
     // All done! Update final stats
-    console.log(`[BulkEnroll] ✅ COMPLETE! Total enrolled: ${totalEnrolled}, skipped: ${totalSkipped}`);
-
     if (totalEnrolled > 0) {
       await ctx.runMutation(internal.emailWorkflows.updateWorkflowStats, {
         workflowId: args.workflowId,
@@ -2059,7 +2017,7 @@ export const getContactWorkflowStatus = query({
     const executions = await ctx.db
       .query("workflowExecutions")
       .filter((q) => q.eq(q.field("customerEmail"), contact.email))
-      .collect();
+      .take(5000);
 
     const workflowIds = [...new Set(executions.map((e) => e.workflowId))];
     const workflows = await Promise.all(workflowIds.map((id) => ctx.db.get(id)));
@@ -2159,7 +2117,7 @@ export const evaluateWorkflowCondition = internalQuery({
           .query("emailContactActivity")
           .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
           .filter((q) => q.eq(q.field("activityType"), "email_opened"))
-          .collect();
+          .take(5000);
 
         if (emailNodeId && emailNodeId !== "any") {
           // Check for specific email open (would need to track which email was opened)
@@ -2177,7 +2135,7 @@ export const evaluateWorkflowCondition = internalQuery({
           .query("emailContactActivity")
           .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
           .filter((q) => q.eq(q.field("activityType"), "email_clicked"))
-          .collect();
+          .take(5000);
 
         if (linkUrl) {
           // Check for specific link click
@@ -2211,7 +2169,7 @@ export const evaluateWorkflowCondition = internalQuery({
           .query("purchases")
           .withIndex("by_userId", (q) => q.eq("userId", user.clerkId || ""))
           .filter((q) => q.eq(q.field("status"), "completed"))
-          .collect();
+          .take(5000);
 
         if (productId) {
           // Check for specific product purchase
@@ -2252,7 +2210,6 @@ export const evaluateWorkflowCondition = internalQuery({
       }
 
       default:
-        console.log(`[Workflows] Unknown condition type: ${args.conditionType}`);
         return true;
     }
   },
@@ -2440,10 +2397,6 @@ export const trackABTestResult = internalMutation({
       updatedAt: Date.now(),
     });
 
-    console.log(
-      `[ABTest] Workflow ${args.workflowId}, Node ${args.nodeId}: Contact ${args.contactId} - variant ${args.variant} ${eventType}`
-    );
-
     // Check if we should auto-select a winner
     if (abTest.autoSelectWinner && abTest.status === "active") {
       const totalSent = updatedVariants.reduce((sum, v) => sum + v.sent, 0);
@@ -2477,9 +2430,6 @@ export const trackABTestResult = internalMutation({
               completedAt: Date.now(),
             });
 
-            console.log(
-              `[ABTest] Winner selected: Variant ${winner} with ${(confidence * 100).toFixed(1)}% confidence`
-            );
           }
         }
       }
@@ -2547,7 +2497,6 @@ export const createTagInternal = internalMutation({
       createdAt: now,
       updatedAt: now,
     });
-    console.log(`[EmailWorkflows] Auto-created tag "${args.name}" with ID ${tagId}`);
     return tagId;
   },
 });
@@ -2589,7 +2538,6 @@ export const getOrCreateTag = internalMutation({
       updatedAt: now,
     });
 
-    console.log(`[EmailWorkflows] Auto-created tag "${args.name}" (ID: ${tagId})`);
     return tagId;
   },
 });
@@ -2648,7 +2596,6 @@ export const ensureWorkflowTagsExist = internalMutation({
           updatedAt: now,
         });
         created.push(name);
-        console.log(`[EmailWorkflows] Pre-created tag "${name}" for workflow`);
       }
     }
 
@@ -3016,9 +2963,6 @@ export const cancelExecution = mutation({
       completedAt: Date.now(),
     });
 
-    console.log(
-      `[EmailWorkflows] Cancelled execution ${args.executionId} for ${execution.customerEmail}`
-    );
     return null;
   },
 });
@@ -3072,13 +3016,11 @@ export const addTagToContactInternal = internalMutation({
   handler: async (ctx, args) => {
     const contact = await ctx.db.get(args.contactId);
     if (!contact) {
-      console.log(`[EmailWorkflows] Contact ${args.contactId} not found for tag add`);
       return null;
     }
 
     const tag = await ctx.db.get(args.tagId);
     if (!tag) {
-      console.log(`[EmailWorkflows] Tag ${args.tagId} not found`);
       return null;
     }
 
@@ -3087,7 +3029,6 @@ export const addTagToContactInternal = internalMutation({
       await ctx.db.patch(args.contactId, {
         tagIds: [...existingTagIds, args.tagId],
       });
-      console.log(`[EmailWorkflows] Added tag "${tag.name}" to contact ${contact.email}`);
     }
 
     return null;
@@ -3107,7 +3048,6 @@ export const addTagByName = internalMutation({
   handler: async (ctx, args) => {
     const contact = await ctx.db.get(args.contactId);
     if (!contact) {
-      console.log(`[EmailWorkflows] Contact ${args.contactId} not found for tag add`);
       return null;
     }
 
@@ -3134,7 +3074,6 @@ export const addTagByName = internalMutation({
     }
 
     if (!tag) {
-      console.log(`[EmailWorkflows] Failed to create tag "${args.tagName}"`);
       return null;
     }
 
@@ -3149,7 +3088,6 @@ export const addTagByName = internalMutation({
         contactCount: (tag.contactCount || 0) + 1,
         updatedAt: Date.now(),
       });
-      console.log(`[EmailWorkflows] Added tag "${args.tagName}" to contact ${contact.email}`);
     }
 
     return null;
@@ -3168,13 +3106,11 @@ export const removeTagFromContactInternal = internalMutation({
   handler: async (ctx, args) => {
     const contact = await ctx.db.get(args.contactId);
     if (!contact) {
-      console.log(`[EmailWorkflows] Contact ${args.contactId} not found for tag remove`);
       return null;
     }
 
     const tag = await ctx.db.get(args.tagId);
     if (!tag) {
-      console.log(`[EmailWorkflows] Tag ${args.tagId} not found`);
       return null;
     }
 
@@ -3183,7 +3119,6 @@ export const removeTagFromContactInternal = internalMutation({
       await ctx.db.patch(args.contactId, {
         tagIds: existingTagIds.filter((t: Id<"emailTags">) => t !== args.tagId),
       });
-      console.log(`[EmailWorkflows] Removed tag "${tag.name}" from contact ${contact.email}`);
     }
 
     return null;
@@ -3450,7 +3385,7 @@ export const fastForwardAllDelays = mutation({
           q.eq(q.field("status"), "pending")
         )
       )
-      .collect();
+      .take(5000);
 
     let skippedCount = 0;
     for (const exec of executions) {
@@ -3558,10 +3493,6 @@ export const batchReEnrollStuckExecutions = internalAction({
       hasMore = result.hasMore && result.reEnrolled > 0;
       batchNumber++;
       batchesProcessed++;
-
-      console.log(
-        `[ReEnroll] Batch ${batchNumber}: re-enrolled ${result.reEnrolled}, total: ${totalReEnrolled}, hasMore: ${hasMore}`
-      );
 
       if (!hasMore) break;
     }
@@ -3832,7 +3763,6 @@ export const batchResumeFailedExecutions = internalAction({
       hasMore = result.hasMore;
       batchCount++;
 
-      console.log(`[ResumeFailedExecutions] Batch ${batchCount}: resumed ${result.resumed}, total: ${totalResumed}`);
     }
 
     if (hasMore) {
@@ -4071,8 +4001,6 @@ export const batchCompleteStopNodes = internalAction({
       hasMore = result.hasMore;
       batchCount++;
 
-      console.log(`[BulkComplete] Batch ${batchCount}: completed ${result.completed}, total: ${totalCompleted}`);
-
       if (result.completed === 0) break;
     }
 
@@ -4177,8 +4105,6 @@ export const batchReroutePendingExecutions = internalAction({
       totalRerouted += result.rerouted;
       hasMore = result.hasMore;
       batchCount++;
-
-      console.log(`[BatchReroute] Batch ${batchCount}: rerouted ${result.rerouted}, total: ${totalRerouted}`);
 
       if (result.rerouted === 0) break;
 

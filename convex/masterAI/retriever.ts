@@ -39,17 +39,13 @@ export const retrieveContent = internalAction({
 
       try {
         // Generate embedding for the search query
-        console.log(`   Generating embedding for query: "${strategy.query.substring(0, 50)}..."`);
         const queryEmbedding = await generateQueryEmbedding(strategy.query);
-        console.log(`   Query embedding generated, length: ${queryEmbedding.length}`);
 
         // Get ALL embeddings from Convex (increased limit for better coverage)
         const embeddings = await ctx.runQuery(internal.masterAI.queries.getFilteredEmbeddings, {
           // No filters - search ALL content
           limit: 500, // Fetch up to 500 embeddings
         });
-
-        console.log(`   Fetched ${embeddings.length} embeddings from database`);
 
         // Calculate similarities and rank
         const withSimilarity = embeddings.map((item: any) => {
@@ -66,19 +62,13 @@ export const retrieveContent = internalAction({
           };
         });
 
-        // Log top similarities for debugging
         const sorted = [...withSimilarity].sort((a, b) => b.similarity - a.similarity);
-        if (sorted.length > 0) {
-          console.log(`   Top 3 similarities: ${sorted.slice(0, 3).map(s => s.similarity.toFixed(3)).join(', ')}`);
-        }
 
         // Use a lower threshold (0.3) to capture more results, then rank by similarity
         const threshold = Math.min(settings.similarityThreshold, 0.3);
         const results = sorted
           .filter((item: any) => item.similarity >= threshold)
           .slice(0, settings.chunksPerFacet);
-
-        console.log(`   Found ${results.length} chunks above threshold ${threshold}`);
 
         return {
           facetName: strategy.facetName,

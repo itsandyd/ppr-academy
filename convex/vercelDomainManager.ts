@@ -36,16 +36,7 @@ export const addDomainToVercel = action({
       };
     }
 
-    console.log("Adding domain to Vercel:", { 
-      domain: args.domain, 
-      projectId: vercelProjectId.substring(0, 10) + "...",
-      teamId: vercelTeamId,
-    });
-
     try {
-      // For team projects, MUST include teamId parameter
-      console.log("Fetching Vercel API...");
-      
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
@@ -65,10 +56,7 @@ export const addDomainToVercel = action({
       );
 
       clearTimeout(timeoutId);
-      console.log("Vercel API responded with status:", response.status);
-      
       const data = await response.json();
-      console.log("Vercel API response data:", data);
 
       if (!response.ok) {
         console.error("Vercel API error:", {
@@ -98,8 +86,6 @@ export const addDomainToVercel = action({
           message: (data as any)?.error?.message || "Failed to add domain to Vercel",
         };
       }
-
-      console.log("✅ Domain added to Vercel:", args.domain);
 
       // Also add www subdomain
       await fetch(

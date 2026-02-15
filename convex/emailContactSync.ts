@@ -891,7 +891,7 @@ export const getSegmentsByTag = query({
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     const displayNameMap: Record<string, string> = {};
     for (const template of PREBUILT_SEGMENT_TEMPLATES) {
@@ -933,7 +933,7 @@ export const getContactsByTags = query({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const matchingContacts = contacts.filter((contact) => {
       const contactTagIds = contact.tagIds || [];
@@ -1022,7 +1022,7 @@ export const retagAllContacts = mutation({
             const purchases = await ctx.db
               .query("purchases")
               .withIndex("by_customerId", (q) => q.eq("customerId", contact.customerId!))
-              .collect();
+              .take(5000);
 
             for (const purchase of purchases) {
               // Check if it's a product purchase
@@ -1271,11 +1271,11 @@ export const tagEnrolledUsersWithCourseTags = mutation({
     const coursesByStoreId = await ctx.db
       .query("courses")
       .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-      .collect();
+      .take(5000);
     const coursesByUserId = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
-      .collect();
+      .take(5000);
 
     // Merge and deduplicate courses, create lookup map
     const coursesMap = new Map<string, (typeof coursesByStoreId)[0]>();
@@ -1432,12 +1432,12 @@ export const tagContactWithEnrollments = mutation({
       ? await ctx.db
           .query("courses")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .collect()
+          .take(5000)
       : [];
     const coursesByUserId = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
-      .collect();
+      .take(5000);
 
     const coursesMap = new Map<string, (typeof coursesByStoreId)[0]>();
     for (const course of [...coursesByStoreId, ...coursesByUserId]) {
@@ -1456,7 +1456,7 @@ export const tagContactWithEnrollments = mutation({
       const enrollments = await ctx.db
         .query("enrollments")
         .withIndex("by_userId", (q) => q.eq("userId", userId as string))
-        .collect();
+        .take(5000);
       allEnrollments = [...allEnrollments, ...enrollments];
     }
 
@@ -1555,12 +1555,12 @@ export const debugContactTags = query({
       ? await ctx.db
           .query("courses")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .collect()
+          .take(5000)
       : [];
     const coursesByUserId = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
-      .collect();
+      .take(5000);
 
     const allCourses = [...coursesByStoreId, ...coursesByUserId];
     const courseIds = new Set(allCourses.map((c) => c._id.toString()));
@@ -1569,7 +1569,7 @@ export const debugContactTags = query({
     const userEnrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", user.clerkId || ""))
-      .collect();
+      .take(5000);
 
     // 6. Filter to this store's courses
     const storeEnrollments = userEnrollments.filter((e) => courseIds.has(e.courseId));
@@ -1636,7 +1636,7 @@ export const tagProductPurchasers = mutation({
     let productTitle: string | undefined;
 
     // Get all purchases for this product/course
-    const purchases = await ctx.db.query("purchases").collect();
+    const purchases = await ctx.db.query("purchases").take(10000);
 
     // Filter to this store's purchases for the specific product
     const relevantPurchases = purchases.filter((p) => {
@@ -1744,7 +1744,7 @@ export const getProductPurchasers = query({
     const limit = args.limit || 100;
 
     // Get all purchases for this product/course
-    const purchases = await ctx.db.query("purchases").collect();
+    const purchases = await ctx.db.query("purchases").take(10000);
 
     // Filter to relevant purchases
     const relevantPurchases = purchases.filter((p) => {
@@ -1914,7 +1914,7 @@ export const syncCreatorReadinessTag = internalMutation({
       .query("emailTags")
       .withIndex("by_storeId_and_name")
       .filter((q) => q.eq(q.field("storeId"), ADMIN_STORE_ID))
-      .collect();
+      .take(5000);
 
     const creatorTagIds = existingTags
       .filter((t) => t.name.startsWith("creator:"))
@@ -1991,7 +1991,7 @@ export const batchUpdateCreatorReadiness = internalMutation({
   }),
   handler: async (ctx) => {
     // Get all users with their stats
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
 
     let processed = 0;
     let updated = 0;
@@ -2012,14 +2012,14 @@ export const batchUpdateCreatorReadiness = internalMutation({
       const certificates = await ctx.db
         .query("certificates")
         .withIndex("by_user", (q) => q.eq("userId", user.clerkId!))
-        .collect();
+        .take(5000);
       const certificatesEarned = certificates.length;
 
       // Count completed enrollments - use enrollments table and check progress
       const enrollments = await ctx.db
         .query("enrollments")
         .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
-        .collect();
+        .take(5000);
       // Count as "completed" if progress is 100%
       const coursesCompleted = enrollments.filter((e) => (e.progress || 0) >= 100).length;
 

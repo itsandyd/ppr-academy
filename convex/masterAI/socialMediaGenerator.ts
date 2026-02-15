@@ -615,8 +615,6 @@ export const generatePlatformScripts = action({
 
     const fullSource = contextHeader ? `${contextHeader}\n\n${sourceContent}` : sourceContent;
 
-    console.log(`🎬 Generating platform scripts for content (${sourceContent.length} chars)`);
-
     const [tiktokResponse, youtubeResponse, instagramResponse] = await Promise.all([
       callLLM({
         model: DEFAULT_MODEL,
@@ -637,8 +635,6 @@ export const generatePlatformScripts = action({
         maxTokens: 1500,
       }),
     ]);
-
-    console.log(`   ✅ All 3 platform scripts generated`);
 
     return {
       tiktokScript: tiktokResponse.content,
@@ -661,8 +657,6 @@ export const combineScripts = action({
   }),
   handler: async (ctx, args) => {
     const { tiktokScript, youtubeScript, instagramScript, ctaText } = args;
-
-    console.log(`🔗 Combining scripts into unified script`);
 
     const ctaInstruction = ctaText
       ? `
@@ -712,8 +706,6 @@ Create a unified script. START with the TikTok hook, then weave in the best cont
 
     const combinedScript = response.content.trim();
 
-    console.log(`   ✅ Scripts combined (${combinedScript.length} chars)`);
-
     return {
       combinedScript,
       scriptWithCta: combinedScript,
@@ -733,8 +725,6 @@ export const generateCaptions = action({
   }),
   handler: async (ctx, args) => {
     const { script, title, ctaText } = args;
-
-    console.log(`📝 Generating captions for script (${script.length} chars)`);
 
     const contextInfo = [title && `Title: ${title}`, ctaText && `CTA: ${ctaText}`]
       .filter(Boolean)
@@ -767,8 +757,6 @@ export const generateCaptions = action({
       }),
     ]);
 
-    console.log(`   ✅ Captions generated`);
-
     return {
       instagramCaption: instagramResponse.content.trim(),
       tiktokCaption: tiktokResponse.content.trim(),
@@ -793,11 +781,9 @@ export const generateImagePrompts = action({
     const { script, aspectRatio = "9:16" } = args;
 
     const lineCount = script.split("\n").filter((line) => line.trim().length > 0).length;
-    console.log(`🖼️ Generating image prompts for ${lineCount} lines of script`);
 
     // Calculate tokens needed: ~150 tokens per prompt (sentence + detailed prompt description)
     const estimatedTokensNeeded = Math.max(4000, lineCount * 200);
-    console.log(`   📊 Estimated tokens needed: ${estimatedTokensNeeded}`);
 
     const response = await callLLM({
       model: DEFAULT_MODEL,
@@ -812,11 +798,6 @@ export const generateImagePrompts = action({
       responseFormat: "json",
     });
 
-    // Log finish reason to detect truncation
-    if (response.finishReason) {
-      console.log(`   📝 Finish reason: ${response.finishReason}`);
-    }
-
     const parsed = safeParseJson<{
       imagePrompts: Array<{
         sentence: string;
@@ -825,17 +806,10 @@ export const generateImagePrompts = action({
       }>;
     }>(response.content, { imagePrompts: [] });
 
-    // Debug: log if parsing resulted in empty array but we had content
-    if (parsed.imagePrompts.length === 0 && response.content.length > 100) {
-      console.log(`   ⚠️ Parse returned empty array. Response preview: ${response.content.substring(0, 500)}...`);
-    }
-
     const prompts = parsed.imagePrompts.map((p) => ({
       ...p,
       aspectRatio: aspectRatio,
     }));
-
-    console.log(`   ✅ Generated ${prompts.length} image prompts`);
 
     return prompts;
   },
@@ -864,8 +838,6 @@ export const generateSocialImage = action({
       await checkRateLimit(ctx, "systemImageGeneration");
     }
 
-    console.log(`🎨 Generating social image (${aspectRatio})`);
-
     const falApiKey = process.env.FAL_KEY;
     if (!falApiKey) {
       return {
@@ -887,11 +859,6 @@ export const generateSocialImage = action({
           enable_web_search: true,
         },
         logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS" && update.logs) {
-            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
-          }
-        },
       });
 
       const imageData = result.data as {
@@ -907,7 +874,6 @@ export const generateSocialImage = action({
       }
 
       const imageUrl = imageData.images[0].url;
-      console.log(`   ✅ Image generated: ${imageUrl.substring(0, 60)}...`);
 
       const storageId = await uploadImageToStorage(ctx, imageUrl);
       const convexUrl = await ctx.storage.getUrl(storageId);
@@ -942,9 +908,6 @@ export const editSocialImage = action({
   handler: async (ctx, args) => {
     const { imageUrl, prompt, aspectRatio } = args;
 
-    console.log(`✏️ Editing social image (${aspectRatio})`);
-    console.log(`   📝 Edit prompt: ${prompt.substring(0, 100)}...`);
-
     const falApiKey = process.env.FAL_KEY;
     if (!falApiKey) {
       return {
@@ -966,11 +929,6 @@ export const editSocialImage = action({
           resolution: "1K",
         },
         logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS" && update.logs) {
-            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
-          }
-        },
       });
 
       const imageData = result.data as {
@@ -986,7 +944,6 @@ export const editSocialImage = action({
       }
 
       const editedImageUrl = imageData.images[0].url;
-      console.log(`   ✅ Image edited: ${editedImageUrl.substring(0, 60)}...`);
 
       const storageId = await uploadImageToStorage(ctx, editedImageUrl);
       const convexUrl = await ctx.storage.getUrl(storageId);
@@ -1021,9 +978,6 @@ export const generateFromUploadedImage = action({
   handler: async (ctx, args) => {
     const { sourceImageUrl, stylePrompt, aspectRatio } = args;
 
-    console.log(`🎨 Generating image from uploaded source (${aspectRatio})`);
-    console.log(`   📝 Style prompt: ${stylePrompt.substring(0, 100)}...`);
-
     const falApiKey = process.env.FAL_KEY;
     if (!falApiKey) {
       return {
@@ -1045,11 +999,6 @@ export const generateFromUploadedImage = action({
           resolution: "1K",
         },
         logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS" && update.logs) {
-            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
-          }
-        },
       });
 
       const imageData = result.data as {
@@ -1065,7 +1014,6 @@ export const generateFromUploadedImage = action({
       }
 
       const imageUrl = imageData.images[0].url;
-      console.log(`   ✅ Image generated from source: ${imageUrl.substring(0, 60)}...`);
 
       const storageId = await uploadImageToStorage(ctx, imageUrl);
       const convexUrl = await ctx.storage.getUrl(storageId);
@@ -1086,7 +1034,6 @@ export const generateFromUploadedImage = action({
 });
 
 async function uploadImageToStorage(ctx: any, imageUrl: string): Promise<Id<"_storage">> {
-  console.log(`   📥 Downloading image from: ${imageUrl.substring(0, 50)}...`);
 
   const response = await fetch(imageUrl);
   if (!response.ok) {
@@ -1111,7 +1058,6 @@ async function uploadImageToStorage(ctx: any, imageUrl: string): Promise<Id<"_st
   const { storageId } = (await uploadResult.json()) as {
     storageId: Id<"_storage">;
   };
-  console.log(`   ✅ Uploaded to Convex storage: ${storageId}`);
   return storageId;
 }
 
@@ -1130,8 +1076,6 @@ export const generateSocialAudio = action({
   handler: async (ctx, args) => {
     const { script, voiceId = ANDREW_1_VOICE_ID } = args;
 
-    console.log(`🎙️ Generating audio with voice ${voiceId}`);
-
     const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
     if (!elevenLabsApiKey) {
       return {
@@ -1147,11 +1091,6 @@ export const generateSocialAudio = action({
         .replace(/\*/g, "")
         .replace(/#\w+/g, "")
         .trim();
-
-      console.log(
-        `   📝 Script length: ${cleanedScript.length} chars, ${cleanedScript.split(/\s+/).length} words`
-      );
-      console.log(`   🌐 Calling ElevenLabs API...`);
 
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: "POST",
@@ -1169,23 +1108,16 @@ export const generateSocialAudio = action({
         }),
       });
 
-      console.log(`   📡 ElevenLabs response status: ${response.status}`);
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`   ❌ ElevenLabs error: ${errorText}`);
         throw new Error(`ElevenLabs API error: ${response.status} ${errorText}`);
       }
 
-      console.log(`   ⏳ Downloading audio buffer...`);
       const audioArrayBuffer = await response.arrayBuffer();
 
-      console.log(`   ✅ Audio generated (${Math.round(audioArrayBuffer.byteLength / 1024)}KB)`);
-
-      console.log(`   📤 Getting upload URL...`);
       const uploadUrl = await ctx.storage.generateUploadUrl();
 
-      console.log(`   📤 Uploading to Convex storage...`);
       const uploadResult = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": "audio/mpeg" },
@@ -1201,12 +1133,9 @@ export const generateSocialAudio = action({
         storageId: Id<"_storage">;
       };
 
-      console.log(`   ✅ Uploaded: ${storageId}`);
       const audioUrl = await ctx.storage.getUrl(storageId);
 
       const estimatedDuration = Math.round(cleanedScript.split(/\s+/).length / 2.5);
-
-      console.log(`   ✅ Audio uploaded: ${storageId}`);
 
       return {
         success: true,
@@ -1418,8 +1347,6 @@ export const generatePostImageEmbeddings = action({
       }
 
       try {
-        console.log(`🧮 Generating embedding for image ${i + 1}/${updatedImages.length}`);
-
         const descriptionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1477,7 +1404,6 @@ export const generatePostImageEmbeddings = action({
         if (embedding.length > 0) {
           updatedImages[i] = { ...image, embedding };
           processedCount++;
-          console.log(`   ✅ Generated ${embedding.length}-dim embedding for image ${i + 1}`);
         }
       } catch (error) {
         const errorMsg = `Image ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`;

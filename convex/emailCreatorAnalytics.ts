@@ -34,7 +34,7 @@ export const getCreatorEmailMetrics = query({
     const contacts = await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     // Aggregate contact metrics
     const totalSent = contacts.reduce((sum, c) => sum + (c.emailsSent || 0), 0);
@@ -91,7 +91,7 @@ export const getWorkflowAnalytics = query({
     const workflows = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     const results = [];
 
@@ -100,7 +100,7 @@ export const getWorkflowAnalytics = query({
       const executions = await ctx.db
         .query("workflowExecutions")
         .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
-        .collect();
+        .take(5000);
 
       const totalEnrolled = executions.length;
       const totalCompleted = executions.filter((e) => e.status === "completed").length;
@@ -149,7 +149,7 @@ export const getDailyEmailActivity = query({
       .query("emailContactActivity")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.gte(q.field("timestamp"), cutoff))
-      .collect();
+      .take(5000);
 
     // Group by date
     const dailyStats = new Map<
@@ -211,7 +211,7 @@ export const getTopPerformingEmails = query({
     const workflows = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     const emailStats = new Map<
       string,
@@ -244,7 +244,7 @@ export const getTopPerformingEmails = query({
               .query("workflowExecutions")
               .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
               .filter((q) => q.eq(q.field("status"), "completed"))
-              .collect()).length || 0;
+              .take(5000)).length || 0;
 
           existing.sent += nodeExecCount;
           emailStats.set(key, existing);
@@ -256,7 +256,7 @@ export const getTopPerformingEmails = query({
     const activity = await ctx.db
       .query("emailContactActivity")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     for (const act of activity) {
       const subject = act.metadata?.emailSubject;
@@ -302,7 +302,7 @@ export const getEngagementBreakdown = query({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
@@ -431,7 +431,7 @@ export const getBestSendTimes = query({
           q.eq(q.field("activityType"), "email_clicked")
         )
       )
-      .collect();
+      .take(5000);
 
     // Group by hour and day of week
     const hourlyStats = new Map<

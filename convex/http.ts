@@ -21,7 +21,6 @@ http.route({
     const VERIFY_TOKEN = process.env.INSTAGRAM_VERIFY_TOKEN || "testing";
 
     if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      console.log("✅ Instagram webhook verified");
       return new Response(challenge, { status: 200 });
     } else {
       console.error("❌ Instagram webhook verification failed");
@@ -41,8 +40,6 @@ http.route({
     try {
       const payload = await request.json();
       
-      console.log("📨 Instagram webhook received:", JSON.stringify(payload, null, 2));
-
       // Process webhook asynchronously
       await ctx.runAction(internal.webhooks.instagram.processWebhook, {
         payload,
@@ -100,8 +97,6 @@ http.route({
           headers: { "Content-Type": "application/json" },
         });
       }
-
-      console.log(`📊 Analytics drain received ${events.length} events`);
 
       // Process events asynchronously
       await ctx.runMutation(internal.webAnalytics.ingestEvents, { events });

@@ -22,8 +22,6 @@ export const fixAllUsersEnrollments = internalMutation({
     let enrollmentsCreated = 0;
     let errors = 0;
 
-    console.log("🔄 Starting bulk enrollment fix for all users...");
-
     try {
       // Get all course purchases (completed)
       const allPurchases = await ctx.db
@@ -36,8 +34,6 @@ export const fixAllUsersEnrollments = internalMutation({
         )
         .collect();
 
-      console.log(`Found ${allPurchases.length} completed course purchases`);
-
       // Group by user
       const purchasesByUser = allPurchases.reduce((acc, purchase) => {
         if (!purchase.courseId) return acc; // Skip invalid purchases
@@ -47,7 +43,6 @@ export const fixAllUsersEnrollments = internalMutation({
       }, {} as Record<string, typeof allPurchases>);
 
       totalUsers = Object.keys(purchasesByUser).length;
-      console.log(`Processing ${totalUsers} users with course purchases`);
 
       // Fix each user
       for (const [userId, userPurchases] of Object.entries(purchasesByUser)) {
@@ -75,9 +70,6 @@ export const fixAllUsersEnrollments = internalMutation({
               
               enrollmentsCreated++;
               userFixed = true;
-              
-              const course = await ctx.db.get(purchase.courseId);
-              console.log(`✅ Created enrollment for user ${userId}, course: ${(course as any)?.title || purchase.courseId}`);
             }
           } catch (error) {
             errors++;
@@ -101,9 +93,6 @@ export const fixAllUsersEnrollments = internalMutation({
         summary.push("✅ Users should now be able to access their courses");
         summary.push("✅ Continue Learning buttons should work");
       }
-
-      console.log("🎉 Bulk enrollment fix completed!");
-      console.log(`Results: ${usersFixed}/${totalUsers} users fixed, ${enrollmentsCreated} enrollments created`);
 
       return {
         totalUsers,

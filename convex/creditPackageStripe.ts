@@ -74,11 +74,10 @@ export const syncCreditPackagesToStripe = action({
                 stripeProductId: existingPrice.product as string,
                 stripePriceId: pkg.stripePriceId,
               });
-              console.log(`✅ ${pkg.name} already has valid Stripe price: ${pkg.stripePriceId}`);
               continue;
             }
           } catch {
-            console.log(`⚠️ ${pkg.name} has invalid Stripe price, creating new one`);
+            // Invalid Stripe price, create new one
           }
         }
 
@@ -93,8 +92,6 @@ export const syncCreditPackagesToStripe = action({
           },
         });
 
-        console.log(`✅ Created Stripe product for ${pkg.name}: ${product.id}`);
-
         const priceInCents = Math.round(pkg.priceUsd * 100);
         const price = await stripe.prices.create({
           product: product.id,
@@ -106,8 +103,6 @@ export const syncCreditPackagesToStripe = action({
             packageName: pkg.name,
           },
         });
-
-        console.log(`✅ Created Stripe price for ${pkg.name}: ${price.id}`);
 
         await ctx.runMutation(internal.creditPackageQueries.updatePackageStripeIds, {
           packageId: pkg._id,
@@ -213,8 +208,6 @@ export const createCreditCheckoutSession = action({
       let priceId: string | undefined = pkg.stripePriceId;
 
       if (!priceId || !priceId.startsWith("price_") || priceId.length < 20) {
-        console.log(`⚠️ Creating on-the-fly price for ${pkg.name} (no stored price ID)`);
-
         const product = await stripe.products.create({
           name: `PPR Academy - ${pkg.name}`,
           description: pkg.description,

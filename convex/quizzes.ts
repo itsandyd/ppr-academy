@@ -89,7 +89,7 @@ export const addQuestion = mutation({
       const existingQuestions = await ctx.db
         .query("quizQuestions")
         .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-        .collect();
+        .take(200);
 
       const questionId = await ctx.db.insert("quizQuestions", {
         quizId: args.quizId,
@@ -134,7 +134,7 @@ export const getQuizWithQuestions = query({
       .query("quizQuestions")
       .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
       .order("asc")
-      .collect();
+      .take(200);
 
     return {
       ...quiz,
@@ -154,7 +154,7 @@ export const getQuizzesForCourse = query({
       .query("quizzes")
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId));
 
-    const quizzes = await query.collect();
+    const quizzes = await query.take(200);
 
     if (!args.includeUnpublished) {
       return quizzes.filter(q => q.isPublished);
@@ -179,7 +179,7 @@ export const publishQuiz = mutation({
       const questions = await ctx.db
         .query("quizQuestions")
         .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-        .collect();
+        .take(200);
 
       if (questions.length === 0) {
         return { success: false, error: "Cannot publish quiz with no questions" };
@@ -226,10 +226,10 @@ export const startQuizAttempt = mutation({
       // Check max attempts
       const previousAttempts = await ctx.db
         .query("quizAttempts")
-        .withIndex("by_user_and_quiz", (q) => 
+        .withIndex("by_user_and_quiz", (q) =>
           q.eq("userId", args.userId).eq("quizId", args.quizId)
         )
-        .collect();
+        .take(1000);
 
       if (quiz.maxAttempts && previousAttempts.length >= quiz.maxAttempts) {
         return { success: false, error: "Maximum attempts reached" };
@@ -292,7 +292,7 @@ export const submitQuizAttempt = mutation({
       const questions = await ctx.db
         .query("quizQuestions")
         .withIndex("by_quiz", (q) => q.eq("quizId", attempt.quizId))
-        .collect();
+        .take(200);
 
       let totalScore = 0;
       const gradedAnswers = args.answers.map(studentAnswer => {
@@ -410,11 +410,11 @@ async function updateQuizResults(ctx: any, userId: string, quizId: Id<"quizzes">
   // Get all attempts for this quiz
   const attempts = await ctx.db
     .query("quizAttempts")
-    .withIndex("by_user_and_quiz", (q: any) => 
+    .withIndex("by_user_and_quiz", (q: any) =>
       q.eq("userId", userId).eq("quizId", quizId)
     )
     .filter((q: any) => q.eq(q.field("status"), "graded"))
-    .collect();
+    .take(1000);
 
   if (attempts.length === 0) return;
 
@@ -492,13 +492,13 @@ export const getUserQuizResults = query({
         .query("quizResults")
         .withIndex("by_user", (q) => q.eq("userId", args.userId))
         .filter((q) => q.eq(q.field("courseId"), args.courseId))
-        .collect();
+        .take(1000);
     }
 
     return await ctx.db
       .query("quizResults")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
   },
 });
 

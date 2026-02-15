@@ -20,19 +20,13 @@ export const dailyAnalyticsRollup = internalAction({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    console.log("[Email Analytics Rollup] Starting daily aggregation...");
-    
     // Get yesterday's date
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split("T")[0];
     
-    console.log(`[Email Analytics Rollup] Processing data for ${yesterdayStr}`);
-    
     // Get all domains
     const domains = await ctx.runMutation(internal.emailAnalyticsRollup.getDomains);
-    
-    console.log(`[Email Analytics Rollup] Found ${domains.length} domains`);
     
     // Process each domain
     for (const domain of domains) {
@@ -41,8 +35,6 @@ export const dailyAnalyticsRollup = internalAction({
           domainId: domain._id,
           date: yesterdayStr,
         });
-        
-        console.log(`[Email Analytics Rollup] ✅ Rolled up analytics for ${domain.domain}`);
       } catch (error) {
         console.error(`[Email Analytics Rollup] ❌ Failed for ${domain.domain}:`, error);
       }
@@ -56,7 +48,6 @@ export const dailyAnalyticsRollup = internalAction({
       date: yesterdayStr,
     });
     
-    console.log("[Email Analytics Rollup] ✅ Daily rollup complete!");
     return null;
   },
 });

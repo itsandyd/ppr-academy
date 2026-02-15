@@ -37,7 +37,6 @@ export const runPipeline = internalAction({
         internal.videosPipeline.gatherContext.gatherContext,
         { jobId }
       );
-      console.log("✅ Context gathered");
 
       // ── Step 2: Generate Script ─────────────────────────────────────
       await ctx.runMutation(internal.videosPipeline.jobMutations.updateJobStatus, {
@@ -50,7 +49,6 @@ export const runPipeline = internalAction({
         internal.videosPipeline.generateScript.generateScript,
         { jobId, context }
       );
-      console.log(`✅ Script generated: ${scriptResult.scriptId}`);
 
       // ── Steps 3+4: Generate Assets + Voice (parallel) ──────────────
       await ctx.runMutation(internal.videosPipeline.jobMutations.updateJobStatus, {
@@ -72,10 +70,6 @@ export const runPipeline = internalAction({
           voiceId: context.voiceId,
         }),
       ]);
-
-      console.log(
-        `✅ Assets generated: ${imageResult.successCount} images, voice ${voiceResult.skipped ? "skipped" : "generated"}`
-      );
 
       // Update progress after parallel step
       await ctx.runMutation(internal.videosPipeline.jobMutations.updateJobStatus, {
@@ -149,10 +143,6 @@ export const runPipeline = internalAction({
         }
       );
 
-      console.log(
-        `✅ Code generated (${codeResult.code.length} chars, fallback: ${codeResult.usedFallback})`
-      );
-
       // ── Step 6: Render Video ──────────────────────────────────────
       await ctx.runMutation(internal.videosPipeline.jobMutations.updateJobStatus, {
         jobId,
@@ -171,10 +161,6 @@ export const runPipeline = internalAction({
           width: dimensions.width,
           height: dimensions.height,
         }
-      );
-
-      console.log(
-        `✅ Video rendered in ${renderResult.renderDurationSeconds.toFixed(1)}s`
       );
 
       // ── Step 7: Post-Processing ───────────────────────────────────
@@ -199,15 +185,10 @@ export const runPipeline = internalAction({
         }
       );
 
-      console.log(
-        `✅ Post-processing complete: thumbnail=${!!postResult.thumbnailId}, srt=${!!postResult.srtContent}, caption=${!!postResult.caption}`
-      );
-
       // ── Step 8: Complete ──────────────────────────────────────────
       await ctx.runMutation(internal.videosPipeline.jobMutations.updateJobCompleted, {
         jobId,
       });
-      console.log("✅ Pipeline completed");
     } catch (err: any) {
       console.error("❌ Pipeline failed:", err.message);
 
@@ -224,7 +205,6 @@ export const runPipeline = internalAction({
 
       // Retry if under limit
       if (retryCount < 3) {
-        console.log(`🔄 Scheduling retry ${retryCount}/3 in 5 seconds`);
         await ctx.scheduler.runAfter(5000, internal.videosNode.runPipeline, { jobId });
       }
     }

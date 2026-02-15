@@ -114,8 +114,6 @@ Return a JSON object with this structure:
 
 Make sure the HTML is properly formatted with inline CSS for email clients. Include proper structure with a max-width of 600px container.`;
 
-    console.log(`🤖 Generating ${args.emailCount} nurture emails for course: ${courseContent.title}`);
-
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -146,8 +144,6 @@ Make sure the HTML is properly formatted with inline CSS for email clients. Incl
         generatedFromLesson: email.sourceLesson,
       });
     }
-
-    console.log(`✅ Generated ${result.emails.length} nurture emails`);
     return true;
   },
 });
@@ -238,8 +234,6 @@ Make sure the HTML includes:
 - Max-width 600px container
 - The course purchase link placeholder: {{courseUrl}}`;
 
-    console.log(`🤖 Generating ${args.emailCount} pitch emails for course: ${courseContent.title}`);
-
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -269,8 +263,6 @@ Make sure the HTML includes:
         htmlContent: email.htmlContent,
       });
     }
-
-    console.log(`✅ Generated ${result.emails.length} pitch emails`);
     return true;
   },
 });

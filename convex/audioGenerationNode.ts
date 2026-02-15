@@ -39,8 +39,6 @@ export const generateSoundEffectFromText = internalAction({
         apiKey,
       });
       
-      console.log(`🎵 Generating sound effect: "${args.description}"`);
-      
       // Generate sound effect
       const audio = await elevenlabs.textToSoundEffects.convert({
         text: args.description,
@@ -85,9 +83,6 @@ export const generateSoundEffectFromText = internalAction({
       }
       
       await fs.writeFile(filePath, buffer);
-      
-      console.log(`✅ Sound effect generated: ${filePath} (${buffer.length} bytes)`);
-      
       // Upload to Convex storage for preview
       const storageId = await ctx.storage.store(
         new Blob([buffer], { type: "audio/mpeg" })
@@ -95,9 +90,6 @@ export const generateSoundEffectFromText = internalAction({
       
       // Get preview URL
       const audioUrl = await ctx.storage.getUrl(storageId);
-      
-      console.log(`✅ Preview URL generated: ${audioUrl}`);
-      
       return {
         success: true,
         filePath,

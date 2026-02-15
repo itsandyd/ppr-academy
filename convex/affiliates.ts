@@ -273,15 +273,20 @@ export const approveAffiliate = mutation({
     commissionRate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const affiliate = await ctx.db.get(args.affiliateId);
     if (!affiliate) {
       throw new Error("Affiliate not found");
     }
+    await requireStoreOwner(ctx, affiliate.storeId);
+
+    const newRate = args.commissionRate ?? affiliate.commissionRate;
+    if (newRate < 0 || newRate > 50) {
+      throw new Error("Commission rate must be between 0% and 50%");
+    }
 
     await ctx.db.patch(args.affiliateId, {
       status: "active",
-      commissionRate: args.commissionRate || affiliate.commissionRate,
+      commissionRate: newRate,
       approvedAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -296,7 +301,12 @@ export const rejectAffiliate = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const affiliate = await ctx.db.get(args.affiliateId);
+    if (!affiliate) {
+      throw new Error("Affiliate not found");
+    }
+    await requireStoreOwner(ctx, affiliate.storeId);
+
     await ctx.db.patch(args.affiliateId, {
       status: "rejected",
       rejectionReason: args.reason,
@@ -310,7 +320,12 @@ export const rejectAffiliate = mutation({
 export const suspendAffiliate = mutation({
   args: { affiliateId: v.id("affiliates") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const affiliate = await ctx.db.get(args.affiliateId);
+    if (!affiliate) {
+      throw new Error("Affiliate not found");
+    }
+    await requireStoreOwner(ctx, affiliate.storeId);
+
     await ctx.db.patch(args.affiliateId, {
       status: "suspended",
       updatedAt: Date.now(),
@@ -328,7 +343,18 @@ export const updateAffiliateSettings = mutation({
     payoutEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const affiliate = await ctx.db.get(args.affiliateId);
+    if (!affiliate) {
+      throw new Error("Affiliate not found");
+    }
+    await requireStoreOwner(ctx, affiliate.storeId);
+
+    if (args.commissionRate !== undefined) {
+      if (args.commissionRate < 0 || args.commissionRate > 50) {
+        throw new Error("Commission rate must be between 0% and 50%");
+      }
+    }
+
     const { affiliateId, ...updates } = args;
 
     await ctx.db.patch(affiliateId, {
@@ -462,11 +488,11 @@ export const recordAffiliateSale = mutation({
 export const approveSale = mutation({
   args: { saleId: v.id("affiliateSales") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const sale = await ctx.db.get(args.saleId);
     if (!sale) {
       throw new Error("Sale not found");
     }
+    await requireStoreOwner(ctx, sale.storeId);
 
     await ctx.db.patch(args.saleId, {
       commissionStatus: "approved",
@@ -480,11 +506,11 @@ export const approveSale = mutation({
 export const reverseSale = mutation({
   args: { saleId: v.id("affiliateSales") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const sale = await ctx.db.get(args.saleId);
     if (!sale) {
       throw new Error("Sale not found");
     }
+    await requireStoreOwner(ctx, sale.storeId);
 
     const affiliate = await ctx.db.get(sale.affiliateId);
     if (!affiliate) {
@@ -515,11 +541,11 @@ export const createAffiliatePayout = mutation({
     saleIds: v.array(v.id("affiliateSales")),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const affiliate = await ctx.db.get(args.affiliateId);
     if (!affiliate) {
       throw new Error("Affiliate not found");
     }
+    await requireStoreOwner(ctx, affiliate.storeId);
 
     // Get approved sales
     const sales = await Promise.all(
@@ -527,7 +553,11 @@ export const createAffiliatePayout = mutation({
     );
 
     const validSales = sales.filter(
-      (s): s is NonNullable<typeof s> => s !== null && s.commissionStatus === "approved" && !s.isPaid
+      (s): s is NonNullable<typeof s> =>
+        s !== null &&
+        s.affiliateId === args.affiliateId &&
+        s.commissionStatus === "approved" &&
+        !s.isPaid
     );
 
     if (validSales.length === 0) {
@@ -582,7 +612,12 @@ export const completeAffiliatePayout = mutation({
     transactionId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
+    const payout = await ctx.db.get(args.payoutId);
+    if (!payout) {
+      throw new Error("Payout not found");
+    }
+    await requireStoreOwner(ctx, payout.storeId);
+
     await ctx.db.patch(args.payoutId, {
       status: "completed",
       transactionId: args.transactionId,
@@ -600,11 +635,11 @@ export const failAffiliatePayout = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const payout = await ctx.db.get(args.payoutId);
     if (!payout) {
       throw new Error("Payout not found");
     }
+    await requireStoreOwner(ctx, payout.storeId);
 
     // Revert sales to approved status
     await Promise.all(

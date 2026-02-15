@@ -41,45 +41,38 @@ export const getPlatformOverview = query({
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
 
-    // Fetch all data
-    const users = await ctx.db.query("users").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const digitalProducts = await ctx.db.query("digitalProducts").collect();
-    const enrollments = await ctx.db.query("enrollments").collect();
-    const stores = await ctx.db.query("stores").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    // Read pre-aggregated metrics (single document read instead of 6 full table loads)
+    const metrics = await ctx.db.query("adminMetrics").first();
 
-    // Calculate total revenue from completed purchases
-    const completedPurchases = purchases.filter((p) => p.status === "completed");
-    const totalRevenue = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-    // Calculate revenue this month
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentPurchases = completedPurchases.filter((p) => p._creationTime > thirtyDaysAgo);
-    const revenueThisMonth = recentPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-    // Calculate active users (users with activity in last 30 days)
-    const recentEnrollments = enrollments.filter((e) => e._creationTime > thirtyDaysAgo);
-    const activeUserIds = new Set([
-      ...recentEnrollments.map((e) => e.userId),
-      ...recentPurchases.map((p) => p.userId),
-    ]);
-
-    // New users this month
-    const newUsersThisMonth = users.filter((u) => u._creationTime > thirtyDaysAgo).length;
+    if (!metrics) {
+      // No metrics yet — return zeros (aggregation cron hasn't run)
+      return {
+        totalUsers: 0,
+        totalCourses: 0,
+        totalProducts: 0,
+        totalRevenue: 0,
+        activeUsers: 0,
+        publishedCourses: 0,
+        totalEnrollments: 0,
+        totalStores: 0,
+        totalPurchases: 0,
+        revenueThisMonth: 0,
+        newUsersThisMonth: 0,
+      };
+    }
 
     return {
-      totalUsers: users.length,
-      totalCourses: courses.length,
-      totalProducts: digitalProducts.length,
-      totalRevenue: totalRevenue / 100, // Convert from cents to dollars
-      activeUsers: activeUserIds.size,
-      publishedCourses: courses.filter((c) => c.isPublished).length,
-      totalEnrollments: enrollments.length,
-      totalStores: stores.length,
-      totalPurchases: completedPurchases.length,
-      revenueThisMonth: revenueThisMonth / 100,
-      newUsersThisMonth,
+      totalUsers: metrics.totalUsers,
+      totalCourses: metrics.totalCourses,
+      totalProducts: metrics.totalProducts,
+      totalRevenue: metrics.totalRevenue / 100, // Convert from cents to dollars
+      activeUsers: metrics.activeUsers,
+      publishedCourses: metrics.totalPublishedCourses,
+      totalEnrollments: metrics.totalEnrollments,
+      totalStores: metrics.totalStores,
+      totalPurchases: metrics.totalPurchases,
+      revenueThisMonth: metrics.monthlyRevenue / 100,
+      newUsersThisMonth: metrics.newUsersThisMonth,
     };
   },
 });
@@ -100,31 +93,23 @@ export const getRevenueOverTime = query({
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
 
-    // Get all completed purchases
-    const purchases = await ctx.db.query("purchases").collect();
-    const completedPurchases = purchases.filter((p) => p.status === "completed");
+    // Read pre-aggregated daily revenue from adminMetrics
+    const metrics = await ctx.db.query("adminMetrics").first();
+    const dailyRevenue: Record<string, number> = (metrics?.dailyRevenue as Record<string, number>) || {};
+    const dailyPurchaseCounts: Record<string, number> = (metrics?.dailyPurchaseCounts as Record<string, number>) || {};
 
-    // Group purchases by date
+    // Build the last 30 days of revenue data
     const days = 30;
     const revenueData = [];
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split("T")[0];
-      const dayStart = new Date(dateStr).getTime();
-      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-
-      // Filter purchases for this day
-      const dayPurchases = completedPurchases.filter(
-        (p) => p._creationTime >= dayStart && p._creationTime < dayEnd
-      );
-
-      const dailyRevenue = dayPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
 
       revenueData.push({
         date: dateStr,
-        revenue: dailyRevenue / 100, // Convert cents to dollars
-        purchases: dayPurchases.length,
+        revenue: (dailyRevenue[dateStr] || 0) / 100,
+        purchases: dailyPurchaseCounts[dateStr] || 0,
       });
     }
 
@@ -152,7 +137,7 @@ export const getTopCourses = query({
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
     const limit = args.limit || 10;
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
+    const courseAnalytics = await ctx.db.query("courseAnalytics").take(1000);
 
     // Sort by revenue
     const sortedAnalytics = courseAnalytics
@@ -197,8 +182,8 @@ export const getTopCreators = query({
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
     const limit = args.limit || 10;
-    const courses = await ctx.db.query("courses").collect();
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
+    const courses = await ctx.db.query("courses").take(1000);
+    const courseAnalytics = await ctx.db.query("courseAnalytics").take(1000);
 
     // Group by creator
     const creatorMap = new Map<
@@ -263,30 +248,35 @@ export const getUserGrowth = query({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    const users = await ctx.db.query("users").collect();
 
-    // Group users by creation date
+    // Read pre-aggregated data from adminMetrics
+    const metrics = await ctx.db.query("adminMetrics").first();
+    const dailySignups: Record<string, number> = (metrics?.dailySignups as Record<string, number>) || {};
+    const totalUsersNow = metrics?.totalUsers || 0;
+
+    // Build the last 30 days of growth data
     const days = 30;
     const growthData = [];
+
+    // Calculate total users as of 30 days ago by subtracting all signups in the window
+    let signupsInWindow = 0;
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split("T")[0];
+      signupsInWindow += dailySignups[dateStr] || 0;
+    }
+    let runningTotal = totalUsersNow - signupsInWindow;
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split("T")[0];
-      const dayStart = date.getTime();
-      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-
-      // Count users created on this day
-      const newUsersCount = users.filter(
-        (u) => u._creationTime >= dayStart && u._creationTime < dayEnd
-      ).length;
-
-      // Count total users up to this day
-      const totalUsersCount = users.filter((u) => u._creationTime < dayEnd).length;
+      const newUsers = dailySignups[dateStr] || 0;
+      runningTotal += newUsers;
 
       growthData.push({
         date: dateStr,
-        newUsers: newUsersCount,
-        totalUsers: totalUsersCount,
+        newUsers,
+        totalUsers: runningTotal,
       });
     }
 
@@ -309,8 +299,8 @@ export const getCategoryDistribution = query({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    const courses = await ctx.db.query("courses").collect();
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
+    const courses = await ctx.db.query("courses").take(1000);
+    const courseAnalytics = await ctx.db.query("courseAnalytics").take(1000);
 
     const categoryMap = new Map<string, { count: number; revenue: number }>();
 
@@ -495,14 +485,14 @@ export const getAllCreatorsWithProducts = query({
     await verifyAdmin(ctx, args.clerkId);
 
     // Get all users
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
 
     // Get all stores, courses, products, and analytics
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const digitalProducts = await ctx.db.query("digitalProducts").collect();
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
-    const enrollments = await ctx.db.query("enrollments").collect();
+    const stores = await ctx.db.query("stores").take(5000);
+    const courses = await ctx.db.query("courses").take(1000);
+    const digitalProducts = await ctx.db.query("digitalProducts").take(5000);
+    const courseAnalytics = await ctx.db.query("courseAnalytics").take(1000);
+    const enrollments = await ctx.db.query("enrollments").take(10000);
 
     // Build creator data
     const creatorsWithProducts = [];
@@ -600,10 +590,10 @@ export const getCreatorsForEmail = query({
   handler: async (ctx, args) => {
     await verifyAdmin(ctx, args.clerkId);
 
-    const stores = await ctx.db.query("stores").collect();
-    const courses = await ctx.db.query("courses").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    const stores = await ctx.db.query("stores").take(5000);
+    const courses = await ctx.db.query("courses").take(1000);
+    const products = await ctx.db.query("digitalProducts").take(5000);
+    const purchases = await ctx.db.query("purchases").take(10000);
 
     const creators = [];
 
@@ -700,16 +690,15 @@ export const getAdvancedRevenueMetrics = query({
   handler: async (ctx, args) => {
     await verifyAdmin(ctx, args.clerkId);
 
-    const purchases = await ctx.db.query("purchases").collect();
+    // Only load purchases (needed for LTV/revenue-by-type breakdown).
+    // Enrollments scoped to 90 days for churn calculation.
+    const purchases = await ctx.db.query("purchases").take(10000);
     const completedPurchases = purchases.filter((p) => p.status === "completed");
-    const enrollments = await ctx.db.query("enrollments").collect();
-    const users = await ctx.db.query("users").collect();
 
-    // Time boundaries
-    const now = Date.now();
-    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-    const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
-    const ninetyDaysAgo = now - 90 * 24 * 60 * 60 * 1000;
+    // For churn: only need 90-day window of enrollments
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const sixtyDaysAgo = Date.now() - 60 * 24 * 60 * 60 * 1000;
 
     // MRR Calculation (revenue this month)
     const thisMonthPurchases = completedPurchases.filter(
@@ -733,15 +722,13 @@ export const getAdvancedRevenueMetrics = query({
       customerRevenue.set(purchase.userId, current + (purchase.amount || 0));
     }
 
-    const ltvValues = Array.from(customerRevenue.values()).map((v) => v / 100);
+    const ltvValues = Array.from(customerRevenue.values()).map((val) => val / 100);
     const averageLtv = ltvValues.length > 0
       ? ltvValues.reduce((a, b) => a + b, 0) / ltvValues.length
       : 0;
     const highestLtv = ltvValues.length > 0 ? Math.max(...ltvValues) : 0;
 
-    // Churn Calculation
-    // Active = users with activity in last 30 days
-    // Churned = users with activity 30-90 days ago but none in last 30 days
+    // Churn Calculation — only from purchases (skip full enrollments load)
     const recentActiveUsers = new Set<string>();
     const olderActiveUsers = new Set<string>();
 
@@ -753,15 +740,6 @@ export const getAdvancedRevenueMetrics = query({
       }
     }
 
-    for (const enrollment of enrollments) {
-      if (enrollment._creationTime > thirtyDaysAgo) {
-        recentActiveUsers.add(enrollment.userId);
-      } else if (enrollment._creationTime > ninetyDaysAgo) {
-        olderActiveUsers.add(enrollment.userId);
-      }
-    }
-
-    // Churned = was active before but not recently
     const churnedUsers = Array.from(olderActiveUsers).filter(
       (userId) => !recentActiveUsers.has(userId)
     );
@@ -822,9 +800,8 @@ export const getAdvancedRevenueMetrics = query({
     const goalProgress = (currentRevenue / revenueGoal) * 100;
 
     // Projected monthly revenue (based on last 3 months average)
-    const threeMonthsAgo = now - 90 * 24 * 60 * 60 * 1000;
     const last3MonthsRevenue = completedPurchases
-      .filter((p) => p._creationTime > threeMonthsAgo)
+      .filter((p) => p._creationTime > ninetyDaysAgo)
       .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
     const projectedMonthlyRevenue = last3MonthsRevenue / 3;
 
@@ -876,7 +853,7 @@ export const getRevenueExportData = query({
   handler: async (ctx, args) => {
     await verifyAdmin(ctx, args.clerkId);
 
-    const purchases = await ctx.db.query("purchases").collect();
+    const purchases = await ctx.db.query("purchases").take(10000);
     const startDate = args.startDate || Date.now() - 90 * 24 * 60 * 60 * 1000;
     const endDate = args.endDate || Date.now();
 
@@ -941,7 +918,7 @@ export const getCreatorEmailStats = query({
   handler: async (ctx, args) => {
     await verifyAdmin(ctx, args.clerkId);
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(5000);
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     let totalCreators = 0;

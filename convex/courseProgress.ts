@@ -406,7 +406,6 @@ export const checkAndIssueCertificate = internalMutation({
   handler: async (ctx, args) => {
     // Verify 100% completion
     if (args.completedChapters < args.totalChapters) {
-      console.log("Course not yet complete, skipping certificate");
       return { success: false, reason: "course_not_complete" };
     }
 
@@ -419,7 +418,6 @@ export const checkAndIssueCertificate = internalMutation({
       .first();
 
     if (existingCertificate) {
-      console.log("Certificate already exists for this user and course");
       return {
         success: true,
         alreadyExists: true,
@@ -485,8 +483,6 @@ export const checkAndIssueCertificate = internalMutation({
       createdAt: now,
       verificationCount: 0,
     });
-
-    console.log(`Certificate issued: ${certificateId} for user ${args.userId} course ${args.courseId}`);
 
     // Schedule completion notification email
     await ctx.scheduler.runAfter(0, internal.courseProgress.sendCompletionNotification, {
@@ -563,7 +559,6 @@ export const sendCompletionNotification = internalMutation({
       .first();
 
     if (!user?.email) {
-      console.log("No email found for completion notification");
       return;
     }
 
@@ -585,9 +580,6 @@ export const sendCompletionNotification = internalMutation({
       senderName: "PPR Academy",
     });
 
-    // TODO: Integrate with email service (Resend/SendGrid)
-    // For now, just log the notification
-    console.log(`Completion notification sent to ${user.email} for course ${course.title}`);
   },
 });
 

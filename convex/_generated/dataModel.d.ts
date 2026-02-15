@@ -82,6 +82,63 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  adminMetrics: {
+    document: {
+      activeUsers: number;
+      averageOrderValue: number;
+      cartAbandonmentRate: number;
+      dailyEnrollments?: any;
+      dailyPurchaseCounts?: any;
+      dailyRevenue?: any;
+      dailySignups?: any;
+      lastUpdated: number;
+      monthlyRevenue: number;
+      newUsersThisMonth: number;
+      platformFees: number;
+      repeatPurchaseRate: number;
+      totalCourses: number;
+      totalCreators: number;
+      totalEnrollments: number;
+      totalProducts: number;
+      totalPublishedCourses: number;
+      totalPurchases: number;
+      totalRevenue: number;
+      totalStores: number;
+      totalUsers: number;
+      _id: Id<"adminMetrics">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "activeUsers"
+      | "averageOrderValue"
+      | "cartAbandonmentRate"
+      | "dailyEnrollments"
+      | "dailyPurchaseCounts"
+      | "dailyRevenue"
+      | "dailySignups"
+      | "lastUpdated"
+      | "monthlyRevenue"
+      | "newUsersThisMonth"
+      | "platformFees"
+      | "repeatPurchaseRate"
+      | "totalCourses"
+      | "totalCreators"
+      | "totalEnrollments"
+      | "totalProducts"
+      | "totalPublishedCourses"
+      | "totalPurchases"
+      | "totalRevenue"
+      | "totalStores"
+      | "totalUsers";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   affiliateClicks: {
     document: {
       affiliateCode: string;

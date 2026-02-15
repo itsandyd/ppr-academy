@@ -25,7 +25,7 @@ export const getWebhookEndpoints = query({
     const endpoints = await ctx.db
       .query("webhookEndpoints")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Enrich with workflow info
     const enriched = await Promise.all(
@@ -202,7 +202,7 @@ export const getCustomEvents = query({
     const events = await ctx.db
       .query("customEvents")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     return events;
   },
@@ -342,7 +342,7 @@ export const fireCustomEvent = mutation({
           q.eq(q.field("trigger.type"), "custom_event")
         )
       )
-      .collect();
+      .take(1000);
 
     const matchingWorkflows = workflows.filter(
       (w) => w.trigger.config?.eventName === args.eventName
@@ -449,7 +449,7 @@ export const trackPageVisit = mutation({
           q.eq(q.field("trigger.type"), "page_visit")
         )
       )
-      .collect();
+      .take(1000);
 
     // Filter workflows that match this page path
     const matchingWorkflows = workflows.filter((w) => {
@@ -487,7 +487,7 @@ export const getPageVisitAnalytics = query({
       .withIndex("by_storeId_timestamp", (q) =>
         q.eq("storeId", args.storeId).gte("timestamp", startTime)
       )
-      .collect();
+      .take(10000);
 
     // Aggregate by page
     const pageStats: Record<string, { visits: number; uniqueVisitors: Set<string> }> = {};
@@ -655,7 +655,7 @@ export const getCartAbandonStats = query({
       .query("cartAbandonEvents")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.gte(q.field("abandonedAt"), startTime))
-      .collect();
+      .take(500);
 
     const totalAbandoned = carts.length;
     const recovered = carts.filter((c) => c.recovered).length;
@@ -693,7 +693,7 @@ export const getTriggerOverview = query({
     const workflows = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     const triggerCounts: Record<string, { total: number; active: number }> = {};
 
@@ -712,13 +712,13 @@ export const getTriggerOverview = query({
     const webhooks = await ctx.db
       .query("webhookEndpoints")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Get custom events count
     const customEvents = await ctx.db
       .query("customEvents")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     return {
       triggerCounts,

@@ -38,8 +38,6 @@ export const postProcess = internalAction({
     caption: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    console.log("🔧 Starting post-processing...");
-
     let thumbnailId: Id<"_storage"> | undefined;
     let srtContent: string | undefined;
     let caption: string | undefined;
@@ -130,7 +128,6 @@ export const postProcess = internalAction({
       if (uploadResult.ok) {
         const uploadJson: any = await uploadResult.json();
         thumbnailId = uploadJson.storageId as Id<"_storage">;
-        console.log(`✅ Thumbnail generated at frame ${thumbnailFrame}`);
       }
 
       // Cleanup
@@ -148,9 +145,6 @@ export const postProcess = internalAction({
     if (args.audioWords && args.audioWords.length > 0) {
       try {
         srtContent = generateSRT(args.audioWords);
-        console.log(
-          `✅ SRT generated (${args.audioWords.length} words, ${srtContent.split("\n\n").length} cues)`
-        );
       } catch (err: any) {
         console.error("⚠️ SRT generation failed:", err.message);
       }
@@ -160,7 +154,6 @@ export const postProcess = internalAction({
     if (script) {
       try {
         caption = generateCaption(script);
-        console.log(`✅ Caption generated (${caption.length} chars)`);
       } catch (err: any) {
         console.error("⚠️ Caption generation failed:", err.message);
       }

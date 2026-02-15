@@ -52,7 +52,6 @@ export const saveAssistantMessage = internalMutation({
         msg.createdAt > oneMinuteAgo &&
         msg.content.substring(0, 200) === args.content.substring(0, 200)
       ) {
-        console.log(`⏭️ Skipping duplicate assistant message (already saved)`);
         return msg._id;
       }
     }
@@ -80,7 +79,6 @@ export const saveAssistantMessage = internalMutation({
       });
     }
 
-    console.log(`💾 Auto-saved AI response to conversation ${conversationId}`);
     return messageId;
   },
 });
@@ -112,7 +110,6 @@ export const createWebEmbedding = internalMutation({
       .first();
 
     if (existing) {
-      console.log(`⏭️ Skipping duplicate web research: ${args.url}`);
       return null; // Already indexed
     }
 
@@ -133,8 +130,6 @@ export const createWebEmbedding = internalMutation({
       },
       embedding: [], // Will be populated by the embedding generation
     });
-
-    console.log(`✅ Indexed new web research: ${args.title}`);
 
     // Schedule embedding generation
     await ctx.scheduler.runAfter(0, internal.rag.generateEmbedding, {

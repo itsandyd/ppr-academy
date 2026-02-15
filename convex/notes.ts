@@ -500,13 +500,11 @@ export const processNoteForRAG = internalAction({
       });
 
       if (!note || note.isArchived) {
-        console.log(`Note ${args.noteId} not found or archived, skipping RAG processing`);
         return null;
       }
 
       // Check if already processed
       if (note.isProcessedForRAG) {
-        console.log(`Note ${args.noteId} already processed for RAG`);
         return null;
       }
 
@@ -514,7 +512,6 @@ export const processNoteForRAG = internalAction({
       const content = note.plainTextContent || note.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
       if (content.length < 10) {
-        console.log(`Note ${args.noteId} too short for RAG processing`);
         await ctx.runMutation(internal.notes.markNoteAsProcessed, { noteId: args.noteId });
         return null;
       }
@@ -538,8 +535,6 @@ export const processNoteForRAG = internalAction({
 
       // Mark as processed
       await ctx.runMutation(internal.notes.markNoteAsProcessed, { noteId: args.noteId });
-
-      console.log(`✅ Note ${args.noteId} processed for RAG`);
       return null;
     } catch (error) {
       console.error(`❌ Error processing note ${args.noteId} for RAG:`, error);

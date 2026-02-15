@@ -37,13 +37,13 @@ export const getKPIs = query({
     }),
   }),
   handler: async (ctx, { startTime, endTime, storeId }) => {
-    // Query analytics events using index for efficiency
+    // Query analytics events using index for efficiency (bounded)
     const allEvents = await ctx.db
       .query("analyticsEvents")
       .withIndex("by_timestamp", (q) =>
         q.gte("timestamp", startTime).lte("timestamp", endTime)
       )
-      .collect();
+      .take(10000);
 
     // Filter by storeId if provided (creator scope)
     const events = storeId
@@ -182,11 +182,11 @@ export const getQuickStats = query({
         activeCampaigns,
       };
     } else {
-      // Platform-wide stats
-      const users = await ctx.db.query("users").collect();
-      const courses = await ctx.db.query("courses").collect();
-      const revenueEvents = await ctx.db.query("revenueEvents").collect();
-      const campaigns = await ctx.db.query("campaigns").collect();
+      // Platform-wide stats (bounded)
+      const users = await ctx.db.query("users").take(10000);
+      const courses = await ctx.db.query("courses").take(1000);
+      const revenueEvents = await ctx.db.query("revenueEvents").take(5000);
+      const campaigns = await ctx.db.query("campaigns").take(1000);
       
       const totalRevenue = revenueEvents.reduce((sum, e) => sum + e.grossAmount, 0);
       const activeCampaigns = campaigns.filter(

@@ -31,8 +31,6 @@ export const processWebhook = internalAction({
       const payload = args.payload;
       const forUserId = payload.for_user_id;
 
-      console.log("🐦 Twitter webhook received for user:", forUserId);
-
       // Handle Direct Messages
       if (payload.direct_message_events && payload.direct_message_events.length > 0) {
         for (const dmEvent of payload.direct_message_events) {
@@ -45,13 +43,10 @@ export const processWebhook = internalAction({
 
           // Don't respond to our own messages
           if (senderId === forUserId) {
-            console.log("⏭️ Ignoring own message");
             continue;
           }
 
           if (!messageText) continue;
-
-          console.log("💬 Twitter DM received:", messageText.substring(0, 50) + "...");
 
           // Find automation by keyword
           const matcher = await ctx.runQuery(
@@ -60,7 +55,6 @@ export const processWebhook = internalAction({
           );
 
           if (!matcher || !matcher.trigger) {
-            console.log("❌ No automation found for keyword:", messageText.substring(0, 30));
             continue;
           }
 
@@ -99,8 +93,6 @@ export const processWebhook = internalAction({
 
           if (!mentionsUs) continue;
 
-          console.log("📢 Twitter mention received:", tweet.text?.substring(0, 50) + "...");
-
           // Could add mention-based automation here
           // For now, just log it
         }
@@ -131,7 +123,6 @@ async function executeTwitterAutomation(
   const { automation, senderId, recipientId, messageText, accessToken, users } = options;
 
   if (!automation.listener) {
-    console.log("❌ No listener configured");
     return;
   }
 
@@ -141,8 +132,6 @@ async function executeTwitterAutomation(
 
   // MESSAGE type - send static response
   if (listener.listener === "MESSAGE") {
-    console.log("📤 Processing MESSAGE automation for Twitter");
-
     let dmMessage = listener.prompt || "Thanks for reaching out!";
 
     // Simple personalization
@@ -160,9 +149,7 @@ async function executeTwitterAutomation(
       }
     );
 
-    if (result.success) {
-      console.log("✅ Twitter DM sent successfully");
-    } else {
+    if (!result.success) {
       console.error("❌ Twitter DM failed:", result.error);
     }
 
@@ -175,8 +162,6 @@ async function executeTwitterAutomation(
 
   // SMART_AI type - generate AI response
   if (listener.listener === "SMART_AI" || listener.listener === "SMARTAI") {
-    console.log("🤖 Processing Smart AI automation for Twitter");
-
     const systemPrompt = buildTwitterAIPrompt(listener.prompt);
 
     // Generate AI response
@@ -198,9 +183,7 @@ async function executeTwitterAutomation(
       }
     );
 
-    if (result.success) {
-      console.log("✅ Twitter Smart AI response sent");
-    } else {
+    if (!result.success) {
       console.error("❌ Twitter DM failed:", result.error);
     }
 

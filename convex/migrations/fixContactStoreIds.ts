@@ -33,8 +33,6 @@ export const fixContactStoreIds = internalMutation({
         .withIndex("by_storeId", (q) => q.eq("storeId", args.convexStoreId))
         .take(batchSize);
 
-      console.log(`Found ${contactsWithWrongId.length} contacts with Convex store ID`);
-
       // Get existing contacts with correct (Clerk) storeId to check for duplicates
       const existingContacts = await ctx.db
         .query("emailContacts")
@@ -69,10 +67,6 @@ export const fixContactStoreIds = internalMutation({
       }
 
       const hasMore = contactsWithWrongId.length === batchSize;
-      console.log(
-        `Batch complete: ${updated} updated, ${skipped} skipped, ${duplicates} duplicates removed. Has more: ${hasMore}`
-      );
-
       return {
         success: true,
         updated,

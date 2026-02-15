@@ -182,7 +182,7 @@ export const getProductsByStore = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Filter out courses (they belong in the courses table, not digitalProducts)
     const nonCourseProducts = products.filter((product) => product.productCategory !== "course");
@@ -421,7 +421,7 @@ export const getPublishedProductsByStore = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Filter for published products only, and exclude courses (they belong in courses table)
     const publishedProducts = products.filter(
@@ -666,7 +666,7 @@ export const getProductsByUser = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     // Resolve storage URLs
     const productsWithUrls = await Promise.all(
@@ -1628,7 +1628,7 @@ export const getAllPublishedProducts = query({
     const products = await ctx.db
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(100);
 
     // Enrich with download counts and creator info
     const productsWithDetails = await Promise.all(
@@ -1637,14 +1637,14 @@ export const getAllPublishedProducts = query({
         const purchases = await ctx.db
           .query("purchases")
           .filter((q) => q.eq(q.field("productId"), product._id))
-          .collect();
+          .take(5000);
 
         // Get creator info
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
         // Get store info - storeId is a string in the schema
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(10000);
         const store = stores.find((s) => s._id === product.storeId);
 
         if (store) {
@@ -1712,7 +1712,7 @@ export const getAllProducts = query({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    return await ctx.db.query("digitalProducts").collect();
+    return await ctx.db.query("digitalProducts").take(10000);
   },
 });
 
@@ -1959,7 +1959,7 @@ export const backfillProductSlugs = mutation({
       .first();
     if (!user?.admin) throw new Error("Admin access required");
 
-    const products = await ctx.db.query("digitalProducts").collect();
+    const products = await ctx.db.query("digitalProducts").take(10000);
 
     const productsWithoutSlug = products.filter((p) => !(p as any).slug);
 

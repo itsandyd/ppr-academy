@@ -6,26 +6,11 @@ import { api } from "./_generated/api";
 
 // Helper function to send confirmation email
 async function sendConfirmationEmailHelper(ctx: any, args: any, product: any) {
-  console.log("🚀 STARTING EMAIL PROCESS - this should always appear");
-
   try {
-    console.log("📧 Checking email configuration for product:", {
-      productId: args.productId,
-      productTitle: product?.title,
-      hasDownloadUrl: !!product?.downloadUrl,
-      hasEmailSubject: !!product?.confirmationEmailSubject,
-      hasEmailBody: !!product?.confirmationEmailBody,
-      emailSubject: product?.confirmationEmailSubject,
-      emailBody: product?.confirmationEmailBody?.slice(0, 100) + "...", // First 100 chars
-    });
-
     // Send confirmation email to customer with download link
     if (product?.downloadUrl && product.confirmationEmailSubject && product.confirmationEmailBody) {
-      console.log("📧 ✅ All email requirements met! Sending confirmation email for:", args.email);
-
       try {
         // Use the centralized email action to send confirmation email
-        console.log("🔄 About to schedule email action...");
         const emailResult = await ctx.scheduler.runAfter(
           0,
           // @ts-ignore Convex type instantiation too deep
@@ -41,23 +26,13 @@ async function sendConfirmationEmailHelper(ctx: any, args: any, product: any) {
           }
         );
 
-        console.log("✅ Lead magnet confirmation email scheduled successfully:", emailResult);
       } catch (scheduleError) {
         console.error("❌ Failed to schedule email:", scheduleError);
       }
-    } else {
-      console.log("❌ Cannot send confirmation email - missing requirements:", {
-        hasDownloadUrl: !!product?.downloadUrl,
-        hasEmailSubject: !!product?.confirmationEmailSubject,
-        hasEmailBody: !!product?.confirmationEmailBody,
-        productTitle: product?.title,
-      });
     }
   } catch (emailError) {
-    console.error("⚠️ Email sending failed, but lead was still recorded:", emailError);
+    console.error("Email sending failed, but lead was still recorded:", emailError);
   }
-
-  console.log("🏁 EMAIL PROCESS COMPLETE - this should always appear");
 }
 
 // Submit a lead magnet opt-in
@@ -91,12 +66,10 @@ export const submitLead = mutation({
       const product = await ctx.db.get(args.productId);
 
       // Send email even for returning users
-      console.log("🔄 Returning user - sending confirmation email again");
       await sendConfirmationEmailHelper(ctx, args, product);
 
       // Send admin notification for returning user engagement
       try {
-        console.log("📧 Scheduling admin notification for returning user...");
         await ctx.scheduler.runAfter(0, (internal as any).emails.sendNewLeadAdminNotification, {
           storeId: args.storeId as any,
           customerName: args.name,
@@ -104,14 +77,12 @@ export const submitLead = mutation({
           productName: product?.title || "Lead Magnet",
           source: (args.source || "storefront") + " (returning user)",
         });
-        console.log("✅ Admin notification for returning user scheduled successfully");
       } catch (adminNotificationError) {
-        console.error("⚠️ Admin notification failed for returning user:", adminNotificationError);
+        console.error("Admin notification failed for returning user:", adminNotificationError);
       }
 
       // Trigger workflows for returning user activity
       try {
-        console.log("🔄 Checking for returning user workflows to trigger...");
         await ctx.scheduler.runAfter(
           0,
           (internal as any).emailWorkflows.triggerLeadSignupWorkflows,
@@ -125,9 +96,8 @@ export const submitLead = mutation({
             isReturningUser: true,
           }
         );
-        console.log("✅ Returning user workflow triggers scheduled successfully");
       } catch (workflowError) {
-        console.error("⚠️ Returning user workflow triggering failed:", workflowError);
+        console.error("Returning user workflow triggering failed:", workflowError);
       }
 
       return {
@@ -196,7 +166,6 @@ export const submitLead = mutation({
 
     // Send admin notification for new lead
     try {
-      console.log("📧 Scheduling admin notification for new lead...");
       await ctx.scheduler.runAfter(0, (internal as any).emails.sendNewLeadAdminNotification, {
         storeId: args.storeId as any,
         customerName: args.name,
@@ -204,17 +173,15 @@ export const submitLead = mutation({
         productName: product?.title || "Lead Magnet",
         source: args.source || "storefront",
       });
-      console.log("✅ Admin notification scheduled successfully");
     } catch (adminNotificationError) {
       console.error(
-        "⚠️ Admin notification failed, but lead was still recorded:",
+        "Admin notification failed, but lead was still recorded:",
         adminNotificationError
       );
     }
 
     // Trigger email automation workflows
     try {
-      console.log("🔄 Checking for automation workflows to trigger...");
       await ctx.scheduler.runAfter(0, (internal as any).emailWorkflows.triggerLeadSignupWorkflows, {
         storeId: args.storeId,
         customerEmail: args.email,
@@ -223,14 +190,12 @@ export const submitLead = mutation({
         productName: product?.title || "Lead Magnet",
         source: args.source || "storefront",
       });
-      console.log("✅ Workflow triggers scheduled successfully");
     } catch (workflowError) {
-      console.error("⚠️ Workflow triggering failed, but lead was still recorded:", workflowError);
+      console.error("Workflow triggering failed, but lead was still recorded:", workflowError);
     }
 
     // Trigger drip campaigns for lead signup
     try {
-      console.log("🔄 Checking for drip campaigns to trigger...");
       await ctx.scheduler.runAfter(
         0,
         (internal as any).dripCampaignActions.triggerCampaignsForEvent,
@@ -246,9 +211,8 @@ export const submitLead = mutation({
           },
         }
       );
-      console.log("✅ Drip campaign triggers scheduled successfully");
     } catch (dripError) {
-      console.error("⚠️ Drip campaign triggering failed, but lead was still recorded:", dripError);
+      console.error("Drip campaign triggering failed, but lead was still recorded:", dripError);
     }
 
     return {

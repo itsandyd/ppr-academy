@@ -41,12 +41,9 @@ export const searchIllustrations = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    console.log(`🔍 Searching illustrations for query: "${args.query}"`);
-
     try {
       // Generate embedding for the search query
       const queryEmbedding = await generateQueryEmbedding(args.query);
-      console.log(`   Generated query embedding (${queryEmbedding.length} dimensions)`);
 
       // Get all illustrations with embeddings
       // Type annotation to avoid TypeScript type instantiation depth issues
@@ -74,8 +71,6 @@ export const searchIllustrations = action({
           !!item.embedding && item.embedding.length > 0
         );
 
-      console.log(`   Found ${illustrations.length} illustrations with embeddings`);
-
       // Calculate similarity scores
       const withSimilarity = illustrations
         .map((item) => ({
@@ -85,8 +80,6 @@ export const searchIllustrations = action({
         .filter((item) => item.similarity >= (args.minSimilarity ?? 0.7))
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, args.limit ?? 10);
-
-      console.log(`   Returning ${withSimilarity.length} results above similarity threshold`);
 
       const results = withSimilarity.map((item) => ({
         illustrationId: item._id,
@@ -136,8 +129,6 @@ export const findSimilarIllustrations = action({
   }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: async (ctx, args): Promise<any> => {
-    console.log(`🔍 Finding similar illustrations to ${args.illustrationId}`);
-
     try {
       // Get the source illustration
       // Type annotation to avoid TypeScript type instantiation depth issues
@@ -242,12 +233,9 @@ export const getRecommendedIllustrations = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    console.log(`💡 Getting illustration recommendations for script`);
-
     try {
       // Extract key concepts from the script
       const concepts = await extractKeyConcepts(args.scriptText);
-      console.log(`   Extracted ${concepts.length} key concepts:`, concepts);
 
       // Search for illustrations matching each concept
       const allMatches: any[] = [];
@@ -304,8 +292,6 @@ export const getRecommendedIllustrations = action({
       const results = Array.from(uniqueMatches.values())
         .sort((a, b) => b.relevanceScore - a.relevanceScore)
         .slice(0, args.limit ?? 10);
-
-      console.log(`   Found ${results.length} recommended illustrations`);
 
       return {
         success: true,

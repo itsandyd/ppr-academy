@@ -93,11 +93,6 @@ export const logDM = internalMutation({
     workflowExecutionId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Log to socialMessageLogs table if it exists, otherwise just console log
-    console.log(`DM ${args.success ? "sent" : "failed"} [${args.platform}]:`, {
-      recipientId: args.recipientId,
-      messagePreview: args.message.substring(0, 50) + "...",
-      error: args.error,
-    });
+    // No-op: logging removed
   },
 });

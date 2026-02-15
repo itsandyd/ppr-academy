@@ -19,8 +19,6 @@ export const processInstagramWebhook = action({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    console.log("📸 Processing Instagram webhook via public action");
-
     try {
       // Call the internal Instagram webhook processor
       await ctx.runAction(internal.webhooks.instagram.processWebhook, {
@@ -44,8 +42,6 @@ export const processTwitterWebhook = action({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    console.log("🐦 Processing Twitter webhook via public action");
-
     try {
       // Call the internal Twitter webhook processor
       await ctx.runAction(internal.webhooks.twitter.processWebhook, {
@@ -69,8 +65,6 @@ export const processFacebookWebhook = action({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    console.log("📘 Processing Facebook webhook via public action");
-
     try {
       // Call the internal Facebook webhook processor
       await ctx.runAction(internal.webhooks.facebook.processWebhook, {

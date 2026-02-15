@@ -194,12 +194,12 @@ export const getAllCreators = query({
     const limit = args.limit || 20;
     const offset = args.offset || 0;
 
-    // Get only public stores with published profiles
+    // Get only public stores with published profiles (bounded)
     const allStores = await ctx.db
       .query("stores")
       .withIndex("by_public", (q) => q.eq("isPublic", true))
       .filter((q) => q.eq(q.field("isPublishedProfile"), true))
-      .collect();
+      .take(500);
 
     // Paginate
     const stores = allStores.slice(offset, offset + limit);
@@ -213,31 +213,30 @@ export const getAllCreators = query({
           .filter((q) => q.eq(q.field("clerkId"), store.userId))
           .first();
 
-        // Count published courses
-        const courses = await ctx.db
+        // Count published courses using index
+        const allCourses = await ctx.db
           .query("courses")
-          .filter((q) =>
-            q.and(q.eq(q.field("storeId"), store._id), q.eq(q.field("isPublished"), true))
-          )
-          .collect();
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .take(500);
+        const courses = allCourses.filter((c) => c.isPublished === true);
 
-        // Count published products
+        // Count published products using index
         const products = await ctx.db
           .query("digitalProducts")
-          .filter((q) => q.eq(q.field("storeId"), store._id))
-          .collect();
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .take(500);
 
-        // Count sample packs
+        // Count sample packs using index
         const samplePacks = await ctx.db
           .query("samplePacks")
-          .filter((q) => q.eq(q.field("storeId"), store._id))
-          .collect();
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .take(500);
 
-        // Count unique students
+        // Count unique students using index
         const storePurchases = await ctx.db
           .query("purchases")
-          .filter((q) => q.eq(q.field("storeId"), store._id))
-          .collect();
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .take(1000);
         const uniqueStudents = new Set(storePurchases.map((p) => p.userId));
 
         // Collect unique categories from courses and products
@@ -342,14 +341,14 @@ export const searchMarketplace = query({
       const courses = await ctx.db
         .query("courses")
         .filter((q) => q.eq(q.field("isPublished"), true))
-        .collect();
+        .take(200);
 
       const coursesWithDetails = await Promise.all(
         courses.map(async (course) => {
-          // Get enrollment count
+          // Get enrollment count using index
           const enrollments = await ctx.db
             .query("purchases")
-            .filter((q) => q.eq(q.field("courseId"), course._id))
+            .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
             .collect();
 
           // Get creator info
@@ -398,7 +397,7 @@ export const searchMarketplace = query({
       const products = await ctx.db
         .query("digitalProducts")
         .filter((q) => q.eq(q.field("isPublished"), true))
-        .collect();
+        .take(200);
 
       const digitalProducts = products.filter(
         (p) =>
@@ -411,14 +410,15 @@ export const searchMarketplace = query({
         digitalProducts.map(async (product) => {
           const purchases = await ctx.db
             .query("purchases")
-            .filter((q) => q.eq(q.field("productId"), product._id))
+            .withIndex("by_productId", (q) => q.eq("productId", product._id))
             .collect();
 
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
 
-          const stores = await ctx.db.query("stores").collect();
-          const store = stores.find((s) => s._id === product.storeId);
+          const store = product.storeId
+            ? await ctx.db.get(product.storeId as Id<"stores">)
+            : null;
 
           if (store) {
             const user = await ctx.db
@@ -459,7 +459,7 @@ export const searchMarketplace = query({
       const allProducts = await ctx.db
         .query("digitalProducts")
         .filter((q) => q.eq(q.field("isPublished"), true))
-        .collect();
+        .take(200);
 
       const coachingProducts = allProducts.filter((p) => (p as any).productType === "coaching");
 
@@ -467,14 +467,15 @@ export const searchMarketplace = query({
         coachingProducts.map(async (product) => {
           const purchases = await ctx.db
             .query("purchases")
-            .filter((q) => q.eq(q.field("productId"), product._id))
+            .withIndex("by_productId", (q) => q.eq("productId", product._id))
             .collect();
 
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
 
-          const stores = await ctx.db.query("stores").collect();
-          const store = stores.find((s) => s._id === product.storeId);
+          const store = product.storeId
+            ? await ctx.db.get(product.storeId as Id<"stores">)
+            : null;
 
           if (store) {
             const user = await ctx.db
@@ -586,15 +587,16 @@ export const searchMarketplace = query({
             )
           )
         )
-        .collect();
+        .take(200);
 
       const racksWithDetails = await Promise.all(
         racks.map(async (rack) => {
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
 
-          const stores = await ctx.db.query("stores").collect();
-          const store = stores.find((s) => s._id === rack.storeId);
+          const store = rack.storeId
+            ? await ctx.db.get(rack.storeId as Id<"stores">)
+            : null;
 
           if (store) {
             const user = await ctx.db
@@ -637,7 +639,7 @@ export const searchMarketplace = query({
       const bundles = await ctx.db
         .query("bundles")
         .filter((q) => q.eq(q.field("isPublished"), true))
-        .collect();
+        .take(200);
 
       const bundlesWithDetails = await Promise.all(
         bundles.map(async (bundle) => {
@@ -658,11 +660,11 @@ export const searchMarketplace = query({
             }
           }
 
-          // Count bundle purchases
+          // Count bundle purchases using index
           const purchases = await ctx.db
             .query("purchases")
             .filter((q) => q.eq(q.field("bundleId"), bundle._id))
-            .collect();
+            .take(500);
 
           return {
             _id: bundle._id,
@@ -775,20 +777,20 @@ export const getMarketplaceCategories = query({
   handler: async (ctx) => {
     const categories = new Set<string>();
 
-    // Get categories from courses
+    // Get categories from courses (bounded)
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
     courses.forEach((c) => {
       if (c.category) categories.add(c.category);
     });
 
-    // Get categories from products
+    // Get categories from products (bounded)
     const products = await ctx.db
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
     products.forEach((p) => {
       if (p.category) categories.add(p.category);
     });

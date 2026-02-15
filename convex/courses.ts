@@ -139,7 +139,7 @@ export const getCourseBySlug = query({
       .query("courseModules")
       .withIndex("by_courseId", q => q.eq("courseId", course._id))
       .order("asc")
-      .collect();
+      .take(200);
 
     // Build modules structure with lessons
     const modulesWithLessons = await Promise.all(
@@ -148,7 +148,7 @@ export const getCourseBySlug = query({
           .query("courseLessons")
           .withIndex("by_moduleId", q => q.eq("moduleId", module._id))
           .order("asc")
-          .collect();
+          .take(100);
 
         return {
           title: module.title,
@@ -254,25 +254,21 @@ export const getCourseWithInstructor = query({
           instructorInfo.socialLinks = store.socialLinks;
         }
 
-        // Count students enrolled in this creator's courses
+        // Count students enrolled in this creator's courses using index
         const creatorCourses = await ctx.db
           .query("courses")
-          .filter((q) => q.eq(q.field("storeId"), course.storeId))
-          .collect();
+          .withIndex("by_storeId", (q) => q.eq("storeId", course.storeId!))
+          .take(500);
         instructorInfo.courseCount = creatorCourses.length;
 
-        // Count unique students
+        // Count unique students using index
         const enrollmentCounts = await Promise.all(
           creatorCourses.map(async (c) => {
             const enrollments = await ctx.db
               .query("purchases")
-              .filter((q) =>
-                q.and(
-                  q.eq(q.field("courseId"), c._id),
-                  q.eq(q.field("status"), "completed")
-                )
-              )
-              .collect();
+              .withIndex("by_courseId", (q) => q.eq("courseId", c._id))
+              .filter((q) => q.eq(q.field("status"), "completed"))
+              .take(5000);
             return enrollments.length;
           })
         );
@@ -285,7 +281,7 @@ export const getCourseWithInstructor = query({
               .query("courseReviews")
               .withIndex("by_courseId", (q) => q.eq("courseId", c._id))
               .filter((q) => q.eq(q.field("isPublished"), true))
-              .collect();
+              .take(1000);
             return reviews;
           })
         );
@@ -369,7 +365,7 @@ export const getCoursesByUser = query({
     return await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -429,7 +425,7 @@ export const getCoursesByStore = query({
     return await ctx.db
       .query("courses")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -486,8 +482,8 @@ export const getPublishedCoursesByStore = query({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-    
+      .take(500);
+
     // Filter for published courses only
     return courses.filter(course => course.isPublished === true);
   },
@@ -546,7 +542,7 @@ export const getCoursesByInstructor = query({
     return await ctx.db
       .query("courses")
       .withIndex("by_instructorId", (q) => q.eq("instructorId", args.instructorId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -650,12 +646,9 @@ export const createCourseWithData = mutation({
 
       // Create modules, lessons, and chapters if provided
       if (data.modules && Array.isArray(data.modules)) {
-        console.log(`📦 Processing ${data.modules.length} modules`);
-        
         for (let i = 0; i < data.modules.length; i++) {
           const moduleData = data.modules[i];
-          console.log(`  📚 Module ${i + 1}: "${moduleData.title}"`);
-          
+
           const moduleId = await ctx.db.insert("courseModules", {
             courseId,
             title: moduleData.title,
@@ -665,13 +658,9 @@ export const createCourseWithData = mutation({
 
           // Create lessons for this module
           if (moduleData.lessons && Array.isArray(moduleData.lessons)) {
-            console.log(`    📖 Found ${moduleData.lessons.length} lessons in module "${moduleData.title}"`);
-            
             for (let j = 0; j < moduleData.lessons.length; j++) {
               const lessonData = moduleData.lessons[j];
-              console.log(`      📝 Lesson ${j + 1}: "${lessonData.title}"`);
-              console.log(`      🔍 Has chapters? ${!!lessonData.chapters}, Is array? ${Array.isArray(lessonData.chapters)}, Count: ${lessonData.chapters?.length || 0}`);
-              
+
               const lessonId = await ctx.db.insert("courseLessons", {
                 moduleId,
                 title: lessonData.title,
@@ -681,12 +670,9 @@ export const createCourseWithData = mutation({
 
               // Create chapters for this lesson
               if (lessonData.chapters && Array.isArray(lessonData.chapters)) {
-                console.log(`        ✨ Creating ${lessonData.chapters.length} chapters for lesson "${lessonData.title}"`);
-                
                 for (let k = 0; k < lessonData.chapters.length; k++) {
                   const chapterData = lessonData.chapters[k];
-                  console.log(`          📄 Chapter ${k + 1}: "${chapterData.title}"`);
-                  
+
                   await ctx.db.insert("courseChapters", {
                     lessonId,
                     courseId,
@@ -696,22 +682,11 @@ export const createCourseWithData = mutation({
                     isPublished: true,
                   });
                 }
-                console.log(`        ✅ Created ${lessonData.chapters.length} chapters`);
-              } else {
-                console.log(`        ⚠️ NO CHAPTERS found for lesson "${lessonData.title}"!`);
-                console.log(`        📊 Lesson data keys:`, Object.keys(lessonData));
               }
             }
-          } else {
-            console.log(`    ⚠️ NO LESSONS found for module "${moduleData.title}"!`);
           }
         }
-        console.log(`✅ Created ${data.modules.length} modules with lessons and chapters`);
-      } else {
-        console.log(`⚠️ NO MODULES provided in data!`);
       }
-
-      console.log("Course created successfully:", courseId);
 
       return {
         success: true,
@@ -856,27 +831,26 @@ export const updateCourseWithModules = mutation({
       await ctx.db.patch(courseId, courseData);
 
       // If modules are provided, update them
-      console.log(`🔥 updateCourseWithModules: Saving ${modules?.length || 0} modules for course ${courseId}`);
       if (modules && modules.length > 0) {
         // Delete existing modules and their children
         const existingModules = await ctx.db
           .query("courseModules")
           .withIndex("by_courseId", (q) => q.eq("courseId", courseId))
-          .collect();
+          .take(200);
 
         for (const module of existingModules) {
           // Delete lessons and chapters for this module
           const lessons = await ctx.db
             .query("courseLessons")
             .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
-            .collect();
+            .take(100);
 
           for (const lesson of lessons) {
             // Delete chapters for this lesson
             const chapters = await ctx.db
               .query("courseChapters")
               .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
-              .collect();
+              .take(200);
 
             for (const chapter of chapters) {
               await ctx.db.delete(chapter._id);
@@ -906,11 +880,6 @@ export const updateCourseWithModules = mutation({
 
               if (lessonData.chapters && lessonData.chapters.length > 0) {
                 for (const chapterData of lessonData.chapters) {
-                  console.log(`🎵 Creating chapter "${chapterData.title}" with audio:`, {
-                    hasGeneratedAudio: !!chapterData.generatedAudioData,
-                    audioDataLength: chapterData.generatedAudioData?.length || 0,
-                  });
-                  
                   await ctx.db.insert("courseChapters", {
                     title: chapterData.title,
                     description: chapterData.content,
@@ -1008,7 +977,6 @@ export const createOrUpdateChapter = mutation({
         // Update existing chapter
         await ctx.db.patch(args.chapterId, chapterDbData);
         chapterId = args.chapterId;
-        console.log(`📝 Updated existing chapter: ${args.chapterData.title}`);
       } else {
         // Try to find existing chapter by title, courseId, and lessonId
         const existingChapter = await ctx.db
@@ -1028,11 +996,9 @@ export const createOrUpdateChapter = mutation({
           // Update existing chapter
           await ctx.db.patch(existingChapter._id, chapterDbData);
           chapterId = existingChapter._id;
-          console.log(`🔄 Found and updated existing chapter: ${args.chapterData.title} (ID: ${existingChapter._id})`);
         } else {
           // Create new chapter
           chapterId = await ctx.db.insert("courseChapters", chapterDbData);
-          console.log(`✨ Created new chapter: ${args.chapterData.title}`);
         }
       }
 
@@ -1193,9 +1159,7 @@ export const getCourseForEdit = query({
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .order("asc")
-      .collect();
-
-    console.log(`🔥 getCourseForEdit: Found ${modules.length} modules for course ${args.courseId}`);
+      .take(200);
 
     // Build the complete course structure
     const courseModules = [];
@@ -1206,7 +1170,7 @@ export const getCourseForEdit = query({
         .query("courseLessons")
         .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
         .order("asc")
-        .collect();
+        .take(100);
 
       const courseLessons = [];
 
@@ -1233,7 +1197,7 @@ export const getCourseForEdit = query({
           .query("courseChapters")
           .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
           .order("asc")
-          .collect();
+          .take(200);
 
         // Resolve storage IDs to URLs for chapter audio
         const courseChapters = await Promise.all(
@@ -1434,21 +1398,21 @@ export const deleteCourse = mutation({
       const modules = await ctx.db
         .query("courseModules")
         .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-        .collect();
-      
+        .take(200);
+
       for (const module of modules) {
         // Delete all lessons in this module
         const lessons = await ctx.db
           .query("courseLessons")
           .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
-          .collect();
-        
+          .take(100);
+
         for (const lesson of lessons) {
           // Delete all chapters in this lesson
           const chapters = await ctx.db
             .query("courseChapters")
             .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
-            .collect();
+            .take(200);
           
           for (const chapter of chapters) {
             await ctx.db.delete(chapter._id);
@@ -1572,9 +1536,7 @@ export const cleanupDuplicateChapters = mutation({
       const allChapters = await ctx.db
         .query("courseChapters")
         .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-        .collect();
-
-      console.log(`🧹 Found ${allChapters.length} chapters for course ${args.courseId}`);
+        .take(1000);
 
       // Group chapters by title and lessonId to find duplicates
       const chapterGroups: Record<string, typeof allChapters> = {};
@@ -1599,12 +1561,9 @@ export const cleanupDuplicateChapters = mutation({
           const toKeep = chapters[0];
           const toDelete = chapters.slice(1);
           
-          console.log(`🧹 Group "${groupKey}": keeping ${toKeep._id} (${new Date(toKeep._creationTime).toISOString()}), deleting ${toDelete.length} duplicates`);
-          
           for (const duplicate of toDelete) {
             await ctx.db.delete(duplicate._id);
             removedCount++;
-            console.log(`🗑️ Deleted duplicate chapter: ${duplicate._id} (${new Date(duplicate._creationTime).toISOString()})`);
           }
         }
       }
@@ -1665,21 +1624,21 @@ export const getAllPublishedCourses = query({
     followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx) => {
-    // Get all published courses
+    // Get all published courses (bounded)
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(200);
 
     // Enrich with enrollment counts and creator info
     const coursesWithDetails = await Promise.all(
       courses.map(async (course) => {
-        // Get enrollment count
+        // Get enrollment count using index
         const enrollments = await ctx.db
           .query("purchases")
-          .filter((q) => q.eq(q.field("courseId"), course._id))
-          .collect();
-        
+          .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
+          .take(5000);
+
         // Get creator info
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
@@ -1736,7 +1695,7 @@ export const getAllCourses = query({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    return await ctx.db.query("courses").collect();
+    return await ctx.db.query("courses").take(1000);
   },
 });
 
@@ -1756,9 +1715,9 @@ export const getModulesByCourseInternal = internalQuery({
   handler: async (ctx, args) => {
     const modules = await ctx.db
       .query("courseModules")
-      .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
-    
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .take(200);
+
     return modules.map(m => ({
       _id: m._id,
       title: m.title,
@@ -1780,9 +1739,9 @@ export const getLessonsByModuleInternal = internalQuery({
   handler: async (ctx, args) => {
     const lessons = await ctx.db
       .query("courseLessons")
-      .filter((q) => q.eq(q.field("moduleId"), args.moduleId))
-      .collect();
-    
+      .withIndex("by_moduleId", (q) => q.eq("moduleId", args.moduleId))
+      .take(100);
+
     return lessons.map(l => ({
       _id: l._id,
       title: l.title,
@@ -1804,9 +1763,9 @@ export const getChaptersByLessonInternal = internalQuery({
   handler: async (ctx, args) => {
     const chapters = await ctx.db
       .query("courseChapters")
-      .filter((q) => q.eq(q.field("lessonId"), args.lessonId))
-      .collect();
-    
+      .withIndex("by_lessonId", (q) => q.eq("lessonId", args.lessonId))
+      .take(200);
+
     return chapters.map(ch => ({
       _id: ch._id,
       title: ch.title,
@@ -1919,7 +1878,7 @@ export const getChaptersForLeadMagnet = internalQuery({
     const chapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     // Get lesson and module info for each chapter
     const enrichedChapters = await Promise.all(
@@ -1978,7 +1937,7 @@ export const getCourseChaptersEnriched = query({
     const chapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q: any) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     const enrichedChapters = await Promise.all(
       chapters.map(async (chapter: any) => {
@@ -2069,7 +2028,7 @@ export const getCourseChapters = query({
     const chapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     // Helper function to resolve storage ID to URL
     const resolveStorageUrl = async (url: string | undefined): Promise<string | undefined> => {
@@ -2147,7 +2106,6 @@ export const updateChapterMuxAsset = mutation({
 
     if (!chapter) {
       // Asset ID not found - might be new upload, try to find by null assetId and update
-      console.log(`No chapter found with muxAssetId: ${args.muxAssetId}`);
       return;
     }
 
@@ -2158,7 +2116,6 @@ export const updateChapterMuxAsset = mutation({
       videoDuration: args.videoDuration,
     });
 
-    console.log(`Updated chapter ${chapter._id} with Mux playback ID: ${args.muxPlaybackId}`);
   },
 });
 

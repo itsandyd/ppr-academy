@@ -180,7 +180,7 @@ export const getOverviewStats = query({
       const allTimeEvents = await ctx.db
         .query("webhookEmailEvents")
         .withIndex("by_eventType_timestamp", (q) => q.eq("eventType", eventType))
-        .collect();
+        .take(10000);
       allTime[eventType] = allTimeEvents.length;
 
       // Last 7 days
@@ -189,7 +189,7 @@ export const getOverviewStats = query({
         .withIndex("by_eventType_timestamp", (q) =>
           q.eq("eventType", eventType).gte("timestamp", sevenDaysAgo)
         )
-        .collect();
+        .take(10000);
       last7Days[eventType] = last7Events.length;
 
       // Last 30 days
@@ -198,7 +198,7 @@ export const getOverviewStats = query({
         .withIndex("by_eventType_timestamp", (q) =>
           q.eq("eventType", eventType).gte("timestamp", thirtyDaysAgo)
         )
-        .collect();
+        .take(10000);
       last30Days[eventType] = last30Events.length;
     }
 
@@ -217,12 +217,12 @@ export const getOverviewStats = query({
     const suppressedPrefs = await ctx.db
       .query("resendPreferences")
       .filter((q) => q.eq(q.field("isUnsubscribed"), true))
-      .collect();
+      .take(5000);
     const suppressedContacts = suppressedPrefs.length;
 
     const allPrefsCount = await ctx.db
       .query("resendPreferences")
-      .collect();
+      .take(5000);
     const totalContacts = allPrefsCount.length;
     const activeContacts = totalContacts - suppressedContacts;
     const healthScore = totalContacts > 0
@@ -459,7 +459,7 @@ export const getCampaignDetail = query({
     const alerts = await ctx.db
       .query("emailAlerts")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     // Group events by type
     const eventsByType: Record<string, number> = {};
@@ -712,7 +712,7 @@ export const getListHealth = query({
     const bounceLogs = await ctx.db
       .query("resendLogs")
       .filter((q) => q.eq(q.field("status"), "bounced"))
-      .collect();
+      .take(5000);
 
     const bounceCountMap = new Map<string, number>();
     for (const log of bounceLogs) {
@@ -911,7 +911,7 @@ export const getCreatorCampaignAnalytics = query({
     const connections = await ctx.db
       .query("resendConnections")
       .withIndex("by_user", (q) => q.eq("userId", args.storeId))
-      .collect();
+      .take(500);
 
     const connectionIds = new Set(connections.map((c) => c._id));
 

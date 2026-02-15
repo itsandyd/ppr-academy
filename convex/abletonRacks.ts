@@ -164,7 +164,7 @@ export const getAbletonRacksByStore = query({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     return products.filter(
       (p) => p.productType === "abletonRack" || p.productType === "abletonPreset"
@@ -205,7 +205,7 @@ export const getPublishedAbletonRacks = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(100);
 
     // Apply filters
     if (args.rackType) {
@@ -262,7 +262,7 @@ export const getPublishedAbletonRacks = query({
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(500);
         const store = stores.find((s) => s._id === rack.storeId);
 
         if (store) {
@@ -342,7 +342,7 @@ export const getAbletonRackById = query({
     let creatorName = "Creator";
     let creatorAvatar: string | undefined = undefined;
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(500);
     const store = stores.find((s) => s._id === rack.storeId);
 
     if (store) {
@@ -407,7 +407,7 @@ export const getAbletonRackStats = query({
     const racks = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     const abletonRacks = racks.filter(
       (r) => r.productType === "abletonRack" || r.productType === "abletonPreset"
@@ -416,7 +416,7 @@ export const getAbletonRackStats = query({
     const publishedRacks = abletonRacks.filter((r) => r.isPublished);
 
     // Get purchases
-    const purchases = await ctx.db.query("purchases").collect();
+    const purchases = await ctx.db.query("purchases").take(5000);
     const rackPurchases = purchases.filter((p) => abletonRacks.some((r) => r._id === p.productId));
 
     // Calculate stats
@@ -513,7 +513,7 @@ export const getAbletonRackBySlug = query({
           q.eq(q.field("productType"), "abletonPreset")
         )
       )
-      .collect();
+      .take(200);
 
     let rack = racks.find((r) => (r as any).slug === args.slug);
 
@@ -545,7 +545,7 @@ export const getAbletonRackBySlug = query({
     let creatorName = "Creator";
     let creatorAvatar: string | undefined = undefined;
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(500);
     const store = stores.find((s) => s._id === rack.storeId);
 
     if (store) {

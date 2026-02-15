@@ -61,7 +61,7 @@ export const getUserPurchases = query({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .order("desc")
-      .collect();
+      .take(5000);
 
     // Enrich with product details
     const enrichedPurchases = await Promise.all(
@@ -178,7 +178,7 @@ export const getUserCourses = query({
       .filter((q) =>
         q.and(q.eq(q.field("status"), "completed"), q.eq(q.field("productType"), "course"))
       )
-      .collect();
+      .take(5000);
 
     // Deduplicate courses by courseId (in case user has multiple purchases for same course)
     const uniqueCourseIds = Array.from(
@@ -200,13 +200,13 @@ export const getUserCourses = query({
         const userProgress = await ctx.db
           .query("userProgress")
           .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", courseId))
-          .collect();
+          .take(500);
 
         // Calculate overall progress
         const totalChapters = await ctx.db
           .query("courseChapters")
           .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-          .collect();
+          .take(5000);
 
         const completedChapters = userProgress.filter((p) => p.isCompleted).length;
         const progress =
@@ -281,7 +281,7 @@ export const getUserDigitalProducts = query({
       .filter((q) =>
         q.and(q.eq(q.field("status"), "completed"), q.eq(q.field("productType"), "digitalProduct"))
       )
-      .collect();
+      .take(5000);
 
     // Get product details
     const userProducts = await Promise.all(
@@ -356,12 +356,12 @@ export const verifyCourseAccess = query({
     const userProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
-      .collect();
+      .take(500);
 
     const totalChapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-      .collect();
+      .take(5000);
 
     const completedChapters = userProgress.filter((p) => p.isCompleted).length;
     const progress =
@@ -716,13 +716,13 @@ export const getCourseWithProgress = query({
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
       .order("asc")
-      .collect();
+      .take(5000);
 
     // Get user progress
     const userProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
-      .collect();
+      .take(500);
 
     const progressMap = new Map(userProgress.map((p) => [p.chapterId, p]));
 
@@ -733,7 +733,7 @@ export const getCourseWithProgress = query({
           .query("courseLessons")
           .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
           .order("asc")
-          .collect();
+          .take(5000);
 
         const lessonsWithChapters = await Promise.all(
           lessons.map(async (lesson) => {
@@ -741,7 +741,7 @@ export const getCourseWithProgress = query({
               .query("courseChapters")
               .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
               .order("asc")
-              .collect();
+              .take(5000);
 
             const chaptersWithProgress = chapters.map((chapter) => {
               const progress = progressMap.get(chapter._id);
@@ -785,7 +785,7 @@ export const getCourseWithProgress = query({
     const allChapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-      .collect();
+      .take(5000);
 
     const completedChapters = userProgress.filter((p) => p.isCompleted).length;
     const overallProgress =

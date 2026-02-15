@@ -11,7 +11,6 @@ import { Id } from "./_generated/dataModel";
 export const processWorkflowExecutions = internalAction({
   args: {},
   handler: async () => {
-    console.log(`[Workflow] DEPRECATED - this processor is disabled. Use emailWorkflowActions instead.`);
     return { processed: 0, failed: 0 };
   },
 });
@@ -70,7 +69,6 @@ export const processExecution = internalAction({
     const suppression = suppressionResults[0];
 
     if (suppression?.suppressed) {
-      console.log(`[Workflow] Skipping ${execution.customerEmail}: ${suppression.reason}`);
       await ctx.runMutation(internal.workflowHelpers.markExecutionCancelled, {
         executionId: args.executionId,
       });
@@ -99,7 +97,6 @@ export const processExecution = internalAction({
         break;
 
       case "stop":
-        console.log(`[Workflow] Stop node reached, completing execution`);
         await ctx.runMutation(internal.workflowHelpers.markExecutionCompleted, {
           executionId: args.executionId,
         });
@@ -118,7 +115,6 @@ export const processExecution = internalAction({
         break;
 
       case "goal":
-        console.log(`[Workflow] Goal reached: ${currentNode.data?.goalType || "unknown"}`);
         await ctx.runMutation(internal.workflowHelpers.markExecutionCompleted, {
           executionId: args.executionId,
         });
@@ -156,7 +152,6 @@ async function processEmailNode(
   }
 
   if (!subject || !htmlContent) {
-    console.log(`[Workflow] Email node ${node.id} has no content, skipping`);
     await processNextNode(ctx, executionId, workflow, node);
     return;
   }
@@ -223,8 +218,6 @@ async function processDelayNode(
     nextNodeId,
     scheduledFor,
   });
-
-  console.log(`[Workflow] Delay node: scheduled for ${new Date(scheduledFor).toISOString()}`);
 }
 
 async function processConditionNode(
@@ -376,8 +369,6 @@ async function processWebhookNode(
         url: webhookUrl,
         payload: JSON.stringify(payload),
       });
-
-      console.log(`[Workflow] Webhook sent to ${webhookUrl}`);
     } catch (error) {
       console.error(`[Workflow] Webhook failed:`, error);
     }
@@ -418,10 +409,6 @@ async function processSplitNode(
     return;
   }
 
-  console.log(
-    `[Workflow] Split: took path ${pathId.toUpperCase()} (${random.toFixed(1)}% < ${splitPercentage}%)`
-  );
-
   await ctx.runMutation(internal.workflowHelpers.scheduleNextNode, {
     executionId,
     nextNodeId: nextEdge.target,
@@ -461,8 +448,6 @@ async function processNotifyNode(
       });
     }
   }
-
-  console.log(`[Workflow] Notification sent via ${notifyMethod}`);
 
   await processNextNode(ctx, executionId, workflow, node);
 }
@@ -548,7 +533,6 @@ export const sendWorkflowEmail = internalAction({
       },
     });
 
-    console.log(`[Workflow] Email sent to ${args.email}: "${personalizedSubject}"`);
   },
 });
 
@@ -569,8 +553,6 @@ export const sendWebhook = internalAction({
     if (!response.ok) {
       throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
     }
-
-    console.log(`[Workflow] Webhook sent to ${args.url}: ${response.status}`);
   },
 });
 
@@ -596,6 +578,5 @@ export const sendNotificationEmail = internalAction({
       html: `<pre style="font-family: sans-serif; white-space: pre-wrap;">${args.message}</pre>`,
     });
 
-    console.log(`[Workflow] Notification email sent to ${args.to}`);
   },
 });

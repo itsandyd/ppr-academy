@@ -11,8 +11,6 @@ export const processDueDripEmails = internalAction({
       limit: 50,
     });
 
-    console.log(`[Drip] Processing ${dueEnrollments.length} due enrollments`);
-
     let sent = 0;
     let failed = 0;
 
@@ -47,7 +45,6 @@ export const processDueDripEmails = internalAction({
         const suppression = suppressionResults[0];
 
         if (suppression.suppressed) {
-          console.log(`[Drip] Skipping ${enrollment.email}: ${suppression.reason}`);
           await ctx.runMutation(internal.dripCampaigns.advanceEnrollment, {
             enrollmentId: enrollment._id,
             success: false,
@@ -77,7 +74,6 @@ export const processDueDripEmails = internalAction({
       }
     }
 
-    console.log(`[Drip] Complete: ${sent} sent, ${failed} failed`);
     return { sent, failed };
   },
 });
@@ -146,7 +142,6 @@ export const resolveAndEnqueueDripEmail = internalAction({
       },
     });
 
-    console.log(`[Drip] Enqueued email for ${args.email}: ${personalizedSubject}`);
   },
 });
 
@@ -219,8 +214,6 @@ export const triggerCampaignsForEvent = internalAction({
       storeId: args.storeId,
       triggerType: args.triggerType,
     });
-
-    console.log(`[Drip] Found ${campaigns.length} campaigns for ${args.triggerType} trigger`);
 
     for (const campaign of campaigns) {
       await ctx.runMutation(internal.dripCampaigns.enrollContactInternal, {

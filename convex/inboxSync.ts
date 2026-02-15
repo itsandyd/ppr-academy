@@ -23,8 +23,6 @@ export const fetchInboxReplies = internalAction({
     failed: v.number(),
   }),
   handler: async (ctx) => {
-    console.log("[Inbox Sync] Starting inbox fetch...");
-    
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       console.error("[Inbox Sync] RESEND_API_KEY not configured");
@@ -38,8 +36,6 @@ export const fetchInboxReplies = internalAction({
       
       // For now, we'll rely on webhooks to receive emails
       // This function serves as a backup/manual trigger
-      
-      console.log("[Inbox Sync] Inbox sync relies on webhooks. Ensure /api/webhooks/resend/inbox is configured.");
       
       return {
         fetched: 0,

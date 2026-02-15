@@ -63,8 +63,6 @@ export const getInstagramTokenByBusinessId = query({
   ),
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    console.log("🔍 getInstagramTokenByBusinessId: Looking for account with ID:", args.instagramBusinessAccountId);
-
     // PRIORITY 1: Check socialAccounts table (fresh OAuth tokens from reconnection flow)
     const socialAccounts = await ctx.db
       .query("socialAccounts")
@@ -83,7 +81,6 @@ export const getInstagramTokenByBusinessId = query({
         platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId ||
         account.platformUserId === args.instagramBusinessAccountId
       ) {
-        console.log("✅ getInstagramTokenByBusinessId: Using socialAccounts token:", account.platformUsername);
         return {
           accessToken: account.accessToken,
           username: account.platformUsername || "",
@@ -106,8 +103,6 @@ export const getInstagramTokenByBusinessId = query({
       .first();
 
     if (integration?.token) {
-      console.log("⚠️ getInstagramTokenByBusinessId: Using legacy integrations token:", integration.username);
-      
       // Try to get Page ID from socialAccounts for this account
       let facebookPageId: string | undefined;
       for (const account of socialAccounts) {
@@ -126,7 +121,6 @@ export const getInstagramTokenByBusinessId = query({
       };
     }
 
-    console.log("❌ getInstagramTokenByBusinessId: No account found for business ID:", args.instagramBusinessAccountId);
     return null;
   },
 });
@@ -153,11 +147,8 @@ export const getInstagramToken = query({
     // Get the user to find their Clerk ID
     const user = await ctx.db.get(args.userId);
     if (!user?.clerkId) {
-      console.log("❌ getInstagramToken: No user found for ID:", args.userId);
       return null;
     }
-
-    console.log("🔍 getInstagramToken: Looking for Instagram token for user:", user.email || user.clerkId);
 
     // PRIORITY: Check socialAccounts table first (has fresh tokens)
     const socialAccount = await ctx.db
@@ -173,7 +164,6 @@ export const getInstagramToken = query({
       .first();
 
     if (socialAccount?.accessToken) {
-      console.log("✅ getInstagramToken: Found token in socialAccounts table for:", socialAccount.platformUsername);
       return {
         accessToken: socialAccount.accessToken,
         username: socialAccount.platformUsername || "",
@@ -189,7 +179,6 @@ export const getInstagramToken = query({
       .first();
 
     if (integration?.token) {
-      console.log("⚠️ getInstagramToken: Using legacy integrations table token");
       return {
         accessToken: integration.token,
         username: integration.username || "",
@@ -197,7 +186,6 @@ export const getInstagramToken = query({
       };
     }
 
-    console.log("❌ getInstagramToken: No Instagram token found in either table");
     return null;
   },
 });
@@ -228,7 +216,6 @@ export const updatePostStatus = internalMutation({
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId as Id<"scheduledPosts">);
     if (!post) {
-      console.log("📊 Post not found:", args.postId);
       return null;
     }
 
@@ -239,8 +226,6 @@ export const updatePostStatus = internalMutation({
       ...(args.platformPostUrl && { platformPostUrl: args.platformPostUrl }),
       ...(args.status === "published" && { publishedAt: Date.now() }),
     });
-
-    console.log("📊 Post status updated:", args.postId, args.status);
     return null;
   },
 });
@@ -324,9 +309,6 @@ export const connectSocialAccount = mutation({
       )
       .first();
 
-    console.log(`🔍 Looking for existing account: platform=${args.platform}, storeId=${args.storeId}, platformUserId=${args.platformUserId}`);
-    console.log(`📋 Found existing:`, existing ? `Yes (${existing.platformUsername})` : 'No');
-
     if (existing) {
       // Update existing account
       await ctx.db.patch(existing._id, {
@@ -344,7 +326,6 @@ export const connectSocialAccount = mutation({
         grantedScopes: args.grantedScopes,
         platformData: args.platformData,
       });
-      console.log("✅ Updated existing socialAccount:", existing._id);
       return existing._id;
     }
 
@@ -368,7 +349,6 @@ export const connectSocialAccount = mutation({
       grantedScopes: args.grantedScopes,
       platformData: args.platformData,
     });
-    console.log("✅ Created new socialAccount:", newId);
     return newId;
   },
 });
@@ -415,10 +395,7 @@ export const removeDuplicateSocialAccounts = mutation({
 
     for (const account of toDelete) {
       await ctx.db.delete(account._id);
-      console.log("🗑️ Deleted duplicate socialAccount:", account._id, account.platformUsername);
     }
-
-    console.log("✅ Kept socialAccount:", keep._id, keep.platformUsername);
     return { removed: toDelete.length, kept: keep.platformUsername };
   },
 });

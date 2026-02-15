@@ -153,13 +153,20 @@ export const deleteContact = mutation({
       }
     }
 
-    const activities = await ctx.db
+    // Delete activities in bounded batches
+    let activitiesBatch = await ctx.db
       .query("emailContactActivity")
       .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId))
-      .collect();
+      .take(500);
 
-    for (const activity of activities) {
-      await ctx.db.delete(activity._id);
+    while (activitiesBatch.length > 0) {
+      for (const activity of activitiesBatch) {
+        await ctx.db.delete(activity._id);
+      }
+      activitiesBatch = await ctx.db
+        .query("emailContactActivity")
+        .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId))
+        .take(500);
     }
 
     await ctx.db.delete(args.contactId);
@@ -1452,13 +1459,13 @@ export const syncEnrolledUsersToEmailContacts = mutation({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_storeId", (q) => q.eq("storeId", actualStoreId))
-      .collect();
+      .take(500);
 
     // Also get courses by userId (in case storeId isn't set on some courses)
     const coursesByUserId = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
-      .collect();
+      .take(500);
 
     // Merge and deduplicate courses
     const allCourses = [...courses];
@@ -1472,13 +1479,15 @@ export const syncEnrolledUsersToEmailContacts = mutation({
       return { synced: 0, skipped: 0, total: 0, errors: ["No courses found for this store"] };
     }
 
-    const courseIds = new Set(allCourses.map((c) => c._id.toString()));
-
-    // Step 3: Get all enrollments
-    const allEnrollmentsRaw = await ctx.db.query("enrollments").collect();
-
-    // Filter enrollments to only those for courses in this store
-    const storeEnrollments = allEnrollmentsRaw.filter((e) => courseIds.has(e.courseId));
+    // Step 3: Get enrollments per course using by_courseId index (instead of loading all enrollments)
+    const storeEnrollments = [];
+    for (const course of allCourses) {
+      const courseEnrollments = await ctx.db
+        .query("enrollments")
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
+        .take(5000);
+      storeEnrollments.push(...courseEnrollments);
+    }
 
     if (storeEnrollments.length === 0) {
       return {
@@ -1598,7 +1607,7 @@ export const bulkImportContacts = mutation({
     const existingTags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     const tagNameToId: Record<string, Id<"emailTags">> = {};
     for (const tag of existingTags) {
@@ -1800,8 +1809,6 @@ export const removeDuplicateContacts = action({
     let cursor: string | null = null;
     let totalProcessed = 0;
 
-    console.log(`[Dedup] Starting scan for store ${args.storeId}...`);
-
     // Scan all contacts
     while (true) {
       const result: ScanResult = await ctx.runQuery(internal.emailContacts.scanContactsForDedup, {
@@ -1825,10 +1832,6 @@ export const removeDuplicateContacts = action({
       cursor = result.nextCursor;
     }
 
-    console.log(
-      `[Dedup] Scanned ${totalProcessed} contacts, found ${Object.keys(emailToContacts).length} unique emails`
-    );
-
     // Collect all IDs to delete
     const idsToDelete: string[] = [];
     let kept = 0;
@@ -1847,10 +1850,6 @@ export const removeDuplicateContacts = action({
       const toDelete = contacts.slice(1);
       idsToDelete.push(...toDelete.map((c) => c.id));
     }
-
-    console.log(
-      `[Dedup] Found ${idsToDelete.length} duplicates to delete, keeping ${kept} contacts`
-    );
 
     if (dryRun) {
       return {
@@ -1880,23 +1879,14 @@ export const removeDuplicateContacts = action({
         errors += batch.length;
       }
 
-      // Log progress every 1000 deletions
-      if ((i + BATCH_SIZE) % 1000 === 0 || i + BATCH_SIZE >= idsToDelete.length) {
-        console.log(
-          `[Dedup] Progress: ${Math.min(i + BATCH_SIZE, idsToDelete.length)}/${idsToDelete.length} processed`
-        );
-      }
     }
 
     // Refresh stats after deduplication
     if (deleted > 0) {
-      console.log(`[Dedup] Refreshing stats...`);
       await ctx.runMutation(internal.emailContacts.refreshContactStats, {
         storeId: args.storeId,
       });
     }
-
-    console.log(`[Dedup] Complete! Deleted ${deleted}, kept ${kept}, errors ${errors}`);
 
     return {
       processed: totalProcessed,
@@ -2018,7 +2008,7 @@ export const deleteContactInternal = internalMutation({
     const contactTags = await ctx.db
       .query("emailContactTags")
       .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId))
-      .collect();
+      .take(500);
 
     for (const ct of contactTags) {
       await ctx.db.delete(ct._id);
@@ -2136,12 +2126,7 @@ export const runFullTagMigration = action({
       batches++;
       cursor = result.nextCursor;
 
-      console.log(`Batch ${batches}: processed ${result.processed}, created ${result.created}`);
     } while (cursor);
-
-    console.log(
-      `Migration complete: ${totalProcessed} contacts, ${totalCreated} tag relationships`
-    );
 
     return { totalProcessed, totalCreated, batches };
   },

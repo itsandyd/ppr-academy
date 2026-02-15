@@ -126,35 +126,16 @@ export const syncClerkUsersInternal = internalAction({
       // Fetch all users from Clerk
       const clerkUsers = await fetchAllClerkUsers(args.clerkSecretKey);
       
-      console.log(`📊 Found ${clerkUsers.length} users in Clerk`);
-
       // Get existing users in Convex
       const convexUsers: any[] = await ctx.runQuery(internal.clerkSync.getAllUsersInternal);
       const convexUserMap = new Map(
         convexUsers.map((u: any) => [u.clerkId, u])
       );
 
-      console.log(`📊 Found ${convexUsers.length} users in Convex`);
-
       // Sync each user
       for (const clerkUser of clerkUsers) {
         try {
           const existingUser: any = convexUserMap.get(clerkUser.id);
-
-          // Debug: Log the first user's structure to understand the API response
-          if (clerkUser === clerkUsers[0]) {
-            console.log("📧 Sample Clerk user structure:", JSON.stringify({
-              id: clerkUser.id,
-              emailAddresses: clerkUser.emailAddresses,
-              email_addresses: clerkUser.email_addresses,
-              firstName: clerkUser.firstName,
-              first_name: clerkUser.first_name,
-              lastName: clerkUser.lastName,
-              last_name: clerkUser.last_name,
-              imageUrl: clerkUser.imageUrl,
-              image_url: clerkUser.image_url,
-            }, null, 2));
-          }
 
           const userData = {
             clerkId: clerkUser.id,
@@ -189,8 +170,6 @@ export const syncClerkUsersInternal = internalAction({
         usersAdded,
         usersUpdated,
       });
-
-      console.log(`✅ Sync complete: ${usersAdded} added, ${usersUpdated} updated`);
 
       return {
         success: true,
@@ -365,7 +344,6 @@ export const createUserInternal = internalMutation({
       });
     }
 
-    console.log(`✅ Created user: ${userId} (${args.email})`);
     return userId;
   },
 });
@@ -394,7 +372,6 @@ export const updateUserInternal = internalMutation({
       name,
     });
 
-    console.log(`✅ Updated user: ${args.userId} (${args.email})`);
     return null;
   },
 });

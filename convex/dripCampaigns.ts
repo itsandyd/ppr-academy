@@ -97,12 +97,12 @@ export const getCampaign = query({
     const steps = await ctx.db
       .query("dripCampaignSteps")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(200);
 
     const enrollments = await ctx.db
       .query("dripCampaignEnrollments")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     return {
       ...campaign,
@@ -120,7 +120,7 @@ export const getCampaignsByStore = query({
     return await ctx.db
       .query("dripCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
   },
 });
 
@@ -129,7 +129,7 @@ export const getAllDripCampaigns = query({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    return await ctx.db.query("dripCampaigns").order("desc").collect();
+    return await ctx.db.query("dripCampaigns").order("desc").take(10000);
   },
 });
 
@@ -157,7 +157,7 @@ export const deleteCampaign = mutation({
     const steps = await ctx.db
       .query("dripCampaignSteps")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(200);
 
     for (const step of steps) {
       await ctx.db.delete(step._id);
@@ -166,7 +166,7 @@ export const deleteCampaign = mutation({
     const enrollments = await ctx.db
       .query("dripCampaignEnrollments")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     for (const enrollment of enrollments) {
       await ctx.db.delete(enrollment._id);
@@ -202,7 +202,7 @@ export const enrollContact = mutation({
     const steps = await ctx.db
       .query("dripCampaignSteps")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(200);
 
     if (steps.length === 0) return null;
 
@@ -260,7 +260,7 @@ export const getEnrollmentsByEmail = query({
     return await ctx.db
       .query("dripCampaignEnrollments")
       .withIndex("by_email", (q) => q.eq("email", args.email))
-      .collect();
+      .take(5000);
   },
 });
 
@@ -292,7 +292,7 @@ export const advanceEnrollment = internalMutation({
     const steps = await ctx.db
       .query("dripCampaignSteps")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", enrollment.campaignId))
-      .collect();
+      .take(200);
 
     const sortedSteps = steps.sort((a, b) => a.stepNumber - b.stepNumber);
     const currentStepIndex = sortedSteps.findIndex(
@@ -345,7 +345,7 @@ export const getCampaignInternal = internalQuery({
     const steps = await ctx.db
       .query("dripCampaignSteps")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(200);
 
     return {
       ...campaign,
@@ -367,7 +367,7 @@ export const getActiveCampaignsByTrigger = internalQuery({
       .filter((q) =>
         q.and(q.eq(q.field("isActive"), true), q.eq(q.field("triggerType"), args.triggerType))
       )
-      .collect();
+      .take(5000);
 
     return campaigns;
   },
@@ -444,10 +444,6 @@ export const recoverStuckEnrollments = internalMutation({
         nextSendAt: Date.now(),
       });
       recovered++;
-    }
-
-    if (recovered > 0) {
-      console.log(`[Drip] Recovered ${recovered} stuck enrollments`);
     }
 
     return recovered;

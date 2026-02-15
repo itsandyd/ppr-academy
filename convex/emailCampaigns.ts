@@ -133,7 +133,7 @@ export const getCampaigns = query({
       query = query.filter((q) => q.eq(q.field("status"), args.status));
     }
 
-    return await query.order("desc").collect();
+    return await query.order("desc").take(5000);
   },
 });
 
@@ -231,7 +231,7 @@ export const addRecipients = mutation({
     const totalRecipients = await ctx.db
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     await ctx.db.patch(args.campaignId, {
       recipientCount: totalRecipients.length,
@@ -436,7 +436,7 @@ export const removeRecipients = mutation({
     const totalRecipients = await ctx.db
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     await ctx.db.patch(args.campaignId, {
       recipientCount: totalRecipients.length,
@@ -501,7 +501,7 @@ export const getCampaignRecipients = query({
       query = query.filter((q) => q.eq(q.field("status"), args.status));
     }
 
-    return await query.collect();
+    return await query.take(5000);
   },
 });
 
@@ -593,7 +593,7 @@ export const deleteCampaign = mutation({
     const recipients = await ctx.db
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     for (const recipient of recipients) {
       await ctx.db.delete(recipient._id);
@@ -632,7 +632,7 @@ export const addRecipientsFromTags = mutation({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const matchingContacts = contacts.filter((contact) => {
       const contactTagIds = contact.tagIds || [];
@@ -690,7 +690,7 @@ export const addRecipientsFromTags = mutation({
     const totalRecipients = await ctx.db
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     await ctx.db.patch(args.campaignId, {
       recipientCount: totalRecipients.length,
@@ -727,7 +727,7 @@ export const getTagPreview = query({
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .take(5000);
 
     const matchingContacts = contacts.filter((contact) => {
       const contactTagIds = contact.tagIds || [];

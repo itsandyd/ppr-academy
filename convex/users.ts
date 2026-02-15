@@ -8,8 +8,6 @@ export const getUserFromClerk = query({
   args: { clerkId: v.string() },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
-    console.log(`🔍 Looking up user with clerkId: ${args.clerkId}`);
-
     try {
       // First, try to find the user in our database
       const user = await ctx.db
@@ -18,11 +16,9 @@ export const getUserFromClerk = query({
         .unique();
 
       if (user) {
-        console.log(`✅ Found existing user in database: ${user.email}`);
         return user;
       }
 
-      console.log(`⚠️ User not found in database with clerkId: ${args.clerkId}`);
       return null;
     } catch (error) {
       console.error(`❌ Error looking up user:`, error);
@@ -42,8 +38,6 @@ export const createOrUpdateUserFromClerk = mutation({
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
-    console.log(`📝 Creating/updating user with clerkId: ${args.clerkId}`);
-
     // Check if user already exists
     const existingUser = await ctx.db
       .query("users")
@@ -64,7 +58,6 @@ export const createOrUpdateUserFromClerk = mutation({
         imageUrl: args.imageUrl || undefined,
         name,
       });
-      console.log(`✅ Updated existing user: ${existingUser._id}`);
       return existingUser._id;
     }
 
@@ -85,7 +78,6 @@ export const createOrUpdateUserFromClerk = mutation({
       admin: false,
     });
 
-    console.log(`✅ Created new user: ${userId}`);
     return userId;
   },
 });
@@ -261,7 +253,6 @@ export const deleteUser = mutation({
 
     if (user) {
       await ctx.db.delete(user._id);
-      console.log(`🗑️ Deleted user: ${user._id}`);
     }
     return null;
   },
@@ -394,7 +385,6 @@ export const setUserAsAdmin = internalMutation({
       admin: true,
     });
 
-    console.log(`✅ User ${user.email} (${args.clerkId}) is now an admin`);
     return user._id;
   },
 });
@@ -462,8 +452,6 @@ export const updateUserRole = mutation({
       details: `Changed user role to ${args.role}`,
       timestamp: Date.now(),
     });
-
-    console.log(`✅ User ${targetUser.email} role updated to ${args.role}`);
 
     return {
       success: true,

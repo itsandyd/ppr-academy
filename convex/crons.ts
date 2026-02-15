@@ -63,4 +63,11 @@ crons.interval(
   {}
 );
 
+crons.interval(
+  "aggregate admin metrics",
+  { hours: 1 },
+  internal.adminMetricsAggregation.aggregateAdminMetrics,
+  {}
+);
+
 export default crons;

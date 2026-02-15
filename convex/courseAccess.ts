@@ -417,7 +417,7 @@ async function checkBundleAccess(
  * with status="completed" and amount=0 for free courses with completed follow gates.
  * This differs from digitalProducts which use the followGateSubmissions table.
  *
- * TODO: Consider adding a dedicated courseFollowGateSubmissions table for better tracking
+ * POST-LAUNCH: Consider adding a dedicated courseFollowGateSubmissions table for better tracking
  */
 async function checkFollowGateCompletion(
   ctx: any,

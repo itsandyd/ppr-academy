@@ -99,10 +99,6 @@ export const generateCode = internalAction({
             ? userPrompt
             : `${userPrompt}\n\n## IMPORTANT: Fix These Issues From Previous Attempt\nYour previous code had these validation errors:\n${lastErrors.map((e) => `- ${e}`).join("\n")}\n\nPlease fix ALL of these issues and output corrected code.`;
 
-        console.log(
-          `🧠 Code generation attempt ${attempt + 1}/${MAX_ATTEMPTS}`
-        );
-
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
           {
@@ -145,10 +141,6 @@ export const generateCode = internalAction({
         const validation = validateAll(code);
 
         if (validation.valid) {
-          console.log(
-            `✅ Code generated and validated (${code.length} chars, attempt ${attempt + 1})`
-          );
-
           // Store code on the job
           await ctx.runMutation(
             internal.videosPipeline.jobMutations.updateJobCode,
@@ -180,7 +172,6 @@ export const generateCode = internalAction({
     }
 
     // All attempts failed — use fallback template
-    console.log("🔄 Falling back to template code");
     const fallbackCode = buildFallbackCode(
       script,
       args.imageUrls,

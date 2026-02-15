@@ -78,9 +78,6 @@ export const generateOutline = action({
     const { courseId, chapterIds, customInstructions } = args;
     const startTime = Date.now();
 
-    console.log(`📝 Generating cheat sheet outline for course: ${courseId}`);
-    console.log(`   Selected ${chapterIds.length} chapters`);
-
     // Fetch course info
     const courseInfo = await ctx.runQuery(
       internalRef.courses.getCourseForLeadMagnet,
@@ -113,8 +110,6 @@ export const generateOutline = action({
     if (selectedChapters.length === 0) {
       throw new Error("No matching chapters found for the provided IDs");
     }
-
-    console.log(`   Found ${selectedChapters.length} matching chapters with content`);
 
     // Build chapter content for the prompt
     const chapterContent = selectedChapters
@@ -226,9 +221,6 @@ Generate a focused, scannable 1-2 page cheat sheet with 3-6 sections. Prioritize
         sections: validatedSections,
         footer: parsed.footer || "Download more at ppr.academy",
       };
-
-      const elapsed = Math.round((Date.now() - startTime) / 1000);
-      console.log(`✅ Outline generated in ${elapsed}s - ${outline.sections.length} sections`);
 
       return outline;
     } catch (error) {

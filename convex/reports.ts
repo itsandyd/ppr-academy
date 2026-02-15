@@ -1,15 +1,16 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// Helper function to verify admin access
-async function verifyAdmin(ctx: any, clerkId?: string) {
-  if (!clerkId) {
+// Helper function to verify admin access via auth token
+async function verifyAdmin(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
     throw new Error("Unauthorized: Authentication required");
   }
 
   const user = await ctx.db
     .query("users")
-    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", clerkId))
+    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", identity.subject))
     .unique();
 
   if (!user || user.admin !== true) {
@@ -22,7 +23,6 @@ async function verifyAdmin(ctx: any, clerkId?: string) {
 // Get all reports by status (admin only)
 export const getReportsByStatus = query({
   args: {
-    clerkId: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("reviewed"),
@@ -34,7 +34,7 @@ export const getReportsByStatus = query({
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     // Verify admin access
-    await verifyAdmin(ctx, args.clerkId);
+    await verifyAdmin(ctx);
 
     return await ctx.db
       .query("reports")
@@ -46,13 +46,11 @@ export const getReportsByStatus = query({
 
 // Get all reports (admin only)
 export const getAllReports = query({
-  args: {
-    clerkId: v.optional(v.string()),
-  },
+  args: {},
   returns: v.array(v.any()),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     // Verify admin access
-    await verifyAdmin(ctx, args.clerkId);
+    await verifyAdmin(ctx);
 
     return await ctx.db.query("reports").order("desc").collect();
   },
@@ -60,9 +58,7 @@ export const getAllReports = query({
 
 // Get report statistics (admin only)
 export const getReportStats = query({
-  args: {
-    clerkId: v.optional(v.string()),
-  },
+  args: {},
   returns: v.object({
     pending: v.number(),
     reviewed: v.number(),
@@ -71,8 +67,8 @@ export const getReportStats = query({
     counter_notice: v.number(),
     total: v.number(),
   }),
-  handler: async (ctx, args) => {
-    await verifyAdmin(ctx, args.clerkId);
+  handler: async (ctx) => {
+    await verifyAdmin(ctx);
 
     const allReports = await ctx.db.query("reports").collect();
 
@@ -129,26 +125,24 @@ export const createReport = mutation({
 // Update report status to "reviewed" (admin only)
 export const markAsReviewed = mutation({
   args: {
-    clerkId: v.string(),
     reportId: v.id("reports"),
-    reviewedBy: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify admin access
-    const admin = await verifyAdmin(ctx, args.clerkId);
+    // Verify admin access via auth token
+    const admin = await verifyAdmin(ctx);
 
     const report = await ctx.db.get(args.reportId);
 
     await ctx.db.patch(args.reportId, {
       status: "reviewed",
-      reviewedBy: args.reviewedBy,
+      reviewedBy: admin.clerkId,
       reviewedAt: Date.now(),
     });
 
     // Log admin activity
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "report_reviewed",
@@ -167,29 +161,27 @@ export const markAsReviewed = mutation({
 // Update report status to "resolved" (admin only)
 export const markAsResolved = mutation({
   args: {
-    clerkId: v.string(),
     reportId: v.id("reports"),
-    reviewedBy: v.string(),
     resolution: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify admin access
-    const admin = await verifyAdmin(ctx, args.clerkId);
+    // Verify admin access via auth token
+    const admin = await verifyAdmin(ctx);
 
     const report = await ctx.db.get(args.reportId);
     const resolutionText = args.resolution || "Content removed";
 
     await ctx.db.patch(args.reportId, {
       status: "resolved",
-      reviewedBy: args.reviewedBy,
+      reviewedBy: admin.clerkId,
       reviewedAt: Date.now(),
       resolution: resolutionText,
     });
 
     // Log admin activity
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "report_resolved",
@@ -208,29 +200,27 @@ export const markAsResolved = mutation({
 // Update report status to "dismissed" (admin only)
 export const markAsDismissed = mutation({
   args: {
-    clerkId: v.string(),
     reportId: v.id("reports"),
-    reviewedBy: v.string(),
     resolution: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify admin access
-    const admin = await verifyAdmin(ctx, args.clerkId);
+    // Verify admin access via auth token
+    const admin = await verifyAdmin(ctx);
 
     const report = await ctx.db.get(args.reportId);
     const resolutionText = args.resolution || "Report dismissed";
 
     await ctx.db.patch(args.reportId, {
       status: "dismissed",
-      reviewedBy: args.reviewedBy,
+      reviewedBy: admin.clerkId,
       reviewedAt: Date.now(),
       resolution: resolutionText,
     });
 
     // Log admin activity
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "report_dismissed",
@@ -249,13 +239,12 @@ export const markAsDismissed = mutation({
 // Delete a report (admin only)
 export const deleteReport = mutation({
   args: {
-    clerkId: v.string(),
     reportId: v.id("reports"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify admin access
-    const admin = await verifyAdmin(ctx, args.clerkId);
+    // Verify admin access via auth token
+    const admin = await verifyAdmin(ctx);
 
     const report = await ctx.db.get(args.reportId);
     const reportTitle = report?.contentTitle || "Report";
@@ -265,7 +254,7 @@ export const deleteReport = mutation({
 
     // Log admin activity
     await ctx.db.insert("adminActivityLogs", {
-      adminId: args.clerkId,
+      adminId: admin.clerkId,
       adminEmail: admin?.email,
       adminName: admin?.name || admin?.firstName || "Admin",
       action: "report_deleted",

@@ -262,7 +262,6 @@ Identify 3-10 key visual opportunities. Focus on quality over quantity - priorit
       // Generate embeddings if requested
       let visualIdeas: VisualIdea[];
       if (generateEmbeddings) {
-        console.log(`   🧮 Generating embeddings for ${rawIdeas.length} visual ideas...`);
         visualIdeas = await Promise.all(
           rawIdeas.map(async (idea: any) => {
             try {
@@ -274,7 +273,6 @@ Identify 3-10 key visual opportunities. Focus on quality over quantity - priorit
             }
           })
         );
-        console.log(`   ✅ Embeddings generated`);
       } else {
         visualIdeas = rawIdeas;
       }
@@ -332,11 +330,6 @@ export const analyzeLeadMagnetOpportunities = action({
     const { courseId, maxChapters, generateEmbeddings } = args;
     const startTime = Date.now();
 
-    console.log(`🎯 Starting lead magnet analysis for course: ${courseId}`);
-    if (generateEmbeddings) {
-      console.log(`   🧮 Embedding generation enabled`);
-    }
-
     // Get course info using internal query from courses.ts
     const courseInfo = await ctx.runQuery(
       internalRef.courses.getCourseForLeadMagnet,
@@ -361,12 +354,9 @@ export const analyzeLeadMagnetOpportunities = action({
       moduleTitle?: string;
     }>;
 
-    console.log(`📚 Found ${chapters.length} chapters to analyze`);
-
     // Pre-filter chapters with content (skip empty ones early)
     const chaptersWithContent = chapters.filter(ch => {
       if (!ch.description) {
-        console.log(`   ⏭️ Pre-filter: Skipping "${ch.title}" - no content`);
         return false;
       }
       // Also skip very short content (< 100 chars after stripping HTML)
@@ -375,13 +365,10 @@ export const analyzeLeadMagnetOpportunities = action({
         .replace(/\s+/g, " ")
         .trim();
       if (plainText.length < 200) {
-        console.log(`   ⏭️ Pre-filter: Skipping "${ch.title}" - too short (${plainText.length} chars)`);
         return false;
       }
       return true;
     });
-
-    console.log(`📋 ${chaptersWithContent.length} chapters have analyzable content`);
 
     // Optionally limit chapters for testing
     const chaptersToAnalyze = maxChapters 
@@ -390,8 +377,6 @@ export const analyzeLeadMagnetOpportunities = action({
 
     // OPTIMIZATION: Process ALL chapters in parallel at once
     // OpenAI rate limits are generous enough for this with GPT-4o-mini
-    console.log(`\n🚀 Launching ${chaptersToAnalyze.length} parallel chapter analyses...`);
-    
     const allPromises = chaptersToAnalyze.map(async (chapter, index) => {
       try {
         const analysis = await ctx.runAction(
@@ -407,8 +392,6 @@ export const analyzeLeadMagnetOpportunities = action({
           }
         ) as ChapterAnalysis;
         
-        const elapsed = Math.round((Date.now() - startTime) / 1000);
-        console.log(`   ✅ [${index + 1}/${chaptersToAnalyze.length}] "${chapter.title.substring(0, 30)}..." - ${analysis.visualIdeas.length} visuals (${elapsed}s)`);
         return analysis;
       } catch (error) {
         console.error(`   ❌ [${index + 1}] Error analyzing "${chapter.title}":`, error);
@@ -422,9 +405,6 @@ export const analyzeLeadMagnetOpportunities = action({
     // Filter out nulls (failed analyses)
     const chapterAnalyses = allResults.filter((r): r is ChapterAnalysis => r !== null);
     
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
-    console.log(`\n⏱️ All chapters analyzed in ${elapsed}s. Success: ${chapterAnalyses.length}/${chaptersToAnalyze.length}`);
-
     // Calculate totals
     const totalVisualIdeas = chapterAnalyses.reduce(
       (sum, ch) => sum + ch.visualIdeas.length,
@@ -445,9 +425,6 @@ export const analyzeLeadMagnetOpportunities = action({
 
     // Generate bundle ideas (group related chapters)
     const bundleIdeas = generateBundleIdeas(chapterAnalyses);
-
-    const totalTime = Date.now() - startTime;
-    console.log(`✅ Analysis complete in ${totalTime}ms - ${totalVisualIdeas} total visual ideas`);
 
     return {
       courseId,
@@ -528,8 +505,6 @@ export const findSimilarVisualIdeas = action({
     const { query, analysisResults, topK = 10, minScore = 0.5 } = args;
 
     // Generate embedding for the query
-    console.log(`🔍 Searching for visual ideas similar to: "${query}"`);
-    
     const queryEmbedding = await generateQueryEmbedding(query);
     
     // Collect all visual ideas with embeddings
@@ -560,9 +535,7 @@ export const findSimilarVisualIdeas = action({
 
     // Sort by similarity score and return top K
     results.sort((a, b) => b.similarityScore - a.similarityScore);
-    
-    console.log(`   ✅ Found ${results.length} matching visual ideas`);
-    
+
     return results.slice(0, topK);
   },
 });
@@ -1054,8 +1027,6 @@ export const generateVisualImage = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    console.log(`🎨 Generating visual image for prompt: ${args.prompt.substring(0, 100)}...`);
-    
     // Check FAL API key
     const falApiKey = process.env.FAL_KEY;
     if (!falApiKey) {
@@ -1072,9 +1043,7 @@ export const generateVisualImage = action({
     try {
       // Create FAL client - it reads FAL_KEY from environment automatically
       const falClient = createFalClient();
-      
-      console.log(`   🎨 Calling FAL API with Nano Banana Pro (Gemini 3 Pro Image) + Web Search...`);
-      
+
       // Use fal.subscribe for better handling of long-running requests
       const result = await falClient.subscribe("fal-ai/nano-banana-pro", {
         input: {
@@ -1086,11 +1055,6 @@ export const generateVisualImage = action({
           enable_web_search: true, // Let model search for reference images/context
         },
         logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS" && update.logs) {
-            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
-          }
-        },
       });
 
       const imageData = result.data as {
@@ -1107,10 +1071,6 @@ export const generateVisualImage = action({
       }
 
       const imageUrl = imageData.images[0].url;
-      console.log(`   ✅ Image generated: ${imageUrl.substring(0, 80)}...`);
-      if (imageData.description) {
-        console.log(`   📝 Model description: ${imageData.description.substring(0, 100)}...`);
-      }
 
       // Upload to Convex storage for persistence
       try {
@@ -1146,8 +1106,6 @@ export const generateVisualImage = action({
  * Helper to upload image from URL to Convex storage
  */
 async function uploadImageUrlToStorage(ctx: any, imageUrl: string): Promise<Id<"_storage">> {
-  console.log(`   📥 Downloading image from: ${imageUrl.substring(0, 60)}...`);
-  
   // Fetch the image
   const response = await fetch(imageUrl);
   if (!response.ok) {
@@ -1172,7 +1130,6 @@ async function uploadImageUrlToStorage(ctx: any, imageUrl: string): Promise<Id<"
   }
 
   const { storageId } = await uploadResult.json() as { storageId: Id<"_storage"> };
-  console.log(`   ✅ Uploaded to Convex storage: ${storageId}`);
   return storageId;
 }
 
@@ -1240,15 +1197,12 @@ export const saveAcceptedImage = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    console.log(`💾 Saving accepted image for chapter ${args.chapterId}`);
-
     try {
       let storageId = args.storageId;
       let imageUrl: string;
 
       // If we have base64 data but no storage ID, upload to storage
       if (!storageId && args.imageData.startsWith("data:image")) {
-        console.log("   📤 Uploading image to storage...");
         storageId = await uploadBase64ToStorage(ctx, args.imageData);
       }
 
@@ -1265,14 +1219,10 @@ export const saveAcceptedImage = action({
         throw new Error("No valid image data provided");
       }
 
-      console.log("   🎨 Image URL:", imageUrl.substring(0, 50) + "...");
-
       // Generate embedding from the image using vision + text embedding
-      console.log("   🧮 Generating image embedding...");
       const embedding = await generateImageEmbeddingFromUrl(imageUrl, args.visualDescription);
 
       // Save to scriptIllustrations table
-      console.log("   💾 Saving to database...");
       const illustrationId = await ctx.runMutation(
         internalRef.scriptIllustrationMutations.createCompleteIllustration,
         {
@@ -1290,8 +1240,6 @@ export const saveAcceptedImage = action({
           generationStatus: "completed" as const,
         }
       ) as Id<"scriptIllustrations">;
-
-      console.log(`   ✅ Saved illustration: ${illustrationId}`);
 
       return {
         success: true,
@@ -1321,7 +1269,6 @@ async function generateImageEmbeddingFromUrl(imageUrl: string, additionalContext
 
   try {
     // Step 1: Use GPT-4o-mini vision to describe the image
-    console.log("      📝 Describing image with GPT-4o-mini vision...");
     const descriptionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1359,10 +1306,7 @@ Be concise but thorough (2-3 sentences).`,
     const descriptionData = await descriptionResponse.json() as any;
     const imageDescription = descriptionData.choices?.[0]?.message?.content || additionalContext || "";
 
-    console.log("      📝 Image description:", imageDescription.substring(0, 100) + "...");
-
     // Step 2: Generate text embedding from the description
-    console.log("      🔢 Generating embedding from description...");
     const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
       method: "POST",
       headers: {
@@ -1386,7 +1330,6 @@ Be concise but thorough (2-3 sentences).`,
       throw new Error("No embedding returned");
     }
 
-    console.log(`      ✅ Generated ${embedding.length}-dim embedding`);
     return embedding;
 
   } catch (error) {

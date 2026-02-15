@@ -57,14 +57,14 @@ export const getPlatformOverview = query({
     const today = new Date().toISOString().split("T")[0];
     
     // Get all domains
-    const domains = await ctx.db.query("emailDomains").collect();
+    const domains = await ctx.db.query("emailDomains").take(10000);
     const activeDomains = domains.filter(d => d.status === "active");
-    
+
     // Get today's analytics across all domains
     const todayAnalytics = await ctx.db
       .query("emailDomainAnalytics")
       .filter(q => q.eq(q.field("date"), today))
-      .collect();
+      .take(10000);
     
     // Aggregate today's stats
     const todayStats = todayAnalytics.reduce((acc, stat) => ({
@@ -98,19 +98,19 @@ export const getPlatformOverview = query({
     const last7DaysAnalytics = await ctx.db
       .query("emailDomainAnalytics")
       .filter(q => q.gte(q.field("date"), sevenDaysAgoStr))
-      .collect();
-    
+      .take(10000);
+
     const last7DaysStats = last7DaysAnalytics.reduce((acc, stat) => ({
       sent: acc.sent + stat.totalSent,
       delivered: acc.delivered + stat.totalDelivered,
       opened: acc.opened + stat.totalOpened,
     }), { sent: 0, delivered: 0, opened: 0 });
-    
+
     // Get creator stats
     const creatorStats = await ctx.db
       .query("emailCreatorStats")
       .filter(q => q.eq(q.field("date"), today))
-      .collect();
+      .take(10000);
     
     const flaggedCreators = creatorStats.filter(
       s => s.sendingStatus === "warning" || s.sendingStatus === "suspended"
@@ -120,7 +120,7 @@ export const getPlatformOverview = query({
     const activeAlerts = await ctx.db
       .query("emailDomainAlerts")
       .filter(q => q.eq(q.field("resolved"), false))
-      .collect();
+      .take(1000);
     
     return {
       today: {
@@ -185,7 +185,7 @@ export const listEmailDomains = query({
     alerts: v.number(),
   })),
   handler: async (ctx) => {
-    const domains = await ctx.db.query("emailDomains").collect();
+    const domains = await ctx.db.query("emailDomains").take(10000);
     const today = new Date().toISOString().split("T")[0];
     
     const domainsWithStats = await Promise.all(
@@ -206,7 +206,7 @@ export const listEmailDomains = query({
             q.eq(q.field("domainId"), domain._id),
             q.eq(q.field("resolved"), false)
           ))
-          .collect();
+          .take(1000);
         
         return {
           _id: domain._id,
@@ -281,7 +281,7 @@ export const getDomainDetails = query({
         q.eq(q.field("domainId"), args.domainId),
         q.gte(q.field("date"), sevenDaysAgo.toISOString().split("T")[0])
       ))
-      .collect();
+      .take(5000);
     
     // Last 30 days aggregates
     const thirtyDaysAgo = new Date();
@@ -292,7 +292,7 @@ export const getDomainDetails = query({
         q.eq(q.field("domainId"), args.domainId),
         q.gte(q.field("date"), thirtyDaysAgo.toISOString().split("T")[0])
       ))
-      .collect();
+      .take(5000);
     
     const last30DaysStats = last30DaysAnalytics.reduce((acc, stat) => ({
       totalSent: acc.totalSent + stat.totalSent,
@@ -308,7 +308,7 @@ export const getDomainDetails = query({
         q.eq(q.field("domainId"), args.domainId),
         q.eq(q.field("date"), today)
       ))
-      .collect();
+      .take(10000);
     
     const topCreators = await Promise.all(
       creatorStats

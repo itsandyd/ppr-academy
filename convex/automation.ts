@@ -292,17 +292,17 @@ export const deleteAutomationFlow = mutation({
     const userStates = await ctx.db
       .query("userAutomationStates")
       .withIndex("by_automationFlowId", (q) => q.eq("automationFlowId", args.flowId))
-      .collect();
+      .take(1000);
 
     const triggers = await ctx.db
       .query("automationTriggers")
       .withIndex("by_automationFlowId", (q) => q.eq("automationFlowId", args.flowId))
-      .collect();
+      .take(200);
 
     const messages = await ctx.db
       .query("automationMessages")
       .withIndex("by_automationFlowId", (q) => q.eq("automationFlowId", args.flowId))
-      .collect();
+      .take(1000);
 
     // Delete all related records
     for (const state of userStates) {
@@ -343,7 +343,7 @@ export const getAutomationFlows = query({
         .withIndex("by_store_active", (q) => q.eq("storeId", args.storeId).eq("isActive", isActive));
     }
 
-    const flows = await query.collect();
+    const flows = await query.take(1000);
     
     // Filter by user (additional security layer)
     return flows.filter(flow => flow.userId === args.userId);
@@ -377,7 +377,7 @@ export const getAutomationFlow = query({
       .query("userAutomationStates")
       .withIndex("by_automationFlowId", (q) => q.eq("automationFlowId", args.flowId))
       .filter((q) => q.eq(q.field("status"), "active"))
-      .collect();
+      .take(1000);
 
     return {
       ...flow,
@@ -537,7 +537,6 @@ export const processTrigger = internalAction({
     }
 
     if (trigger.status !== "pending") {
-      console.log(`Trigger ${args.triggerId} already processed`);
       return null;
     }
 
@@ -637,7 +636,6 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
   const commenterUsername = payload.user?.username || payload.from?.username || "";
   
   if (!commentText || !commenterUserId) {
-    console.log("Insufficient comment data for trigger processing");
     return;
   }
 
@@ -648,8 +646,7 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
     responseText: commentText,
   });
 
-  // For now, use the simpler approach - find all active flows for this platform
-  // TODO: Implement centralized routing once webhook is working
+  // POST-LAUNCH: Replace per-platform flow lookup with centralized webhook routing
   const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "comment"],
@@ -684,7 +681,6 @@ async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
   const senderUsername = payload.sender?.username || payload.from?.username || "";
   
   if (!messageText || !senderUserId) {
-    console.log("Insufficient message data for trigger processing");
     return;
   }
 
@@ -695,8 +691,7 @@ async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
     responseText: messageText,
   });
 
-  // For now, use the simpler approach - find all active flows for this platform
-  // TODO: Implement centralized routing once webhook is working
+  // POST-LAUNCH: Replace per-platform flow lookup with centralized webhook routing
   const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "dm"],
@@ -730,7 +725,6 @@ async function processMentionForTriggers(ctx: any, webhook: any, payload: any) {
   const platformUsername = payload.user?.username || payload.from?.username || "";
   
   if (!mentionText || !platformUserId) {
-    console.log("Insufficient mention data for trigger processing");
     return;
   }
 
@@ -935,7 +929,7 @@ export const getActiveAutomationFlows = internalQuery({
     const allFlows = await ctx.db
       .query("automationFlows")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
-      .collect();
+      .take(1000);
 
     // Filter by criteria
     return allFlows.filter(flow => {
@@ -1160,7 +1154,6 @@ export const executeAutomationFlow = internalAction({
     // Find the next node after trigger
     const connection = flow.flowDefinition.connections.find((conn: any) => conn.from === triggerNode.id);
     if (!connection) {
-      console.log(`No connections from trigger node in flow ${flow._id}`);
       return null;
     }
 
@@ -1197,8 +1190,6 @@ async function executeFlowNode(ctx: any, userStateId: Id<"userAutomationStates">
     userStateId,
     currentNodeId: nodeId,
   });
-
-  console.log(`Executing node ${nodeId} of type ${node.type} for user state ${userStateId}`);
 
   switch (node.type) {
     case "message":
@@ -1428,8 +1419,6 @@ async function executeWebhookNode(ctx: any, userStateId: Id<"userAutomationState
       },
       body: JSON.stringify(payload),
     });
-
-    console.log(`Webhook sent successfully to ${webhookUrl}`);
   } catch (error) {
     console.error(`Failed to send webhook to ${webhookUrl}:`, error);
   }
@@ -1579,7 +1568,6 @@ export const executeDelayedNode = internalAction({
     });
     
     if (!userState || userState.status !== "active") {
-      console.log(`User state ${args.userStateId} no longer active, skipping delayed execution`);
       return null;
     }
 
@@ -1588,7 +1576,6 @@ export const executeDelayedNode = internalAction({
     });
 
     if (!flow || !flow.isActive) {
-      console.log(`Flow ${args.flowId} no longer active, skipping delayed execution`);
       return null;
     }
 
@@ -1613,7 +1600,6 @@ export const sendAutomationMessage = internalAction({
     });
     
     if (!message || message.status !== "pending") {
-      console.log(`Message ${args.messageId} not found or not pending`);
       return null;
     }
 
@@ -1654,7 +1640,6 @@ export const sendAutomationMessage = internalAction({
           break;
         
         default:
-          console.log(`Platform ${message.platform} not yet implemented for automation messages`);
           success = true; // For testing, mark as successful
           break;
       }
@@ -1786,8 +1771,6 @@ export const getSocialAccount = internalQuery({
  * Uses the Facebook Graph API with Instagram Business Account
  */
 async function sendInstagramDM(message: any, account: any): Promise<boolean> {
-  console.log(`📤 Sending Instagram DM to ${message.platformUserId}: ${message.content}`);
-
   try {
     // Get Instagram Business Account ID and access token from account
     const instagramBusinessAccountId = account.platformData?.instagramBusinessAccountId || account.platformUserId;
@@ -1819,10 +1802,9 @@ async function sendInstagramDM(message: any, account: any): Promise<boolean> {
       return false;
     }
 
-    console.log("✅ Instagram DM sent successfully");
     return true;
   } catch (error) {
-    console.error("❌ sendInstagramDM error:", error);
+    console.error("sendInstagramDM error:", error);
     return false;
   }
 }
@@ -1832,8 +1814,6 @@ async function sendInstagramDM(message: any, account: any): Promise<boolean> {
  * Requires OAuth 2.0 or OAuth 1.0a user context
  */
 async function sendTwitterDM(message: any, account: any): Promise<boolean> {
-  console.log(`📤 Sending Twitter DM to ${message.platformUserId}: ${message.content}`);
-
   try {
     // Get Twitter credentials from account
     const accessToken = account.accessToken;
@@ -1892,10 +1872,9 @@ async function sendTwitterDM(message: any, account: any): Promise<boolean> {
       }
     }
 
-    console.log("✅ Twitter DM sent successfully");
     return true;
   } catch (error) {
-    console.error("❌ sendTwitterDM error:", error);
+    console.error("sendTwitterDM error:", error);
     return false;
   }
 }
@@ -1904,8 +1883,6 @@ async function sendTwitterDM(message: any, account: any): Promise<boolean> {
  * Send Facebook Messenger message via Graph API
  */
 async function sendFacebookMessage(message: any, account: any): Promise<boolean> {
-  console.log(`📤 Sending Facebook message to ${message.platformUserId}: ${message.content}`);
-
   try {
     const pageId = account.platformData?.pageId || account.platformUserId;
     const accessToken = account.accessToken;
@@ -1937,10 +1914,9 @@ async function sendFacebookMessage(message: any, account: any): Promise<boolean>
       return false;
     }
 
-    console.log("✅ Facebook message sent successfully");
     return true;
   } catch (error) {
-    console.error("❌ sendFacebookMessage error:", error);
+    console.error("sendFacebookMessage error:", error);
     return false;
   }
 }
@@ -2079,18 +2055,18 @@ export const getPendingUserStates = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("userAutomationStates")
-      .withIndex("by_store_platform_user", (q) => 
+      .withIndex("by_store_platform_user", (q) =>
         q.eq("storeId", args.storeId)
          .eq("platform", args.platform)
          .eq("platformUserId", args.platformUserId)
       )
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("status"), "active"),
           q.eq(q.field("isPendingResponse"), true)
         )
       )
-      .collect();
+      .take(1000);
   },
 });
 
@@ -2141,20 +2117,12 @@ export const findSocialAccountByWebhook = internalQuery({
       return null;
     }
 
-    console.log(`🔍 Looking for social account with ${args.platform} ID: ${targetAccountId}`);
-
     // Find the social account in our database that matches this platform account ID
     const socialAccount = await ctx.db
       .query("socialAccounts")
       .withIndex("by_platform", (q) => q.eq("platform", args.platform))
       .filter((q) => q.eq(q.field("platformUserId"), targetAccountId))
       .first();
-
-    if (socialAccount) {
-      console.log(`✅ Found matching account: ${socialAccount.platformUsername} → User: ${socialAccount.userId}`);
-    } else {
-      console.log(`❌ No matching social account found for ${args.platform} ID: ${targetAccountId}`);
-    }
 
     return socialAccount;
   },
@@ -2184,7 +2152,7 @@ export const getActiveAutomationFlowsForUser = internalQuery({
       .query("automationFlows")
       .withIndex("by_store_active", (q) => q.eq("storeId", args.storeId).eq("isActive", true))
       .filter((q) => q.eq(q.field("userId"), args.userId))
-      .collect();
+      .take(1000);
 
     // Filter by criteria
     return userFlows.filter(flow => {
@@ -2227,17 +2195,17 @@ export const getPendingUserStatesAnyStore = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("userAutomationStates")
-      .withIndex("by_platformUser", (q) => 
+      .withIndex("by_platformUser", (q) =>
         q.eq("platform", args.platform)
          .eq("platformUserId", args.platformUserId)
       )
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("status"), "active"),
           q.eq(q.field("isPendingResponse"), true)
         )
       )
-      .collect();
+      .take(1000);
   },
 });
 

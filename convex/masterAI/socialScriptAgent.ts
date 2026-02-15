@@ -129,8 +129,6 @@ export const startScriptGeneration = action({
   },
   returns: v.id("scriptGenerationJobs"),
   handler: async (ctx, args): Promise<Id<"scriptGenerationJobs">> => {
-    console.log(`🚀 Starting script generation job: ${args.jobType}`);
-
     // Create the job
     // @ts-ignore - Convex type inference depth issue
     const jobId = await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.createJob, {
@@ -149,8 +147,6 @@ export const startScriptGeneration = action({
         courseId: args.courseId,
       }
     );
-
-    console.log(`📚 Found ${chapters.length} chapters to process`);
 
     if (chapters.length === 0) {
       await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.completeJob, {
@@ -243,10 +239,6 @@ export const resumeJob = action({
       throw new Error("Job is still active. Wait 2 minutes before resuming.");
     }
 
-    console.log(
-      `🔄 Resuming stalled job ${args.jobId} from ${job.processedChapters}/${job.totalChapters} chapters`
-    );
-
     // Get remaining chapters to process
     const allChapters = await ctx.runQuery(
       internal.masterAI.socialScriptAgentMutations.getChaptersToProcess,
@@ -309,17 +301,12 @@ export const processChapterBatch = internalAction({
   handler: async (ctx, args) => {
     const { jobId, chapterIds, batchId, batchIndex, totalBatches } = args;
 
-    console.log(
-      `🔄 Processing batch ${batchIndex + 1}/${totalBatches} (${chapterIds.length} chapters)`
-    );
-
     // Get job info
     const job = await ctx.runQuery(internal.masterAI.socialScriptAgentMutations.getJobInternal, {
       jobId,
     });
 
     if (!job || job.status === "cancelled") {
-      console.log("Job cancelled, stopping batch processing");
       return;
     }
 
@@ -352,9 +339,6 @@ export const processChapterBatch = internalAction({
     // Count results
     const succeeded = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.filter((r) => r.status === "rejected").length;
-
-    console.log(`   ✅ Batch complete: ${succeeded} succeeded, ${failed} failed`);
-
     // Update job progress
     const newProcessed = (job.processedChapters || 0) + chapterIds.length;
     const newFailed = (job.failedChapters || 0) + failed;
@@ -439,11 +423,8 @@ async function processChapter(
   // Extract content from chapter (description/content)
   const sourceContent = chapter.description || "";
   if (sourceContent.length < 100) {
-    console.log(`   ⏭️ Skipping chapter "${chapter.title}" - content too short`);
     throw new Error("Content too short");
   }
-
-  console.log(`   📝 Processing: ${course.title} > ${chapter.title}`);
 
   // Generate platform scripts using existing function
   const scripts = await ctx.runAction(api.masterAI.socialMediaGenerator.generatePlatformScripts, {
@@ -509,10 +490,6 @@ async function processChapter(
     generationBatchId,
   });
 
-  console.log(
-    `   ✅ Created script for "${chapter.title}" - Virality: ${viralityAnalysis.viralityScore}/10`
-  );
-
   return scriptId;
 }
 
@@ -572,8 +549,6 @@ export const startRescoring = action({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    console.log(`🔄 Starting rescore job for store ${args.storeId}`);
-
     let rescored = 0;
     let total = 0;
     let cursor: any = undefined;
@@ -593,13 +568,11 @@ export const startRescoring = action({
 
       if (scripts.length === 0) {
         if (total === 0) {
-          console.log("No scripts to rescore");
           return { rescored: 0, total: 0 };
         }
         break;
       }
 
-      console.log(`📚 Page ${pageNumber}: Processing ${scripts.length} scripts`);
       total += scripts.length;
 
       // Process this page in batches
@@ -610,8 +583,6 @@ export const startRescoring = action({
 
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
-        console.log(`🔄 Rescoring batch ${i + 1}/${batches.length} (page ${pageNumber})`);
-
         // Process batch in parallel
         const results = await Promise.allSettled(
           batch.map((script: any) => rescoreScript(ctx, script))
@@ -628,7 +599,6 @@ export const startRescoring = action({
       cursor = result.nextCursor;
     }
 
-    console.log(`✅ Rescoring complete: ${rescored}/${total} scripts`);
     return { rescored, total };
   },
 });
@@ -655,10 +625,6 @@ async function rescoreScript(ctx: any, script: any) {
       reasoning: viralityAnalysis.reasoning,
     },
   });
-
-  console.log(
-    `   📊 Rescored "${script.chapterTitle}": ${script.viralityScore} → ${viralityAnalysis.viralityScore}`
-  );
 
   return viralityAnalysis.viralityScore;
 }

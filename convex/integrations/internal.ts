@@ -61,7 +61,6 @@ export const saveIntegration = internalMutation({
           instagramBusinessAccountId: args.instagramId,
         },
       });
-      console.log("✅ Instagram socialAccount updated for user:", user.clerkId);
     } else {
       // Create new socialAccount
       await ctx.db.insert("socialAccounts", {
@@ -92,7 +91,6 @@ export const saveIntegration = internalMutation({
           instagramBusinessAccountId: args.instagramId,
         },
       });
-      console.log("✅ Instagram socialAccount created for user:", user.clerkId);
     }
 
     // Also update legacy integrations table for backwards compatibility (temporarily)
@@ -228,7 +226,6 @@ export const updateToken = internalMutation({
           lastVerified: Date.now(),
           connectionError: undefined,
         });
-        console.log("✅ socialAccount token updated");
       }
     }
 
@@ -244,7 +241,6 @@ export const updateToken = internalMutation({
         expiresAt: args.expiresAt,
         lastVerified: Date.now(),
       });
-      console.log("✅ Legacy integration token updated");
     }
 
     return null;
@@ -287,7 +283,6 @@ export const updateInstagramToken = mutation({
         lastVerified: Date.now(),
       });
 
-      console.log(`✅ Token manually updated for @${args.username}`);
       return {
         success: true,
         message: `Token updated for @${args.username}. Will expire in 60 days.`,
@@ -333,7 +328,6 @@ export const disconnectInstagram = mutation({
 
         if (socialAccount) {
           await ctx.db.delete(socialAccount._id);
-          console.log("✅ Instagram socialAccount deleted for user:", user.clerkId);
           disconnected = true;
         }
       }
@@ -346,7 +340,6 @@ export const disconnectInstagram = mutation({
 
       if (integration) {
         await ctx.db.delete(integration._id);
-        console.log("✅ Legacy Instagram integration deleted for user:", args.userId);
         disconnected = true;
       }
 

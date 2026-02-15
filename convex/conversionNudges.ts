@@ -31,7 +31,7 @@ export const getActiveNudges = query({
       .withIndex("by_userId_and_dismissed", (q: any) =>
         q.eq("userId", args.userId).eq("dismissed", false)
       )
-      .collect();
+      .take(1000);
 
     return nudges;
   },
@@ -58,7 +58,7 @@ export const getPriorityNudge = query({
       .withIndex("by_userId_and_dismissed", (q: any) =>
         q.eq("userId", args.userId).eq("dismissed", false)
       )
-      .collect();
+      .take(1000);
 
     if (nudges.length === 0) return null;
 
@@ -159,7 +159,7 @@ export const markNudgeConverted = mutation({
     const nudges = await ctx.db
       .query("userNudges")
       .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     for (const nudge of nudges) {
       if (!nudge.converted) {
@@ -221,7 +221,7 @@ export const triggerFirstEnrollment = internalMutation({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     if (enrollments.length > 1) return null; // Not their first
 
@@ -301,7 +301,7 @@ export const triggerLessonsMilestone = internalMutation({
       .query("userNudges")
       .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .filter((q: any) => q.eq(q.field("nudgeContext"), "lessons_milestone"))
-      .collect();
+      .take(1000);
 
     const hasMilestone = existing.some(
       (n: any) => n.contextData?.lessonCount === args.lessonCount
@@ -396,7 +396,7 @@ export const triggerShareProgress = internalMutation({
       .query("userNudges")
       .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .filter((q: any) => q.eq(q.field("nudgeContext"), "share_progress"))
-      .collect();
+      .take(1000);
 
     const hasThisMilestone = existing.some(
       (n: any) =>
@@ -454,7 +454,7 @@ export const triggerCertificateShowcase = internalMutation({
     const certificates = await ctx.db
       .query("certificates")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     // Create the nudge
     const nudgeId = await ctx.db.insert("userNudges", {
@@ -853,7 +853,7 @@ export const checkConversionTriggers = internalMutation({
         .withIndex("by_user_completed", (q: any) =>
           q.eq("userId", args.userId).eq("isCompleted", true)
         )
-        .collect();
+        .take(5000);
 
       const lessonCount = completedLessons.length;
       const result = await ctx.runMutation(internal.conversionNudges.triggerLessonsMilestone, {

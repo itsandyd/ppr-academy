@@ -35,16 +35,11 @@ export const checkCourseEnrollments = internalQuery({
       )
       .collect();
 
-    console.log(`Found ${purchases.length} course purchases for store ${args.storeId}`);
-
     // Get all customers for this store
     const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
-
-    console.log(`Found ${customers.length} customer records for store ${args.storeId}`);
-
     // Check which enrollments don't have customer records
     let enrollmentsWithoutCustomers = 0;
     const sampleEnrollments = [];

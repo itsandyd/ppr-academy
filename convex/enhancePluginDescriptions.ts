@@ -58,8 +58,6 @@ export const enhancePluginDescription = action({
         };
       }
 
-      console.log(`🤖 Enhancing description for plugin: ${plugin.name}`);
-
       // Call OpenAI to enhance the description
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -99,8 +97,6 @@ Guidelines:
         pluginId: args.pluginId,
         description: enhancedDescription,
       });
-
-      console.log(`✅ Enhanced description for plugin: ${plugin.name}`);
 
       return {
         success: true,
@@ -158,8 +154,6 @@ export const enhanceAllPluginDescriptions = action({
         ? allPlugins.slice(0, args.limit) 
         : allPlugins;
 
-      console.log(`🚀 Starting batch enhancement for ${pluginsToProcess.length} plugins`);
-
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
@@ -173,12 +167,10 @@ export const enhanceAllPluginDescriptions = action({
 
           if (result.success) {
             successCount++;
-            console.log(`✅ [${successCount}/${pluginsToProcess.length}] Enhanced: ${plugin.name}`);
           } else {
             errorCount++;
             const errorMsg = `${plugin.name}: ${result.error}`;
             errors.push(errorMsg);
-            console.log(`❌ [${errorCount}/${pluginsToProcess.length}] Failed: ${errorMsg}`);
           }
 
           // Add a small delay to avoid rate limiting
@@ -190,8 +182,6 @@ export const enhanceAllPluginDescriptions = action({
           console.error(`❌ Error processing ${plugin.name}:`, error);
         }
       }
-
-      console.log(`🎉 Batch enhancement complete! Success: ${successCount}, Errors: ${errorCount}`);
 
       return {
         success: true,

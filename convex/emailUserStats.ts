@@ -78,13 +78,13 @@ export const getUserStatsForEmail = query({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     // Get completed courses/lessons from userProgress
     const userProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     const completedChapters = userProgress.filter((p) => p.isCompleted === true);
 
@@ -99,7 +99,7 @@ export const getUserStatsForEmail = query({
     const purchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     const completedPurchases = purchases.filter((p) => p.status === "completed");
     const totalSpent = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -119,20 +119,20 @@ export const getUserStatsForEmail = query({
       const products = await ctx.db
         .query("digitalProducts")
         .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-        .collect();
+        .take(500);
       productsCreated = products.length;
 
       const creatorCourses = await ctx.db
         .query("courses")
         .withIndex("by_instructorId", (q) => q.eq("instructorId", args.userId))
-        .collect();
+        .take(500);
       coursesCreated = creatorCourses.length;
 
       // Get earnings from creator's sales
       const creatorSales = await ctx.db
         .query("purchases")
         .withIndex("by_storeId", (q) => q.eq("storeId", store._id.toString()))
-        .collect();
+        .take(5000);
       totalEarnings = creatorSales
         .filter((s) => s.status === "completed")
         .reduce((sum, s) => sum + (s.amount || 0), 0);
@@ -238,12 +238,12 @@ export const internalGetUserStatsForEmail = internalQuery({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     const userProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     const completedChapters = userProgress.filter((p) => p.isCompleted === true);
     const completedCourseIds = new Set(
@@ -253,7 +253,7 @@ export const internalGetUserStatsForEmail = internalQuery({
     const purchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     const completedPurchases = purchases.filter((p) => p.status === "completed");
     const totalSpent = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -271,19 +271,19 @@ export const internalGetUserStatsForEmail = internalQuery({
       const products = await ctx.db
         .query("digitalProducts")
         .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-        .collect();
+        .take(500);
       productsCreated = products.length;
 
       const creatorCourses = await ctx.db
         .query("courses")
         .withIndex("by_instructorId", (q) => q.eq("instructorId", args.userId))
-        .collect();
+        .take(500);
       coursesCreated = creatorCourses.length;
 
       const creatorSales = await ctx.db
         .query("purchases")
         .withIndex("by_storeId", (q) => q.eq("storeId", store._id.toString()))
-        .collect();
+        .take(5000);
       totalEarnings = creatorSales
         .filter((s) => s.status === "completed")
         .reduce((sum, s) => sum + (s.amount || 0), 0);
@@ -373,12 +373,12 @@ export const getUserStatsBatch = internalQuery({
       const enrollments = await ctx.db
         .query("enrollments")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
+        .take(5000);
 
       const userProgress = await ctx.db
         .query("userProgress")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
+        .take(5000);
 
       const completedChapters = userProgress.filter((p) => p.isCompleted === true);
       const completedCourseIds = new Set(
@@ -388,7 +388,7 @@ export const getUserStatsBatch = internalQuery({
       const purchases = await ctx.db
         .query("purchases")
         .withIndex("by_userId", (q) => q.eq("userId", userId))
-        .collect();
+        .take(5000);
 
       const completedPurchases = purchases.filter((p) => p.status === "completed");
       const totalSpent = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -406,19 +406,19 @@ export const getUserStatsBatch = internalQuery({
         const products = await ctx.db
           .query("digitalProducts")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .collect();
+          .take(500);
         productsCreated = products.length;
 
         const creatorCourses = await ctx.db
           .query("courses")
           .withIndex("by_instructorId", (q) => q.eq("instructorId", userId))
-          .collect();
+          .take(500);
         coursesCreated = creatorCourses.length;
 
         const creatorSales = await ctx.db
           .query("purchases")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id.toString()))
-          .collect();
+          .take(5000);
         totalEarnings = creatorSales
           .filter((s) => s.status === "completed")
           .reduce((sum, s) => sum + (s.amount || 0), 0);
@@ -514,12 +514,12 @@ export const getUserStatsForEmailByEmail = internalQuery({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(5000);
 
     const userProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(5000);
 
     const completedChapters = userProgress.filter((p) => p.isCompleted === true);
     const completedCourseIds = new Set(
@@ -529,7 +529,7 @@ export const getUserStatsForEmailByEmail = internalQuery({
     const purchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(5000);
 
     const completedPurchases = purchases.filter((p) => p.status === "completed");
     const totalSpent = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -547,19 +547,19 @@ export const getUserStatsForEmailByEmail = internalQuery({
       const products = await ctx.db
         .query("digitalProducts")
         .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-        .collect();
+        .take(500);
       productsCreated = products.length;
 
       const creatorCourses = await ctx.db
         .query("courses")
         .withIndex("by_instructorId", (q) => q.eq("instructorId", userId))
-        .collect();
+        .take(500);
       coursesCreated = creatorCourses.length;
 
       const creatorSales = await ctx.db
         .query("purchases")
         .withIndex("by_storeId", (q) => q.eq("storeId", store._id.toString()))
-        .collect();
+        .take(5000);
       totalEarnings = creatorSales
         .filter((s) => s.status === "completed")
         .reduce((sum, s) => sum + (s.amount || 0), 0);
@@ -639,8 +639,8 @@ export const getPlatformStatsForEmail = internalQuery({
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-    // Get all courses
-    const allCourses = await ctx.db.query("courses").collect();
+    // Get all courses (bounded)
+    const allCourses = await ctx.db.query("courses").take(1000);
     const publishedCourses = allCourses.filter((c) => c.isPublished);
 
     // New courses in last 7 days
@@ -651,24 +651,24 @@ export const getPlatformStatsForEmail = internalQuery({
       (a, b) => (b._creationTime || 0) - (a._creationTime || 0)
     )[0];
 
-    // Get all digital products (sample packs)
-    const allProducts = await ctx.db.query("digitalProducts").collect();
+    // Get all digital products (bounded)
+    const allProducts = await ctx.db.query("digitalProducts").take(1000);
     const publishedProducts = allProducts.filter((p) => p.isPublished);
     const newProducts = publishedProducts.filter(
       (p) => p._creationTime > sevenDaysAgo
     );
 
-    // Get creators (users with stores)
-    const allStores = await ctx.db.query("stores").collect();
+    // Get creators (users with stores, bounded)
+    const allStores = await ctx.db.query("stores").take(500);
     const newStores = allStores.filter(
       (s) => s._creationTime > thirtyDaysAgo
     );
 
-    // Get most popular course this week (by enrollments)
+    // Get most popular course this week (by enrollments, bounded)
     const recentEnrollments = await ctx.db
       .query("enrollments")
       .filter((q) => q.gte(q.field("_creationTime"), sevenDaysAgo))
-      .collect();
+      .take(5000);
 
     // Count enrollments per course
     const courseEnrollmentCounts: Record<string, number> = {};

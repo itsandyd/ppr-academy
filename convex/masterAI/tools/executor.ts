@@ -32,8 +32,6 @@ export const executeTool = internalAction({
   handler: async (ctx, args): Promise<any> => {
     const { toolName, parameters, userId, storeId } = args;
     
-    console.log(`🔧 Executing tool: ${toolName}`, parameters);
-
     // Validate the tool exists
     if (!AI_TOOLS[toolName]) {
       return {

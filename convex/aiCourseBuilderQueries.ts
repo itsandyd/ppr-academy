@@ -282,31 +282,31 @@ export const getCourseStructure = query({
     const modules = await ctx.db
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
-    
+      .take(200);
+
     // Sort by position
     modules.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    
+
     let totalChapters = 0;
     let chaptersWithContent = 0;
-    
+
     // Build full structure with lessons and chapters
     const fullModules = await Promise.all(modules.map(async (mod) => {
       // Get lessons for this module
       const lessons = await ctx.db
         .query("courseLessons")
         .withIndex("by_moduleId", (q) => q.eq("moduleId", mod._id))
-        .collect();
-      
+        .take(200);
+
       // Sort by position
       lessons.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-      
+
       const lessonsWithChapters = await Promise.all(lessons.map(async (lesson) => {
         // Get chapters for this lesson
         const chapters = await ctx.db
           .query("courseChapters")
           .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
-          .collect();
+          .take(200);
         
         // Sort by position
         chapters.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -638,7 +638,7 @@ export const deleteOrphanLessons = mutation({
           deleted++;
         }
       } catch (e) {
-        console.log(`Failed to delete lesson ${idStr}:`, e);
+        console.error(`Failed to delete lesson ${idStr}:`, e);
       }
     }
     return { success: true, deleted };
@@ -665,7 +665,7 @@ export const cleanupCourseTitles = mutation({
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(200);
 
     // Fix module titles
     for (const mod of modules) {
@@ -674,14 +674,13 @@ export const cleanupCourseTitles = mutation({
       if (cleanTitle !== mod.title) {
         await ctx.db.patch(mod._id, { title: cleanTitle });
         modulesFixed++;
-        console.log(`  📦 Module: "${mod.title}" -> "${cleanTitle}"`);
       }
 
       // Get lessons for this module
       const lessons = await ctx.db
         .query("courseLessons")
         .filter((q) => q.eq(q.field("moduleId"), mod._id))
-        .collect();
+        .take(200);
 
       // Fix lesson titles
       for (const lesson of lessons) {
@@ -690,12 +689,10 @@ export const cleanupCourseTitles = mutation({
         if (cleanLessonTitle !== lesson.title) {
           await ctx.db.patch(lesson._id, { title: cleanLessonTitle });
           lessonsFixed++;
-          console.log(`    📖 Lesson: "${lesson.title}" -> "${cleanLessonTitle}"`);
         }
       }
     }
 
-    console.log(`✅ Fixed ${modulesFixed} modules and ${lessonsFixed} lessons`);
     return { success: true, modulesFixed, lessonsFixed };
   },
 });
@@ -727,14 +724,14 @@ export const fixChapterLessonMappings = mutation({
     const modules = await ctx.db
       .query("courseModules")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(200);
     modules.sort((a, b) => a.position - b.position);
 
     // Get all chapters for this course
     const chapters = await ctx.db
       .query("courseChapters")
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
+      .take(200);
 
     // Build a map of chapter title -> lessonId from the outline and DB
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -754,7 +751,7 @@ export const fixChapterLessonMappings = mutation({
       const lessons = await ctx.db
         .query("courseLessons")
         .filter((q) => q.eq(q.field("moduleId"), dbModule._id))
-        .collect();
+        .take(200);
       lessons.sort((a, b) => a.position - b.position);
 
       for (let li = 0; li < outlineModule.lessons.length; li++) {
@@ -773,8 +770,6 @@ export const fixChapterLessonMappings = mutation({
       }
     }
 
-    console.log(`📚 Built map with ${chapterToLessonMap.size} chapter->lesson mappings`);
-
     // Now update each chapter with the correct lessonId
     for (const chapter of chapters) {
       const correctLessonId = chapterToLessonMap.get(chapter.title);
@@ -783,14 +778,12 @@ export const fixChapterLessonMappings = mutation({
         if (chapter.lessonId !== correctLessonId) {
           await ctx.db.patch(chapter._id, { lessonId: correctLessonId });
           fixed++;
-          console.log(`  ✅ Fixed "${chapter.title}" -> ${correctLessonId}`);
         }
       } else {
         errors.push(`No lesson mapping found for chapter "${chapter.title}"`);
       }
     }
 
-    console.log(`✅ Fixed ${fixed} chapter mappings`);
     return { success: true, fixed, errors };
   },
 });
@@ -828,20 +821,16 @@ export const repairCourseFromOutline = mutation({
       const modules = await ctx.db
         .query("courseModules")
         .filter((q) => q.eq(q.field("courseId"), args.courseId))
-        .collect();
+        .take(200);
 
       // Sort modules by position
       modules.sort((a, b) => a.position - b.position);
-
-      console.log(`📦 Found ${modules.length} modules for course "${course.title}"`);
 
       // Get all existing chapters for this course
       const existingChapters = await ctx.db
         .query("courseChapters")
         .filter((q) => q.eq(q.field("courseId"), args.courseId))
-        .collect();
-
-      console.log(`📄 Found ${existingChapters.length} existing chapters`);
+        .take(200);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const outlineData = outline.outline as any;
@@ -857,11 +846,8 @@ export const repairCourseFromOutline = mutation({
         const dbModule = modules[mi];
 
         if (!dbModule) {
-          console.log(`⚠️ No module found at index ${mi}`);
           continue;
         }
-
-        console.log(`📚 Processing module "${dbModule.title}"`);
 
         // Create lessons for this module
         for (let li = 0; li < outlineModule.lessons.length; li++) {
@@ -875,9 +861,6 @@ export const repairCourseFromOutline = mutation({
             position: outlineLesson.orderIndex ?? li,
           });
           lessonsCreated++;
-
-          console.log(`  📖 Created lesson "${outlineLesson.title}"`);
-
           // Track chapter positions for this lesson
           for (let ci = 0; ci < outlineLesson.chapters.length; ci++) {
             const chapterKey = `${mi}-${li}-${ci}`;
@@ -912,8 +895,6 @@ export const repairCourseFromOutline = mutation({
           }
         }
       }
-
-      console.log(`✅ Repair complete: ${lessonsCreated} lessons created, ${chaptersFixed} chapters fixed`);
 
       return {
         success: true,
@@ -986,8 +967,6 @@ export const startBackgroundOutlineGeneration = mutation({
         settings: args.settings,
       });
 
-      console.log(`🚀 Started background outline generation: ${queueId}`);
-      
       return { success: true, queueId };
     } catch (error) {
       console.error("Error starting background generation:", error);
@@ -1034,8 +1013,6 @@ export const startBackgroundChapterExpansion = mutation({
         parallelBatchSize: args.parallelBatchSize,
       });
 
-      console.log(`🚀 Started background chapter expansion: ${args.queueId}`);
-      
       return { success: true };
     } catch (error) {
       console.error("Error starting background expansion:", error);
@@ -1106,8 +1083,6 @@ export const startBackgroundExistingCourseExpansion = mutation({
         parallelBatchSize: args.parallelBatchSize,
       });
 
-      console.log(`🚀 Started background existing course expansion: ${queueId}`);
-
       return { success: true, queueId };
     } catch (error) {
       console.error("Error starting background expansion:", error);
@@ -1175,8 +1150,6 @@ export const startBackgroundReformatting = mutation({
         courseId: args.courseId,
         parallelBatchSize: args.parallelBatchSize,
       });
-
-      console.log(`🚀 Started background reformatting: ${queueId}`);
 
       return { success: true, queueId };
     } catch (error) {
@@ -1247,7 +1220,7 @@ export const getActiveQueueItems = query({
     const items = await ctx.db
       .query("aiCourseQueue")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     return items.filter(item => activeStatuses.includes(item.status));
   },

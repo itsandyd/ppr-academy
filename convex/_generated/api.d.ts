@@ -723,13 +723,13 @@ export declare const api: {
     approveCoachProfile: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string; profileId: Id<"coachProfiles"> },
+      { profileId: Id<"coachProfiles"> },
       { message: string; success: boolean }
     >;
     cleanupOrphanedProfiles: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string; dryRun?: boolean },
+      { dryRun?: boolean },
       {
         deletedIds: Array<string>;
         message: string;
@@ -740,7 +740,7 @@ export declare const api: {
     deleteCoachProfile: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string; profileId: Id<"coachProfiles"> },
+      { profileId: Id<"coachProfiles"> },
       { message: string; success: boolean }
     >;
     getActiveCoachProfilesByUserId: FunctionReference<
@@ -765,7 +765,7 @@ export declare const api: {
     getAllCoachProfiles: FunctionReference<
       "query",
       "public",
-      { clerkId: string },
+      {},
       Array<{
         _creationTime: number;
         _id: Id<"coachProfiles">;
@@ -796,7 +796,7 @@ export declare const api: {
     getCoachProfilesDebug: FunctionReference<
       "query",
       "public",
-      { clerkId: string },
+      {},
       Array<{
         _creationTime: number;
         _id: Id<"coachProfiles">;
@@ -812,7 +812,7 @@ export declare const api: {
     rejectCoachProfile: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string; profileId: Id<"coachProfiles"> },
+      { profileId: Id<"coachProfiles"> },
       { message: string; success: boolean }
     >;
   };
@@ -8215,32 +8215,6 @@ export declare const api: {
       Id<"customers">
     >;
   };
-  debug: {
-    findCourseByTitle: FunctionReference<
-      "query",
-      "public",
-      { titleFragment: string },
-      Array<{
-        _id: Id<"courses">;
-        isPublished?: boolean;
-        slug?: string;
-        title: string;
-        userId: string;
-      }>
-    >;
-    getAllUserCourses: FunctionReference<
-      "query",
-      "public",
-      { userId: string },
-      Array<{
-        _creationTime: number;
-        _id: Id<"courses">;
-        isPublished?: boolean;
-        slug?: string;
-        title: string;
-      }>
-    >;
-  };
   digitalProducts: {
     backfillProductSlugs: FunctionReference<
       "mutation",
@@ -12383,14 +12357,6 @@ export declare const api: {
       "public",
       { storageId: string },
       string | null
-    >;
-  };
-  fixAccounts: {
-    createBothInstagramAccounts: FunctionReference<
-      "action",
-      "public",
-      { storeId: string; userId: string },
-      { message: string; success: boolean }
     >;
   };
   followGateSubmissions: {
@@ -17847,20 +17813,14 @@ export declare const api: {
     deleteReport: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string; reportId: Id<"reports"> },
+      { reportId: Id<"reports"> },
       null
     >;
-    getAllReports: FunctionReference<
-      "query",
-      "public",
-      { clerkId?: string },
-      Array<any>
-    >;
+    getAllReports: FunctionReference<"query", "public", {}, Array<any>>;
     getReportsByStatus: FunctionReference<
       "query",
       "public",
       {
-        clerkId?: string;
         status:
           | "pending"
           | "reviewed"
@@ -17873,7 +17833,7 @@ export declare const api: {
     getReportStats: FunctionReference<
       "query",
       "public",
-      { clerkId?: string },
+      {},
       {
         counter_notice: number;
         dismissed: number;
@@ -17886,29 +17846,19 @@ export declare const api: {
     markAsDismissed: FunctionReference<
       "mutation",
       "public",
-      {
-        clerkId: string;
-        reportId: Id<"reports">;
-        resolution?: string;
-        reviewedBy: string;
-      },
+      { reportId: Id<"reports">; resolution?: string },
       null
     >;
     markAsResolved: FunctionReference<
       "mutation",
       "public",
-      {
-        clerkId: string;
-        reportId: Id<"reports">;
-        resolution?: string;
-        reviewedBy: string;
-      },
+      { reportId: Id<"reports">; resolution?: string },
       null
     >;
     markAsReviewed: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string; reportId: Id<"reports">; reviewedBy: string },
+      { reportId: Id<"reports"> },
       null
     >;
   };
@@ -21306,6 +21256,43 @@ export declare const internal: {
         } | null
       >;
     };
+  };
+  adminMetricsAggregation: {
+    aggregateAdminMetrics: FunctionReference<"action", "internal", {}, any>;
+    countCourses: FunctionReference<"query", "internal", {}, any>;
+    countEnrollments: FunctionReference<"query", "internal", {}, any>;
+    countProducts: FunctionReference<"query", "internal", {}, any>;
+    countPurchases: FunctionReference<"query", "internal", {}, any>;
+    countStores: FunctionReference<"query", "internal", {}, any>;
+    countUsers: FunctionReference<"query", "internal", {}, any>;
+    seedInitialMetrics: FunctionReference<"action", "internal", {}, any>;
+    updateMetrics: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        activeUsers: number;
+        averageOrderValue: number;
+        cartAbandonmentRate: number;
+        dailyEnrollments: any;
+        dailyPurchaseCounts: any;
+        dailyRevenue: any;
+        dailySignups: any;
+        monthlyRevenue: number;
+        newUsersThisMonth: number;
+        platformFees: number;
+        repeatPurchaseRate: number;
+        totalCourses: number;
+        totalCreators: number;
+        totalEnrollments: number;
+        totalProducts: number;
+        totalPublishedCourses: number;
+        totalPurchases: number;
+        totalRevenue: number;
+        totalStores: number;
+        totalUsers: number;
+      },
+      any
+    >;
   };
   adminSetup: {
     checkAdminStatus: FunctionReference<

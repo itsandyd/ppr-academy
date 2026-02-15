@@ -33,15 +33,12 @@ export const importPluginsFromJSON = action({
     const data = parsed.data || parsed;
     const errors: string[] = [];
     
-    console.log("Starting plugin data import...");
-    
     // Track mapping from old UUIDs to new Convex IDs
     const typeIdMap = new Map<string, Id<"pluginTypes">>();
     const categoryIdMap = new Map<string, Id<"pluginCategories">>();
     
     try {
       // 1. Import Plugin Types
-      console.log(`Importing ${data.pluginTypes?.length || 0} plugin types...`);
       for (const type of data.pluginTypes || []) {
         try {
           const newId = await ctx.runMutation(api.plugins.createPluginType, {
@@ -55,7 +52,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 2. Import Plugin Categories
-      console.log(`Importing ${data.pluginCategories?.length || 0} plugin categories...`);
       for (const category of data.pluginCategories || []) {
         try {
           const newId = await ctx.runMutation(api.plugins.createPluginCategory, {
@@ -69,7 +65,6 @@ export const importPluginsFromJSON = action({
       }
       
       // 3. Import Plugins
-      console.log(`Importing ${data.plugins?.length || 0} plugins...`);
       let successCount = 0;
       let errorCount = 0;
       
@@ -101,7 +96,6 @@ export const importPluginsFromJSON = action({
         }
       }
       
-      console.log("Import complete!");
       return {
         success: true,
         stats: {

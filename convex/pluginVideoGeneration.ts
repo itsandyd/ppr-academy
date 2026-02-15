@@ -58,8 +58,6 @@ export const generateUniversalPluginScript = action({
         throw new Error("Plugin not found");
       }
 
-      console.log(`🎬 Starting workflow for: ${plugin.name}`);
-
       // Step 1: Prepare plugin content (like copying manual content)
       const pluginContent = `
 # ${plugin.name}
@@ -77,22 +75,14 @@ ${plugin.description || "Professional music production plugin"}
 This plugin is designed for music producers and audio engineers looking to enhance their production workflow with professional-grade audio processing tools.
       `.trim();
 
-      console.log("📄 Plugin content prepared");
-
       // Step 2: Call Blotato API (optional)
       let blotatoScript = pluginContent;
       if (BLOTATO_API_KEY) {
-        console.log("🤖 Calling Blotato API...");
         blotatoScript = await generateBlotatoScript(pluginContent, BLOTATO_API_KEY);
-        console.log("✅ Blotato script generated");
-      } else {
-        console.log("⚠️ Blotato API key not set, skipping Blotato step");
       }
 
       // Step 3: Refine with OpenAI to match your EXACT style
-      console.log("🤖 Refining with OpenAI...");
       const refinedScript = await refineScriptWithOpenAI(blotatoScript, plugin);
-      console.log("✅ Script refined!");
 
       // Step 4: Prepare clean audio script
       const audioScript = refinedScript
@@ -106,7 +96,6 @@ This plugin is designed for music producers and audio engineers looking to enhan
       let storageId: string | undefined;
 
       if (args.generateAudio) {
-        console.log("🎙️ Generating audio with ElevenLabs...");
         const audioResult = await generateAudioWithElevenLabs(
           audioScript,
           args.voiceId || "pNInz6obpgDQGcFmaJgB", // Default: Adam voice
@@ -117,7 +106,6 @@ This plugin is designed for music producers and audio engineers looking to enhan
         if (audioResult.success) {
           audioUrl = audioResult.audioUrl;
           storageId = audioResult.storageId;
-          console.log("✅ Audio generated and stored!");
         } else {
           console.warn("⚠️ Audio generation failed:", audioResult.error);
         }
@@ -304,8 +292,6 @@ async function generateAudioWithElevenLabs(
 
     // Get URL
     const audioUrl = await ctx.storage.getUrl(storageId);
-
-    console.log(`✅ Audio stored: ${storageId}`);
 
     return {
       success: true,

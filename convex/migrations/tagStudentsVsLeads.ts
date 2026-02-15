@@ -162,10 +162,6 @@ export const tagStudentsVsLeads = internalMutation({
     await ctx.db.patch(leadTagId, { contactCount: leadCount });
 
     const isDone = contactsResult.isDone;
-    console.log(
-      `Batch complete: ${studentsTagged} students tagged, ${leadsTagged} leads tagged, ${alreadyTagged} already tagged. Done: ${isDone}`
-    );
-
     return {
       success: true,
       studentsTagged,

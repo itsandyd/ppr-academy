@@ -106,8 +106,6 @@ export const fixDelayNodeTracking = internalMutation({
       (e) => e.scheduledFor && e.scheduledFor > now
     );
 
-    console.log(`[Migration] Processing ${futureExecutions.length} pending executions with future scheduledFor`);
-
     // Cache workflows to avoid repeated lookups (but limit cache size)
     const workflowCache = new Map<string, any>();
     if (targetWorkflow) {
@@ -186,11 +184,6 @@ export const fixDelayNodeTracking = internalMutation({
     }
 
     const hasMore = executions.length === batchSize;
-
-    console.log(
-      `[Migration] ${dryRun ? "[DRY RUN] " : ""}Batch complete: ${fixed} fixed, ${alreadyCorrect} already correct, ${skipped} skipped out of ${processed} processed. hasMore: ${hasMore}`
-    );
-
     return {
       success: true,
       processed,
@@ -320,8 +313,6 @@ export const forceProcessStuckExecutions = internalMutation({
         if (scheduled >= 50) break;
       }
     }
-
-    console.log(`[ForceProcess] ${dryRun ? "[DRY RUN] " : ""}Found ${toProcess.length} stuck executions, scheduled ${scheduled}`);
 
     return {
       processed: toProcess.length,

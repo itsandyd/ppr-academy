@@ -346,7 +346,6 @@ export const saveMessage = mutation({
         msg.createdAt > oneMinuteAgo &&
         msg.content.substring(0, 200) === args.content.substring(0, 200)
       ) {
-        console.log(`⏭️ Skipping duplicate ${args.role} message (already saved)`);
         return msg._id; // Return existing message ID
       }
     }

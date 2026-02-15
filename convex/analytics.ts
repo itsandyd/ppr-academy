@@ -215,8 +215,8 @@ export const getUserEvents = query({
       query = query.take(args.limit) as any;
     }
 
-    const events = await query.collect();
-    
+    const events = await query.take(1000);
+
     if (args.eventType) {
       return events.filter(e => e.eventType === args.eventType);
     }
@@ -237,14 +237,14 @@ export const getCourseAnalytics = query({
       .query("courseAnalytics")
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId));
 
-    const analytics = await query.collect();
-    
+    const analytics = await query.take(1000);
+
     if (args.startDate && args.endDate) {
-      return analytics.filter(a => 
+      return analytics.filter(a =>
         a.date >= args.startDate! && a.date <= args.endDate!
       );
     }
-    
+
     return analytics;
   },
 });
@@ -261,14 +261,14 @@ export const getRevenueAnalytics = query({
       .query("revenueAnalytics")
       .withIndex("by_creator", (q) => q.eq("creatorId", args.creatorId));
 
-    const analytics = await query.collect();
-    
+    const analytics = await query.take(1000);
+
     if (args.startDate && args.endDate) {
-      return analytics.filter(a => 
+      return analytics.filter(a =>
         a.date >= args.startDate! && a.date <= args.endDate!
       );
     }
-    
+
     return analytics;
   },
 });
@@ -290,7 +290,7 @@ export const getStudentProgress = query({
     return await ctx.db
       .query("studentProgress")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -322,7 +322,7 @@ export const getChapterAnalytics = query({
     return await ctx.db
       .query("chapterAnalytics")
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
   },
 });
 
@@ -336,8 +336,8 @@ export const getVideoAnalytics = query({
     const analytics = await ctx.db
       .query("videoAnalytics")
       .withIndex("by_chapter", (q) => q.eq("chapterId", args.chapterId))
-      .collect();
-    
+      .take(5000);
+
     return analytics;
   },
 });
@@ -368,7 +368,7 @@ export const getAtRiskStudents = query({
       .query("studentProgress")
       .withIndex("by_risk", (q) => q.eq("isAtRisk", true))
       .filter((q) => q.eq(q.field("courseId"), args.courseId))
-          .collect();
+          .take(5000);
   },
 });
 
@@ -379,8 +379,8 @@ export const getCourseCompletionRate = query({
     const allProgress = await ctx.db
       .query("studentProgress")
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
-        .collect();
-      
+        .take(10000);
+
     if (allProgress.length === 0) {
       return { completionRate: 0, totalStudents: 0, completedStudents: 0 };
     }
@@ -403,7 +403,7 @@ export const getCourseDropOffPoints = query({
     const chapterAnalytics = await ctx.db
       .query("chapterAnalytics")
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(200);
 
     // Sort by drop-off rate descending
     return chapterAnalytics
@@ -463,7 +463,7 @@ export const getCreatorAnalytics = query({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     const courseIds = courses.map(c => c._id);
 
@@ -593,7 +593,7 @@ export const getProductMetrics = query({
       const viewEvents = await ctx.db
         .query("productViews")
         .withIndex("by_resourceId", (q) => q.eq("resourceId", args.productId))
-        .collect();
+        .take(10000);
       views = viewEvents.length;
 
       // Get sales from purchases
@@ -605,7 +605,7 @@ export const getProductMetrics = query({
             q.eq(q.field("status"), "completed")
           )
         )
-        .collect();
+        .take(5000);
       sales = purchases.length;
       revenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
 
@@ -613,7 +613,7 @@ export const getProductMetrics = query({
       const reviews = await ctx.db
         .query("courseReviews")
         .filter((q) => q.eq(q.field("courseId"), args.productId))
-        .collect();
+        .take(1000);
       reviewCount = reviews.length;
       if (reviews.length > 0) {
         averageRating =
@@ -628,7 +628,7 @@ export const getProductMetrics = query({
       const viewEvents = await ctx.db
         .query("productViews")
         .withIndex("by_resourceId", (q) => q.eq("resourceId", args.productId))
-        .collect();
+        .take(10000);
       views = viewEvents.length;
 
       const purchases = await ctx.db
@@ -639,7 +639,7 @@ export const getProductMetrics = query({
             q.eq(q.field("status"), "completed")
           )
         )
-        .collect();
+        .take(5000);
       sales = purchases.length;
       revenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
 
@@ -647,7 +647,7 @@ export const getProductMetrics = query({
       const reviews = await ctx.db
         .query("productReviews")
         .withIndex("by_productId", (q) => q.eq("productId", args.productId))
-        .collect();
+        .take(1000);
       reviewCount = reviews.length;
       if (reviews.length > 0) {
         averageRating =
@@ -689,7 +689,7 @@ export const getCreatorEngagementRate = query({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     if (courses.length === 0) {
       return { engagementRate: 0, activeStudents: 0, totalStudents: 0 };
@@ -703,7 +703,7 @@ export const getCreatorEngagementRate = query({
       const enrollments = await ctx.db
         .query("enrollments")
         .withIndex("by_courseId", (q) => q.eq("courseId", courseId as any))
-        .collect();
+        .take(5000);
       allEnrollments.push(...enrollments.map(e => ({ userId: e.userId, courseId: e.courseId })));
     }
 
@@ -724,7 +724,7 @@ export const getCreatorEngagementRate = query({
         .query("userEvents")
         .withIndex("by_course", (q) => q.eq("courseId", courseId))
         .filter((q) => q.gte(q.field("timestamp"), sevenDaysAgo))
-        .collect();
+        .take(5000);
 
       recentEvents.forEach(event => activeUserIds.add(event.userId));
     }
@@ -785,7 +785,7 @@ export const getCreatorRevenueOverTime = query({
     const purchases = await ctx.db
       .query("purchases")
       .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-      .collect();
+      .take(5000);
 
     const completedPurchases = purchases.filter((p) => p.status === "completed");
 
@@ -836,7 +836,7 @@ export const getCreatorCoursePerformance = query({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     const coursePerformance = await Promise.all(
       courses.map(async (course) => {
@@ -844,7 +844,7 @@ export const getCreatorCoursePerformance = query({
         const enrollments = await ctx.db
           .query("enrollments")
           .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
-          .collect();
+          .take(5000);
 
         // Calculate completion rate (students who finished / total enrolled)
         const completedCount = enrollments.filter(
@@ -968,7 +968,7 @@ export const getCreatorRecentActivity = query({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     for (const course of courses) {
       // Get recent enrollments
@@ -1238,7 +1238,7 @@ export const getCreatorStudentProgress = query({
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     if (courses.length === 0) {
       return {
@@ -1269,7 +1269,7 @@ export const getCreatorStudentProgress = query({
       const enrollments = await ctx.db
         .query("enrollments")
         .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
-        .collect();
+        .take(5000);
 
       for (const enrollment of enrollments) {
         // Get user info

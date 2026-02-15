@@ -17,13 +17,6 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
     const { content, mediaUrls, platformOptions, postType } = post;
     const { accessToken, platformData } = account;
 
-    console.log('📸 Publishing to Instagram:', {
-      postType,
-      hasMedia: mediaUrls?.length > 0,
-      mediaCount: mediaUrls?.length || 0,
-      accountId: platformData?.instagramBusinessAccountId,
-    });
-
     if (!platformData?.instagramBusinessAccountId) {
       throw new Error("Instagram Business Account ID not found");
     }
@@ -35,8 +28,6 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
 
     // Step 1: Upload media
     const mediaUrl = mediaUrls[0];
-    console.log('📤 Uploading media:', mediaUrl);
-    
     // Detect media type from URL or content
     const isVideo = mediaUrl.toLowerCase().includes('mp4') || 
                     mediaUrl.toLowerCase().includes('mov') || 
@@ -82,12 +73,10 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
 
     const uploadData = await uploadResponse.json();
     const mediaContainerId = (uploadData as any)?.id;
-    console.log('✅ Media container created:', mediaContainerId);
 
     // Wait for media processing
     if (isVideo) {
       // For videos and reels, wait for processing with status checks
-      console.log('⏳ Waiting for video processing...');
       let processingComplete = false;
       let attempts = 0;
       const maxAttempts = 30; // 5 minutes max
@@ -99,8 +88,6 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
           `https://graph.facebook.com/v18.0/${mediaContainerId}?fields=status_code&access_token=${accessToken}`
         );
         const statusData = await statusResponse.json();
-
-        console.log(`⏳ Video status check ${attempts + 1}/${maxAttempts}:`, (statusData as any)?.status_code);
 
         if ((statusData as any)?.status_code === 'FINISHED') {
           processingComplete = true;
@@ -114,18 +101,12 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
       if (!processingComplete) {
         throw new Error('Video processing timeout');
       }
-      
-      console.log('✅ Video processing complete');
     } else {
       // For images and stories, wait a few seconds for Instagram to process
-      console.log('⏳ Waiting 5 seconds for image processing...');
       await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log('✅ Image processing wait complete');
     }
 
     // Step 2: Publish the post (with retry logic)
-    console.log('📢 Publishing post with container ID:', mediaContainerId);
-    
     const publishEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media_publish`;
     const publishParams = new URLSearchParams({
       access_token: accessToken,
@@ -146,8 +127,6 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
         // Success! Parse and return
         const publishData = await publishResponse.json();
         const postId = (publishData as any)?.id;
-        
-        console.log('✅ Instagram post published successfully:', postId);
 
         return {
           success: true,
@@ -161,7 +140,6 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
       
       // Check if it's a "media not ready" error (code 9007)
       if ((error as any)?.error?.code === 9007 && publishAttempts < maxPublishAttempts - 1) {
-        console.log(`⏳ Media not ready yet, waiting 3 seconds... (attempt ${publishAttempts + 1}/${maxPublishAttempts})`);
         await new Promise(resolve => setTimeout(resolve, 3000));
         publishAttempts++;
         continue;
@@ -199,7 +177,6 @@ async function publishToTwitter(post: any, account: any): Promise<{ success: boo
       // Note: Twitter media upload requires OAuth 1.0a, which is complex
       // For production, use a library like twitter-api-v2
       // This is a simplified example
-      console.log('Media upload not implemented in this example');
     }
 
     // Create tweet
@@ -449,7 +426,6 @@ export const publishScheduledPost = internalAction({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Stub for now - posting functionality not needed for automation
-    console.log(`Publishing scheduled post ${args.postId} - functionality stubbed`);
     return null;
   },
 });
@@ -561,8 +537,6 @@ export const refreshOAuthToken = internalAction({
           break;
       }
 
-      // Token refresh is handled directly by frontend calling the mutation
-      console.log("🔄 OAuth token refresh completed for platform:", args.platform);
     } catch (error: any) {
       console.error(`Failed to refresh token for account ${args.accountId}:`, error);
     }

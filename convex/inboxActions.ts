@@ -83,7 +83,6 @@ export const sendReplyEmail = internalAction({
         },
       });
       
-      console.log("[Inbox Actions] Reply sent successfully");
     } catch (error) {
       console.error("[Inbox Actions] Failed to send reply:", error);
       throw error;
