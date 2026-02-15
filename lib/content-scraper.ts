@@ -98,11 +98,11 @@ export async function scrapeContent(url: string, fixErrors: boolean = false): Pr
       result = await scrapeYouTubeVideo(url);
 
       if (fixErrors) {
-        // console.log(...);
+
         result.content = await processContentWithAI(result.content, 'youtube', result.title);
-        // console.log(...);
+
       } else {
-        // console.log(...);
+
       }
       
       const textSplitter = new RecursiveCharacterTextSplitter({

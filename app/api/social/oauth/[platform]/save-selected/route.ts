@@ -29,7 +29,7 @@ export async function POST(
 
     // Process the selected account based on platform
     if (platform === 'instagram' || platformParam === 'instagram') {
-      console.log('Processing Instagram account:', JSON.stringify(selectedAccount, null, 2));
+
       
       const instagramAccount = selectedAccount.instagram;
       const connectedPage = selectedAccount.page;
@@ -51,12 +51,6 @@ export async function POST(
         },
       };
       
-      console.log('Instagram userData created:', {
-        id: userData.id,
-        username: userData.username,
-        displayName: userData.displayName,
-        facebookPageId: userData.platformData.facebookPageId
-      });
     } else if (platform === 'facebook' || platformParam === 'facebook') {
       const page = selectedAccount;
       const profilePicture = page.picture?.data?.url;

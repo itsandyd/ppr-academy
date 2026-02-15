@@ -7,18 +7,18 @@ export async function GET(
   try {
     const { filename } = await params;
     
-    console.log(`🎵 Audio API request for: ${filename}`);
+
     
     // Check if we have the audio file in our cache
     const audioCache = (global as any).audioCache as Map<string, ArrayBuffer>;
     
     if (!audioCache || !audioCache.has(filename)) {
-      console.log(`❌ Audio file not found in cache: ${filename}`);
+
       return NextResponse.json({ error: 'Audio file not found' }, { status: 404 });
     }
     
     const audioBuffer = audioCache.get(filename);
-    console.log(`✅ Found audio file in cache: ${filename}, size: ${audioBuffer?.byteLength} bytes`);
+
     
     // Return the audio file with proper headers
     return new NextResponse(audioBuffer, {

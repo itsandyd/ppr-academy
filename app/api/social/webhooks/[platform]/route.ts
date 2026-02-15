@@ -83,33 +83,25 @@ export async function GET(
     const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
-    console.log('🔍 Webhook verification attempt:', {
-      platform,
-      mode,
-      token,
-      challenge,
-      expectedToken: process.env.WEBHOOK_VERIFY_TOKEN,
-    });
-
     // Instagram/Facebook webhook verification
     if (mode === 'subscribe') {
       const expectedToken = process.env.WEBHOOK_VERIFY_TOKEN;
       
       if (!expectedToken) {
-        console.error('❌ WEBHOOK_VERIFY_TOKEN not set in environment variables');
+        console.error('WEBHOOK_VERIFY_TOKEN not set in environment variables');
         return NextResponse.json({ 
           error: 'Server configuration error - verify token not set' 
         }, { status: 500 });
       }
 
       if (token === expectedToken && challenge) {
-        console.log('✅ Webhook verification successful');
+
         return new NextResponse(challenge, { 
           status: 200,
           headers: { 'Content-Type': 'text/plain' }
         });
       } else {
-        console.error('❌ Token mismatch:', { received: token, expected: expectedToken });
+        console.error('Webhook verify token mismatch');
         return NextResponse.json({ 
           error: 'Invalid verify token',
           received: token,
@@ -118,11 +110,11 @@ export async function GET(
       }
     }
 
-    console.error('❌ Invalid verification mode:', mode);
+    console.error('Invalid verification mode:', mode);
     return NextResponse.json({ error: 'Invalid mode' }, { status: 403 });
     
   } catch (error) {
-    console.error('❌ Webhook verification error:', error);
+    console.error('Webhook verification error:', error);
     return NextResponse.json({ 
       error: 'Verification processing failed',
       details: String(error)
@@ -213,14 +205,14 @@ function verifyTikTokSignature(body: string, signature: string): boolean {
 // ============================================================================
 
 async function handleFacebookWebhook(payload: any) {
-  console.log('📥 Facebook/Instagram webhook received:', JSON.stringify(payload, null, 2));
+
 
   if (payload.object === 'page' || payload.object === 'instagram') {
     for (const entry of payload.entry) {
       // Handle Instagram comments
       if (entry.changes) {
         for (const change of entry.changes) {
-          console.log('📝 Change event:', change.field, change.value);
+
           
           // Process comments for automation triggers
           if (change.field === 'comments' || (change.field === 'feed' && change.value?.item === 'comment')) {
@@ -240,9 +232,9 @@ async function handleFacebookWebhook(payload: any) {
                 webhookId,
               });
               
-              console.log('✅ Automation processing triggered for comment');
+
             } catch (error) {
-              console.error('❌ Error processing comment for automation:', error);
+              console.error('Error processing comment for automation:', error);
             }
           }
         }
@@ -251,7 +243,7 @@ async function handleFacebookWebhook(payload: any) {
       // Handle Instagram/Facebook messages
       if (entry.messaging) {
         for (const message of entry.messaging) {
-          console.log('💬 Message event:', message);
+
 
           if (message.message) {
             try {
@@ -268,9 +260,9 @@ async function handleFacebookWebhook(payload: any) {
                 });
               }
 
-              console.log('✅ DM automation processing triggered');
+
             } catch (error) {
-              console.error('❌ Error processing message for automation:', error);
+              console.error('Error processing message for automation:', error);
             }
           }
         }
@@ -280,7 +272,7 @@ async function handleFacebookWebhook(payload: any) {
 }
 
 async function handleTwitterWebhook(payload: any) {
-  console.log('Twitter webhook received:', JSON.stringify(payload, null, 2));
+
 
   // Handle Direct Messages - route to Convex for automation processing
   if (payload.direct_message_events && payload.direct_message_events.length > 0) {
@@ -289,38 +281,38 @@ async function handleTwitterWebhook(payload: any) {
       await convex.action(api.socialDMWebhooks.processTwitterWebhook, {
         payload,
       });
-      console.log('✅ Twitter DM webhook processed');
+
     } catch (error) {
-      console.error('❌ Error processing Twitter DM:', error);
+      console.error('Error processing Twitter DM:', error);
     }
   }
 
   // Handle different Twitter events
   if (payload.tweet_create_events) {
     for (const tweet of payload.tweet_create_events) {
-      console.log('Tweet created:', tweet.id_str);
+
     }
   }
 
   if (payload.favorite_events) {
     for (const favorite of payload.favorite_events) {
-      console.log('Tweet favorited:', favorite.favorited_status.id_str);
+
     }
   }
 
   if (payload.follow_events) {
     for (const follow of payload.follow_events) {
-      console.log('New follower:', follow.source.id_str);
+
     }
   }
 }
 
 async function handleLinkedInWebhook(payload: any) {
-  console.log('LinkedIn webhook received:', JSON.stringify(payload, null, 2));
+
 
   // Handle LinkedIn events
   if (payload.eventType === 'SHARE_STATISTICS_UPDATE') {
-    console.log('Share statistics updated:', payload.shareUrn);
+
     
     // Update analytics in database
     // TODO: Call Convex mutation to update analytics
@@ -328,17 +320,17 @@ async function handleLinkedInWebhook(payload: any) {
 }
 
 async function handleTikTokWebhook(payload: any) {
-  console.log('TikTok webhook received:', JSON.stringify(payload, null, 2));
+
 
   // TikTok webhooks are limited to video status updates only
   // Comment/DM automation requires Creator Marketplace API approval
   if (payload.event === 'video.publish.completed') {
-    console.log('Video published:', payload.video_id);
+
     // TODO: Update post status in database
   }
 
   if (payload.event === 'video.upload.failed') {
-    console.log('Video upload failed:', payload.video_id);
+
     // TODO: Update post status to failed
   }
 }

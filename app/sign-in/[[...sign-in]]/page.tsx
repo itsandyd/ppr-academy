@@ -181,7 +181,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
               {/* Sign In Component - No wrapper card, let Clerk handle it */}
               <SignIn
-                fallbackRedirectUrl={params.redirect_url || "/home"}
+                fallbackRedirectUrl={params.redirect_url || "/dashboard"}
                 appearance={{
                   elements: {
                     rootBox: "w-full",

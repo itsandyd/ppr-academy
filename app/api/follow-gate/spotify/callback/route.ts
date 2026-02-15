@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
 
       if (followResponse.ok || followResponse.status === 204) {
         isFollowing = true;
-        console.log(`Successfully followed Spotify artist: ${artistId}`);
+
       } else {
         const errorText = await followResponse.text();
         console.error("Spotify follow error:", errorText);

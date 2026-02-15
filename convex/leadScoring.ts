@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, internalMutation, action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Default scoring rules that can be customized
 const DEFAULT_SCORING_RULES = [
@@ -19,6 +20,7 @@ export const getScoringRules = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const rules = await ctx.db
       .query("leadScoringRules")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -34,6 +36,7 @@ export const getActiveScoringRules = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const rules = await ctx.db
       .query("leadScoringRules")
       .withIndex("by_active", (q) => q.eq("storeId", args.storeId).eq("isActive", true))
@@ -75,6 +78,7 @@ export const saveScoringRules = mutation({
     ruleSetId: v.optional(v.id("leadScoringRules")),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const now = Date.now();
 
     if (args.ruleSetId) {
@@ -106,6 +110,7 @@ export const deleteScoringRules = mutation({
     ruleSetId: v.id("leadScoringRules"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.delete(args.ruleSetId);
   },
 });
@@ -117,6 +122,7 @@ export const calculateContactScore = query({
     contactId: v.id("emailContacts"),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const contact = await ctx.db.get(args.contactId);
     if (!contact) return { score: 0, breakdown: [] };
 
@@ -198,6 +204,7 @@ export const getScoreDistribution = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Read from pre-aggregated summary table (single doc read)
     const summary = await ctx.db
       .query("leadScoringSummary")
@@ -232,6 +239,7 @@ export const getTopLeads = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const limit = args.limit || 20;
 
     // Use compound index to get subscribed contacts sorted by engagement score desc
@@ -267,6 +275,7 @@ export const getLeadsNeedingAttention = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const resultLimit = args.limit || 20;
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
     // Fetch more than needed since we'll filter; 500 is safe under 32k limit
@@ -359,6 +368,7 @@ export const getContactScoreHistory = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const limit = args.limit || 50;
 
     const history = await ctx.db
@@ -514,6 +524,7 @@ export const recalculateAllScores = mutation({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Kick off the first batch (it will schedule subsequent batches)
     await ctx.scheduler.runAfter(0, internal.leadScoring._recalculateScoresBatch, {
       storeId: args.storeId,
@@ -544,6 +555,7 @@ export const getLeadScoringSummary = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Read from pre-aggregated summary table (single doc read)
     const summary = await ctx.db
       .query("leadScoringSummary")
@@ -705,6 +717,7 @@ export const rebuildLeadScoringSummary = mutation({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Kick off the first batch
     await ctx.scheduler.runAfter(0, internal.leadScoring._rebuildSummaryBatch, {
       storeId: args.storeId,

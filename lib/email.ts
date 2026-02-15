@@ -166,8 +166,8 @@ const getAdminNotificationTemplate = (data: AdminNotificationData) => `
 // Main email sending functions
 export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    // console.log(...);
+    // RESEND_API_KEY not configured - simulation mode
+
     return { success: true, simulation: true };
   }
 
@@ -185,15 +185,15 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send lead magnet email:', error);
+    console.error('Failed to send lead magnet email:', error);
     throw new Error(`Email sending failed: ${error}`);
   }
 }
 
 export async function sendAdminNotification(data: AdminNotificationData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    // console.log(...);
+    // RESEND_API_KEY not configured - simulation mode
+
     return { success: true, simulation: true };
   }
 
@@ -207,10 +207,10 @@ export async function sendAdminNotification(data: AdminNotificationData) {
       html: getAdminNotificationTemplate(data),
     });
 
-    // console.log(...);
+
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send admin notification:', error);
+    console.error('Failed to send admin notification:', error);
     throw new Error(`Admin notification failed: ${error}`);
   }
 }
@@ -218,7 +218,7 @@ export async function sendAdminNotification(data: AdminNotificationData) {
 // Welcome email for general use
 export async function sendWelcomeEmail(data: WelcomeEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -242,7 +242,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send welcome email:', error);
+    console.error('Failed to send welcome email:', error);
     throw new Error(`Welcome email failed: ${error}`);
   }
 }
@@ -327,8 +327,8 @@ const getPaymentFailureEmailTemplate = (data: PaymentFailureEmailData) => `
 
 export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    // console.log(...);
+    // RESEND_API_KEY not configured - simulation mode
+
     return { success: true, simulation: true };
   }
 
@@ -346,7 +346,7 @@ export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send payment failure email:', error);
+    console.error('Failed to send payment failure email:', error);
     throw new Error(`Payment failure email failed: ${error}`);
   }
 }
@@ -440,8 +440,8 @@ const getCourseEnrollmentEmailTemplate = (data: CourseEnrollmentEmailData) => `
 
 export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    // console.log(...);
+    // RESEND_API_KEY not configured - simulation mode
+
     return { success: true, simulation: true };
   }
 
@@ -459,7 +459,7 @@ export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData)
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send course enrollment email:', error);
+    console.error('Failed to send course enrollment email:', error);
     throw new Error(`Course enrollment email failed: ${error}`);
   }
 }
@@ -537,7 +537,7 @@ const getTipConfirmationEmailTemplate = (data: TipConfirmationEmailData) => `
 
 export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -555,7 +555,7 @@ export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send tip confirmation email:', error);
+    console.error('Failed to send tip confirmation email:', error);
     throw new Error(`Tip confirmation email failed: ${error}`);
   }
 }
@@ -651,7 +651,7 @@ const getMembershipConfirmationEmailTemplate = (data: MembershipConfirmationEmai
 
 export async function sendMembershipConfirmationEmail(data: MembershipConfirmationEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -669,7 +669,7 @@ export async function sendMembershipConfirmationEmail(data: MembershipConfirmati
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send membership confirmation email:', error);
+    console.error('Failed to send membership confirmation email:', error);
     throw new Error(`Membership confirmation email failed: ${error}`);
   }
 }
@@ -757,7 +757,7 @@ const getBeatPurchaseEmailTemplate = (data: BeatPurchaseEmailData) => `
 
 export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -775,7 +775,7 @@ export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send beat purchase email:', error);
+    console.error('Failed to send beat purchase email:', error);
     throw new Error(`Beat purchase email failed: ${error}`);
   }
 }
@@ -852,7 +852,7 @@ const getDigitalProductPurchaseEmailTemplate = (data: DigitalProductPurchaseEmai
 
 export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurchaseEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -870,7 +870,7 @@ export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurcha
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send digital product purchase email:', error);
+    console.error('Failed to send digital product purchase email:', error);
     throw new Error(`Digital product purchase email failed: ${error}`);
   }
 }
@@ -951,7 +951,7 @@ const getBundlePurchaseEmailTemplate = (data: BundlePurchaseEmailData) => `
 
 export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -969,7 +969,7 @@ export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send bundle purchase email:', error);
+    console.error('Failed to send bundle purchase email:', error);
     throw new Error(`Bundle purchase email failed: ${error}`);
   }
 }
@@ -1070,7 +1070,7 @@ const getCoachingConfirmationEmailTemplate = (data: CoachingConfirmationEmailDat
 
 export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1088,7 +1088,7 @@ export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEm
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send coaching confirmation email:', error);
+    console.error('Failed to send coaching confirmation email:', error);
     throw new Error(`Coaching confirmation email failed: ${error}`);
   }
 }
@@ -1171,7 +1171,7 @@ const getCreditsPurchaseEmailTemplate = (data: CreditsPurchaseEmailData) => `
 
 export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1189,7 +1189,7 @@ export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send credits purchase email:', error);
+    console.error('Failed to send credits purchase email:', error);
     throw new Error(`Credits purchase email failed: ${error}`);
   }
 }
@@ -1310,7 +1310,7 @@ const getMixingServiceEmailTemplate = (data: MixingServiceEmailData) => `
 
 export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1328,7 +1328,7 @@ export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send mixing service email:', error);
+    console.error('Failed to send mixing service email:', error);
     throw new Error(`Mixing service email failed: ${error}`);
   }
 }
@@ -1426,7 +1426,7 @@ const getPlaylistSubmissionEmailTemplate = (data: PlaylistSubmissionEmailData) =
 
 export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1444,7 +1444,7 @@ export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailD
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send playlist submission email:', error);
+    console.error('Failed to send playlist submission email:', error);
     throw new Error(`Playlist submission email failed: ${error}`);
   }
 }
@@ -1547,7 +1547,7 @@ const getCoachingReminderEmailTemplate = (data: CoachingReminderEmailData) => `
 
 export async function sendCoachingReminderEmail(data: CoachingReminderEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1566,7 +1566,7 @@ export async function sendCoachingReminderEmail(data: CoachingReminderEmailData)
 
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Failed to send coaching reminder email:', error);
+    console.error('Failed to send coaching reminder email:', error);
     throw new Error(`Coaching reminder email failed: ${error}`);
   }
 }
@@ -1637,7 +1637,7 @@ const getPprProWelcomeEmailTemplate = (data: PprProWelcomeEmailData) => `
 
 export async function sendPprProWelcomeEmail(data: PprProWelcomeEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1719,7 +1719,7 @@ const getPprProCancelledEmailTemplate = (data: PprProCancelledEmailData) => `
 
 export async function sendPprProCancelledEmail(data: PprProCancelledEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 
@@ -1795,7 +1795,7 @@ const getPprProPaymentFailedEmailTemplate = (data: PprProPaymentFailedEmailData)
 
 export async function sendPprProPaymentFailedEmail(data: PprProPaymentFailedEmailData) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY not configured. Email simulation mode.');
+    // RESEND_API_KEY not configured - simulation mode
     return { success: true, simulation: true };
   }
 

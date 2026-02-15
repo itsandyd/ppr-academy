@@ -1,4 +1,4 @@
-import { mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -6,7 +6,7 @@ import { v } from "convex/values";
  * 
  * Automatically fix enrollment problems for ALL users at once
  */
-export const fixAllUsersEnrollments = mutation({
+export const fixAllUsersEnrollments = internalMutation({
   args: {},
   returns: v.object({
     totalUsers: v.number(),
@@ -131,7 +131,7 @@ export const fixAllUsersEnrollments = mutation({
  * 
  * Get overview of enrollment issues without fixing them
  */
-export const checkEnrollmentHealth = query({
+export const checkEnrollmentHealth = internalQuery({
   args: {},
   returns: v.object({
     totalPurchases: v.number(),

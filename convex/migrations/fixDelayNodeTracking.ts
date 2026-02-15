@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { v } from "convex/values";
 
@@ -23,7 +23,7 @@ import { v } from "convex/values";
  *   // Or for a specific workflow:
  *   npx convex run migrations/fixDelayNodeTracking:fixDelayNodeTracking '{"workflowId": "...", "dryRun": false}'
  */
-export const fixDelayNodeTracking = mutation({
+export const fixDelayNodeTracking = internalMutation({
   args: {
     workflowId: v.optional(v.id("emailWorkflows")), // Optional: only fix specific workflow
     dryRun: v.optional(v.boolean()), // Default true for safety
@@ -207,7 +207,7 @@ export const fixDelayNodeTracking = mutation({
 /**
  * Diagnose why pending executions aren't being processed
  */
-export const diagnosePendingExecutions = mutation({
+export const diagnosePendingExecutions = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
   },
@@ -276,7 +276,7 @@ export const diagnosePendingExecutions = mutation({
 /**
  * Force process stuck pending executions that should have run
  */
-export const forceProcessStuckExecutions = mutation({
+export const forceProcessStuckExecutions = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
     dryRun: v.optional(v.boolean()),
@@ -335,7 +335,7 @@ export const forceProcessStuckExecutions = mutation({
  * Reset failed executions back to pending with staggered scheduledFor times
  * This lets them retry without all competing at once
  */
-export const resetFailedExecutions = mutation({
+export const resetFailedExecutions = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
     dryRun: v.optional(v.boolean()),
@@ -385,7 +385,7 @@ export const resetFailedExecutions = mutation({
  * Spread out pending executions to reduce OCC contention
  * Uses tiny batches to avoid fighting with the cron
  */
-export const spreadPendingExecutions = mutation({
+export const spreadPendingExecutions = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
     dryRun: v.optional(v.boolean()),
@@ -454,7 +454,7 @@ export const spreadPendingExecutions = mutation({
 /**
  * Get failed executions to see what errors are happening
  */
-export const getFailedExecutions = mutation({
+export const getFailedExecutions = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
   },
@@ -482,7 +482,7 @@ export const getFailedExecutions = mutation({
 /**
  * Check what the cron is seeing - does getDueExecutions return anything?
  */
-export const checkCronView = mutation({
+export const checkCronView = internalMutation({
   args: {},
   returns: v.object({
     dueCount: v.number(),
@@ -519,7 +519,7 @@ export const checkCronView = mutation({
 /**
  * Check a specific execution's status
  */
-export const checkExecution = mutation({
+export const checkExecution = internalMutation({
   args: {
     executionId: v.id("workflowExecutions"),
   },
@@ -551,7 +551,7 @@ export const checkExecution = mutation({
   },
 });
 
-export const getExecutionStats = mutation({
+export const getExecutionStats = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"), // Required to avoid hitting limits
   },
@@ -644,7 +644,7 @@ export const getExecutionStats = mutation({
  * Reroute executions stuck at a specific node (both pending AND running) to another node.
  * Handles the orphaned "running" status executions that processScheduledExecutions created.
  */
-export const rerouteStuckAtNode = mutation({
+export const rerouteStuckAtNode = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
     fromNodeId: v.string(),
@@ -710,7 +710,7 @@ export const rerouteStuckAtNode = mutation({
   },
 });
 
-export const resetPendingToNode = mutation({
+export const resetPendingToNode = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
     targetNodeId: v.string(),

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 const ANDREW_1_VOICE_ID = "IXQAN2tgDlb8raWmXvzP";
 
@@ -22,6 +23,7 @@ export const getSocialMediaPostsByUser = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { userId, status, limit = 50 } = args;
 
     let postsQuery = ctx.db
@@ -45,6 +47,7 @@ export const getSocialMediaPostById = query({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.postId);
   },
 });
@@ -55,6 +58,7 @@ export const getSocialMediaPostWithDetails = query({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const post = await ctx.db.get(args.postId);
     if (!post) return null;
 
@@ -104,6 +108,8 @@ export const createSocialMediaPost = mutation({
   },
   returns: v.id("socialMediaPosts"),
   handler: async (ctx, args) => {
+    if (args.storeId) await requireStoreOwner(ctx, args.storeId);
+    else await requireAuth(ctx);
     const now = Date.now();
 
     return await ctx.db.insert("socialMediaPosts", {
@@ -132,6 +138,7 @@ export const updateSocialMediaPostScripts = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { postId, ...updates } = args;
 
     const filteredUpdates: Record<string, string | number> = {};
@@ -162,6 +169,7 @@ export const updateSocialMediaPostCombined = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { postId, ...updates } = args;
 
     await ctx.db.patch(postId, {
@@ -196,6 +204,7 @@ export const updateSocialMediaPostImages = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.postId, {
       images: args.images,
       status: "images_generated",
@@ -224,6 +233,7 @@ export const addImageToSocialMediaPost = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Post not found");
 
@@ -245,6 +255,7 @@ export const removeImageFromSocialMediaPost = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Post not found");
 
@@ -271,6 +282,7 @@ export const updateSocialMediaPostAudio = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { postId, ...updates } = args;
 
     await ctx.db.patch(postId, {
@@ -291,6 +303,7 @@ export const updateSocialMediaPostCaptions = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { postId, instagramCaption, tiktokCaption } = args;
 
     const updates: Record<string, string | number> = { updatedAt: Date.now() };
@@ -309,6 +322,7 @@ export const completeSocialMediaPost = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.postId, {
       status: "completed",
       updatedAt: Date.now(),
@@ -333,6 +347,7 @@ export const updateSocialMediaPostStatus = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.postId, {
       status: args.status,
       updatedAt: Date.now(),
@@ -349,6 +364,7 @@ export const updateSocialMediaPostTitle = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.postId, {
       title: args.title,
       updatedAt: Date.now(),
@@ -364,6 +380,7 @@ export const deleteSocialMediaPost = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.delete(args.postId);
     return null;
   },
@@ -375,6 +392,7 @@ export const getCTATemplatesByUser = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db
       .query("ctaTemplates")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -389,6 +407,7 @@ export const getCTATemplateById = query({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.templateId);
   },
 });
@@ -407,6 +426,8 @@ export const createCTATemplate = mutation({
   },
   returns: v.id("ctaTemplates"),
   handler: async (ctx, args) => {
+    if (args.storeId) await requireStoreOwner(ctx, args.storeId);
+    else await requireAuth(ctx);
     const now = Date.now();
 
     return await ctx.db.insert("ctaTemplates", {
@@ -439,6 +460,7 @@ export const updateCTATemplate = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { templateId, ...updates } = args;
 
     const filteredUpdates: Record<string, string | Id<"digitalProducts"> | Id<"courses"> | number> =
@@ -466,6 +488,7 @@ export const incrementCTATemplateUsage = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const template = await ctx.db.get(args.templateId);
     if (!template) return null;
 
@@ -485,6 +508,7 @@ export const deleteCTATemplate = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.delete(args.templateId);
     return null;
   },
@@ -549,6 +573,7 @@ export const generateUploadUrl = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
+    await requireAuth(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // ==================== PUBLIC QUERIES ====================
 
@@ -21,6 +22,7 @@ export const getUserDiscordConnection = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const connection = await ctx.db
       .query("discordIntegrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -92,6 +94,7 @@ export const connectDiscordAccount = mutation({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     try {
       // Check if connection already exists
       const existing = await ctx.db
@@ -146,6 +149,7 @@ export const disconnectDiscord = mutation({
   args: { userId: v.string() },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const connection = await ctx.db
       .query("discordIntegrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -175,6 +179,7 @@ export const updateDiscordGuildConfig = mutation({
     guildConfigId: v.optional(v.id("discordGuilds")),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const existing = await ctx.db
       .query("discordGuilds")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))

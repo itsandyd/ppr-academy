@@ -31,8 +31,6 @@ import {
   DollarSign,
   Settings,
   Play,
-  Sparkles,
-  Trash2,
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
@@ -70,57 +68,6 @@ export default function SubmissionsPage() {
 
   const acceptSubmission = useMutation(api.submissions.acceptSubmission);
   const declineSubmission = useMutation(api.submissions.declineSubmission);
-
-  // DEV ONLY: Seeder for testing
-  const createSampleSubmissions = useMutation(api.devSeeders.createSampleSubmissions);
-  const clearTestSubmissions = useMutation(api.devSeeders.clearTestSubmissions);
-
-  const handleGenerateSamples = async () => {
-    if (!user?.id) return;
-
-    try {
-      await createSampleSubmissions({
-        creatorId: user.id,
-        count: 3,
-      });
-
-      toast({
-        title: "Test Submissions Created!",
-        description: "3 sample submissions added to your inbox",
-        className: "bg-white dark:bg-black",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description:
-          error.message ||
-          "Failed to create samples. Make sure you have a playlist accepting submissions.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleClearSamples = async () => {
-    if (!user?.id) return;
-
-    try {
-      await clearTestSubmissions({
-        creatorId: user.id,
-      });
-
-      toast({
-        title: "Test Data Cleared",
-        description: "All test submissions removed",
-        className: "bg-white dark:bg-black",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to clear test data",
-        variant: "destructive",
-      });
-    }
-  };
 
   const filteredSubmissions = allSubmissions?.filter((s: any) => {
     // Status filter
@@ -253,24 +200,6 @@ export default function SubmissionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* DEV ONLY: Test Data Seeder */}
-          {stats?.total === 0 && (
-            <Button variant="outline" onClick={handleGenerateSamples} className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              Generate Test Data
-            </Button>
-          )}
-          {stats && stats.total > 0 && (
-            <Button
-              variant="ghost"
-              onClick={handleClearSamples}
-              size="sm"
-              className="gap-1 text-red-600"
-            >
-              <Trash2 className="h-3 w-3" />
-              Clear Test Data
-            </Button>
-          )}
           <Button variant="outline" asChild>
             <a href="/home/playlists">
               <Settings className="mr-2 h-4 w-4" />

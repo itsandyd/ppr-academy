@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Server-side logger utility for production-safe logging
  * Used in API routes and server actions

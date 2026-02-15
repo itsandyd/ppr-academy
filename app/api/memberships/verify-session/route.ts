@@ -52,11 +52,6 @@ export async function POST(request: NextRequest) {
       stripeSubscriptionId: (session.subscription as string) || "",
     });
 
-    console.log("Membership subscription created via session verification:", {
-      subscriptionId,
-      sessionId,
-    });
-
     return NextResponse.json({ success: true, subscribed: true, subscriptionId });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {

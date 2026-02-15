@@ -52,6 +52,7 @@ import { features } from "@/lib/features";
 // Legacy imports (will be phased out)
 import { createCoachApplication, getUserCoachProfile, updateCoachApplication } from "@/app/actions/coaching-actions";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
+import { CreatorAnalyticsTab } from "@/components/dashboard/creator-analytics-tab";
 
 interface CreatorDashboardV2Props {
   // Legacy props for backwards compatibility
@@ -495,15 +496,19 @@ export function CreatorDashboardV2({
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-8">
-          <Card>
-            <CardContent className="p-12 text-center">
-              <BarChart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Analytics Coming Soon</h3>
-              <p className="text-slate-600">
-                Detailed insights about your {features.useNewMarketplace ? "products" : "courses"} and customers will be available here
-              </p>
-            </CardContent>
-          </Card>
+          {store?._id ? (
+            <CreatorAnalyticsTab storeId={store._id} storeSlug={store.slug} />
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <BarChart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Set up your store first</h3>
+                <p className="text-slate-600">
+                  Create a store to start tracking your sales and revenue
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="coaching" className="space-y-8">

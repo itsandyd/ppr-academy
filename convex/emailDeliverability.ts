@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Get deliverability health overview
 export const getDeliverabilityHealth = query({
@@ -8,6 +9,7 @@ export const getDeliverabilityHealth = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Get recent events (last 30 days)
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
@@ -115,6 +117,7 @@ export const getDeliverabilityEvents = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const limit = args.limit || 50;
 
     let query = ctx.db
@@ -141,6 +144,7 @@ export const getDeliverabilityTrends = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const limit = args.limit || 30;
 
     const stats = await ctx.db
@@ -161,6 +165,7 @@ export const getDomainReputation = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const domains = await ctx.db
       .query("emailDomainReputation")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -189,6 +194,7 @@ export const recordDeliverabilityEvent = mutation({
     broadcastId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Find the contact by email
     const contact = await ctx.db
       .query("emailContacts")
@@ -228,6 +234,7 @@ export const getBounceRateByDomain = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     const events = await ctx.db
@@ -279,6 +286,7 @@ export const getProblematicContacts = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const limit = args.limit || 25;
 
     // Get contacts with bounce or spam issues
@@ -477,6 +485,7 @@ export const markEventProcessed = mutation({
     eventId: v.id("emailDeliverabilityEvents"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.eventId, { processed: true });
   },
 });
@@ -488,6 +497,7 @@ export const cleanBouncedContacts = mutation({
     hardBouncesOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const events = await ctx.db
       .query("emailDeliverabilityEvents")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))

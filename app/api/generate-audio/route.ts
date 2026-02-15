@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cleanTextForSpeech, validateTextForSpeech } from '@/lib/text-utils';
 import { auth } from '@clerk/nextjs/server';
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from '@/lib/rate-limit';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
 
@@ -13,6 +14,13 @@ export async function POST(req: NextRequest) {
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    // SECURITY: Rate limiting (strict - 5 requests/min)
+    const identifier = getRateLimitIdentifier(req, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
     }
 
     // Initialize Convex client for server-side use
@@ -54,7 +62,7 @@ export async function POST(req: NextRequest) {
     // Check if ElevenLabs API key is configured
     if (!process.env.ELEVENLABS_API_KEY) {
       // For development/demo purposes, create a simulated audio file and upload it to Convex
-      console.log('ElevenLabs API not configured, creating simulated audio file');
+
       
       const estimatedDuration = validation.wordCount / 150; // minutes
       const simulatedAudioSize = cleanedText.length * 100; // rough estimate

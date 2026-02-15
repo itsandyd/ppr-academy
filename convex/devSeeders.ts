@@ -1,10 +1,10 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 /**
  * DEV ONLY: Create sample submissions for testing
  */
-export const createSampleSubmissions = mutation({
+export const createSampleSubmissions = internalMutation({
   args: {
     creatorId: v.string(),
     count: v.optional(v.number()),
@@ -99,7 +99,7 @@ export const createSampleSubmissions = mutation({
 /**
  * DEV ONLY: Clear all test submissions
  */
-export const clearTestSubmissions = mutation({
+export const clearTestSubmissions = internalMutation({
   args: {
     creatorId: v.string(),
   },

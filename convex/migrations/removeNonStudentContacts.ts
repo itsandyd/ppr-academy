@@ -1,11 +1,11 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
  * Remove contacts that are not students (e.g., imported contacts from ActiveCampaign)
  * Only keeps contacts with source: "course_enrollment", "student_sync", "manual"
  */
-export const removeNonStudentContacts = mutation({
+export const removeNonStudentContacts = internalMutation({
   args: {
     storeId: v.string(), // Clerk User ID
     dryRun: v.optional(v.boolean()), // If true, just count without deleting

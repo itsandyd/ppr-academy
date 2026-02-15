@@ -1,6 +1,7 @@
 import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Email campaigns are now sent using store-specific Resend configurations
 // See convex/emails.ts for the actual email sending actions
@@ -21,6 +22,7 @@ export const createCampaign = mutation({
   },
   returns: v.id("emailCampaigns"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const campaignId = await ctx.db.insert("emailCampaigns", {
       name: args.name,
       subject: args.subject,
@@ -52,6 +54,11 @@ export const updateCampaign = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
+
     const { campaignId, ...updates } = args;
 
     // Remove undefined values
@@ -117,6 +124,7 @@ export const getCampaigns = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     let query = ctx.db
       .query("emailCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
@@ -167,7 +175,11 @@ export const getCampaign = query({
     })
   ),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.campaignId);
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return null;
+    await requireStoreOwner(ctx, campaign.storeId);
+    return campaign;
   },
 });
 
@@ -179,10 +191,12 @@ export const addRecipients = mutation({
   },
   returns: v.number(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) {
       throw new Error("Campaign not found");
     }
+    await requireStoreOwner(ctx, campaign.storeId);
 
     if (campaign.status !== "draft") {
       throw new Error("Can only add recipients to draft campaigns");
@@ -244,6 +258,7 @@ export const addAllCustomersAsRecipients = mutation({
     nextCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) {
       throw new Error("Campaign not found");
@@ -328,8 +343,10 @@ export const duplicateAllRecipients = mutation({
     nextCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const targetCampaign = await ctx.db.get(args.targetCampaignId);
     if (!targetCampaign) throw new Error("Target campaign not found");
+    await requireStoreOwner(ctx, targetCampaign.storeId);
 
     // Allow adding recipients to draft or sending campaigns
     // (sending status is set at the start of processing)
@@ -389,10 +406,12 @@ export const removeRecipients = mutation({
   },
   returns: v.number(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) {
       throw new Error("Campaign not found");
     }
+    await requireStoreOwner(ctx, campaign.storeId);
 
     if (campaign.status !== "draft") {
       throw new Error("Can only remove recipients from draft campaigns");
@@ -469,6 +488,11 @@ export const getCampaignRecipients = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
+
     let query = ctx.db
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId));
@@ -513,7 +537,7 @@ export const getCampaignForSending = query({
   },
 });
 
-// Internal function to update campaign status
+// Update campaign status (requires store ownership)
 export const updateCampaignStatus = mutation({
   args: {
     campaignId: v.id("emailCampaigns"),
@@ -531,6 +555,11 @@ export const updateCampaignStatus = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
+
     const updates: any = { status: args.status };
 
     if (args.sentAt !== undefined) updates.sentAt = args.sentAt;
@@ -549,10 +578,12 @@ export const deleteCampaign = mutation({
   args: { campaignId: v.id("emailCampaigns") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) {
       throw new Error("Campaign not found");
     }
+    await requireStoreOwner(ctx, campaign.storeId);
 
     if (campaign.status === "sending") {
       throw new Error("Cannot delete campaign that is currently sending");
@@ -588,6 +619,7 @@ export const addRecipientsFromTags = mutation({
     totalRecipients: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) throw new Error("Campaign not found");
     if (campaign.status !== "draft") throw new Error("Can only add recipients to draft campaigns");
@@ -688,6 +720,7 @@ export const getTagPreview = query({
     sampleEmails: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const mode = args.targetTagMode || "all";
 
     const contacts = await ctx.db
@@ -743,7 +776,7 @@ export const getTagPreview = query({
 });
 
 /**
- * Update resendCampaigns content - for fixing campaigns missing content
+ * Update resendCampaigns content - for fixing campaigns missing content (admin only)
  */
 export const updateResendCampaignContent = mutation({
   args: {
@@ -751,6 +784,13 @@ export const updateResendCampaignContent = mutation({
     htmlContent: v.string(),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user?.admin) throw new Error("Admin access required");
+
     await ctx.db.patch(args.campaignId, {
       htmlContent: args.htmlContent,
       updatedAt: Date.now(),

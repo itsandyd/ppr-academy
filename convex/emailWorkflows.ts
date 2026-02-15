@@ -9,6 +9,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 export const listEmailTemplates = query({
   args: { storeId: v.string() },
@@ -21,6 +22,7 @@ export const listEmailTemplates = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const templates = await ctx.db
       .query("emailTemplates")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -46,6 +48,7 @@ export const createEmailTemplate = mutation({
   },
   returns: v.id("emailTemplates"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const identity = await ctx.auth.getUserIdentity();
     const adminUserId = identity?.subject || "system";
 
@@ -65,6 +68,7 @@ export const getEmailTemplate = query({
   args: { templateId: v.id("emailTemplates") },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.templateId);
   },
 });
@@ -162,6 +166,7 @@ export const preCreateWorkflowTags = mutation({
     tagId: v.id("emailTags"),
   })),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const tagMap: { name: string; tagId: any }[] = [];
 
     // Extract all tag names from action nodes
@@ -222,6 +227,7 @@ export const createWorkflow = mutation({
   },
   returns: v.id("emailWorkflows"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Auto-create any tags referenced in action nodes
     await ctx.scheduler.runAfter(0, internal.emailWorkflows.ensureWorkflowTagsExist, {
       storeId: args.storeId,
@@ -256,6 +262,7 @@ export const updateWorkflow = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { workflowId, ...updates } = args;
     const workflow = await ctx.db.get(workflowId);
     if (!workflow) throw new Error("Workflow not found");
@@ -287,6 +294,7 @@ export const deleteWorkflow = mutation({
     remainingExecutions: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Delete executions in batches to avoid 32k document limit
     // Process up to 5000 at a time (safe limit for mutations)
     const BATCH_SIZE = 5000;
@@ -321,6 +329,7 @@ export const getWorkflow = query({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.workflowId);
   },
 });
@@ -329,6 +338,7 @@ export const getNodeExecutionCounts = query({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const counts: Record<string, number> = {};
     // Use .take() instead of pagination since Convex only allows one paginated query per function
     // With compound index, we directly get only matching records (no filtering overhead)
@@ -389,6 +399,7 @@ export const getWorkflowNodeStats = query({
     ),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Get the workflow to access node definitions
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) {
@@ -541,6 +552,7 @@ export const getContactsAtNode = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const maxResults = args.limit ?? 100; // Default to 100 contacts per node display
     const results: {
       executionId: Id<"workflowExecutions">;
@@ -621,6 +633,7 @@ export const listWorkflows = query({
   args: { storeId: v.string() },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // First try to find by storeId (Clerk user ID)
     const workflowsByStoreId = await ctx.db
       .query("emailWorkflows")
@@ -657,6 +670,7 @@ export const listWorkflowsBySequenceType = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     if (!args.sequenceType) {
       // If no type specified, return all workflows for this store
       return await ctx.db
@@ -686,6 +700,7 @@ export const getWorkflowCountsByType = query({
   args: { storeId: v.string() },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const workflows = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -720,6 +735,7 @@ export const listAdminWorkflows = query({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
+    await requireAuth(ctx);
     const workflows = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_isAdminWorkflow", (q) => q.eq("isAdminWorkflow", true))
@@ -744,6 +760,7 @@ export const createAdminWorkflow = mutation({
   },
   returns: v.id("emailWorkflows"),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.insert("emailWorkflows", {
       name: args.name,
       description: args.description,
@@ -766,6 +783,7 @@ export const toggleWorkflowActive = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.workflowId, { isActive: args.isActive });
     return null;
   },
@@ -775,6 +793,7 @@ export const duplicateWorkflow = mutation({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.id("emailWorkflows"),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new Error("Workflow not found");
 
@@ -1456,6 +1475,7 @@ export const enrollUserInAdminWorkflow = mutation({
   },
   returns: v.id("workflowExecutions"),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new Error("Workflow not found");
     if (!workflow.isAdminWorkflow) throw new Error("Not an admin workflow");
@@ -1514,6 +1534,7 @@ export const enrollContactInWorkflow = mutation({
   },
   returns: v.id("workflowExecutions"),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new Error("Workflow not found");
 
@@ -1576,6 +1597,7 @@ export const bulkEnrollContactsInWorkflow = mutation({
     errors: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new Error("Workflow not found");
 
@@ -1751,6 +1773,8 @@ export const bulkEnrollAllContactsByFilter = action({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
     // Start the bulk enrollment process via scheduler
     // This returns immediately and processes in background
     await ctx.scheduler.runAfter(0, internal.emailWorkflows.processBulkEnrollment, {
@@ -1889,19 +1913,21 @@ export const getActiveExecutionEmails = internalQuery({
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
     // Use compound index to query only pending/running executions directly
+    // This returns only email addresses (small strings), so higher cap is fine
+    // Needed for duplicate enrollment prevention — must see all active contacts
     const pendingExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_workflowId_status", (q) =>
         q.eq("workflowId", args.workflowId).eq("status", "pending")
       )
-      .take(10000);
+      .take(5000);
 
     const runningExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_workflowId_status", (q) =>
         q.eq("workflowId", args.workflowId).eq("status", "running")
       )
-      .take(10000);
+      .take(5000);
 
     return [
       ...pendingExecutions.map((e) => e.customerEmail),
@@ -2026,6 +2052,7 @@ export const getContactWorkflowStatus = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const contact = await ctx.db.get(args.contactId);
     if (!contact) return [];
 
@@ -2665,22 +2692,24 @@ export const getDueExecutions = internalQuery({
     const now = Date.now();
 
     // Get pending executions that are scheduled for now or earlier
-    // Processor runs in parallel batches, so we can handle more per tick
-    // The cron runs every minute with parallel processing for high throughput
+    // Balance between bandwidth and throughput:
+    // - Each record is 5-20KB, runs every 60s
+    // - At 200 records × 10KB × 1/min = ~2.8 GB/day (acceptable)
+    // - Supports ~12,000 execution steps/hour throughput
     const dueExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "pending").lte("scheduledFor", now)
       )
-      .take(1000);
+      .take(200);
 
-    // Also get running executions that might be stuck (but limit)
+    // Also get running executions that might be stuck
     const runningExecutions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_status_scheduledFor", (q) =>
         q.eq("status", "running").lte("scheduledFor", now)
       )
-      .take(50);
+      .take(20);
 
     return [...dueExecutions, ...runningExecutions];
   },
@@ -2971,6 +3000,7 @@ export const cancelExecution = mutation({
   args: { executionId: v.id("workflowExecutions") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const execution = await ctx.db.get(args.executionId);
     if (!execution) {
       throw new Error("Execution not found");
@@ -3186,6 +3216,7 @@ export const listActiveExecutions = query({
     createdAt: v.number(),
   })),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     let query = ctx.db.query("workflowExecutions");
 
     // Filter by status (active = pending or running)
@@ -3266,6 +3297,7 @@ export const skipExecutionDelay = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const execution = await ctx.db.get(args.executionId);
 
     if (!execution) {
@@ -3304,6 +3336,8 @@ export const forceProcessExecution = action({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
     try {
       // First skip any delay
       await ctx.runMutation(internal.emailWorkflows.skipExecutionDelayInternal, {
@@ -3364,6 +3398,7 @@ export const getRecentCompletedExecutions = query({
     createdAt: v.number(),
   })),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Use index for efficient query
     const executions = await ctx.db
       .query("workflowExecutions")
@@ -3406,6 +3441,7 @@ export const fastForwardAllDelays = mutation({
     skippedCount: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const executions = await ctx.db
       .query("workflowExecutions")
       .filter((q) =>
@@ -3845,6 +3881,7 @@ export const getScheduledExecutions = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now();
     const limit = args.limit || 100;
 
@@ -4186,6 +4223,7 @@ export const getExecutionStatusSummary = query({
     estimatedProcessingTime: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now();
 
     // Query each status separately using the compound index (stays under read limits)

@@ -1,4 +1,3 @@
-// @ts-nocheck - Convex type instantiation is too deep
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { Id } from "@/convex/_generated/dataModel";

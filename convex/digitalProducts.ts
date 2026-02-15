@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { generateSlug } from "./lib/utils";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Get products by store (all products - for dashboard)
 export const getProductsByStore = query({
@@ -176,6 +177,8 @@ export const getProductsByStore = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -655,6 +658,11 @@ export const getProductsByUser = query({
     })
   ),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    if (identity.subject !== args.userId) {
+      throw new Error("Unauthorized: userId mismatch");
+    }
+
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -993,6 +1001,8 @@ export const createProduct = mutation({
   },
   returns: v.id("digitalProducts"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     // Get store name for slug generation
     const store = await ctx.db
       .query("stores")
@@ -1350,11 +1360,16 @@ export const updateProduct = mutation({
     v.null()
   ),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const { id, title, pricingModel, ...otherUpdates } = args;
 
     const product = await ctx.db.get(id);
     if (!product) {
       return null;
+    }
+
+    if (product.userId !== identity.subject) {
+      throw new Error("Unauthorized: you don't own this product");
     }
 
     const updates: Record<string, any> = { ...otherUpdates };
@@ -1453,9 +1468,14 @@ export const updateEmailConfirmation = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const identity = await requireAuth(ctx);
       const product = await ctx.db.get(args.productId);
       if (!product) {
         return { success: false, message: "Product not found" };
+      }
+
+      if (product.userId !== identity.subject) {
+        return { success: false, message: "Unauthorized: you don't own this product" };
       }
 
       await ctx.db.patch(args.productId, {
@@ -1479,14 +1499,16 @@ export const deleteProduct = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
     // Get the product to verify ownership
     const product = await ctx.db.get(args.id);
     if (!product) {
       throw new Error("Product not found");
     }
 
-    // Authorization check: only product owner can delete
-    if (product.userId !== args.userId) {
+    // Authorization check: only product owner can delete (verified via auth)
+    if (product.userId !== identity.subject) {
       throw new Error("Unauthorized: You can only delete your own products");
     }
 
@@ -1514,6 +1536,8 @@ export const createUrlMediaProduct = mutation({
   },
   returns: v.id("digitalProducts"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     return await ctx.db.insert("digitalProducts", {
       ...args,
       productType: "urlMedia",
@@ -1920,7 +1944,7 @@ export const getProductBySlug = query({
   },
 });
 
-// Backfill slugs for all existing digital products that don't have them
+// Backfill slugs for all existing digital products that don't have them (admin only)
 export const backfillProductSlugs = mutation({
   args: {},
   returns: v.object({
@@ -1928,6 +1952,13 @@ export const backfillProductSlugs = mutation({
     skipped: v.number(),
   }),
   handler: async (ctx) => {
+    const identity = await requireAuth(ctx);
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user?.admin) throw new Error("Admin access required");
+
     const products = await ctx.db.query("digitalProducts").collect();
 
     const productsWithoutSlug = products.filter((p) => !(p as any).slug);

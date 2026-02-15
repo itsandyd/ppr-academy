@@ -62,7 +62,7 @@ export async function checkRateLimit(
 ) {
   // If rate limiting is not configured, allow the request
   if (!limiter) {
-    console.log("⚠️ Rate limiting not configured - allowing request");
+
     return { success: true, remaining: 999, limit: 999 };
   }
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Production-safe logger utility
  * Only logs in development environment unless explicitly enabled

@@ -11,6 +11,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Plan feature limits configuration
 // Updated January 2025 with progressive tiers for better revenue optimization
@@ -242,6 +243,7 @@ export const getStorePlan = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) return null;
 
@@ -298,6 +300,7 @@ export const checkFeatureAccess = query({
     earlyAccessExpired: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       return { hasAccess: false };
@@ -439,6 +442,7 @@ export const updateStoreVisibility = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       return { success: false, message: "Store not found" };
@@ -495,6 +499,7 @@ export const initializeStorePlan = mutation({
     success: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       throw new Error("Store not found");
@@ -538,6 +543,7 @@ export const upgradePlan = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       return { success: false, message: "Store not found" };
@@ -578,6 +584,7 @@ export const updateSubscriptionStatus = mutation({
     success: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       throw new Error("Store not found");
@@ -614,6 +621,7 @@ export const getPlanUsageStats = query({
     }),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       throw new Error("Store not found");
@@ -777,11 +785,11 @@ export const setEarlyAccessExpiration = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Check admin
+    const identity = await requireAuth(ctx);
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
 
     if (!user?.admin) {
       return { success: false, message: "Admin access required" };
@@ -823,11 +831,11 @@ export const sunsetAllEarlyAccess = mutation({
     affectedStores: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Check admin
+    const identity = await requireAuth(ctx);
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
 
     if (!user?.admin) {
       return { success: false, message: "Admin access required", affectedStores: 0 };
@@ -879,11 +887,11 @@ export const adminSetStorePlan = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Check admin
+    const identity = await requireAuth(ctx);
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
 
     if (!user?.admin) {
       return { success: false, message: "Admin access required" };
@@ -997,11 +1005,11 @@ export const extendEarlyAccess = mutation({
     newExpirationDate: v.optional(v.number()),
   }),
   handler: async (ctx, args) => {
-    // Check admin
+    const identity = await requireAuth(ctx);
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .unique();
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
 
     if (!user?.admin) {
       return { success: false, message: "Admin access required" };

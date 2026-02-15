@@ -372,8 +372,8 @@ export const getUserStats = query({
   },
 });
 
-// Set user as admin (mutation to grant admin access)
-export const setUserAsAdmin = mutation({
+// Set user as admin (internal only - not client-callable)
+export const setUserAsAdmin = internalMutation({
   args: {
     clerkId: v.string(),
   },
@@ -469,6 +469,37 @@ export const updateUserRole = mutation({
       success: true,
       message: `User ${targetUser.email || targetUser.name} role updated to ${args.role}`,
     };
+  },
+});
+
+// Set initial role during onboarding (first-time role selection)
+export const setInitialRole = mutation({
+  args: {
+    clerkId: v.string(),
+    role: v.union(v.literal("learn"), v.literal("create")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const updates: Record<string, unknown> = {
+      dashboardPreference: args.role,
+    };
+
+    if (args.role === "create") {
+      updates.isCreator = true;
+      updates.creatorSince = Date.now();
+    }
+
+    await ctx.db.patch(user._id, updates);
+    return null;
   },
 });
 

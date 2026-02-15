@@ -105,7 +105,7 @@ class ResearchAgent implements Agent {
   role = "Information Gathering & Topic Analysis";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🔍 ${this.name}: Researching "${context.topic}"`);
+
     
     try {
       const searchQueries = [
@@ -128,7 +128,7 @@ class ResearchAgent implements Agent {
           // Rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-          console.log(`⚠️ Search failed for: ${query}`);
+
         }
       }
 
@@ -201,7 +201,7 @@ class StructureAgent implements Agent {
   role = "Curriculum Design & Course Architecture";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🏗️ ${this.name}: Designing course structure for "${context.topic}"`);
+
     
     try {
       const researchContext = (context.researchData as any)?.analysis || `Creating course structure for ${context.topic}`;
@@ -359,7 +359,7 @@ class ContentAgent implements Agent {
   role = "Educational Content Generation";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`✍️ ${this.name}: Generating content for "${context.topic}"`);
+
     
     try {
       if (!context.courseStructure) {
@@ -387,14 +387,14 @@ class ContentAgent implements Agent {
     const totalChapters = this.countTotalChapters(structure);
     let processedChapters = 0;
 
-    console.log(`📝 Generating detailed content for ${totalChapters} chapters...`);
+
 
     // Process each module, lesson, and chapter
     for (const module of structure.modules) {
       for (const lesson of module.lessons) {
         for (const chapter of lesson.chapters) {
           try {
-            console.log(`📝 Processing: ${module.title} > ${lesson.title} > ${chapter.title} (${++processedChapters}/${totalChapters})`);
+
             
             const detailedContent = await this.generateChapterContent(
               context.topic,
@@ -414,7 +414,7 @@ class ContentAgent implements Agent {
             await new Promise(resolve => setTimeout(resolve, 1000));
 
           } catch (error) {
-            console.error(`❌ Failed to generate content for chapter: ${chapter.title}`, error);
+            console.error(`Failed to generate content for chapter: ${chapter.title}`, error);
             // Keep existing content as fallback
           }
         }
@@ -503,7 +503,7 @@ class ImageAgent implements Agent {
   role = "Visual Content Curation";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🖼️ ${this.name}: Finding images for "${context.topic}"`);
+
     
     try {
       const images = await this.findRelevantImages(context);
@@ -539,7 +539,7 @@ class ImageAgent implements Agent {
         allImages.push(...images);
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
-        console.log(`⚠️ Image search failed for: ${query}`);
+
       }
     }
 
@@ -576,7 +576,7 @@ class QualityAgent implements Agent {
   role = "Content Quality Assurance";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🔍 ${this.name}: Validating course quality for "${context.topic}"`);
+
     
     try {
       const qualityReport = await this.assessQuality(context);
@@ -752,7 +752,7 @@ class OrchestratorAgent implements Agent {
   ];
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🎼 ${this.name}: Starting multi-agent course generation for "${context.topic}"`);
+
     
     const executionLog = [];
     let currentContext = { ...context };
@@ -760,7 +760,7 @@ class OrchestratorAgent implements Agent {
     try {
       // Execute agents in sequence
       for (const agent of this.agents) {
-        console.log(`\n🤖 Executing ${agent.name}...`);
+
         const startTime = Date.now();
         
         const result = await agent.execute(currentContext);
@@ -774,13 +774,13 @@ class OrchestratorAgent implements Agent {
         });
 
         if (!result.success) {
-          console.log(`❌ ${agent.name} failed: ${result.error}`);
+
           // Continue with other agents unless it's a critical failure
           if (agent.name === 'Structure Agent') {
             throw new Error(`Critical failure in ${agent.name}: ${result.error}`);
           }
         } else {
-          console.log(`✅ ${agent.name} completed in ${executionTime}ms`);
+
           // Merge context updates
           if (result.context) {
             currentContext = { ...currentContext, ...result.context };
@@ -802,7 +802,7 @@ class OrchestratorAgent implements Agent {
       };
 
     } catch (error: any) {
-      console.error(`❌ ${this.name} failed:`, error);
+      console.error(`${this.name} failed:`, error.message);
       return {
         success: false,
         error: `Orchestration failed: ${error.message}`,
@@ -855,7 +855,7 @@ class OrchestratorAgent implements Agent {
 // Keep existing functions for backward compatibility
 export async function searchTavily(query: string, includeImages = false, searchType = 'web'): Promise<any[]> {
   if (!process.env.TAVILY_API_KEY) {
-    // console.log(...);
+
     return [];
   }
 
@@ -884,7 +884,7 @@ export async function searchTavily(query: string, includeImages = false, searchT
       ];
     }
 
-    console.log(`🔍 Tavily ${searchType} search: "${query}"`);
+
 
     const response = await fetch('https://api.tavily.com/search', {
       method: 'POST',
@@ -897,21 +897,21 @@ export async function searchTavily(query: string, includeImages = false, searchT
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Tavily API error (${response.status}): ${errorText}`);
+      console.error(`Tavily API error (${response.status}): ${errorText}`);
       return [];
     }
 
     const data = await response.json();
-    console.log(`✅ Tavily found ${data.results?.length || 0} results for "${query}"`);
+
     return data.results || [];
   } catch (error) {
-    console.error('❌ Tavily search error:', error);
+    console.error('Tavily search error:', error);
     return [];
   }
 }
 
 export async function searchTopicImages(topic: string, skillLevel: string): Promise<string[]> {
-  console.log(`🖼️ Searching for course images: ${topic} (${skillLevel})`);
+
   
   const imageUrls: string[] = [];
   
@@ -950,15 +950,15 @@ export async function searchTopicImages(topic: string, skillLevel: string): Prom
     );
 
     if (uniqueUrls.length > 0) {
-      console.log(`✅ Found ${uniqueUrls.length} images via Tavily for: ${topic}`);
+
       return uniqueUrls.slice(0, 6);
     }
 
   } catch (error) {
-    console.error('❌ Error searching for topic images via Tavily:', error);
+    console.error('Error searching for topic images via Tavily:', error);
   }
   
-  console.log(`🔄 Using fallback curated images for: ${topic}`);
+
   return getEducationalMusicImages(topic, skillLevel);
 }
 
@@ -1097,7 +1097,7 @@ interface GeneratedCourse {
 
 // Updated generateAICourse function using multi-agent system
 export async function generateAICourse(request: CourseGenerationRequest): Promise<GeneratedCourse> {
-  console.log(`🚀 Starting multi-agent course generation for: "${request.topic}"`);
+
   
   const orchestrator = new MultiAgentOrchestrator();
   
@@ -1122,16 +1122,16 @@ export async function generateAICourse(request: CourseGenerationRequest): Promis
 
   const courseData = result.data.course;
   
-  // console.log(...);
-  console.log(`📊 Quality Score: ${result.data.qualityScore?.toFixed(1) || 'N/A'}/100`);
-  console.log(`📈 Generated: ${courseData.stats.modules} modules, ${courseData.stats.lessons} lessons, ${courseData.stats.chapters} chapters`);
+
+
+
   
   // Log execution summary
   if (result.data.executionLog) {
-    // console.log(...);
+
     result.data.executionLog.forEach((log: any) => {
       const status = log.success ? '✅' : '❌';
-      console.log(`  ${status} ${log.agent}: ${log.executionTime}ms ${log.error ? `(${log.error})` : ''}`);
+
     });
   }
 
@@ -1153,7 +1153,7 @@ export async function generateAICourseLegacy(request: CourseGenerationRequest): 
     additionalContext
   } = request;
 
-  console.log(`📚 Legacy course generation for: ${topic}`);
+
   
   // Step 1: Research the topic
   let searchQuery = `${topic} music production tutorial guide ${skillLevel} level`;
@@ -1165,7 +1165,7 @@ export async function generateAICourseLegacy(request: CourseGenerationRequest): 
   try {
     searchResults = await searchTavily(searchQuery);
   } catch (error) {
-    // console.log(...);
+
   }
   
   // Step 2: Generate course structure
@@ -1186,7 +1186,7 @@ export async function generateAICourseLegacy(request: CourseGenerationRequest): 
     : '';
 
   try {
-    // console.log(...);
+
     const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -1368,7 +1368,7 @@ Content Requirements:
 
 // Fast course generation for initial creation (outline mode)
 export async function generateAICourseFast(request: CourseGenerationRequest): Promise<GeneratedCourse> {
-  console.log(`🚀 Starting FAST AI course generation for: ${request.topic}`);
+
   
   try {
     // Quick research phase
@@ -1384,7 +1384,7 @@ export async function generateAICourseFast(request: CourseGenerationRequest): Pr
         researchData.push(...results.slice(0, 3)); // Limit results
         await new Promise(resolve => setTimeout(resolve, 200)); // Short delay
       } catch (error) {
-        console.log(`⚠️ Fast research query failed: ${query}`);
+
       }
     }
 
@@ -1405,7 +1405,7 @@ export async function generateAICourseFast(request: CourseGenerationRequest): Pr
         courseThumbnail = quickImages[0];
       }
     } catch (error) {
-      // console.log(...);
+
     }
 
     // Calculate stats
@@ -1424,7 +1424,7 @@ export async function generateAICourseFast(request: CourseGenerationRequest): Pr
       isPublished: false
     };
 
-    console.log(`✅ Fast course generation completed for: ${request.topic}`);
+
     
     return {
       course: courseData,
@@ -1554,7 +1554,7 @@ ${request.learningObjectives?.length ? `Objectives: ${request.learningObjectives
 
 // Generate outline content for all chapters (fast, short summaries)
 async function generateCourseOutlines(structure: any, request: CourseGenerationRequest) {
-  // console.log(...);
+
   
   // Process all chapters but generate SHORT outline content only
   for (const module of structure.modules) {

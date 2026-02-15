@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 
@@ -19,6 +20,13 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // SECURITY: Rate limiting (standard - 30 requests/min)
+    const identifier = getRateLimitIdentifier(request, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.standard);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
     }
 
     // Check if API key is available
@@ -50,7 +58,7 @@ export async function POST(request: NextRequest) {
         storeId: storeId as any,
       });
     } catch (e) {
-      console.log("Could not fetch products:", e);
+
     }
 
     try {
@@ -59,7 +67,7 @@ export async function POST(request: NextRequest) {
         storeId: storeId as any,
       });
     } catch (e) {
-      console.log("Could not fetch courses:", e);
+
     }
 
     // Combine and summarize products for the AI

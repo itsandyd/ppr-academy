@@ -108,7 +108,7 @@ export default function PluginsMarketplacePage() {
   const [pricingFilter, setPricingFilter] = useState<string>("all");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);

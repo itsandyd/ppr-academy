@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner } from "./lib/auth";
 
 export const getStorePurchases = query({
   args: {
@@ -28,6 +29,8 @@ export const getStorePurchases = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const limit = args.limit ?? 10;
 
     const purchases = await ctx.db
@@ -94,6 +97,8 @@ export const getStorePurchaseStats = query({
     averageOrderValue: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const timeRange = args.timeRange ?? "30d";
     const now = Date.now();
 
@@ -306,5 +311,109 @@ export const createCoachingPurchase = mutation({
     }
 
     return purchaseId;
+  },
+});
+
+/**
+ * Get creator analytics summary for the dashboard analytics tab.
+ * Returns total revenue, this-month revenue, total sales count,
+ * total enrollments, and the 10 most recent sales with product names.
+ */
+export const getCreatorDashboardAnalytics = query({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.object({
+    totalRevenue: v.number(),
+    monthRevenue: v.number(),
+    totalSales: v.number(),
+    totalEnrollments: v.number(),
+    recentSales: v.array(
+      v.object({
+        _id: v.id("purchases"),
+        _creationTime: v.number(),
+        productTitle: v.string(),
+        productType: v.union(
+          v.literal("digitalProduct"),
+          v.literal("course"),
+          v.literal("coaching"),
+          v.literal("bundle"),
+          v.literal("beatLease")
+        ),
+        amount: v.number(),
+        status: v.union(
+          v.literal("pending"),
+          v.literal("completed"),
+          v.literal("refunded")
+        ),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
+    // Get all purchases for this store
+    const allPurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    const completed = allPurchases.filter((p) => p.status === "completed");
+
+    // Total revenue from completed purchases
+    const totalRevenue = completed.reduce((sum, p) => sum + p.amount, 0);
+
+    // This calendar month revenue
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const monthCompleted = completed.filter(
+      (p) => p._creationTime >= monthStart
+    );
+    const monthRevenue = monthCompleted.reduce((sum, p) => sum + p.amount, 0);
+
+    // Total sales = completed purchases count
+    const totalSales = completed.length;
+
+    // Total enrollments = completed course purchases
+    const totalEnrollments = completed.filter(
+      (p) => p.productType === "course"
+    ).length;
+
+    // Recent 10 sales (all statuses, sorted newest first)
+    const sorted = [...allPurchases].sort(
+      (a, b) => b._creationTime - a._creationTime
+    );
+    const recent = sorted.slice(0, 10);
+
+    const recentSales = await Promise.all(
+      recent.map(async (purchase) => {
+        let productTitle = "Unknown Product";
+
+        if (purchase.productType === "course" && purchase.courseId) {
+          const course = await ctx.db.get(purchase.courseId);
+          productTitle = course?.title || "Untitled Course";
+        } else if (purchase.productId) {
+          const product = await ctx.db.get(purchase.productId);
+          productTitle = product?.title || "Untitled Product";
+        }
+
+        return {
+          _id: purchase._id,
+          _creationTime: purchase._creationTime,
+          productTitle,
+          productType: purchase.productType,
+          amount: purchase.amount,
+          status: purchase.status,
+        };
+      })
+    );
+
+    return {
+      totalRevenue,
+      monthRevenue,
+      totalSales,
+      totalEnrollments,
+      recentSales,
+    };
   },
 });

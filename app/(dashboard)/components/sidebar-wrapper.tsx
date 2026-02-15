@@ -270,15 +270,6 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
           <DialogContent className="bg-white dark:bg-black max-w-2xl">
             {selectedNotification && (
               <>
-                {/* Debug: Log notification data */}
-                {console.log("📧 Dashboard Notification Dialog Data:", {
-                  senderType: selectedNotification.senderType,
-                  senderId: selectedNotification.senderId,
-                  senderName: selectedNotification.senderName,
-                  senderAvatar: selectedNotification.senderAvatar,
-                  title: selectedNotification.title,
-                  fullNotification: selectedNotification,
-                })}
                 <DialogHeader>
                   <div className="flex items-start gap-3 mb-4">
                     {/* Sender Avatar */}

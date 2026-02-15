@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Create Stripe product/price on the fly for credit packages
     // (Credit packages are hardcoded, not stored in DB with Stripe IDs)
-    console.log(`Creating checkout session for ${packageName}`);
+
 
     const priceInCents = Math.round(priceUsd * 100);
 
@@ -97,15 +97,6 @@ export async function POST(request: NextRequest) {
         customerName: "", // Name will be extracted from session.customer_details if available
         priceUsd: priceUsd.toString(),
       },
-    });
-
-    console.log("✅ Credit checkout session created (on-the-fly):", {
-      sessionId: session.id,
-      packageName,
-      credits,
-      bonusCredits,
-      amount: priceUsd,
-      customer: customerEmail,
     });
 
     return NextResponse.json({

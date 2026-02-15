@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 /**
  * Get media URLs from storage IDs
@@ -11,6 +12,7 @@ export const getMediaUrls = query({
   },
   returns: v.array(v.union(v.string(), v.null())),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const urls = await Promise.all(
       args.storageIds.map(async (storageId) => {
         try {
@@ -33,6 +35,7 @@ export const getSocialAccounts = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     return await ctx.db
       .query("socialAccounts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -59,6 +62,7 @@ export const getInstagramTokenByBusinessId = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     console.log("🔍 getInstagramTokenByBusinessId: Looking for account with ID:", args.instagramBusinessAccountId);
 
     // PRIORITY 1: Check socialAccounts table (fresh OAuth tokens from reconnection flow)
@@ -145,6 +149,7 @@ export const getInstagramToken = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Get the user to find their Clerk ID
     const user = await ctx.db.get(args.userId);
     if (!user?.clerkId) {
@@ -252,6 +257,7 @@ export const refreshAccountToken = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     try {
       // Direct implementation to avoid circular dependencies
       const account = await ctx.db.get(args.accountId as Id<"socialAccounts">);
@@ -304,6 +310,7 @@ export const connectSocialAccount = mutation({
   },
   returns: v.id("socialAccounts"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Check for existing account by EXACT platformUserId only (not platform)
     // This allows multiple Instagram accounts while preventing duplicates of the same account
     const existing = await ctx.db
@@ -379,6 +386,7 @@ export const removeDuplicateSocialAccounts = mutation({
     kept: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Find all accounts for this user + platform
     const accounts = await ctx.db
       .query("socialAccounts")
@@ -426,6 +434,7 @@ export const getScheduledPosts = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     return [];
   },
 });
@@ -440,6 +449,7 @@ export const deleteScheduledPost = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return null;
   },
 });
@@ -462,6 +472,7 @@ export const createScheduledPost = mutation({
   },
   returns: v.id("scheduledPosts"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const postId = await ctx.db.insert("scheduledPosts", {
       storeId: args.storeId,
       userId: args.userId,
@@ -498,6 +509,7 @@ export const updateScheduledPost = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const post = await ctx.db.get(args.postId);
     if (!post) {
       throw new Error("Post not found");
@@ -528,6 +540,7 @@ export const generateMediaUploadUrl = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
+    await requireAuth(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -542,6 +555,7 @@ export const disconnectSocialAccount = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Verify the account exists and belongs to this user
     const account = await ctx.db.get(args.accountId);
     if (!account) {
@@ -550,7 +564,7 @@ export const disconnectSocialAccount = mutation({
     if (account.userId !== args.userId) {
       throw new Error("Not authorized to delete this account");
     }
-    
+
     // Delete the social account
     await ctx.db.delete(args.accountId);
     
@@ -569,6 +583,7 @@ export const updateAccountLabel = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Verify the account exists and belongs to this user
     const account = await ctx.db.get(args.accountId);
     if (!account) {
@@ -597,6 +612,7 @@ export const deleteSocialAccount = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Verify the account exists and belongs to this user
     const account = await ctx.db.get(args.accountId);
     if (!account) {

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 /**
  * AFFILIATE PROGRAM
@@ -32,6 +33,7 @@ export const getAffiliateByUser = query({
     storeId: v.optional(v.id("stores")),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     let query = ctx.db
       .query("affiliates")
       .withIndex("by_affiliate_user", (q: any) => q.eq("affiliateUserId", args.userId));
@@ -57,6 +59,7 @@ export const getAffiliatesByStore = query({
     )),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     let affiliates = await ctx.db
       .query("affiliates")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
@@ -73,6 +76,7 @@ export const getAffiliatesByStore = query({
 export const getAffiliateStats = query({
   args: { affiliateId: v.id("affiliates") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const affiliate = await ctx.db.get(args.affiliateId);
     if (!affiliate) return null;
 
@@ -137,6 +141,7 @@ export const getAffiliateSales = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     let sales = await ctx.db
       .query("affiliateSales")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
@@ -159,6 +164,7 @@ export const getAffiliateSales = query({
 export const getAffiliatePayouts = query({
   args: { affiliateId: v.id("affiliates") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const payouts = await ctx.db
       .query("affiliatePayouts")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
@@ -175,6 +181,7 @@ export const getAffiliateClicks = query({
     endDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     let clicks = await ctx.db
       .query("affiliateClicks")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
@@ -202,6 +209,7 @@ export const applyForAffiliate = mutation({
     applicationNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Check if already an affiliate
     const existing = await ctx.db
       .query("affiliates")
@@ -265,6 +273,7 @@ export const approveAffiliate = mutation({
     commissionRate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const affiliate = await ctx.db.get(args.affiliateId);
     if (!affiliate) {
       throw new Error("Affiliate not found");
@@ -287,6 +296,7 @@ export const rejectAffiliate = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.affiliateId, {
       status: "rejected",
       rejectionReason: args.reason,
@@ -300,6 +310,7 @@ export const rejectAffiliate = mutation({
 export const suspendAffiliate = mutation({
   args: { affiliateId: v.id("affiliates") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.affiliateId, {
       status: "suspended",
       updatedAt: Date.now(),
@@ -317,6 +328,7 @@ export const updateAffiliateSettings = mutation({
     payoutEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { affiliateId, ...updates } = args;
 
     await ctx.db.patch(affiliateId, {
@@ -450,6 +462,7 @@ export const recordAffiliateSale = mutation({
 export const approveSale = mutation({
   args: { saleId: v.id("affiliateSales") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const sale = await ctx.db.get(args.saleId);
     if (!sale) {
       throw new Error("Sale not found");
@@ -467,6 +480,7 @@ export const approveSale = mutation({
 export const reverseSale = mutation({
   args: { saleId: v.id("affiliateSales") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const sale = await ctx.db.get(args.saleId);
     if (!sale) {
       throw new Error("Sale not found");
@@ -501,6 +515,7 @@ export const createAffiliatePayout = mutation({
     saleIds: v.array(v.id("affiliateSales")),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const affiliate = await ctx.db.get(args.affiliateId);
     if (!affiliate) {
       throw new Error("Affiliate not found");
@@ -567,6 +582,7 @@ export const completeAffiliatePayout = mutation({
     transactionId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.payoutId, {
       status: "completed",
       transactionId: args.transactionId,
@@ -584,6 +600,7 @@ export const failAffiliatePayout = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const payout = await ctx.db.get(args.payoutId);
     if (!payout) {
       throw new Error("Payout not found");

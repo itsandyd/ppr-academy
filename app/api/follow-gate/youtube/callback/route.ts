@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       const subscribeResult = await triggerSubscription(tokenData.access_token, channelId);
       if (subscribeResult.success) {
         isSubscribed = true;
-        console.log(`Successfully subscribed to YouTube channel: ${channelId}`);
+
       } else {
         console.error("YouTube subscribe error:", subscribeResult.error);
         // Don't fail completely - user might subscribe manually

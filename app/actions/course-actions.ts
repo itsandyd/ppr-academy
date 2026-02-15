@@ -150,7 +150,6 @@ export async function createCourse(courseData: CourseData) {
 
     return { success: true, courseId, slug: uniqueSlug };
   } catch (error) {
-    console.error("Error creating course:", error);
     return { success: false, error: "Failed to create course. Please try again." };
   }
 }
@@ -180,7 +179,6 @@ export async function updateCourse(courseId: string, courseData: Partial<CourseD
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating course:", error);
     return { success: false, error: "Failed to update course. Please try again." };
   }
 }
@@ -203,7 +201,6 @@ export async function deleteCourse(courseId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting course:", error);
     return { success: false, error: "Failed to delete course. Please try again." };
   }
 }
@@ -223,7 +220,6 @@ export async function publishCourse(courseId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error publishing course:", error);
     return { success: false, error: "Failed to publish course. Please try again." };
   }
 }
@@ -234,7 +230,6 @@ export async function enrollInCourse(courseId: string) {
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
-    console.error("Error enrolling in course:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to enroll in course",
@@ -248,7 +243,6 @@ export async function submitCourseReview(courseId: string, rating: number, comme
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
-    console.error("Error submitting review:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to submit review",
@@ -262,7 +256,6 @@ export async function markChapterComplete(chapterId: string) {
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
-    console.error("Error marking chapter complete:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to mark chapter complete",
@@ -304,7 +297,6 @@ export async function updateChapterContent(chapterId: string, content: string) {
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
-    console.error("Error updating chapter content:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update chapter",
@@ -339,7 +331,6 @@ export async function updateChapter(chapterId: string, updateData: ChapterUpdate
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
-    console.error("Error updating chapter:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update chapter",
@@ -387,7 +378,6 @@ export async function populateCourseSlugs() {
       updated: updatedCount,
     };
   } catch (error) {
-    console.error("Error populating course slugs:", error);
     return { success: false, error: "Failed to populate course slugs. Please try again." };
   }
 }
@@ -423,7 +413,6 @@ export async function createChapter(courseId: string, chapterData: CreateChapter
 
     return { success: true, chapterId: result.chapterId };
   } catch (error) {
-    console.error("Error creating chapter:", error);
     return { success: false, error: "Failed to create chapter. Please try again." };
   }
 }
@@ -435,7 +424,6 @@ export async function deleteChapter(chapterId: string) {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting chapter:", error);
     return { success: false, error: "Failed to delete chapter. Please try again." };
   }
 }
@@ -452,7 +440,6 @@ export async function createModule(courseId: string, moduleData: CreateModuleDat
     revalidatePath("/dashboard");
     return { success: true, moduleId: `module_${Date.now()}` };
   } catch (error) {
-    console.error("Error creating module:", error);
     return { success: false, error: "Failed to create module. Please try again." };
   }
 }
@@ -470,7 +457,6 @@ export async function createLesson(courseId: string, lessonData: CreateLessonDat
     revalidatePath("/dashboard");
     return { success: true, lessonId: `lesson_${Date.now()}` };
   } catch (error) {
-    console.error("Error creating lesson:", error);
     return { success: false, error: "Failed to create lesson. Please try again." };
   }
 }
@@ -487,7 +473,6 @@ export async function updateModule(moduleChapterId: string, moduleData: UpdateMo
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error updating module:", error);
     return { success: false, error: "Failed to update module. Please try again." };
   }
 }
@@ -505,7 +490,6 @@ export async function updateLesson(lessonChapterId: string, lessonData: UpdateLe
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error updating lesson:", error);
     return { success: false, error: "Failed to update lesson. Please try again." };
   }
 }
@@ -521,7 +505,6 @@ export async function reorderChapters(courseId: string, reorderData: ReorderChap
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error reordering chapters:", error);
     return { success: false, error: "Failed to reorder chapters. Please try again." };
   }
 }
@@ -537,7 +520,6 @@ export async function reorderModules(courseId: string, reorderData: ReorderModul
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error reordering modules:", error);
     return { success: false, error: "Failed to reorder modules. Please try again." };
   }
 }
@@ -554,7 +536,6 @@ export async function reorderLessons(courseId: string, reorderData: ReorderLesso
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error reordering lessons:", error);
     return { success: false, error: "Failed to reorder lessons. Please try again." };
   }
 }
@@ -566,7 +547,6 @@ export async function deleteModule(moduleChapterId: string) {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting module:", error);
     return { success: false, error: "Failed to delete module. Please try again." };
   }
 }
@@ -578,7 +558,6 @@ export async function deleteLesson(lessonChapterId: string) {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting lesson:", error);
     return { success: false, error: "Failed to delete lesson. Please try again." };
   }
 }
@@ -590,7 +569,6 @@ export async function deleteOrphanedChapters(courseId: string) {
     revalidatePath("/dashboard");
     return { success: true, deletedCount: 0 };
   } catch (error) {
-    console.error("Error deleting orphaned chapters:", error);
     return { success: false, error: "Failed to delete orphaned chapters. Please try again." };
   }
 }
@@ -606,7 +584,6 @@ export async function deleteFallbackModule(courseId: string, moduleTitle: string
       message: "Fallback module removed from view",
     };
   } catch (error) {
-    console.error("Error deleting fallback module:", error);
     return { success: false, error: "Failed to delete module. Please try again." };
   }
 }
@@ -621,7 +598,6 @@ export async function updateCourseModule(
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error updating course module:", error);
     return { success: false, error: "Failed to update module" };
   }
 }
@@ -636,7 +612,6 @@ export async function updateCourseLesson(
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error updating course lesson:", error);
     return { success: false, error: "Failed to update lesson" };
   }
 }
@@ -656,7 +631,6 @@ export async function debugModuleStructure(courseId: string) {
       structure: course || null,
     };
   } catch (error) {
-    console.error("Error debugging module structure:", error);
     return { success: false, error: "Failed to debug structure" };
   }
 }
@@ -668,7 +642,6 @@ export async function deleteRealCourseModule(moduleId: string) {
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting real course module:", error);
     return { success: false, error: "Failed to delete module" };
   }
 }
@@ -684,7 +657,6 @@ export async function generateChapterAudio(chapterId: string, audioData: Generat
 
     const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
     if (!elevenLabsApiKey) {
-      console.error("11 Labs API key not configured");
       return { success: false, error: "11 Labs API key not configured" };
     }
 
@@ -692,7 +664,7 @@ export async function generateChapterAudio(chapterId: string, audioData: Generat
     const cleanedText = stripMarkdownForTTS(audioData.text);
     const textChunks = splitTextIntoChunks(cleanedText, 3000);
 
-    console.log(`[Audio] Generating audio for ${textChunks.length} chunks...`);
+
 
     const audioBuffers: ArrayBuffer[] = [];
 
@@ -815,7 +787,6 @@ export async function generateChapterAudio(chapterId: string, audioData: Generat
       };
     }
   } catch (error) {
-    console.error("Error generating audio:", error);
     return { success: false, error: "Failed to generate audio. Please try again." };
   }
 }
@@ -830,7 +801,6 @@ export async function getElevenLabsVoices() {
     const voices = await elevenlabs.voices.getAll();
     return { success: true, voices: voices.voices };
   } catch (error) {
-    console.error("Error fetching voices:", error);
     return { success: false, error: "Failed to fetch voices" };
   }
 }
@@ -840,14 +810,13 @@ export async function clearNonPlayableAudio() {
     const user = await checkAuth();
     if (!user.admin) return { success: false, error: "Unauthorized" };
 
-    // console.log(...);
+
 
     revalidatePath("/courses");
     revalidatePath("/admin");
 
     return { success: true, cleared: 0 };
   } catch (error) {
-    console.error("Error clearing non-playable audio:", error);
     return { success: false, error: "Failed to clear audio" };
   }
 }
@@ -863,7 +832,6 @@ export async function testAudioUrl(url: string) {
       isPlayable: url.startsWith("http"),
     };
   } catch (error) {
-    console.error("Error testing audio URL:", error);
     return { success: false, error: "Failed to test audio URL" };
   }
 }
@@ -884,7 +852,6 @@ export async function testElevenLabsApiKey() {
       message: `API key valid. Found ${voices.voices?.length || 0} voices.`,
     };
   } catch (error) {
-    console.error("Error testing API key:", error);
     return { success: false, error: "Invalid API key or API error" };
   }
 }
@@ -894,14 +861,13 @@ export async function cleanupLegacyAudioReferences() {
     const user = await checkAuth();
     if (!user.admin) return { success: false, error: "Unauthorized" };
 
-    // console.log(...);
+
 
     revalidatePath("/courses");
     revalidatePath("/admin");
 
     return { success: true, cleaned: 0 };
   } catch (error) {
-    console.error("Error cleaning up legacy audio:", error);
     return { success: false, error: "Failed to cleanup" };
   }
 }

@@ -158,7 +158,7 @@ export function PostComposer({
   // Load existing media when editing
   useEffect(() => {
     if (existingMediaUrls && existingMediaUrls.length > 0) {
-      // console.log(...);
+
 
       const existingFiles: MediaFile[] = existingMediaUrls
         .filter((item: any) => item.url !== null)
@@ -172,7 +172,7 @@ export function PostComposer({
         }));
 
       if (existingFiles.length > 0) {
-        // console.log(...);
+
         setMediaFiles(existingFiles);
       }
     }
@@ -193,11 +193,11 @@ export function PostComposer({
 
   // Debug
   useEffect(() => {
-    // console.log(...);
+
   }, []);
 
   useEffect(() => {
-    // console.log(...);
+
   }, [scheduledDate]);
 
   // Get selected account details
@@ -327,7 +327,7 @@ export function PostComposer({
   // Upload media files to Convex storage
   const uploadMediaFiles = async (): Promise<Id<"_storage">[]> => {
     const storageIds: Id<"_storage">[] = [];
-    // console.log(...);
+
 
     for (let i = 0; i < mediaFiles.length; i++) {
       const mediaFile = mediaFiles[i];
@@ -347,12 +347,12 @@ export function PostComposer({
         });
 
         // Get upload URL
-        // console.log(...);
+
         const uploadUrl = await generateUploadUrl();
-        // console.log(...);
+
 
         // Upload file with progress tracking
-        // console.log(...);
+
         const result = await uploadWithProgress(uploadUrl, mediaFile.file, (progress) => {
           // Update progress state in real-time
           setMediaFiles((prev) => {
@@ -362,23 +362,22 @@ export function PostComposer({
           });
         });
 
-        // console.log(...);
+
 
         if (!result.ok) {
           const errorText = await result.text();
-          console.error("  - Upload failed:", errorText);
           throw new Error(`Failed to upload file: ${errorText}`);
         }
 
         const responseData = await result.json();
-        // console.log(...);
+
 
         const { storageId } = responseData;
         if (!storageId) {
           throw new Error("No storageId in response");
         }
 
-        // console.log(...);
+
         storageIds.push(storageId);
 
         // Update success state
@@ -393,7 +392,6 @@ export function PostComposer({
           return newFiles;
         });
       } catch (error: any) {
-        console.error(`  - ❌ Upload failed for file ${i + 1}:`, error);
         // Update error state
         setMediaFiles((prev) => {
           const newFiles = [...prev];
@@ -408,7 +406,7 @@ export function PostComposer({
       }
     }
 
-    // console.log(...);
+
     return storageIds;
   };
 
@@ -543,7 +541,6 @@ export function PostComposer({
         onSuccess();
       }
     } catch (error: any) {
-      console.error("Failed to create post:", error);
       toast({
         title: "Failed to schedule post",
         description: error.message || "An error occurred",
@@ -846,7 +843,7 @@ export function PostComposer({
                       mode="single"
                       selected={scheduledDate}
                       onSelect={(date) => {
-                        // console.log(...);
+
                         setScheduledDate(date);
                       }}
                       disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}

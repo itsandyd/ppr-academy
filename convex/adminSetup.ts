@@ -1,11 +1,11 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 
 /**
  * Make a user an admin
  * Run this from the Convex dashboard with your clerkId
  */
-export const makeUserAdmin = mutation({
+export const makeUserAdmin = internalMutation({
   args: {
     clerkId: v.string(),
   },
@@ -42,7 +42,7 @@ export const makeUserAdmin = mutation({
 /**
  * Check your current admin status
  */
-export const checkAdminStatus = query({
+export const checkAdminStatus = internalQuery({
   args: {
     clerkId: v.string(),
   },

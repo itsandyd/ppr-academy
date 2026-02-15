@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { EmptyState as SharedEmptyState } from '@/components/ui/empty-state';
 
 interface CreateProductsViewProps {
   convexUser: any;
@@ -503,13 +504,11 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="published" className="space-y-4 mt-6">
           {publishedProducts.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Published Products</h3>
-              <p className="text-muted-foreground">
-                Publish a product to make it available in your store
-              </p>
-            </Card>
+            <SharedEmptyState
+              icon={Eye}
+              title="No published products"
+              description="Publish a product to make it available in your store."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {publishedProducts.map((product: any) => (
@@ -528,13 +527,11 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="drafts" className="space-y-4 mt-6">
           {draftProducts.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Edit className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Drafts</h3>
-              <p className="text-muted-foreground">
-                Draft products will appear here
-              </p>
-            </Card>
+            <SharedEmptyState
+              icon={Edit}
+              title="No drafts"
+              description="Draft products will appear here as you create them."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {draftProducts.map((product: any) => (
@@ -553,16 +550,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="courses" className="space-y-4 mt-6">
           {courses.length === 0 ? (
-            <Card className="p-12 text-center">
-              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Courses Yet</h3>
-              <Button asChild>
-                <Link href="/dashboard/create/course?category=course">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Course
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={BookOpen}
+              title="No courses yet"
+              description="Create your first course to start teaching production skills."
+              action={{ label: "Create Course", href: "/dashboard/create/course?category=course" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((product: any) => (
@@ -581,16 +574,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="packs" className="space-y-4 mt-6">
           {packs.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Music className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Packs Yet</h3>
-              <Button asChild>
-                <Link href="/dashboard/create/pack?type=sample-pack">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Pack
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={Music}
+              title="No packs yet"
+              description="Upload sample packs, preset packs, or MIDI packs to sell."
+              action={{ label: "Create Pack", href: "/dashboard/create/pack?type=sample-pack" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {packs.map((product: any) => (
@@ -609,19 +598,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="chains" className="space-y-4 mt-6">
           {effectChains.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Effect Chains Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Upload effect chains for Ableton, FL Studio, Logic, and more
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/create/chain?category=effect-chain">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Effect Chain
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={Zap}
+              title="No effect chains yet"
+              description="Upload effect chains for Ableton, FL Studio, Logic, and more."
+              action={{ label: "Create Effect Chain", href: "/dashboard/create/chain?category=effect-chain" }}
+            />
           ) : (
             <div className="space-y-6">
               {/* DAW Filter */}
@@ -653,19 +635,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="pdfs" className="space-y-4 mt-6">
           {pdfs.length === 0 ? (
-            <Card className="p-12 text-center">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No PDFs Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Upload PDF guides, cheat sheets, ebooks, and educational content
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/create/pdf">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Upload PDF
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={FileText}
+              title="No PDFs yet"
+              description="Upload PDF guides, cheat sheets, ebooks, and educational content."
+              action={{ label: "Upload PDF", href: "/dashboard/create/pdf" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {pdfs.map((product: any) => (
@@ -677,19 +652,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="blogs" className="space-y-4 mt-6">
           {blogPosts.length === 0 ? (
-            <Card className="p-12 text-center">
-              <PenTool className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Blog Posts Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Write articles and blog content to share with your audience
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/create/blog">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Write Blog Post
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={PenTool}
+              title="No blog posts yet"
+              description="Write articles and blog content to share with your audience."
+              action={{ label: "Write Blog Post", href: "/dashboard/create/blog" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {blogPosts.map((product: any) => (
@@ -701,19 +669,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="beats" className="space-y-4 mt-6">
           {beats.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Music2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Beat Leases Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Upload beats with multiple licensing options (free, basic, premium, exclusive)
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/create/beat-lease">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Beat Lease
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={Music2}
+              title="No beat leases yet"
+              description="Upload beats with multiple licensing options (free, basic, premium, exclusive)."
+              action={{ label: "Create Beat Lease", href: "/dashboard/create/beat-lease" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {beats.map((product: any) => (
@@ -725,19 +686,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="bundles" className="space-y-4 mt-6">
           {bundles.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Bundles Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Combine multiple products into discounted bundles
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/create/bundle">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Bundle
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={Layers}
+              title="No bundles yet"
+              description="Combine multiple products into discounted bundles."
+              action={{ label: "Create Bundle", href: "/dashboard/create/bundle" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {bundles.map((bundle: any) => (
@@ -749,19 +703,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
 
         <TabsContent value="memberships" className="space-y-4 mt-6">
           {memberships.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Crown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Memberships Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create subscription tiers for recurring revenue
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/create/membership">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Membership
-                </Link>
-              </Button>
-            </Card>
+            <SharedEmptyState
+              icon={Crown}
+              title="No memberships yet"
+              description="Create subscription tiers for recurring revenue."
+              action={{ label: "Create Membership", href: "/dashboard/create/membership" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {memberships.map((tier: any) => (
@@ -1280,19 +1227,12 @@ function MembershipTierCard({ tier }: { tier: any }) {
 
 function EmptyState() {
   return (
-    <Card className="p-12 text-center">
-      <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-      <h3 className="text-lg font-medium mb-2">No Products Yet</h3>
-      <p className="text-muted-foreground mb-4">
-        Create your first product to start selling
-      </p>
-      <Button asChild>
-        <Link href="/dashboard/create">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Product
-        </Link>
-      </Button>
-    </Card>
+    <SharedEmptyState
+      icon={Package}
+      title="No products yet"
+      description="Create your first course, sample pack, or digital product to start selling."
+      action={{ label: "Create Product", href: "/dashboard/create" }}
+    />
   );
 }
 

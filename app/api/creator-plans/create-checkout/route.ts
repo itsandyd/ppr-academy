@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -46,6 +47,13 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // SECURITY: Rate limiting (strict - 5 requests/min)
+    const identifier = getRateLimitIdentifier(req, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
     }
 
     const body = await req.json();

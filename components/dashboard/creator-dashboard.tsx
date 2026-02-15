@@ -37,6 +37,7 @@ import { generateSlug } from "@/lib/utils";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
+import { CreatorAnalyticsTab } from "@/components/dashboard/creator-analytics-tab";
 
 interface CreatorDashboardProps {
   user: User;
@@ -74,6 +75,18 @@ export function CreatorDashboard({
     availableHours: "",
   });
 
+  // Fetch user's store for analytics
+  const store = useQuery(
+    api.stores.getUserStore,
+    user.id ? { userId: user.id } : "skip"
+  );
+
+  // Fetch real purchase stats for revenue
+  const purchaseStats = useQuery(
+    api.purchases.getStorePurchaseStats,
+    store?._id ? { storeId: store._id, timeRange: "all" as const } : "skip"
+  );
+
   // Fetch real engagement rate from Convex
   const engagementData = useQuery(
     api.analytics.getCreatorEngagementRate,
@@ -96,9 +109,8 @@ export function CreatorDashboard({
     loadInitialProfile();
   }, []);
 
-  // Revenue should come from actual purchase amounts, not price * enrollment count.
-  // price * count is wrong when course prices change after enrollments.
-  const totalRevenue = 0;
+  // Revenue from actual completed purchase amounts
+  const totalRevenue = purchaseStats?.totalRevenue ?? 0;
 
   const categories = [
     "Hip-Hop Production",
@@ -409,15 +421,19 @@ export function CreatorDashboard({
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-8">
-          <Card>
-            <CardContent className="p-12 text-center">
-              <BarChart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Analytics Coming Soon</h3>
-              <p className="text-slate-600">
-                Detailed insights about your courses and students will be available here
-              </p>
-            </CardContent>
-          </Card>
+          {store?._id ? (
+            <CreatorAnalyticsTab storeId={store._id} storeSlug={store.slug} />
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <BarChart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Set up your store first</h3>
+                <p className="text-slate-600">
+                  Create a store to start tracking your sales and revenue
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="coaching" className="space-y-8">

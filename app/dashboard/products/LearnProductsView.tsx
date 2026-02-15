@@ -6,13 +6,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Package, 
-  Music, 
+import {
+  Package,
+  Music,
   Download,
   ShoppingCart,
   Sparkles
 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface LearnProductsViewProps {
   convexUser: any;
@@ -71,16 +72,12 @@ export function LearnProductsView({ convexUser }: LearnProductsViewProps) {
 
         <TabsContent value="all" className="space-y-6 mt-6">
           {!userPurchases || userPurchases.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Products Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Purchase products from the marketplace to build your library
-              </p>
-              <Button onClick={() => window.location.href = '/marketplace'}>
-                Browse Marketplace
-              </Button>
-            </Card>
+            <EmptyState
+              icon={Package}
+              title="No products yet"
+              description="Purchase products from the marketplace to build your library."
+              action={{ label: "Browse Marketplace", href: "/marketplace" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {userPurchases.map((purchase: any) => (
@@ -92,16 +89,12 @@ export function LearnProductsView({ convexUser }: LearnProductsViewProps) {
 
         <TabsContent value="packs" className="space-y-6 mt-6">
           {purchasedPacks.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Music className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Packs Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Purchase sample packs, preset packs, or MIDI packs
-              </p>
-              <Button onClick={() => window.location.href = '/marketplace/samples'}>
-                Browse Packs
-              </Button>
-            </Card>
+            <EmptyState
+              icon={Music}
+              title="No packs yet"
+              description="Purchase sample packs, preset packs, or MIDI packs from the marketplace."
+              action={{ label: "Browse Packs", href: "/marketplace/samples" }}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {purchasedPacks.map((purchase: any) => (
@@ -113,10 +106,11 @@ export function LearnProductsView({ convexUser }: LearnProductsViewProps) {
 
         <TabsContent value="other" className="space-y-6 mt-6">
           {otherProducts.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Other Products</h3>
-            </Card>
+            <EmptyState
+              icon={Package}
+              title="No other products"
+              description="Other purchased products like coaching sessions and templates will appear here."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {otherProducts.map((purchase: any) => (

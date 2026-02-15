@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         imageUrl: image_url,
       });
       
-      console.log(`✅ Successfully processed ${eventType} for user: ${id}`);
+
     } catch (error) {
       console.error('Error creating/updating user in Convex:', error);
       return new Response('Error creating/updating user', { status: 500 });
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
         clerkId: id,
       });
       
-      console.log(`✅ Successfully deleted user: ${id}`);
+
     } catch (error) {
       console.error('Error deleting user from Convex:', error);
       return new Response('Error deleting user', { status: 500 });

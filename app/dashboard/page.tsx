@@ -48,6 +48,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
+    // Wait for convexUser to load before making routing decisions
+    if (convexUser === undefined) return;
 
     if (!mode || (mode !== "learn" && mode !== "create")) {
       const localMode = getStoredMode();
@@ -62,8 +64,20 @@ export default function DashboardPage() {
         return;
       }
 
-      const defaultMode: DashboardMode = stores && stores.length > 0 ? "create" : "learn";
-      router.replace(`/dashboard?mode=${defaultMode}`);
+      // If user has stores, they're an existing creator - default to create
+      if (stores && stores.length > 0) {
+        router.replace(`/dashboard?mode=create`);
+        return;
+      }
+
+      // No preference set and no stores - send to onboarding
+      if (convexUser && !convexUser.dashboardPreference) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      // Fallback for edge cases (user record not yet synced)
+      router.replace(`/dashboard?mode=learn`);
     }
   }, [mode, convexUser, stores, router, isLoaded]);
 

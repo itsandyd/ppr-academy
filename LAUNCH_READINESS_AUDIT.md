@@ -57,9 +57,9 @@
    - Fix: Pass stripeAccountId from store data to payment form
 
 3. **Post-Purchase Webhook Actions Incomplete**
-   - File: `app/api/webhooks/stripe-library/route.ts:65-66`
-   - Issue: `// TODO: Send confirmation email` and `// TODO: Trigger any post-purchase workflows`
-   - Fix: Implement email notifications and workflow triggers after purchase
+   - File: `app/api/webhooks/stripe/route.ts` (legacy `stripe-library` route removed)
+   - Issue: Post-purchase email workflows now handled by primary webhook
+   - Fix: Confirm email notifications fire from primary webhook after purchase
 
 4. **Payment Verification API Missing**
    - File: `app/courses/[slug]/success/page.tsx:30`
@@ -608,7 +608,7 @@ The PPR Academy codebase is substantially complete with:
    - Effort: Low (pass stripeAccountId from store data)
 
 2. **Post-Purchase Emails Not Sending**
-   - Files: `app/api/webhooks/stripe-library/route.ts:65-66`, `app/api/courses/payment-success/route.ts:56`
+   - Files: `app/api/webhooks/stripe/route.ts` (legacy `stripe-library` route removed), `app/api/courses/payment-success/route.ts:56`
    - Impact: Customers don't receive confirmation
    - Effort: Medium (integrate Resend email templates)
 

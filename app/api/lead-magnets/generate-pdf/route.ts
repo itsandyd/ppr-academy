@@ -1,6 +1,6 @@
-// @ts-nocheck - Convex type instantiation is too deep
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from "pdf-lib";
 
 export const maxDuration = 60; // PDF generation + upload
@@ -322,6 +322,14 @@ function formatSectionType(type: string): string {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+
+    // SECURITY: Rate limiting (standard - 30 requests/min, CPU-intensive)
+    const identifier = getRateLimitIdentifier(request);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.standard);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
+
     const { cheatSheetId } = await request.json();
 
     if (!cheatSheetId) {

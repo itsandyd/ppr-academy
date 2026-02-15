@@ -729,7 +729,7 @@ The Convex database contains **205+ tables** across 11 schema files. Below is ev
 |-------|---------|-------------|
 | `/api/webhooks/clerk` | POST | Clerk webhook: user.created, user.updated, user.deleted |
 | `/api/webhooks/stripe` | POST | Stripe webhook: 10 event types (checkout, subscription, invoice, etc.) |
-| `/api/webhooks/stripe-library` | POST, GET | Stripe Library webhook handler |
+| `/api/webhooks/stripe-library` | ~~Removed~~ | Legacy duplicate — merged into `/api/webhooks/stripe` |
 | `/api/webhooks/resend` | POST, GET | Resend email webhooks (bounces, opens, clicks) |
 | `/api/webhooks/resend/inbox` | POST, GET | Resend inbound email webhook |
 | `/api/auth/discord/callback` | GET | Discord OAuth callback |

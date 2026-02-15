@@ -4,6 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { BarChart3, TrendingUp, Users, DollarSign, ShoppingCart, Package, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -59,16 +60,12 @@ export default function AnalyticsPage() {
           <h1 className="text-3xl font-bold">Analytics</h1>
           <p className="mt-1 text-muted-foreground">Track your performance and growth</p>
         </div>
-        <Card>
-          <CardContent className="flex min-h-[300px] items-center justify-center">
-            <div className="text-center">
-              <Package className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-              <p className="mt-4 text-muted-foreground">
-                Set up your store to start tracking analytics
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={BarChart3}
+          title="No analytics data yet"
+          description="Set up your store to start tracking revenue, students, and engagement."
+          action={{ label: "Set Up Store", href: "/dashboard" }}
+        />
       </div>
     );
   }
@@ -266,14 +263,12 @@ export default function AnalyticsPage() {
               ))}
             </div>
           ) : (
-            <div className="flex min-h-[200px] items-center justify-center">
-              <div className="text-center">
-                <ShoppingCart className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-                <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-                  No purchases yet. Share your products to start selling!
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              icon={ShoppingCart}
+              title="No purchases yet"
+              description="Share your products to start selling!"
+              compact
+            />
           )}
         </CardContent>
       </Card>

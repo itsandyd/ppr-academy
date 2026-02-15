@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Dynamic import to avoid TypeScript circular type inference issues
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -65,7 +66,7 @@ export const getCourses = query({
     followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx) => {
-    return await ctx.db.query("courses").collect();
+    return await ctx.db.query("courses").take(200);
   },
 });
 
@@ -423,6 +424,8 @@ export const getCoursesByStore = query({
     followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     return await ctx.db
       .query("courses")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -581,6 +584,11 @@ export const createCourse = mutation({
   },
   returns: v.id("courses"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    if (identity.subject !== args.userId) {
+      throw new Error("Unauthorized: userId mismatch");
+    }
+
     return await ctx.db.insert("courses", {
       ...args,
       isPublished: false,
@@ -613,6 +621,8 @@ export const createCourseWithData = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      await requireStoreOwner(ctx, args.storeId);
+
       const { data } = args;
 
       // Generate unique slug
@@ -776,6 +786,15 @@ export const updateCourse = mutation({
     v.null()
   ),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const course = await ctx.db.get(args.id);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+    if (course.userId !== identity.subject) {
+      throw new Error("Unauthorized: you don't own this course");
+    }
+
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
     return await ctx.db.get(id);
@@ -827,6 +846,12 @@ export const updateCourseWithModules = mutation({
   }),
   handler: async (ctx, { courseId, courseData, modules }) => {
     try {
+      const identity = await requireAuth(ctx);
+      const course = await ctx.db.get(courseId);
+      if (!course || course.userId !== identity.subject) {
+        throw new Error("Unauthorized: you don't own this course");
+      }
+
       // Update the course basic info
       await ctx.db.patch(courseId, courseData);
 
@@ -1358,6 +1383,12 @@ export const updateCourseStripeIdsPublic = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const course = await ctx.db.get(args.courseId);
+    if (!course || course.userId !== identity.subject) {
+      throw new Error("Unauthorized: you don't own this course");
+    }
+
     await ctx.db.patch(args.courseId, {
       stripeProductId: args.stripeProductId,
       stripePriceId: args.stripePriceId,
@@ -1387,14 +1418,15 @@ export const deleteCourse = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const identity = await requireAuth(ctx);
       const course = await ctx.db.get(args.courseId);
-      
+
       if (!course) {
         return { success: false, message: "Course not found" };
       }
-      
-      // Check if user owns the course
-      if (course.userId !== args.userId) {
+
+      // Check if authenticated user owns the course
+      if (course.userId !== identity.subject) {
         return { success: false, message: "You don't have permission to delete this course" };
       }
       

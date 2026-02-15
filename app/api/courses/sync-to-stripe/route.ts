@@ -38,13 +38,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("✅ Stripe product created:", {
-      productId: product.id,
-      priceId: price.id,
-      courseTitle,
-      amount: coursePrice,
-    });
-
     return NextResponse.json({ 
       success: true,
       stripeProductId: product.id,

@@ -83,7 +83,7 @@ These issues directly prevent users from generating revenue or block core functi
 **Impact:** No confirmation emails = customer confusion and support burden
 
 **Files:**
-- `/app/api/webhooks/stripe-library/route.ts:65-66`
+- `/app/api/webhooks/stripe/route.ts` (legacy `stripe-library` route removed — primary webhook handles course enrollment emails)
 - `/app/api/courses/payment-success/route.ts:56`
 
 **Missing:** Resend email integration for purchase confirmations

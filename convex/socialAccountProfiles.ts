@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Platform type for validation
 const platformValidator = v.union(
@@ -24,6 +25,7 @@ export const getAccountProfiles = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     return await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -39,6 +41,7 @@ export const getAccountProfilesByUserId = query({
     userId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -54,6 +57,7 @@ export const getAccountProfileById = query({
     profileId: v.id("socialAccountProfiles"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.profileId);
   },
 });
@@ -67,6 +71,7 @@ export const getAccountProfilesByPlatform = query({
     platform: platformValidator,
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const profiles = await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -84,6 +89,7 @@ export const getAccountProfilesWithAccounts = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const profiles = await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -128,6 +134,7 @@ export const createAccountProfile = mutation({
     postsPerWeek: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const now = Date.now();
 
     const profileId = await ctx.db.insert("socialAccountProfiles", {
@@ -166,6 +173,7 @@ export const updateAccountProfile = mutation({
     postsPerWeek: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { profileId, ...updates } = args;
 
     const existing = await ctx.db.get(profileId);
@@ -198,6 +206,7 @@ export const deleteAccountProfile = mutation({
     profileId: v.id("socialAccountProfiles"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const existing = await ctx.db.get(args.profileId);
     if (!existing) {
       throw new Error("Account profile not found");
@@ -231,6 +240,7 @@ export const linkSocialAccount = mutation({
     socialAccountId: v.id("socialAccounts"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const profile = await ctx.db.get(args.profileId);
     if (!profile) {
       throw new Error("Account profile not found");
@@ -265,6 +275,7 @@ export const unlinkSocialAccount = mutation({
     profileId: v.id("socialAccountProfiles"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const profile = await ctx.db.get(args.profileId);
     if (!profile) {
       throw new Error("Account profile not found");
@@ -289,6 +300,7 @@ export const updateProfileStats = mutation({
     incrementPublished: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const profile = await ctx.db.get(args.profileId);
     if (!profile) {
       throw new Error("Account profile not found");

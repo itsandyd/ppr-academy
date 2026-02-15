@@ -194,47 +194,107 @@ class MarketplaceProductService implements IProductService {
   constructor(private convex: ConvexHttpClient) {}
 
   async getProducts(creatorId: string): Promise<Product[]> {
-    // This would use the new schema when implemented
-    return [];
+    // Query digital products by store/user
+    const products = await this.convex.query(api.digitalProducts.getProductsByUser, {
+      userId: creatorId,
+    });
+
+    return products.map((p: any) => this.digitalProductToProduct(p));
   }
 
   async getProduct(id: string): Promise<Product | null> {
-    // Implementation for new schema
-    return null;
+    try {
+      const product = await this.convex.query(api.digitalProducts.getProductById, {
+        productId: id as Id<"digitalProducts">,
+      });
+      return product ? this.digitalProductToProduct(product) : null;
+    } catch {
+      return null;
+    }
   }
 
   async getProductBySlug(slug: string): Promise<Product | null> {
-    return null;
+    try {
+      const product = await this.convex.query(api.digitalProducts.getProductByGlobalSlug, {
+        slug,
+      });
+      return product ? this.digitalProductToProduct(product) : null;
+    } catch {
+      return null;
+    }
   }
 
-  async createProduct(input: CreateProductInput): Promise<Product> {
-    // Implementation for new schema
-    throw new Error("Not implemented yet");
+  // Phase 2: Write operations — the UI uses Convex mutations directly
+  async createProduct(_input: CreateProductInput): Promise<Product> {
+    throw new Error("Phase 2: Not shipping at launch. Use Convex mutations directly.");
   }
 
-  async updateProduct(input: UpdateProductInput): Promise<Product> {
-    throw new Error("Not implemented yet");
+  async updateProduct(_input: UpdateProductInput): Promise<Product> {
+    throw new Error("Phase 2: Not shipping at launch. Use Convex mutations directly.");
   }
 
-  async deleteProduct(id: string): Promise<void> {
-    throw new Error("Not implemented yet");
+  async deleteProduct(_id: string): Promise<void> {
+    throw new Error("Phase 2: Not shipping at launch. Use Convex mutations directly.");
   }
 
-  async publishProduct(id: string): Promise<Product> {
-    throw new Error("Not implemented yet");
+  async publishProduct(_id: string): Promise<Product> {
+    throw new Error("Phase 2: Not shipping at launch. Use Convex mutations directly.");
   }
 
-  async unpublishProduct(id: string): Promise<Product> {
-    throw new Error("Not implemented yet");
+  async unpublishProduct(_id: string): Promise<Product> {
+    throw new Error("Phase 2: Not shipping at launch. Use Convex mutations directly.");
   }
 
   async getProductMetrics(id: string): Promise<ProductMetrics> {
-    // Implementation for new schema with proper analytics
+    // Query purchase data for this product to compute metrics
+    try {
+      const product = await this.convex.query(api.digitalProducts.getProductById, {
+        productId: id as Id<"digitalProducts">,
+      });
+      if (!product) {
+        return { views: 0, sales: 0, revenue: 0, conversionRate: 0 };
+      }
+      // Use available data from the product record
+      const sales = (product as any).totalPurchases || 0;
+      const revenue = (product as any).totalRevenue || 0;
+      return {
+        views: 0, // View tracking not implemented yet
+        sales,
+        revenue,
+        conversionRate: 0, // Requires view tracking to calculate
+      };
+    } catch {
+      return { views: 0, sales: 0, revenue: 0, conversionRate: 0 };
+    }
+  }
+
+  private digitalProductToProduct(product: any): Product {
+    const categoryToType: Record<string, ProductType> = {
+      "sample-pack": "sample_pack",
+      "preset-pack": "preset_pack",
+      template: "template",
+      coaching: "coaching",
+    };
+
+    const productType: ProductType =
+      categoryToType[product.productCategory] ||
+      (product.productType === "coaching" ? "coaching" : "digital_product");
+
     return {
-      views: 0,
-      sales: 0,
-      revenue: 0,
-      conversionRate: 0,
+      id: product._id,
+      title: product.title,
+      description: product.description,
+      price: product.price || 0,
+      currency: "USD",
+      type: productType,
+      creatorId: product.userId,
+      thumbnailUrl: product.imageUrl,
+      isPublished: product.isPublished || false,
+      slug: product.slug,
+      rating: 0,
+      reviewCount: 0,
+      createdAt: product._creationTime,
+      updatedAt: product._creationTime,
     };
   }
 }

@@ -1,4 +1,4 @@
-import { query } from "../_generated/server";
+import { internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -7,7 +7,7 @@ import { v } from "convex/values";
  */
 
 // Check all course enrollments for a specific store
-export const checkCourseEnrollments = query({
+export const checkCourseEnrollments = internalQuery({
   args: { storeId: v.string() },
   returns: v.object({
     totalEnrollments: v.number(),
@@ -93,7 +93,7 @@ export const checkCourseEnrollments = query({
 });
 
 // Check specific user's enrollments
-export const checkUserEnrollments = query({
+export const checkUserEnrollments = internalQuery({
   args: { userId: v.string() },
   returns: v.object({
     userExists: v.boolean(),
@@ -177,7 +177,7 @@ export const checkUserEnrollments = query({
 });
 
 // Get summary of all stores and their customer counts
-export const getStoreCustomerSummary = query({
+export const getStoreCustomerSummary = internalQuery({
   args: {},
   returns: v.array(v.object({
     storeId: v.string(),

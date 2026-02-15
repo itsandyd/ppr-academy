@@ -41,13 +41,6 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      console.log("✅ Payment succeeded:", {
-        paymentId: paymentIntent.id,
-        courseId: metadata.courseId,
-        customer: metadata.customerName,
-        amount: paymentIntent.amount / 100,
-      });
-
       // Create course enrollment in Convex
       if (metadata.userId && metadata.courseId) {
         const { fetchMutation } = await import("convex/nextjs");
@@ -63,7 +56,7 @@ export async function POST(request: NextRequest) {
             transactionId: paymentIntent.id,
           });
 
-          console.log("✅ Course enrollment created:", { purchaseId });
+
         } catch (enrollmentError) {
           console.error("❌ Failed to create enrollment:", enrollmentError);
           // Continue anyway - don't fail the payment confirmation
@@ -81,7 +74,7 @@ export async function POST(request: NextRequest) {
             amount: paymentIntent.amount / 100,
             currency: paymentIntent.currency,
           });
-          console.log("✅ Enrollment confirmation email sent");
+
         } catch (emailError) {
           console.error("⚠️ Failed to send confirmation email:", emailError);
           // Don't fail the response for email errors

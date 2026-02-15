@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -7,7 +7,7 @@ import { v } from "convex/values";
  * 
  * Run with: storeId = your Convex store ID (e.g., "kh78hrngdvmxbqy6g6w4faecpd7m63ra")
  */
-export const syncStudentsToContacts = mutation({
+export const syncStudentsToContacts = internalMutation({
   args: {
     storeId: v.string(), // The actual Convex store ID
     batchSize: v.optional(v.number()),

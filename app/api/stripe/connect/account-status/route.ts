@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const status = isComplete ? "enabled" : 
                    account.details_submitted ? "restricted" : "pending";
 
-    console.log("✅ Stripe account status retrieved:", accountId, status);
+
 
     return NextResponse.json({ 
       success: true,

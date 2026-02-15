@@ -1,11 +1,24 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, internalAction, action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 /**
  * Background job to count all customers for each store
  * Runs periodically to provide accurate total counts without hitting query limits
  */
+
+/**
+ * Internal query to verify store ownership from actions
+ */
+export const verifyStoreOwner = internalQuery({
+  args: { storeId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+    return null;
+  },
+});
 
 // Public action to manually trigger count for a specific store
 export const triggerCountForStore = action({
@@ -16,6 +29,7 @@ export const triggerCountForStore = action({
     message: v.string(),
   }),
   handler: async (ctx, args): Promise<{ success: boolean; total?: number; message: string }> => {
+    await ctx.runQuery(internal.fanCountAggregation.verifyStoreOwner, { storeId: args.storeId });
     try {
       // Count in multiple batches to avoid the 32k read limit
       let total = 0;

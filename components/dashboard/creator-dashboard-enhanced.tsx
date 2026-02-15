@@ -80,6 +80,7 @@ import {
 } from "@/app/actions/coaching-actions";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
 import { SocialScheduler } from "@/components/social-media/social-scheduler";
+import { CreatorAnalyticsTab } from "@/components/dashboard/creator-analytics-tab";
 import { Id } from "@/convex/_generated/dataModel";
 
 // Product type interface for compatibility
@@ -332,8 +333,13 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
         courseStoreId = storeId; // Use the user's actual store ID
       }
 
-      // Fallback to user's store or setup
-      courseStoreId = courseStoreId || storeId || "setup";
+      // Fallback to user's store
+      courseStoreId = courseStoreId || storeId;
+
+      if (!courseStoreId) {
+        toast({ title: "Store required", description: "Please set up your store first.", variant: "destructive" });
+        return;
+      }
 
       const editUrl = `/store/${courseStoreId}/course/create?edit=${product._id}`;
       window.location.href = editUrl;
@@ -827,12 +833,14 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
                         <Plus className="mr-2 h-4 w-4" />
                         New Release
                       </Button>
-                      <Link href={`/store/${storeId || "setup"}/course/create`}>
-                        <Button variant="outline">
-                          <BookOpen className="mr-2 h-4 w-4" />
-                          Create Course
-                        </Button>
-                      </Link>
+                      {storeId && (
+                        <Link href={`/store/${storeId}/course/create`}>
+                          <Button variant="outline">
+                            <BookOpen className="mr-2 h-4 w-4" />
+                            Create Course
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                   </div>
 
@@ -959,26 +967,26 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                     Analytics & Insights
                   </h2>
-                  <Card className="border-slate-200 dark:border-slate-700">
-                    <CardContent className="p-8 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20">
-                        <BarChart className="h-8 w-8 text-blue-500" />
-                      </div>
-                      <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
-                        Advanced Analytics Coming Soon
-                      </h3>
-                      <p className="mb-4 text-slate-500 dark:text-slate-400">
-                        Get detailed insights into your music performance, audience demographics,
-                        and revenue trends.
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className="border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                      >
-                        In Development
-                      </Badge>
-                    </CardContent>
-                  </Card>
+                  {storeId ? (
+                    <CreatorAnalyticsTab
+                      storeId={storeId as string}
+                      storeSlug={stores?.[0]?.slug}
+                    />
+                  ) : (
+                    <Card className="border-slate-200 dark:border-slate-700">
+                      <CardContent className="p-8 text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20">
+                          <BarChart className="h-8 w-8 text-blue-500" />
+                        </div>
+                        <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                          Set up your store first
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400">
+                          Create a store to start tracking your sales and revenue.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               )}
 

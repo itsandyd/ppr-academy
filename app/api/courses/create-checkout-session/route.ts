@@ -5,6 +5,7 @@ import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate
 import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import * as Sentry from "@sentry/nextjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -162,6 +163,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Course checkout failed:", error);
+    Sentry.captureException(error, {
+      tags: { component: "checkout-session", productType: "course" },
+    });
 
     const isStripeError = error && typeof error === "object" && "type" in error;
     const errorMessage = isStripeError

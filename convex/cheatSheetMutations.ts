@@ -1,4 +1,3 @@
-// @ts-nocheck - Convex type instantiation is too deep
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 

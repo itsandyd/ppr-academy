@@ -90,14 +90,6 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log("✅ Playlist submission checkout session created:", {
-      sessionId: session.id,
-      playlistName,
-      trackTitle,
-      amount: submissionFee,
-      platformFee: platformFeeAmount / 100,
-    });
-
     return NextResponse.json({
       success: true,
       checkoutUrl: session.url,

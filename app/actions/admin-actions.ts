@@ -48,7 +48,6 @@ export async function updateUserRole(
     revalidatePath("/admin/users");
     return { success: true, message: result.message };
   } catch (error) {
-    console.error("Error updating user role:", error);
     return { success: false, error: "Failed to update user role" };
   }
 }
@@ -67,7 +66,6 @@ export async function approveCourse(courseId: string) {
     revalidatePath("/courses");
     return { success: true };
   } catch (error) {
-    console.error("Error approving course:", error);
     return { success: false, error: "Failed to approve course" };
   }
 }
@@ -85,7 +83,6 @@ export async function rejectCourse(courseId: string) {
     revalidatePath("/admin");
     return { success: true };
   } catch (error) {
-    console.error("Error rejecting course:", error);
     return { success: false, error: "Failed to reject course" };
   }
 }
@@ -105,7 +102,6 @@ export async function toggleFeatureCourse(courseId: string, featured: boolean) {
     revalidatePath("/courses");
     return { success: true };
   } catch (error) {
-    console.error("Error updating course featured status:", error);
     return { success: false, error: "Failed to update course" };
   }
 }
@@ -128,7 +124,6 @@ export async function approveCoach(profileId: string) {
     revalidatePath("/coaching");
     return { success: true, message: result.message };
   } catch (error) {
-    console.error("Error approving coach:", error);
     return {
       success: false,
       error: `Failed to approve coach: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -154,7 +149,6 @@ export async function rejectCoach(profileId: string) {
     revalidatePath("/coaching");
     return { success: true, message: result.message };
   } catch (error) {
-    console.error("Error rejecting coach:", error);
     return { success: false, error: "Failed to reject coach" };
   }
 }
@@ -170,7 +164,6 @@ export async function debugCoachProfiles() {
 
     return { success: true, profiles };
   } catch (error) {
-    console.error("Error debugging coach profiles:", error);
     return { success: false, error: "Failed to debug coach profiles" };
   }
 }
@@ -192,7 +185,6 @@ export async function cleanupOrphanedCoachProfiles(dryRun: boolean = true) {
       deletedIds: result.deletedIds,
     };
   } catch (error) {
-    console.error("Error cleaning up orphaned coach profiles:", error);
     return { success: false, error: "Failed to cleanup orphaned profiles" };
   }
 }
@@ -294,7 +286,6 @@ export async function generateAICourse(courseData: {
       },
     };
   } catch (error) {
-    console.error("Error generating AI course:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to generate course",
@@ -309,7 +300,6 @@ export async function searchImages(topic: string, skillLevel: string) {
     const images = await searchTopicImages(topic, skillLevel);
     return { success: true, images };
   } catch (error) {
-    console.error("Error searching images:", error);
     return { success: false, error: "Failed to search images" };
   }
 }
@@ -339,7 +329,6 @@ export async function searchCourseImages(courseId: string, customTopic?: string)
       },
     };
   } catch (error) {
-    console.error("Error searching course images:", error);
     return { success: false, error: "Failed to search course images" };
   }
 }
@@ -358,7 +347,6 @@ export async function updateCourseImage(courseId: string, imageUrl: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating course image:", error);
     return { success: false, error: "Failed to update course image" };
   }
 }
@@ -413,7 +401,6 @@ export async function enhancedImageSearch(
       totalFound: uniqueImages.length,
     };
   } catch (error) {
-    console.error("Error in enhanced image search:", error);
     return { success: false, error: "Failed to perform enhanced image search" };
   }
 }
@@ -440,7 +427,6 @@ export async function searchContent(query: string, includeImages: boolean) {
 
     return { success: true, results: sampleResults };
   } catch (error) {
-    console.error("Error searching content:", error);
     return { success: false, error: "Failed to search content" };
   }
 }
@@ -453,7 +439,6 @@ export async function reindexContent() {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     return { success: true };
   } catch (error) {
-    console.error("Error reindexing content:", error);
     return { success: false, error: "Failed to reindex content" };
   }
 }
@@ -475,7 +460,6 @@ export async function scrapeContentFromUrl(url: string, fixErrors: boolean = fal
       },
     };
   } catch (error) {
-    console.error("Error scraping content:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to scrape content",
@@ -495,7 +479,6 @@ export async function generateContentEmbeddings(text: string) {
       dimensions: embeddings.length,
     };
   } catch (error) {
-    console.error("Error generating embeddings:", error);
     return { success: false, error: "Failed to generate embeddings" };
   }
 }
@@ -512,7 +495,6 @@ export async function enhancedSearchContent(query: string, includeYoutube: boole
       query: query,
     };
   } catch (error) {
-    console.error("Error in enhanced search:", error);
     return { success: false, error: "Failed to perform enhanced search" };
   }
 }
@@ -558,7 +540,6 @@ export async function updateCourse(
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating course:", error);
     return { success: false, error: "Failed to update course" };
   }
 }
@@ -585,7 +566,6 @@ export async function deleteCourse(courseId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting course:", error);
     return { success: false, error: "Failed to delete course" };
   }
 }
@@ -647,7 +627,6 @@ export async function bulkUpdateCourses(
 
     return { success: true, count };
   } catch (error) {
-    console.error(`Error performing bulk ${action}:`, error);
     return { success: false, error: `Failed to ${action} courses` };
   }
 }

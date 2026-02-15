@@ -1850,7 +1850,7 @@ export default function AdminEmailsPage() {
                   <Button
                     size="lg"
                     onClick={() => {
-                      console.log("Button clicked, opening dialog");
+
                       setIsTemplateDialogOpen(true);
                     }}
                     className="gap-2"

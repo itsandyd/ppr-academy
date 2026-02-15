@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       skipExisting: body.skipExisting ?? true,
     };
 
-    console.log('🚀 Starting migration with config:', migrationConfig);
+
 
     // Run migration
     const stats = await runMarketplaceMigration(migrationConfig);

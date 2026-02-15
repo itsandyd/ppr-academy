@@ -97,7 +97,7 @@ export class ResearchAgent implements Agent {
   role = "Information Gathering & Topic Analysis";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🔍 ${this.name}: Researching "${context.topic}"`);
+
     
     try {
       const searchQueries = [
@@ -119,7 +119,7 @@ export class ResearchAgent implements Agent {
           researchData.push(...results);
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-          console.log(`⚠️ Search failed for: ${query}`);
+
         }
       }
 
@@ -190,7 +190,7 @@ export class StructureAgent implements Agent {
   role = "Curriculum Design & Course Architecture";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🏗️ ${this.name}: Designing course structure for "${context.topic}"`);
+
     
     try {
       const researchContext = context.researchData?.analysis || `Creating course structure for ${context.topic}`;
@@ -347,7 +347,7 @@ export class ContentAgent implements Agent {
   role = "Educational Content Generation";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`✍️ ${this.name}: Content generation handled by orchestrator in parallel`);
+
     
     // This agent is now primarily used for its generateChapterContent method
     // by the orchestrator's parallel content generation
@@ -458,7 +458,7 @@ export class ImageAgent implements Agent {
   role = "Visual Content Curation";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🖼️ ${this.name}: Finding images for "${context.topic}"`);
+
     
     try {
       const images = await this.findRelevantImages(context);
@@ -494,7 +494,7 @@ export class ImageAgent implements Agent {
         allImages.push(...images);
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
-        console.log(`⚠️ Image search failed for: ${query}`);
+
       }
     }
 
@@ -530,7 +530,7 @@ export class QualityAgent implements Agent {
   role = "Content Quality Assurance";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🔍 ${this.name}: Validating course quality for "${context.topic}"`);
+
     
     try {
       const qualityReport = await this.assessQuality(context);
@@ -702,14 +702,14 @@ export class OrchestratorAgent implements Agent {
   ];
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🎼 ${this.name}: Starting optimized multi-agent course generation for "${context.topic}"`);
+
     
     const executionLog = [];
     let currentContext = { ...context };
 
     try {
       // Phase 1: Run Research and Image agents in parallel (independent operations)
-      // console.log(...);
+
       const phase1Start = Date.now();
       
       const [researchResult, imageResult] = await Promise.all([
@@ -718,7 +718,7 @@ export class OrchestratorAgent implements Agent {
       ]);
 
       const phase1Time = Date.now() - phase1Start;
-      console.log(`✅ Phase 1 completed in ${phase1Time}ms`);
+
 
       // Update context with research data
       if (researchResult.success && researchResult.context) {
@@ -734,7 +734,7 @@ export class OrchestratorAgent implements Agent {
       );
 
       // Phase 2: Structure generation (depends on research)
-      // console.log(...);
+
       const structureStart = Date.now();
       
       const structureResult = await this.agents[1].execute(currentContext); // Structure Agent
@@ -754,10 +754,10 @@ export class OrchestratorAgent implements Agent {
       if (structureResult.context) {
         currentContext = { ...currentContext, ...structureResult.context };
       }
-      console.log(`✅ Phase 2 completed in ${structureTime}ms`);
+
 
       // Phase 3: Parallel Content Generation & Quality Assessment
-      // console.log(...);
+
       const phase3Start = Date.now();
       
       const [contentResult, qualityResult] = await Promise.all([
@@ -766,7 +766,7 @@ export class OrchestratorAgent implements Agent {
       ]);
 
       const phase3Time = Date.now() - phase3Start;
-      console.log(`✅ Phase 3 completed in ${phase3Time}ms`);
+
 
       if (contentResult.success && contentResult.context) {
         currentContext = { ...currentContext, ...contentResult.context };
@@ -783,7 +783,7 @@ export class OrchestratorAgent implements Agent {
       const finalCourse = await this.compileFinalCourse(currentContext);
 
       const totalTime = Date.now() - phase1Start;
-      console.log(`🎉 Total generation time: ${totalTime}ms`);
+
 
       return {
         success: true,
@@ -797,7 +797,7 @@ export class OrchestratorAgent implements Agent {
       };
 
     } catch (error: any) {
-      console.error(`❌ ${this.name} failed:`, error);
+      console.error(`${this.name} failed:`, error.message);
       return {
         success: false,
         error: `Orchestration failed: ${error.message}`,
@@ -817,7 +817,7 @@ export class OrchestratorAgent implements Agent {
       const allChapters = this.collectAllChapters(structure);
       const totalChapters = allChapters.length;
       
-      console.log(`📝 Generating content for ${totalChapters} chapters in parallel batches...`);
+
 
       // Content tracker for avoiding repetition
       const contentTracker = {
@@ -844,7 +844,7 @@ export class OrchestratorAgent implements Agent {
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
-        console.log(`📦 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} chapters)`);
+
 
         // Generate content for all chapters in this batch in parallel
         const batchPromises = batch.map(async (chapterInfo: any) => {
@@ -870,7 +870,7 @@ export class OrchestratorAgent implements Agent {
 
             return { success: true, chapterTitle: chapterInfo.chapter.title };
           } catch (error) {
-            console.error(`❌ Failed to generate content for chapter: ${chapterInfo.chapter.title}`, error);
+            console.error(`Failed to generate content for chapter: ${chapterInfo.chapter.title}`, error);
             return { success: false, chapterTitle: chapterInfo.chapter.title, error };
           }
         });

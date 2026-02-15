@@ -1,4 +1,3 @@
-// @ts-nocheck - Bypassing deep type instantiation errors with large Convex API
 "use client";
 
 import { useState, useMemo } from "react";
@@ -7,6 +6,7 @@ import { api } from "@/lib/convex-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Music,
   BookOpen,
@@ -45,13 +45,27 @@ export default function SectionedMarketplace() {
   const { isSignedIn } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch data
-  const courses = useQuery(api.courses.getAllPublishedCourses) || [];
-  const products = useQuery(api.digitalProducts.getAllPublishedProducts) || [];
-  const samplePacks = useQuery(api.samplePacks?.getAllPublishedSamplePacks) || [];
-  const abletonRacks = useQuery(api.abletonRacks?.getPublishedAbletonRacks, {}) || [];
+  // Fetch data — undefined means "still loading", [] means "loaded but empty"
+  const coursesRaw = useQuery(api.courses.getAllPublishedCourses);
+  const productsRaw = useQuery(api.digitalProducts.getAllPublishedProducts);
+  const samplePacksRaw = useQuery(api.samplePacks?.getAllPublishedSamplePacks);
+  const abletonRacksRaw = useQuery(api.abletonRacks?.getPublishedAbletonRacks, {});
   const platformStats = useQuery(api.marketplace?.getPlatformStats);
-  const featuredCreators = useQuery(api.marketplace?.getAllCreators, { limit: 6 }) || [];
+  const featuredCreatorsRaw = useQuery(api.marketplace?.getAllCreators, { limit: 6 });
+
+  const courses = coursesRaw ?? [];
+  const products = productsRaw ?? [];
+  const samplePacks = samplePacksRaw ?? [];
+  const abletonRacks = abletonRacksRaw ?? [];
+  const featuredCreators = featuredCreatorsRaw ?? [];
+
+  // True when any content query is still loading
+  const isLoadingContent =
+    coursesRaw === undefined ||
+    productsRaw === undefined ||
+    samplePacksRaw === undefined ||
+    abletonRacksRaw === undefined;
+  const isLoadingCreators = featuredCreatorsRaw === undefined;
 
   // Transform data to include contentType
   const coursesWithType = useMemo(
@@ -467,9 +481,13 @@ export default function SectionedMarketplace() {
                       Live community
                     </span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {stats.totalCreators}+ creators • {stats.totalStudents || "2,000"}+ students
-                  </span>
+                  {platformStats === undefined ? (
+                    <Skeleton className="h-4 w-40" />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {stats.totalCreators}+ creators • {stats.totalStudents || "2,000"}+ students
+                    </span>
+                  )}
                 </motion.div>
               </div>
             </div>
@@ -592,7 +610,7 @@ export default function SectionedMarketplace() {
       )}
 
       {/* Creator Spotlight Section */}
-      {!isSearching && featuredCreators.length > 0 && (
+      {!isSearching && (isLoadingCreators || featuredCreators.length > 0) && (
         <section className="relative z-10 overflow-hidden py-24">
           <div className="absolute inset-0 bg-gradient-to-br from-chart-1/5 via-transparent to-chart-4/5"></div>
 
@@ -632,6 +650,29 @@ export default function SectionedMarketplace() {
               </p>
             </motion.div>
 
+            {isLoadingCreators ? (
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
+                    <Skeleton className="h-36 w-full" />
+                    <CardContent className="relative z-10 -mt-12 space-y-4 px-6 pb-6">
+                      <div className="flex justify-center">
+                        <Skeleton className="h-24 w-24 rounded-full border-4 border-card" />
+                      </div>
+                      <div className="flex flex-col items-center space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                      </div>
+                      <div className="flex items-center justify-center gap-6 border-t border-border/50 pt-4">
+                        <Skeleton className="h-4 w-10" />
+                        <Skeleton className="h-4 w-10" />
+                        <Skeleton className="h-4 w-10" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {featuredCreators.slice(0, 6).map((creator: any, index: number) => (
                 <motion.div
@@ -703,6 +744,7 @@ export default function SectionedMarketplace() {
                 </motion.div>
               ))}
             </div>
+            )}
 
             <motion.div
               className="mt-12 text-center"
@@ -801,7 +843,51 @@ export default function SectionedMarketplace() {
       </section>
 
       {/* Product Sections - Each category with its own heading */}
+      {!isSearching && isLoadingContent && (
+        <>
+          {/* Skeleton product sections while loading */}
+          {Array.from({ length: 3 }).map((_, sectionIndex) => (
+            <section
+              key={`skeleton-section-${sectionIndex}`}
+              className={`relative z-10 py-20 ${sectionIndex % 2 === 1 ? "bg-card/30" : ""}`}
+            >
+              <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+                  <div className="flex items-start gap-4">
+                    <Skeleton className="h-14 w-14 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-7 w-48 sm:w-64" />
+                      <Skeleton className="h-4 w-64 sm:w-80" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-9 w-24" />
+                </div>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="overflow-hidden rounded-lg border border-border bg-card">
+                      <Skeleton className="h-52 w-full" />
+                      <div className="space-y-3 p-5">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <div className="flex items-center justify-between border-t border-border pt-2">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-7 w-7 rounded-full" />
+                            <Skeleton className="h-3 w-20" />
+                          </div>
+                          <Skeleton className="h-3 w-12" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          ))}
+        </>
+      )}
       {!isSearching &&
+        !isLoadingContent &&
         productSections.map((section, sectionIndex) => (
           <section
             key={section.id}

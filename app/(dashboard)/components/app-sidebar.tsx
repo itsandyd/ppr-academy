@@ -15,6 +15,7 @@ import {
   Inbox,
   FileText,
   BookOpen,
+  Rocket,
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -52,8 +53,9 @@ export function AppSidebar() {
   // Fetch user's stores to get fallback storeId
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
 
-  // Use URL storeId if available, otherwise use first store or fallback
-  const storeId = urlStoreId || stores?.[0]?._id || "setup";
+  // Use URL storeId if available, otherwise use first store
+  const storeId = urlStoreId || stores?.[0]?._id || null;
+  const hasStore = Boolean(storeId && storeId !== 'setup');
 
   // Get current store object for displaying slug
   const currentStore = stores?.find((s: any) => s._id === storeId) || stores?.[0];
@@ -61,18 +63,22 @@ export function AppSidebar() {
   const mainNavItems: NavItem[] = [
     { icon: Home, href: "/home", label: "Home" },
     { icon: BarChart3, href: "/analytics", label: "Analytics" },
-    { icon: FileText, href: `/store/${storeId || "setup"}/notes`, label: "Notes" },
-    { icon: Users, href: `/store/${storeId || "setup"}/customers`, label: "Customers" },
-    { icon: Mail, href: `/store/${storeId || "setup"}/email-campaigns`, label: "Campaigns" },
-    { icon: Inbox, href: `/store/${storeId || "setup"}/inbox`, label: "Inbox" },
-    { icon: Package, href: `/store/${storeId || "setup"}/products`, label: "Products" },
-    { icon: BookOpen, href: `/store/${storeId || "setup"}/blog`, label: "Blog" },
-    { icon: Store, href: "/store", label: "Store" },
+    ...(hasStore ? [
+      { icon: FileText, href: `/store/${storeId}/notes`, label: "Notes" },
+      { icon: Users, href: `/store/${storeId}/customers`, label: "Customers" },
+      { icon: Mail, href: `/store/${storeId}/email-campaigns`, label: "Campaigns" },
+      { icon: Inbox, href: `/store/${storeId}/inbox`, label: "Inbox" },
+      { icon: Package, href: `/store/${storeId}/products`, label: "Products" },
+      { icon: BookOpen, href: `/store/${storeId}/blog`, label: "Blog" },
+      { icon: Store, href: "/store", label: "Store" },
+    ] : [
+      { icon: Store, href: "/store", label: "Store" },
+    ]),
   ];
 
-  const bottomNavItems: NavItem[] = [
-    { icon: Settings, href: `/store/${storeId || "setup"}/settings/payouts`, label: "Payouts" },
-  ];
+  const bottomNavItems: NavItem[] = hasStore
+    ? [{ icon: Settings, href: `/store/${storeId}/settings/payouts`, label: "Payouts" }]
+    : [];
 
   return (
     <Sidebar>
@@ -90,6 +96,21 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {!hasStore && stores !== undefined && (
+          <div className="mx-3 mt-3 mb-1">
+            <Link href="/dashboard">
+              <div className="rounded-lg border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-3 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Rocket className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-semibold text-sidebar-foreground">Set up your store</span>
+                </div>
+                <p className="text-xs text-sidebar-foreground/70">
+                  Start selling beats, packs, and courses.
+                </p>
+              </div>
+            </Link>
+          </div>
+        )}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>

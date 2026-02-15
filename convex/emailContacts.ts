@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery, action } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 export const createContact = mutation({
   args: {
@@ -18,6 +19,8 @@ export const createContact = mutation({
   },
   returns: v.id("emailContacts"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     // Authorization check: verify user owns the store
     const store = await ctx.db
       .query("stores")
@@ -88,6 +91,8 @@ export const updateContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const { contactId, userId, ...updates } = args;
     const contact = await ctx.db.get(contactId);
     if (!contact) throw new Error("Contact not found");
@@ -126,6 +131,8 @@ export const deleteContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const contact = await ctx.db.get(args.contactId);
     if (!contact) throw new Error("Contact not found");
 
@@ -164,6 +171,8 @@ export const getContact = query({
   args: { contactId: v.id("emailContacts") },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const contact = await ctx.db.get(args.contactId);
     if (!contact) return null;
 
@@ -180,6 +189,8 @@ export const getContactByEmail = query({
   args: { storeId: v.string(), email: v.string() },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     return await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId_and_email", (q) =>
@@ -211,6 +222,8 @@ export const listContacts = query({
     hasMore: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const limit = Math.min(args.limit || 100, 200); // Max 200 per page to stay under read limits
     const needsFiltering = args.tagId || args.noTags;
 
@@ -332,6 +345,8 @@ export const debugTagFilter = query({
   },
   returns: v.any(),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     // Get the tag
     const tag = await ctx.db.get(args.tagId);
 
@@ -377,6 +392,8 @@ export const searchContacts = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const limit = Math.min(args.limit || 50, 100);
     const searchTerm = args.search?.trim();
 
@@ -468,6 +485,8 @@ export const addTagToContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const contact = await ctx.db.get(args.contactId);
     if (!contact) throw new Error("Contact not found");
 
@@ -518,6 +537,8 @@ export const removeTagFromContact = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const contact = await ctx.db.get(args.contactId);
     if (!contact) throw new Error("Contact not found");
 
@@ -566,6 +587,8 @@ export const bulkAddTagToContacts = mutation({
     skipped: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const tag = await ctx.db.get(args.tagId);
     if (!tag) throw new Error("Tag not found");
 
@@ -686,6 +709,8 @@ export const importContacts = mutation({
     errors: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const now = Date.now();
     let imported = 0;
     let skipped = 0;
@@ -847,12 +872,26 @@ export const saveContactStats = internalMutation({
 });
 
 /**
+ * Internal query to verify store ownership from actions
+ */
+export const verifyStoreOwner = internalQuery({
+  args: { storeId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+    return null;
+  },
+});
+
+/**
  * Action to count all contacts - can run longer and iterate through batches
  */
 export const recalculateContactStats = action({
   args: { storeId: v.string() },
   returns: v.object({ success: v.boolean(), message: v.string() }),
   handler: async (ctx, args) => {
+    await ctx.runQuery(internal.emailContacts.verifyStoreOwner, { storeId: args.storeId });
+
     // Count each status by iterating through batches
     let subscribedCount = 0;
     let unsubscribedCount = 0;
@@ -942,6 +981,8 @@ export const getContactActivity = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const activities = await ctx.db
       .query("emailContactActivity")
       .withIndex("by_contactId_and_timestamp", (q) => q.eq("contactId", args.contactId))
@@ -963,6 +1004,8 @@ export const getContactStats = query({
     isEstimate: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     // Try to get cached stats first
     const cachedStats = await ctx.db
       .query("emailContactStats")
@@ -1311,6 +1354,8 @@ export const syncCustomersToEmailContacts = mutation({
     total: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const batchSize = args.batchSize || 500;
     let synced = 0;
     let skipped = 0;
@@ -1384,6 +1429,8 @@ export const syncEnrolledUsersToEmailContacts = mutation({
     errors: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     let synced = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -1541,6 +1588,8 @@ export const bulkImportContacts = mutation({
     errors: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     let imported = 0;
     let skipped = 0;
     const errors: string[] = [];
@@ -1642,6 +1691,8 @@ export const findDuplicateContacts = action({
     ),
   }),
   handler: async (ctx, args) => {
+    await ctx.runQuery(internal.emailContacts.verifyStoreOwner, { storeId: args.storeId });
+
     // Use internal query to scan all contacts
     type ScanResult = { emails: string[]; nextCursor: string | null; done: boolean };
 
@@ -1734,6 +1785,8 @@ export const removeDuplicateContacts = action({
     errors: v.number(),
   }),
   handler: async (ctx, args) => {
+    await ctx.runQuery(internal.emailContacts.verifyStoreOwner, { storeId: args.storeId });
+
     const dryRun = args.dryRun ?? false;
 
     // First, build a map of email -> contact IDs (sorted by creation time)
@@ -1997,6 +2050,8 @@ export const migrateTagsToJunctionTable = mutation({
     done: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const batchSize = args.batchSize || 100;
 
     // Get a batch of contacts
@@ -2057,6 +2112,8 @@ export const runFullTagMigration = action({
     batches: v.number(),
   }),
   handler: async (ctx, args) => {
+    await ctx.runQuery(internal.emailContacts.verifyStoreOwner, { storeId: args.storeId });
+
     let cursor: string | null = null;
     let totalProcessed = 0;
     let totalCreated = 0;
@@ -2100,6 +2157,8 @@ export const addTagToContactWithJunction = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const contact = await ctx.db.get(args.contactId);
     if (!contact) return false;
 
@@ -2145,6 +2204,8 @@ export const removeTagFromContactWithJunction = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const contact = await ctx.db.get(args.contactId);
     if (!contact) return false;
 

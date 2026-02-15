@@ -1,23 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import crypto from "crypto";
 
 /**
  * Resend Inbound Email Webhook Handler
- * 
+ *
  * Receives customer replies sent to inbox@pauseplayrepeat.com
  * Stores them in emailReplies table and matches to creators
  */
 
+// Webhook signature verification (matches sibling resend webhook route)
+function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
+  try {
+    const hmac = crypto.createHmac("sha256", secret);
+    const digest = hmac.update(payload).digest("hex");
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+  } catch (error) {
+    console.error("[Inbox Webhook] Signature verification error:", error);
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    
-    console.log("[Inbox Webhook] Received email:", {
-      from: body.from,
-      to: body.to,
-      subject: body.subject,
-    });
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+
+    // Verify webhook signature
+    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+    const svixId = req.headers.get("svix-id");
+    const svixTimestamp = req.headers.get("svix-timestamp");
+    const svixSignature = req.headers.get("svix-signature");
+
+    if (webhookSecret) {
+      if (svixSignature && svixTimestamp && svixId) {
+        const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`;
+        const expectedSignature = svixSignature.split(",")[1]; // Format: "v1,signature"
+
+        if (!verifyWebhookSignature(signedContent, expectedSignature, webhookSecret)) {
+          console.error("[Inbox Webhook] Invalid signature");
+          return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+        }
+      } else {
+        // Secret is configured but no signature headers provided — reject
+        console.error("[Inbox Webhook] Missing signature headers");
+        return NextResponse.json({ error: "Missing webhook signature" }, { status: 401 });
+      }
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
     
     // Extract email data
     const {

@@ -6932,4 +6932,14 @@ export default defineSchema({
   })
     .index("by_creator", ["creatorId"])
     .index("by_store", ["storeId"]),
+
+  // Webhook Idempotency - tracks processed Stripe events to prevent duplicates
+  webhookEvents: defineTable({
+    stripeEventId: v.string(),
+    eventType: v.string(),
+    productType: v.optional(v.string()),
+    status: v.union(v.literal("processed"), v.literal("failed")),
+    processedAt: v.number(),
+    error: v.optional(v.string()),
+  }).index("by_stripeEventId", ["stripeEventId"]),
 });

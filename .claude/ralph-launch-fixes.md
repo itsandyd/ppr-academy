@@ -34,7 +34,7 @@ You are fixing critical launch blockers for PPR Academy. Work through each issue
 ### Priority 2: Post-Purchase Emails (CRITICAL)
 
 **Files**:
-- `app/api/webhooks/stripe-library/route.ts` (lines 65-66)
+- `app/api/webhooks/stripe/route.ts` (legacy `stripe-library` route removed)
 - `app/api/courses/payment-success/route.ts` (line 56)
 
 **Issue**: Customers don't receive confirmation emails after purchase

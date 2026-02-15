@@ -12441,6 +12441,34 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  webhookEvents: {
+    document: {
+      error?: string;
+      eventType: string;
+      processedAt: number;
+      productType?: string;
+      status: "processed" | "failed";
+      stripeEventId: string;
+      _id: Id<"webhookEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "error"
+      | "eventType"
+      | "processedAt"
+      | "productType"
+      | "status"
+      | "stripeEventId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_stripeEventId: ["stripeEventId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   webResearch: {
     document: {
       addedToEmbeddings: boolean;

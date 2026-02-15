@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -8,7 +8,7 @@ import { v } from "convex/values";
  * Run multiple times until isDone is true
  * Each run processes up to 100 customers to avoid hitting document read limits
  */
-export const backfillCustomersToContacts = mutation({
+export const backfillCustomersToContacts = internalMutation({
   args: {
     storeId: v.string(),
     batchSize: v.optional(v.number()), // Default 100

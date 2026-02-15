@@ -1,4 +1,3 @@
-// @ts-nocheck - Bypassing deep type instantiation errors with large Convex API
 "use client";
 
 import { useState, useEffect, useCallback } from "react";

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { EmptyState as SharedEmptyState } from "@/components/ui/empty-state";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; customerAction?: string }> = {
   pending_payment: { label: "Pending Payment", color: "bg-gray-500", icon: DollarSign },
@@ -134,15 +135,11 @@ export default function MyOrdersPage() {
 
         <TabsContent value="active" className="mt-6">
           {activeOrders.length === 0 ? (
-            <EmptyState
+            <SharedEmptyState
+              icon={Inbox}
               title="No active orders"
               description="When you purchase a mixing service, your orders will appear here."
-              icon={<Inbox className="h-12 w-12 text-muted-foreground" />}
-              action={
-                <Link href="/marketplace/mixing-services">
-                  <Button className="mt-4">Browse Mixing Services</Button>
-                </Link>
-              }
+              action={{ label: "Browse Mixing Services", href: "/marketplace/mixing-services" }}
             />
           ) : (
             <div className="space-y-4">
@@ -155,10 +152,10 @@ export default function MyOrdersPage() {
 
         <TabsContent value="completed" className="mt-6">
           {completedOrders.length === 0 ? (
-            <EmptyState
+            <SharedEmptyState
+              icon={CheckCircle}
               title="No completed orders"
               description="Your completed orders will appear here."
-              icon={<CheckCircle className="h-12 w-12 text-muted-foreground" />}
             />
           ) : (
             <div className="space-y-4">
@@ -171,10 +168,10 @@ export default function MyOrdersPage() {
 
         <TabsContent value="cancelled" className="mt-6">
           {cancelledOrders.length === 0 ? (
-            <EmptyState
+            <SharedEmptyState
+              icon={AlertCircle}
               title="No cancelled orders"
               description="Cancelled or refunded orders will appear here."
-              icon={<AlertCircle className="h-12 w-12 text-muted-foreground" />}
             />
           ) : (
             <div className="space-y-4">
@@ -309,29 +306,6 @@ function OrderCard({ order }: { order: any }) {
           </div>
         )}
       </CardContent>
-    </Card>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-  icon,
-  action,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <Card className="p-12 text-center">
-      <div className="flex flex-col items-center gap-4">
-        {icon}
-        <h3 className="text-lg font-semibold">{title}</h3>
-        <p className="text-muted-foreground">{description}</p>
-        {action}
-      </div>
     </Card>
   );
 }

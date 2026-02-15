@@ -1,10 +1,10 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 /**
  * Seed default credit packages
  * Run this once to populate the database with credit packages
  */
-export const seedDefaultPackages = mutation({
+export const seedDefaultPackages = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if packages already exist

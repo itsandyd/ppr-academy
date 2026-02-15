@@ -115,16 +115,6 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log("Mixing service checkout session created:", {
-      sessionId: session.id,
-      tier: selectedTier.name,
-      basePrice,
-      rushFee: additionalRushFee,
-      totalPrice,
-      platformFee: platformFeeAmount / 100,
-      customer: customerName,
-    });
-
     return NextResponse.json({
       success: true,
       checkoutUrl: session.url,

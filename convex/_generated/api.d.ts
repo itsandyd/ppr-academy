@@ -1067,20 +1067,6 @@ export declare const api: {
       null
     >;
   };
-  adminSetup: {
-    checkAdminStatus: FunctionReference<
-      "query",
-      "public",
-      { clerkId: string },
-      { found: boolean; isAdmin: boolean; userInfo?: string }
-    >;
-    makeUserAdmin: FunctionReference<
-      "mutation",
-      "public",
-      { clerkId: string },
-      { message: string; success: boolean }
-    >;
-  };
   affiliates: {
     applyForAffiliate: FunctionReference<
       "mutation",
@@ -4845,24 +4831,6 @@ export declare const api: {
         }>;
       }
     >;
-    createBeatLicensePurchase: FunctionReference<
-      "mutation",
-      "public",
-      {
-        amount: number;
-        beatId: Id<"digitalProducts">;
-        buyerEmail: string;
-        buyerName?: string;
-        currency?: string;
-        paymentMethod?: string;
-        storeId: string;
-        tierName: string;
-        tierType: "basic" | "premium" | "exclusive" | "unlimited";
-        transactionId?: string;
-        userId: string;
-      },
-      { beatLicenseId: Id<"beatLicenses">; purchaseId: Id<"purchases"> }
-    >;
     getBeatLicenseByPurchase: FunctionReference<
       "query",
       "public",
@@ -8248,63 +8216,6 @@ export declare const api: {
     >;
   };
   debug: {
-    checkEnrollments: {
-      checkCourseEnrollments: FunctionReference<
-        "query",
-        "public",
-        { storeId: string },
-        {
-          enrollmentsWithoutCustomers: number;
-          sampleEnrollments: Array<{
-            courseId: Id<"courses">;
-            courseTitle: string;
-            hasCustomerRecord: boolean;
-            purchaseAmount?: number;
-            userEmail?: string;
-            userId: string;
-          }>;
-          totalCustomers: number;
-          totalEnrollments: number;
-        }
-      >;
-      checkUserEnrollments: FunctionReference<
-        "query",
-        "public",
-        { userId: string },
-        {
-          customerRecords: Array<{
-            _id: Id<"customers">;
-            storeId: string;
-            totalSpent?: number;
-            type: "lead" | "paying" | "subscription";
-          }>;
-          enrollments: Array<{
-            amount: number;
-            courseId: Id<"courses">;
-            courseTitle: string;
-            purchaseDate: number;
-            storeId: string;
-          }>;
-          totalEnrollments: number;
-          userEmail?: string;
-          userExists: boolean;
-        }
-      >;
-      getStoreCustomerSummary: FunctionReference<
-        "query",
-        "public",
-        {},
-        Array<{
-          leads: number;
-          paying: number;
-          storeId: string;
-          storeName?: string;
-          subscriptions: number;
-          totalCustomers: number;
-          totalEnrollments: number;
-        }>
-      >;
-    };
     findCourseByTitle: FunctionReference<
       "query",
       "public",
@@ -8328,84 +8239,6 @@ export declare const api: {
         slug?: string;
         title: string;
       }>
-    >;
-    userEnrollments: {
-      debugUserEnrollments: FunctionReference<
-        "query",
-        "public",
-        { clerkId: string },
-        {
-          clerkId: string;
-          enrollmentCount: number;
-          enrollments: Array<{
-            courseId: string;
-            courseTitle: string;
-            enrolledAt: number;
-            progress?: number;
-          }>;
-          missingEnrollments: Array<string>;
-          missingPurchases: Array<string>;
-          purchaseCount: number;
-          purchases: Array<{
-            amount: number;
-            courseId?: string;
-            courseTitle?: string;
-            purchasedAt: number;
-            status: string;
-          }>;
-          userEmail?: string;
-          userExists: boolean;
-        }
-      >;
-      syncEnrollmentsFromPurchases: FunctionReference<
-        "mutation",
-        "public",
-        { clerkId: string },
-        { created: number; errors: number }
-      >;
-    };
-  };
-  debugFix: {
-    checkCourseData: FunctionReference<
-      "query",
-      "public",
-      { slug: string },
-      {
-        _id: Id<"courses">;
-        hasStoreId: boolean;
-        isPublished?: boolean;
-        slug?: string;
-        storeExists: boolean;
-        storeId?: string;
-        title: string;
-        userExists: boolean;
-        userId: string;
-      } | null
-    >;
-    fixCourseStoreId: FunctionReference<
-      "mutation",
-      "public",
-      { courseId: Id<"courses">; userId: string },
-      {
-        error?: string;
-        fixed?: { storeId?: boolean; userId?: boolean };
-        storeId?: string;
-        success: boolean;
-      }
-    >;
-  };
-  devSeeders: {
-    clearTestSubmissions: FunctionReference<
-      "mutation",
-      "public",
-      { creatorId: string },
-      null
-    >;
-    createSampleSubmissions: FunctionReference<
-      "mutation",
-      "public",
-      { count?: number; creatorId: string },
-      null
     >;
   };
   digitalProducts: {
@@ -12560,49 +12393,6 @@ export declare const api: {
       { message: string; success: boolean }
     >;
   };
-  fixes: {
-    bulkEnrollmentFix: {
-      checkEnrollmentHealth: FunctionReference<
-        "query",
-        "public",
-        {},
-        {
-          healthScore: number;
-          totalEnrollments: number;
-          totalPurchases: number;
-          usersWithEnrollments: number;
-          usersWithMissingEnrollments: number;
-          usersWithPurchases: number;
-        }
-      >;
-      fixAllUsersEnrollments: FunctionReference<
-        "mutation",
-        "public",
-        {},
-        {
-          enrollmentsCreated: number;
-          errors: number;
-          summary: Array<string>;
-          totalUsers: number;
-          usersFixed: number;
-        }
-      >;
-    };
-    enrollmentSync: {
-      fixAllEnrollmentIssues: FunctionReference<
-        "mutation",
-        "public",
-        {},
-        { enrollmentsCreated: number; errors: number; usersProcessed: number }
-      >;
-      fixUserEnrollments: FunctionReference<
-        "mutation",
-        "public",
-        { clerkId: string; courseSlug?: string },
-        { actions: Array<string>; fixed: boolean; issues: Array<string> }
-      >;
-    };
-  };
   followGateSubmissions: {
     checkFollowGateSubmission: FunctionReference<
       "query",
@@ -15619,161 +15409,6 @@ export declare const api: {
     >;
   };
   migrations: {
-    backfillCustomersToContacts: {
-      backfillCustomersToContacts: FunctionReference<
-        "mutation",
-        "public",
-        { batchSize?: number; cursor?: string; storeId: string },
-        {
-          alreadyExisted: number;
-          contactsCreated: number;
-          contactsUpdated: number;
-          customersProcessed: number;
-          errorDetails: Array<string>;
-          errors: number;
-          isDone: boolean;
-          nextCursor?: string;
-          success: boolean;
-        }
-      >;
-    };
-    fixContactStoreIds: {
-      fixContactStoreIds: FunctionReference<
-        "mutation",
-        "public",
-        { batchSize?: number; clerkUserId: string; convexStoreId: string },
-        {
-          duplicates: number;
-          errors: Array<string>;
-          skipped: number;
-          success: boolean;
-          updated: number;
-        }
-      >;
-    };
-    fixDelayNodeTracking: {
-      checkCronView: FunctionReference<
-        "mutation",
-        "public",
-        {},
-        { dueCount: number; samples: Array<any> }
-      >;
-      checkExecution: FunctionReference<
-        "mutation",
-        "public",
-        { executionId: Id<"workflowExecutions"> },
-        any
-      >;
-      diagnosePendingExecutions: FunctionReference<
-        "mutation",
-        "public",
-        { workflowId: Id<"emailWorkflows"> },
-        {
-          inFuture: number;
-          inPast: number;
-          samples: Array<any>;
-          totalPending: number;
-          withScheduledFor: number;
-          withoutScheduledFor: number;
-        }
-      >;
-      fixDelayNodeTracking: FunctionReference<
-        "mutation",
-        "public",
-        {
-          batchSize?: number;
-          dryRun?: boolean;
-          workflowId?: Id<"emailWorkflows">;
-        },
-        {
-          alreadyCorrect: number;
-          details: Array<{
-            email: string;
-            executionId: string;
-            newNodeId: string;
-            oldNodeId: string;
-            scheduledFor: number;
-          }>;
-          fixed: number;
-          hasMore: boolean;
-          isDryRun: boolean;
-          processed: number;
-          skipped: number;
-          success: boolean;
-        }
-      >;
-      forceProcessStuckExecutions: FunctionReference<
-        "mutation",
-        "public",
-        {
-          batchSize?: number;
-          dryRun?: boolean;
-          workflowId: Id<"emailWorkflows">;
-        },
-        { hasMore: boolean; processed: number; scheduled: number }
-      >;
-      getExecutionStats: FunctionReference<
-        "mutation",
-        "public",
-        { workflowId: Id<"emailWorkflows"> },
-        {
-          byNodeType: any;
-          byStatus: any;
-          pendingWithFutureSchedule: number;
-          sampleEmails: Array<string>;
-          total: number;
-        }
-      >;
-      getFailedExecutions: FunctionReference<
-        "mutation",
-        "public",
-        { workflowId: Id<"emailWorkflows"> },
-        Array<any>
-      >;
-      rerouteStuckAtNode: FunctionReference<
-        "mutation",
-        "public",
-        {
-          batchSize?: number;
-          fromNodeId: string;
-          scheduledFor?: number;
-          toNodeId: string;
-          workflowId: Id<"emailWorkflows">;
-        },
-        any
-      >;
-      resetFailedExecutions: FunctionReference<
-        "mutation",
-        "public",
-        {
-          dryRun?: boolean;
-          spreadMinutes?: number;
-          workflowId: Id<"emailWorkflows">;
-        },
-        { found: number; reset: number }
-      >;
-      resetPendingToNode: FunctionReference<
-        "mutation",
-        "public",
-        {
-          batchSize?: number;
-          dryRun?: boolean;
-          targetNodeId: string;
-          workflowId: Id<"emailWorkflows">;
-        },
-        any
-      >;
-      spreadPendingExecutions: FunctionReference<
-        "mutation",
-        "public",
-        {
-          dryRun?: boolean;
-          spreadMinutes?: number;
-          workflowId: Id<"emailWorkflows">;
-        },
-        { found: number; hasMore: boolean; message: string; updated: number }
-      >;
-    };
     importPlugins: {
       batchCreatePlugins: FunctionReference<
         "action",
@@ -15812,52 +15447,6 @@ export declare const api: {
             pluginsSuccess: number;
             studioToolCategories: number;
           };
-          success: boolean;
-        }
-      >;
-    };
-    removeNonStudentContacts: {
-      removeNonStudentContacts: FunctionReference<
-        "mutation",
-        "public",
-        { batchSize?: number; dryRun?: boolean; storeId: string },
-        {
-          bySource: any;
-          deleted: number;
-          isDryRun: boolean;
-          kept: number;
-          success: boolean;
-        }
-      >;
-    };
-    syncStudentsToContacts: {
-      syncStudentsToContacts: FunctionReference<
-        "mutation",
-        "public",
-        { batchSize?: number; cursor?: string; storeId: string },
-        {
-          errors: Array<string>;
-          isDone: boolean;
-          nextCursor?: string;
-          skipped: number;
-          studentsProcessed: number;
-          success: boolean;
-          synced: number;
-        }
-      >;
-    };
-    tagStudentsVsLeads: {
-      tagStudentsVsLeads: FunctionReference<
-        "mutation",
-        "public",
-        { batchSize?: number; cursor?: string; storeId: string },
-        {
-          alreadyTagged: number;
-          isDone: boolean;
-          leadsTagged: number;
-          nextCursor?: string;
-          processed: number;
-          studentsTagged: number;
           success: boolean;
         }
       >;
@@ -17656,6 +17245,30 @@ export declare const api: {
       },
       Id<"purchases">
     >;
+    getCreatorDashboardAnalytics: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      {
+        monthRevenue: number;
+        recentSales: Array<{
+          _creationTime: number;
+          _id: Id<"purchases">;
+          amount: number;
+          productTitle: string;
+          productType:
+            | "digitalProduct"
+            | "course"
+            | "coaching"
+            | "bundle"
+            | "beatLease";
+          status: "pending" | "completed" | "refunded";
+        }>;
+        totalEnrollments: number;
+        totalRevenue: number;
+        totalSales: number;
+      }
+    >;
     getStorePurchases: FunctionReference<
       "query",
       "public",
@@ -18807,9 +18420,6 @@ export declare const api: {
         success: boolean;
       }
     >;
-  };
-  seedCreditPackages: {
-    seedDefaultPackages: FunctionReference<"mutation", "public", {}, any>;
   };
   sendTimeOptimization: {
     getOptimalCampaignSendTime: FunctionReference<
@@ -21189,11 +20799,11 @@ export declare const api: {
       { clerkId: string; preference: "learn" | "create" },
       null
     >;
-    setUserAsAdmin: FunctionReference<
+    setInitialRole: FunctionReference<
       "mutation",
       "public",
-      { clerkId: string },
-      Id<"users">
+      { clerkId: string; role: "learn" | "create" },
+      null
     >;
     updateMyProfile: FunctionReference<
       "mutation",
@@ -21406,6 +21016,26 @@ export declare const api: {
       "query",
       "public",
       { days?: number },
+      any
+    >;
+  };
+  webhookEvents: {
+    getWebhookEvent: FunctionReference<
+      "query",
+      "public",
+      { stripeEventId: string },
+      any
+    >;
+    recordWebhookEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        error?: string;
+        eventType: string;
+        productType?: string;
+        status: "processed" | "failed";
+        stripeEventId: string;
+      },
       any
     >;
   };
@@ -21676,6 +21306,20 @@ export declare const internal: {
         } | null
       >;
     };
+  };
+  adminSetup: {
+    checkAdminStatus: FunctionReference<
+      "query",
+      "internal",
+      { clerkId: string },
+      { found: boolean; isAdmin: boolean; userInfo?: string }
+    >;
+    makeUserAdmin: FunctionReference<
+      "mutation",
+      "internal",
+      { clerkId: string },
+      { message: string; success: boolean }
+    >;
   };
   aiAgents: {
     seedBuiltInAgents: FunctionReference<"mutation", "internal", {}, null>;
@@ -22798,6 +22442,24 @@ export declare const internal: {
     >;
   };
   beatLeases: {
+    createBeatLicensePurchase: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        amount: number;
+        beatId: Id<"digitalProducts">;
+        buyerEmail: string;
+        buyerName?: string;
+        currency?: string;
+        paymentMethod?: string;
+        storeId: string;
+        tierName: string;
+        tierType: "basic" | "premium" | "exclusive" | "unlimited";
+        transactionId?: string;
+        userId: string;
+      },
+      { beatLicenseId: Id<"beatLicenses">; purchaseId: Id<"purchases"> }
+    >;
     markBeatAsExclusivelySold: FunctionReference<
       "mutation",
       "internal",
@@ -23514,6 +23176,143 @@ export declare const internal: {
       null
     >;
   };
+  debug: {
+    checkEnrollments: {
+      checkCourseEnrollments: FunctionReference<
+        "query",
+        "internal",
+        { storeId: string },
+        {
+          enrollmentsWithoutCustomers: number;
+          sampleEnrollments: Array<{
+            courseId: Id<"courses">;
+            courseTitle: string;
+            hasCustomerRecord: boolean;
+            purchaseAmount?: number;
+            userEmail?: string;
+            userId: string;
+          }>;
+          totalCustomers: number;
+          totalEnrollments: number;
+        }
+      >;
+      checkUserEnrollments: FunctionReference<
+        "query",
+        "internal",
+        { userId: string },
+        {
+          customerRecords: Array<{
+            _id: Id<"customers">;
+            storeId: string;
+            totalSpent?: number;
+            type: "lead" | "paying" | "subscription";
+          }>;
+          enrollments: Array<{
+            amount: number;
+            courseId: Id<"courses">;
+            courseTitle: string;
+            purchaseDate: number;
+            storeId: string;
+          }>;
+          totalEnrollments: number;
+          userEmail?: string;
+          userExists: boolean;
+        }
+      >;
+      getStoreCustomerSummary: FunctionReference<
+        "query",
+        "internal",
+        {},
+        Array<{
+          leads: number;
+          paying: number;
+          storeId: string;
+          storeName?: string;
+          subscriptions: number;
+          totalCustomers: number;
+          totalEnrollments: number;
+        }>
+      >;
+    };
+    userEnrollments: {
+      debugUserEnrollments: FunctionReference<
+        "query",
+        "internal",
+        { clerkId: string },
+        {
+          clerkId: string;
+          enrollmentCount: number;
+          enrollments: Array<{
+            courseId: string;
+            courseTitle: string;
+            enrolledAt: number;
+            progress?: number;
+          }>;
+          missingEnrollments: Array<string>;
+          missingPurchases: Array<string>;
+          purchaseCount: number;
+          purchases: Array<{
+            amount: number;
+            courseId?: string;
+            courseTitle?: string;
+            purchasedAt: number;
+            status: string;
+          }>;
+          userEmail?: string;
+          userExists: boolean;
+        }
+      >;
+      syncEnrollmentsFromPurchases: FunctionReference<
+        "mutation",
+        "internal",
+        { clerkId: string },
+        { created: number; errors: number }
+      >;
+    };
+  };
+  debugFix: {
+    checkCourseData: FunctionReference<
+      "query",
+      "internal",
+      { slug: string },
+      {
+        _id: Id<"courses">;
+        hasStoreId: boolean;
+        isPublished?: boolean;
+        slug?: string;
+        storeExists: boolean;
+        storeId?: string;
+        title: string;
+        userExists: boolean;
+        userId: string;
+      } | null
+    >;
+    fixCourseStoreId: FunctionReference<
+      "mutation",
+      "internal",
+      { courseId: Id<"courses">; userId: string },
+      {
+        error?: string;
+        fixed?: { storeId?: boolean; userId?: boolean };
+        storeId?: string;
+        success: boolean;
+      }
+    >;
+  };
+  devSeeders: {
+    clearTestSubmissions: FunctionReference<
+      "mutation",
+      "internal",
+      { creatorId: string },
+      null
+    >;
+    createSampleSubmissions: FunctionReference<
+      "mutation",
+      "internal",
+      { count?: number; creatorId: string },
+      null
+    >;
+  };
   directMessages: {
     getUserByClerkId: FunctionReference<
       "query",
@@ -23863,6 +23662,12 @@ export declare const internal: {
         storeId: string;
       },
       Id<"emailContacts">
+    >;
+    verifyStoreOwner: FunctionReference<
+      "query",
+      "internal",
+      { storeId: string },
+      null
     >;
   };
   emailContactSync: {
@@ -25109,6 +24914,55 @@ export declare const internal: {
       null
     >;
     updateAllStoreFanCounts: FunctionReference<"action", "internal", {}, null>;
+    verifyStoreOwner: FunctionReference<
+      "query",
+      "internal",
+      { storeId: string },
+      null
+    >;
+  };
+  fixes: {
+    bulkEnrollmentFix: {
+      checkEnrollmentHealth: FunctionReference<
+        "query",
+        "internal",
+        {},
+        {
+          healthScore: number;
+          totalEnrollments: number;
+          totalPurchases: number;
+          usersWithEnrollments: number;
+          usersWithMissingEnrollments: number;
+          usersWithPurchases: number;
+        }
+      >;
+      fixAllUsersEnrollments: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        {
+          enrollmentsCreated: number;
+          errors: number;
+          summary: Array<string>;
+          totalUsers: number;
+          usersFixed: number;
+        }
+      >;
+    };
+    enrollmentSync: {
+      fixAllEnrollmentIssues: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        { enrollmentsCreated: number; errors: number; usersProcessed: number }
+      >;
+      fixUserEnrollments: FunctionReference<
+        "mutation",
+        "internal",
+        { clerkId: string; courseSlug?: string },
+        { actions: Array<string>; fixed: boolean; issues: Array<string> }
+      >;
+    };
   };
   generatedScripts: {
     createGeneratedScript: FunctionReference<
@@ -27674,6 +27528,161 @@ export declare const internal: {
         }
       >;
     };
+    backfillCustomersToContacts: {
+      backfillCustomersToContacts: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize?: number; cursor?: string; storeId: string },
+        {
+          alreadyExisted: number;
+          contactsCreated: number;
+          contactsUpdated: number;
+          customersProcessed: number;
+          errorDetails: Array<string>;
+          errors: number;
+          isDone: boolean;
+          nextCursor?: string;
+          success: boolean;
+        }
+      >;
+    };
+    fixContactStoreIds: {
+      fixContactStoreIds: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize?: number; clerkUserId: string; convexStoreId: string },
+        {
+          duplicates: number;
+          errors: Array<string>;
+          skipped: number;
+          success: boolean;
+          updated: number;
+        }
+      >;
+    };
+    fixDelayNodeTracking: {
+      checkCronView: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        { dueCount: number; samples: Array<any> }
+      >;
+      checkExecution: FunctionReference<
+        "mutation",
+        "internal",
+        { executionId: Id<"workflowExecutions"> },
+        any
+      >;
+      diagnosePendingExecutions: FunctionReference<
+        "mutation",
+        "internal",
+        { workflowId: Id<"emailWorkflows"> },
+        {
+          inFuture: number;
+          inPast: number;
+          samples: Array<any>;
+          totalPending: number;
+          withScheduledFor: number;
+          withoutScheduledFor: number;
+        }
+      >;
+      fixDelayNodeTracking: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          batchSize?: number;
+          dryRun?: boolean;
+          workflowId?: Id<"emailWorkflows">;
+        },
+        {
+          alreadyCorrect: number;
+          details: Array<{
+            email: string;
+            executionId: string;
+            newNodeId: string;
+            oldNodeId: string;
+            scheduledFor: number;
+          }>;
+          fixed: number;
+          hasMore: boolean;
+          isDryRun: boolean;
+          processed: number;
+          skipped: number;
+          success: boolean;
+        }
+      >;
+      forceProcessStuckExecutions: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          batchSize?: number;
+          dryRun?: boolean;
+          workflowId: Id<"emailWorkflows">;
+        },
+        { hasMore: boolean; processed: number; scheduled: number }
+      >;
+      getExecutionStats: FunctionReference<
+        "mutation",
+        "internal",
+        { workflowId: Id<"emailWorkflows"> },
+        {
+          byNodeType: any;
+          byStatus: any;
+          pendingWithFutureSchedule: number;
+          sampleEmails: Array<string>;
+          total: number;
+        }
+      >;
+      getFailedExecutions: FunctionReference<
+        "mutation",
+        "internal",
+        { workflowId: Id<"emailWorkflows"> },
+        Array<any>
+      >;
+      rerouteStuckAtNode: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          batchSize?: number;
+          fromNodeId: string;
+          scheduledFor?: number;
+          toNodeId: string;
+          workflowId: Id<"emailWorkflows">;
+        },
+        any
+      >;
+      resetFailedExecutions: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          dryRun?: boolean;
+          spreadMinutes?: number;
+          workflowId: Id<"emailWorkflows">;
+        },
+        { found: number; reset: number }
+      >;
+      resetPendingToNode: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          batchSize?: number;
+          dryRun?: boolean;
+          targetNodeId: string;
+          workflowId: Id<"emailWorkflows">;
+        },
+        any
+      >;
+      spreadPendingExecutions: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          dryRun?: boolean;
+          spreadMinutes?: number;
+          workflowId: Id<"emailWorkflows">;
+        },
+        { found: number; hasMore: boolean; message: string; updated: number }
+      >;
+    };
     migrateAbletonRacksToEffectChains: {
       migrateAbletonRacksToEffectChains: FunctionReference<
         "mutation",
@@ -27686,6 +27695,52 @@ export declare const internal: {
         "internal",
         {},
         { errors: number; reverted: number; total: number }
+      >;
+    };
+    removeNonStudentContacts: {
+      removeNonStudentContacts: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize?: number; dryRun?: boolean; storeId: string },
+        {
+          bySource: any;
+          deleted: number;
+          isDryRun: boolean;
+          kept: number;
+          success: boolean;
+        }
+      >;
+    };
+    syncStudentsToContacts: {
+      syncStudentsToContacts: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize?: number; cursor?: string; storeId: string },
+        {
+          errors: Array<string>;
+          isDone: boolean;
+          nextCursor?: string;
+          skipped: number;
+          studentsProcessed: number;
+          success: boolean;
+          synced: number;
+        }
+      >;
+    };
+    tagStudentsVsLeads: {
+      tagStudentsVsLeads: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize?: number; cursor?: string; storeId: string },
+        {
+          alreadyTagged: number;
+          isDone: boolean;
+          leadsTagged: number;
+          nextCursor?: string;
+          processed: number;
+          studentsTagged: number;
+          success: boolean;
+        }
       >;
     };
     universalProductsMigration: {
@@ -28170,6 +28225,9 @@ export declare const internal: {
       any
     >;
   };
+  seedCreditPackages: {
+    seedDefaultPackages: FunctionReference<"mutation", "internal", {}, any>;
+  };
   sendTimeOptimization: {
     decayEngagementScores: FunctionReference<
       "mutation",
@@ -28447,6 +28505,12 @@ export declare const internal: {
         name?: string;
       } | null
     >;
+    setUserAsAdmin: FunctionReference<
+      "mutation",
+      "internal",
+      { clerkId: string },
+      Id<"users">
+    >;
   };
   videos: {
     getJobInternal: FunctionReference<
@@ -28699,6 +28763,9 @@ export declare const internal: {
       { events: Array<any> },
       any
     >;
+  };
+  webhookEvents: {
+    cleanupOldWebhookEvents: FunctionReference<"mutation", "internal", {}, any>;
   };
   webhooks: {
     facebook: {

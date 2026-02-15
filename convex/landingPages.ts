@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 /**
  * LANDING PAGE BUILDER
@@ -50,6 +51,8 @@ export const getLandingPages = query({
     includeUnpublished: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     let pages = await ctx.db
       .query("landingPages")
       .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
@@ -94,8 +97,12 @@ export const getLandingPages = query({
 export const getLandingPage = query({
   args: { pageId: v.id("landingPages") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
     const page = await ctx.db.get(args.pageId);
     if (!page) return null;
+
+    await requireStoreOwner(ctx, page.storeId);
 
     // Get linked product/course info
     let linkedProduct = null;
@@ -242,6 +249,13 @@ export const getLandingPageAnalytics = query({
     endDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+
+    const page = await ctx.db.get(args.pageId);
+    if (!page) return { daily: [], totals: { views: 0, uniqueVisitors: 0, conversions: 0, conversionRate: 0 } };
+
+    await requireStoreOwner(ctx, page.storeId);
+
     let analytics = await ctx.db
       .query("landingPageAnalytics")
       .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
@@ -313,6 +327,8 @@ export const createLandingPage = mutation({
     templateId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const now = Date.now();
 
     // Check if slug is already taken
@@ -441,6 +457,8 @@ export const updateLandingPage = mutation({
       throw new Error("Page not found");
     }
 
+    await requireStoreOwner(ctx, page.storeId);
+
     // Check slug uniqueness if changing
     if (updates.slug && updates.slug !== page.slug) {
       const existing = await ctx.db
@@ -484,6 +502,8 @@ export const updateBlock = mutation({
       throw new Error("Page not found");
     }
 
+    await requireStoreOwner(ctx, page.storeId);
+
     const blocks = page.blocks.map((block) => {
       if (block.id === args.blockId) {
         return {
@@ -519,6 +539,8 @@ export const addBlock = mutation({
     if (!page) {
       throw new Error("Page not found");
     }
+
+    await requireStoreOwner(ctx, page.storeId);
 
     const blockId = `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -567,6 +589,8 @@ export const removeBlock = mutation({
       throw new Error("Page not found");
     }
 
+    await requireStoreOwner(ctx, page.storeId);
+
     const blocks = page.blocks
       .filter((block) => block.id !== args.blockId)
       .map((block, index) => ({ ...block, position: index }));
@@ -593,6 +617,8 @@ export const reorderBlocks = mutation({
     if (!page) {
       throw new Error("Page not found");
     }
+
+    await requireStoreOwner(ctx, page.storeId);
 
     const blockMap = new Map(page.blocks.map((b) => [b.id, b]));
     const reorderedBlocks = args.blockIds
@@ -623,6 +649,8 @@ export const togglePublish = mutation({
       throw new Error("Page not found");
     }
 
+    await requireStoreOwner(ctx, page.storeId);
+
     const now = Date.now();
     const newStatus = !page.isPublished;
 
@@ -646,6 +674,8 @@ export const duplicatePage = mutation({
     if (!page) {
       throw new Error("Page not found");
     }
+
+    await requireStoreOwner(ctx, page.storeId);
 
     const now = Date.now();
 
@@ -711,6 +741,8 @@ export const createVariant = mutation({
       throw new Error("Parent page not found");
     }
 
+    await requireStoreOwner(ctx, parentPage.storeId);
+
     if (parentPage.isVariant) {
       throw new Error("Cannot create variant of a variant");
     }
@@ -775,6 +807,8 @@ export const deletePage = mutation({
     if (!page) {
       throw new Error("Page not found");
     }
+
+    await requireStoreOwner(ctx, page.storeId);
 
     // Delete variants if this is a parent
     if (!page.isVariant) {

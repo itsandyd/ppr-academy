@@ -18,6 +18,7 @@
     "@typescript-eslint/no-empty-interface": "off",
     "@typescript-eslint/no-empty-object-type": "off",
     "@typescript-eslint/no-require-imports": "off",
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
     "prefer-const": "warn",
     "no-var": "warn"
   },

@@ -124,19 +124,17 @@ export function CourseDetailClient({
   useEffect(() => {
     const loadVoices = async () => {
       try {
-        // console.log(...);
+
         const result = await getElevenLabsVoices();
-        // console.log(...);
+
         
         if (result.success && result.voices) {
           setAvailableVoices(result.voices);
         } else {
-          console.warn('🔊 Failed to load voices:', result.error);
           // Keep the default voice available
           setAvailableVoices([]);
         }
       } catch (error) {
-        console.error('🔊 Error loading voices:', error);
         // Keep the default voice available
         setAvailableVoices([]);
       }
@@ -176,7 +174,6 @@ export function CourseDetailClient({
 
     // Check if audioUrl is a legacy reference (not a playable URL)
     if (audioUrl && audioUrl.startsWith('generated_')) {
-      console.warn('⚠️ Legacy audio reference detected:', audioUrl);
       toast({
         title: "Audio Not Available",
         description: "Please regenerate the audio to enable playback.",
@@ -185,33 +182,16 @@ export function CourseDetailClient({
       return;
     }
 
-    // console.log(...);
+
     
     // Play new audio
     const audio = new Audio(audioUrl);
     
-    audio.onloadstart = () => {
-      // console.log(...);
-    };
-    
-    audio.oncanplay = () => {
-      // console.log(...);
-    };
-    
-    audio.oncanplaythrough = () => {
-      // console.log(...);
-    };
-    
     audio.onended = () => {
-      // console.log(...);
       setAudioPlaying(null);
     };
     
-    audio.onerror = (e) => {
-      console.error('❌ Audio error event:', e);
-      console.error('❌ Audio error details:', audio.error);
-      console.error('❌ Audio error code:', audio.error?.code);
-      console.error('❌ Audio error message:', audio.error?.message);
+    audio.onerror = () => {
       
       let errorMessage = 'Unknown error';
       if (audio.error) {
@@ -243,17 +223,13 @@ export function CourseDetailClient({
     
     setAudioRefs(prev => ({ ...prev, [chapterId]: audio }));
     
-    // console.log(...);
+
     
     // Try to play the audio
     audio.play().then(() => {
-      // console.log(...);
+
       setAudioPlaying(chapterId);
     }).catch((error) => {
-      console.error('❌ Audio play failed:', error);
-      console.error('❌ Error name:', error.name);
-      console.error('❌ Error message:', error.message);
-      
       toast({
         title: "Audio Playback Failed",
         description: `Unable to play audio: ${error.message}`,
@@ -306,7 +282,6 @@ export function CourseDetailClient({
         });
       }
     } catch (error) {
-      console.error('Audio generation error:', error);
       toast({
         title: "Generation Failed",
         description: "An unexpected error occurred. Please try again.",

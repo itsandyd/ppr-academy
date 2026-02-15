@@ -128,7 +128,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background pb-20 md:pb-0">
       {/* Hero Section */}
       <div className="overflow-hidden bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground">
         <div className="mx-auto max-w-6xl px-3 py-8 sm:px-4 sm:py-12 lg:px-6 lg:py-16">
@@ -502,6 +502,24 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
 
       {/* Q&A Chat Component */}
       <CourseQAChat courseId={course._id} courseTitle={course.title} userId={course.userId} />
+
+      {/* Sticky Mobile CTA */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background p-3 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:hidden">
+        <Button
+          size="lg"
+          onClick={handleEnrollClick}
+          className="h-auto w-full bg-chart-1 py-3 text-sm font-semibold text-white hover:bg-chart-1/90"
+        >
+          <span className="truncate">
+            {course.price && course.price > 0 ? (
+              <>Enroll Now - ${course.price}</>
+            ) : (
+              <>Enroll for Free</>
+            )}
+          </span>
+          <ArrowRight className="ml-2 h-4 w-4 flex-shrink-0" />
+        </Button>
+      </div>
     </div>
   );
 }

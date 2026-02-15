@@ -177,12 +177,12 @@ export const cleanupExpiredViewers = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
 
-    // Find expired viewers
+    // Find expired viewers — process in bounded batches to limit bandwidth
     const expired = await ctx.db
       .query("liveViewers")
       .withIndex("by_expiresAt")
       .filter((q) => q.lt(q.field("expiresAt"), now))
-      .collect();
+      .take(200);
 
     // Delete expired records
     for (const viewer of expired) {

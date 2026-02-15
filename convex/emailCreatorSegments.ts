@@ -6,6 +6,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Condition schema for validation
 const conditionSchema = v.object({
@@ -43,6 +44,7 @@ export const getCreatorSegments = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     return await ctx.db
       .query("creatorEmailSegments")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -59,6 +61,7 @@ export const getSegmentById = query({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.db.get(args.segmentId);
   },
 });
@@ -85,6 +88,7 @@ export const previewSegment = query({
     ),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const limit = args.limit || 50;
 
     // Get all contacts for this store
@@ -152,6 +156,7 @@ export const getSegmentContacts = query({
     total: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const segment = await ctx.db.get(args.segmentId);
     if (!segment) return { contacts: [], total: 0 };
 
@@ -203,6 +208,7 @@ export const getSegmentContactIds = query({
   },
   returns: v.array(v.id("emailContacts")),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const segment = await ctx.db.get(args.segmentId);
     if (!segment) return [];
 
@@ -247,6 +253,7 @@ export const createSegment = mutation({
   },
   returns: v.id("creatorEmailSegments"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const now = Date.now();
 
     // Calculate initial member count
@@ -294,6 +301,7 @@ export const updateSegment = mutation({
   },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const segment = await ctx.db.get(args.segmentId);
     if (!segment) return { success: false };
 
@@ -347,6 +355,7 @@ export const deleteSegment = mutation({
   },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const segment = await ctx.db.get(args.segmentId);
     if (!segment) return { success: false };
 
@@ -367,6 +376,7 @@ export const refreshSegment = mutation({
     memberCount: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const segment = await ctx.db.get(args.segmentId);
     if (!segment) return { success: false, memberCount: 0 };
 
@@ -406,6 +416,7 @@ export const duplicateSegment = mutation({
   },
   returns: v.id("creatorEmailSegments"),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const segment = await ctx.db.get(args.segmentId);
     if (!segment) throw new Error("Segment not found");
 

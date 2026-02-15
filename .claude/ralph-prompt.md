@@ -11,7 +11,7 @@ Fix the 8 critical launch blockers identified in LAUNCH_READINESS_AUDIT.md. Work
 - Verify: Check that the connected account ID is included in Stripe payment intent creation
 
 ### 1.2 Post-Purchase Webhook Emails
-- Files: `app/api/webhooks/stripe-library/route.ts:65-66`, `app/api/courses/payment-success/route.ts:56`
+- Files: `app/api/webhooks/stripe/route.ts` (legacy `stripe-library` route removed), `app/api/courses/payment-success/route.ts:56`
 - Fix: Implement Resend email sending for purchase confirmations
 - Verify: Trace the code path to confirm email function is called after successful payment
 

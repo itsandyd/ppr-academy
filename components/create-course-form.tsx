@@ -97,9 +97,9 @@ export default function CreateCourseForm({
 
   // Load initial data from props
   useEffect(() => {
-    // console.log(...);
+
     if (initialData) {
-      // console.log(...);
+
       
       if (initialData.title !== undefined) setTitle(initialData.title);
       if (initialData.description !== undefined) setDescription(initialData.description);
@@ -108,9 +108,9 @@ export default function CreateCourseForm({
       if (initialData.thumbnail !== undefined) setThumbnail(initialData.thumbnail);
       if (initialData.price !== undefined) setPrice(initialData.price);
       if (initialData.modules !== undefined) {
-        // console.log(...);
+
         setModules(initialData.modules);
-        // console.log(...);
+
         
         // Auto-expand modules that should be expanded
         if (initialData.modules.length > 0) {
@@ -139,8 +139,8 @@ export default function CreateCourseForm({
   const notifyDataChange = () => {
     if (onDataChange) {
       const currentData = getCurrentFormData();
-      // console.log(...);
-      // console.log(...);
+
+
       onDataChange(currentData);
     }
   };
@@ -176,8 +176,8 @@ export default function CreateCourseForm({
   ];
 
   const addModule = () => {
-    // console.log(...);
-    // console.log(...);
+
+
     const newModule: Module = {
       title: "",
       description: "",
@@ -186,8 +186,8 @@ export default function CreateCourseForm({
     };
     const newModules = [...modules, newModule];
     const newModuleIndex = modules.length;
-    // console.log(...);
-    // console.log(...);
+
+
     setModules(newModules);
     
     // Auto-expand the newly added module
@@ -196,12 +196,12 @@ export default function CreateCourseForm({
         ...prev,
         [newModuleIndex]: true
       };
-      // console.log(...);
+
       return newExpanded;
     });
     
     // Fix timing issue - use the newModules array directly instead of stale state
-    // console.log(...);
+
     if (onDataChange) {
       const currentData = {
         title,
@@ -212,7 +212,7 @@ export default function CreateCourseForm({
         price,
         modules: newModules  // Use the fresh array instead of stale state
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -220,7 +220,7 @@ export default function CreateCourseForm({
   const updateModule = (index: number, field: keyof Module, value: any) => {
     const updatedModules = [...modules];
     updatedModules[index] = { ...updatedModules[index], [field]: value };
-    // console.log(...);
+
     setModules(updatedModules);
     
     // Use direct onDataChange call with the updated data instead of notifyDataChange
@@ -234,7 +234,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules  // Use the updated array directly
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -246,7 +246,7 @@ export default function CreateCourseForm({
   };
 
   const addLesson = (moduleIndex: number) => {
-    // console.log(...);
+
     const newLesson: Lesson = {
       title: "",
       description: "",
@@ -277,7 +277,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -301,7 +301,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -322,13 +322,13 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
 
   const addChapter = (moduleIndex: number, lessonIndex: number) => {
-    // console.log(...);
+
     const newChapter: Chapter = {
       title: "",
       content: "",
@@ -352,7 +352,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -376,7 +376,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -398,7 +398,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      // console.log(...);
+
       onDataChange(currentData);
     }
   };
@@ -468,7 +468,7 @@ export default function CreateCourseForm({
         }
       });
       
-      // console.log(...);
+
       
       setIsSubmitting(false);
 
@@ -618,7 +618,7 @@ export default function CreateCourseForm({
                     <Button 
                       type="button" 
                       onClick={() => {
-                        // console.log(...);
+
                         addModule();
                       }} 
                       variant="outline"
@@ -631,7 +631,7 @@ export default function CreateCourseForm({
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    // console.log(...);
+
                     return modules.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <p>No modules yet. Add your first module to get started.</p>

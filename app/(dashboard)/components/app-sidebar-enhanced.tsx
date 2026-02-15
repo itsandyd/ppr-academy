@@ -33,6 +33,7 @@ import {
   CreditCard,
   BookOpen,
   Video,
+  Rocket,
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -90,9 +91,10 @@ export function AppSidebarEnhanced() {
   // Fetch user's stores using helper function
   const stores = useStoresByUser(user?.id);
   
-  // Use URL storeId if available, otherwise use first store or fallback
-  const storeId = urlStoreId || stores?.[0]?._id || 'setup';
-  
+  // Use URL storeId if available, otherwise use first store
+  const storeId = urlStoreId || stores?.[0]?._id || null;
+  const hasStore = Boolean(storeId && storeId !== 'setup');
+
   // Get current store object for displaying info
   const currentStore = stores?.find(s => s._id === storeId) || stores?.[0];
 
@@ -100,144 +102,170 @@ export function AppSidebarEnhanced() {
     {
       label: "Overview",
       items: [
-        { 
-          icon: Home, 
-          href: "/home", 
+        {
+          icon: Home,
+          href: "/home",
           label: "Dashboard",
           gradient: "from-blue-500 to-cyan-500"
         },
-        { 
-          icon: TrendingUp, 
-          href: "/home/analytics", 
+        {
+          icon: TrendingUp,
+          href: "/home/analytics",
           label: "Analytics",
           gradient: "from-emerald-500 to-teal-500"
         },
       ]
     },
-    {
-      label: "Create & Distribute",
-      items: [
-        { 
-          icon: FileText, 
-          href: `/store/${storeId || 'setup'}/notes`, 
-          label: "Notes & Ideas",
-          badge: "AI",
-          isNew: true,
-          gradient: "from-violet-500 to-purple-500"
-        },
-        { 
-          icon: Sparkles, 
-          href: `/store/${storeId || 'setup'}/products/create`, 
-          label: "Create Product",
-          badge: "New",
-          gradient: "from-purple-500 to-pink-500"
-        },
-        { 
-          icon: Package, 
-          href: `/store/${storeId || 'setup'}/products`, 
-          label: "My Products",
-          gradient: "from-blue-500 to-cyan-500"
-        },
-        { 
-          icon: BookOpen, 
-          href: `/store/${storeId || 'setup'}/blog`, 
-          label: "Blog Posts",
-          gradient: "from-blue-500 to-indigo-500"
-        },
-        { 
-          icon: List, 
-          href: `/home/playlists`, 
-          label: "My Playlists",
-          gradient: "from-purple-500 to-blue-500"
-        },
-        { 
-          icon: Inbox, 
-          href: `/home/submissions`, 
-          label: "Submissions",
-          gradient: "from-orange-500 to-amber-500"
-        },
-      ]
-    },
-    {
-      label: "Audience & Growth",
-      items: [
-        { 
-          icon: Users, 
-          href: `/store/${storeId || 'setup'}/customers`, 
-          label: "Fans",
-          gradient: "from-orange-500 to-red-500"
-        },
-        { 
-          icon: Mail, 
-          href: `/store/${storeId || 'setup'}/email-campaigns`, 
-          label: "Email Campaigns",
-          gradient: "from-indigo-500 to-purple-500"
-        },
-        { 
-          icon: MessageSquare, 
-          href: `/store/${storeId || 'setup'}/inbox`, 
-          label: "Inbox",
-          gradient: "from-pink-500 to-rose-500"
-        },
-        {
-          icon: Video,
-          href: `/store/${storeId || 'setup'}/videos`,
-          label: "Video Studio",
-          badge: "AI",
-          isNew: true,
-          gradient: "from-rose-500 to-orange-500"
-        },
-        {
-          icon: Share2,
-          href: `/store/${storeId || 'setup'}/social`,
-          label: "Social Media",
-          isNew: true,
-          gradient: "from-blue-500 to-cyan-500"
-        },
-        { 
-          icon: Zap, 
-          href: `/store/${storeId || 'setup'}/automations`, 
-          label: "Automations",
-          isNew: true,
-          gradient: "from-yellow-500 to-orange-500"
-        },
-      ]
-    },
-    {
-      label: "Manage & Monetize",
-      items: [
-        { 
-          icon: Store, 
-          href: `/store/${storeId || 'setup'}/products`, 
-          label: "My Products",
-          gradient: "from-rose-500 to-pink-500"
-        },
-        {
-          icon: User,
-          href: `/dashboard/profile`,
-          label: "Profile",
-          gradient: "from-blue-500 to-indigo-500"
-        },
-        { 
-          icon: DollarSign, 
-          href: `/store/${storeId || 'setup'}/settings/payouts`, 
-          label: "Earnings",
-          gradient: "from-green-500 to-emerald-500"
-        },
-        { 
-          icon: CreditCard, 
-          href: `/store/${storeId || 'setup'}/plan`, 
-          label: "Plan & Billing",
-          gradient: "from-violet-500 to-purple-500"
-        },
-        { 
-          icon: Settings, 
-          href: `/store/${storeId || 'setup'}/options`, 
-          label: "Settings",
-          gradient: "from-gray-500 to-slate-500"
-        },
-      ]
-    }
+    ...(hasStore ? [
+      {
+        label: "Create & Distribute",
+        items: [
+          {
+            icon: FileText,
+            href: `/store/${storeId}/notes`,
+            label: "Notes & Ideas",
+            badge: "AI",
+            isNew: true,
+            gradient: "from-violet-500 to-purple-500"
+          },
+          {
+            icon: Sparkles,
+            href: `/store/${storeId}/products/create`,
+            label: "Create Product",
+            badge: "New",
+            gradient: "from-purple-500 to-pink-500"
+          },
+          {
+            icon: Package,
+            href: `/store/${storeId}/products`,
+            label: "My Products",
+            gradient: "from-blue-500 to-cyan-500"
+          },
+          {
+            icon: BookOpen,
+            href: `/store/${storeId}/blog`,
+            label: "Blog Posts",
+            gradient: "from-blue-500 to-indigo-500"
+          },
+          {
+            icon: List,
+            href: `/home/playlists`,
+            label: "My Playlists",
+            gradient: "from-purple-500 to-blue-500"
+          },
+          {
+            icon: Inbox,
+            href: `/home/submissions`,
+            label: "Submissions",
+            gradient: "from-orange-500 to-amber-500"
+          },
+        ]
+      },
+      {
+        label: "Audience & Growth",
+        items: [
+          {
+            icon: Users,
+            href: `/store/${storeId}/customers`,
+            label: "Fans",
+            gradient: "from-orange-500 to-red-500"
+          },
+          {
+            icon: Mail,
+            href: `/store/${storeId}/email-campaigns`,
+            label: "Email Campaigns",
+            gradient: "from-indigo-500 to-purple-500"
+          },
+          {
+            icon: MessageSquare,
+            href: `/store/${storeId}/inbox`,
+            label: "Inbox",
+            gradient: "from-pink-500 to-rose-500"
+          },
+          {
+            icon: Video,
+            href: `/store/${storeId}/videos`,
+            label: "Video Studio",
+            badge: "AI",
+            isNew: true,
+            gradient: "from-rose-500 to-orange-500"
+          },
+          {
+            icon: Share2,
+            href: `/store/${storeId}/social`,
+            label: "Social Media",
+            isNew: true,
+            gradient: "from-blue-500 to-cyan-500"
+          },
+          {
+            icon: Zap,
+            href: `/store/${storeId}/automations`,
+            label: "Automations",
+            isNew: true,
+            gradient: "from-yellow-500 to-orange-500"
+          },
+        ]
+      },
+      {
+        label: "Manage & Monetize",
+        items: [
+          {
+            icon: Store,
+            href: `/store/${storeId}/products`,
+            label: "My Products",
+            gradient: "from-rose-500 to-pink-500"
+          },
+          {
+            icon: User,
+            href: `/dashboard/profile`,
+            label: "Profile",
+            gradient: "from-blue-500 to-indigo-500"
+          },
+          {
+            icon: DollarSign,
+            href: `/store/${storeId}/settings/payouts`,
+            label: "Earnings",
+            gradient: "from-green-500 to-emerald-500"
+          },
+          {
+            icon: CreditCard,
+            href: `/store/${storeId}/plan`,
+            label: "Plan & Billing",
+            gradient: "from-violet-500 to-purple-500"
+          },
+          {
+            icon: Settings,
+            href: `/store/${storeId}/options`,
+            label: "Settings",
+            gradient: "from-gray-500 to-slate-500"
+          },
+        ]
+      }
+    ] as NavSection[] : [
+      {
+        label: "Get Started",
+        items: [
+          {
+            icon: List,
+            href: `/home/playlists`,
+            label: "My Playlists",
+            gradient: "from-purple-500 to-blue-500"
+          },
+          {
+            icon: Inbox,
+            href: `/home/submissions`,
+            label: "Submissions",
+            gradient: "from-orange-500 to-amber-500"
+          },
+          {
+            icon: User,
+            href: `/dashboard/profile`,
+            label: "Profile",
+            gradient: "from-blue-500 to-indigo-500"
+          },
+        ]
+      }
+    ] as NavSection[]),
   ];
 
   const isActiveLink = (href: string) => {
@@ -294,6 +322,28 @@ export function AppSidebarEnhanced() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4 space-y-2">
+        {!hasStore && stores !== undefined && (
+          <motion.div
+            className="mx-2 mb-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Link href="/dashboard">
+              <div className="rounded-lg border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-4 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                    <Rocket className="w-4 h-4 text-white" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">Set up your store</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Create your producer page to start selling beats, packs, and courses.
+                </p>
+              </div>
+            </Link>
+          </motion.div>
+        )}
         {navigationSections.map((section, sectionIndex) => (
           <motion.div
             key={section.label}
@@ -388,20 +438,33 @@ export function AppSidebarEnhanced() {
               Quick Actions
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <Link href={`/store/${storeId}/products`}>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full h-8 text-xs bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-200"
-                >
-                  <Upload className="w-3 h-3 mr-1" />
-                  Upload
-                </Button>
-              </Link>
+              {hasStore ? (
+                <Link href={`/store/${storeId}/products`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-200"
+                  >
+                    <Upload className="w-3 h-3 mr-1" />
+                    Upload
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/dashboard">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-200"
+                  >
+                    <Store className="w-3 h-3 mr-1" />
+                    Setup
+                  </Button>
+                </Link>
+              )}
               <Link href="/analytics">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-full h-8 text-xs bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20 hover:from-blue-500/20 hover:to-cyan-500/20 transition-all duration-200"
                 >
                   <BarChart3 className="w-3 h-3 mr-1" />

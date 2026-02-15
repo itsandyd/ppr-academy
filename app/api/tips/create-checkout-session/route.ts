@@ -122,13 +122,6 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log("Tip checkout session created:", {
-      sessionId: session.id,
-      tipJarTitle: tipJar.title,
-      amount: tipAmount,
-      customer: customerName,
-    });
-
     return NextResponse.json({
       success: true,
       checkoutUrl: session.url,

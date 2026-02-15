@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -6,7 +6,7 @@ import { v } from "convex/values";
  * The frontend uses Clerk User ID as storeId, so we need to update contacts
  * that were created with the Convex store ID
  */
-export const fixContactStoreIds = mutation({
+export const fixContactStoreIds = internalMutation({
   args: {
     convexStoreId: v.string(), // The Convex store ID (e.g., "kh78hrngdvmxbqy6g6w4faecpd7m63ra")
     clerkUserId: v.string(), // The Clerk User ID (e.g., "user_2UficpPaNnmXib7UksvEIjVwcsx")

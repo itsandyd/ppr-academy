@@ -220,7 +220,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
               {/* Sign Up Card */}
               <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 shadow-xl animate-scale-in">
                 <SignUp
-                  fallbackRedirectUrl={params.redirect_url || (isCreator ? "/home" : "/library")}
+                  fallbackRedirectUrl={params.redirect_url || "/dashboard"}
                   appearance={{
                     elements: {
                       rootBox: "w-full",

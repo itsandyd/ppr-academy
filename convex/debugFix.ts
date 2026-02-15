@@ -1,8 +1,8 @@
-import { query, mutation } from "./_generated/server";
+import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // Check if a course has all required fields for landing page
-export const checkCourseData = query({
+export const checkCourseData = internalQuery({
   args: { slug: v.string() },
   returns: v.union(v.object({
     _id: v.id("courses"),
@@ -57,7 +57,7 @@ export const checkCourseData = query({
 });
 
 // Fix a course by adding the storeId from the user's first store AND fixing userId
-export const fixCourseStoreId = mutation({
+export const fixCourseStoreId = internalMutation({
   args: { 
     courseId: v.id("courses"),
     userId: v.string(),

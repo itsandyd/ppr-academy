@@ -5,6 +5,7 @@ import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import * as Sentry from "@sentry/nextjs";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting
     const identifier = getRateLimitIdentifier(request, user.id);
-    const rateCheck = await checkRateLimit(identifier, rateLimiters.standard);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
     if (rateCheck instanceof NextResponse) {
       return rateCheck;
     }
@@ -35,6 +36,14 @@ export async function POST(request: NextRequest) {
     if (!storeId || !stripeConnectAccountId) {
       return NextResponse.json(
         { error: "Store ID and Stripe Connect Account ID are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate stripeConnectAccountId format (must be acct_*)
+    if (typeof stripeConnectAccountId !== "string" || !/^acct_[a-zA-Z0-9]+$/.test(stripeConnectAccountId)) {
+      return NextResponse.json(
+        { error: "Invalid Stripe Connect Account ID" },
         { status: 400 }
       );
     }
@@ -53,6 +62,25 @@ export async function POST(request: NextRequest) {
     const pendingEarnings = await convex.query(monetizationApi.getCreatorPendingEarnings, {
       creatorId: user.id,
     });
+
+    // Validate computed earnings are a sane value
+    if (
+      pendingEarnings &&
+      (typeof pendingEarnings.netEarnings !== "number" ||
+        !Number.isFinite(pendingEarnings.netEarnings) ||
+        !Number.isInteger(pendingEarnings.netEarnings) ||
+        pendingEarnings.netEarnings < 0)
+    ) {
+      Sentry.captureMessage("Invalid netEarnings value from query", {
+        level: "error",
+        tags: { component: "payout-request" },
+        extra: { userId: user.id, netEarnings: pendingEarnings.netEarnings },
+      });
+      return NextResponse.json(
+        { error: "Unable to calculate payout amount. Please contact support." },
+        { status: 500 }
+      );
+    }
 
     if (!pendingEarnings || pendingEarnings.netEarnings < MINIMUM_PAYOUT_AMOUNT) {
       return NextResponse.json(
@@ -118,7 +146,7 @@ export async function POST(request: NextRequest) {
         payoutId: payoutRecord.payoutId,
       });
 
-      console.log(`✅ Payout processed successfully: ${transfer.id} for $${(pendingEarnings.netEarnings / 100).toFixed(2)}`);
+
 
       return NextResponse.json({
         success: true,
@@ -141,6 +169,10 @@ export async function POST(request: NextRequest) {
         reason: stripeError.message || "Stripe transfer failed",
       });
 
+      Sentry.captureException(stripeError, {
+        tags: { component: "payout-request", stage: "stripe-transfer" },
+        extra: { userId: user.id, payoutId: payoutRecord.payoutId, amount: pendingEarnings.netEarnings },
+      });
       console.error("❌ Stripe transfer failed:", stripeError);
 
       return NextResponse.json(
@@ -158,6 +190,10 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    Sentry.captureException(error, {
+      tags: { component: "payout-request" },
+    });
 
     return NextResponse.json(
       {

@@ -176,7 +176,7 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
               storeName: store?.name,
             }),
           });
-          console.log("Free course enrollment email sent");
+
         } catch (emailError) {
           // Don't fail enrollment if email fails - just log the error
           console.error("Failed to send enrollment email:", emailError);
@@ -233,28 +233,29 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-white border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6">
+          <div className="flex items-center gap-3 md:gap-4">
             <Link href={`/courses/${course.slug}`}>
               <Button variant="ghost" size="sm" className="gap-2">
                 <ArrowLeft className="w-4 h-4" />
-                Back to Course
+                <span className="hidden sm:inline">Back to Course</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             </Link>
-            
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground">Complete Your Enrollment</h1>
-              <p className="text-muted-foreground">Secure checkout powered by Stripe</p>
+
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg md:text-2xl font-bold text-foreground truncate">Complete Your Enrollment</h1>
+              <p className="text-sm md:text-base text-muted-foreground hidden sm:block">Secure checkout powered by Stripe</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-12">
           {/* Checkout Form */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6 md:space-y-8 order-2 lg:order-1">
             {/* Customer Information */}
             <Card>
               <CardHeader>
@@ -304,7 +305,7 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6 text-center">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 md:p-6 text-center">
                     <CreditCard className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
                     <h3 className="font-semibold text-emerald-800 mb-2">Stripe Checkout</h3>
                     <p className="text-emerald-700 text-sm mb-4">
@@ -375,15 +376,15 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-8 border-emerald-200">
+          <div className="lg:col-span-1 order-1 lg:order-2">
+            <Card className="lg:sticky lg:top-8 border-emerald-200">
               <CardHeader>
                 <CardTitle className="text-emerald-800">Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Course Preview */}
                 <div className="space-y-4">
-                  <div className="w-full h-48 bg-emerald-100 rounded-lg overflow-hidden">
+                  <div className="w-full h-36 md:h-48 bg-emerald-100 rounded-lg overflow-hidden">
                     {course.imageUrl ? (
                       <Image 
                         src={course.imageUrl} 
@@ -433,7 +434,7 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
                 <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-emerald-800">Course Price</span>
-                    <span className="text-2xl font-bold text-emerald-800">
+                    <span className="text-xl md:text-2xl font-bold text-emerald-800">
                       {course.price && course.price > 0 ? `$${course.price}` : "FREE"}
                     </span>
                   </div>

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("✅ Stripe Connect account created:", account.id);
+
 
     return NextResponse.json({ 
       success: true,

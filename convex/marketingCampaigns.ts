@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Campaign type validator
 const campaignTypeValidator = v.union(
@@ -41,6 +42,7 @@ export const listCampaigns = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     let query = ctx.db
       .query("marketingCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
@@ -78,6 +80,13 @@ export const listAdminCampaigns = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user?.admin) return [];
+
     let campaigns = await ctx.db
       .query("marketingCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", "admin"))
@@ -110,7 +119,11 @@ export const getCampaign = query({
   args: { campaignId: v.id("marketingCampaigns") },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.campaignId);
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return null;
+    await requireStoreOwner(ctx, campaign.storeId);
+    return campaign;
   },
 });
 
@@ -135,6 +148,7 @@ export const createCampaign = mutation({
   },
   returns: v.id("marketingCampaigns"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const now = Date.now();
     return await ctx.db.insert("marketingCampaigns", {
       storeId: args.storeId,
@@ -179,6 +193,11 @@ export const updateCampaign = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
+
     const { campaignId, ...updates } = args;
 
     // Remove undefined values
@@ -207,8 +226,10 @@ export const updatePlatformContent = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
 
     const contentField = `${args.platform}Content` as const;
     await ctx.db.patch(args.campaignId, {
@@ -230,8 +251,10 @@ export const schedulePlatform = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
 
     const scheduledPlatforms = campaign.scheduledPlatforms || [];
 
@@ -283,8 +306,10 @@ export const updatePlatformStatus = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
 
     const scheduledPlatforms = campaign.scheduledPlatforms || [];
     const existingIndex = scheduledPlatforms.findIndex(
@@ -316,6 +341,11 @@ export const deleteCampaign = mutation({
   args: { campaignId: v.id("marketingCampaigns") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
+
     await ctx.db.delete(args.campaignId);
     return null;
   },
@@ -326,8 +356,10 @@ export const duplicateCampaign = mutation({
   args: { campaignId: v.id("marketingCampaigns") },
   returns: v.id("marketingCampaigns"),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
 
     const now = Date.now();
     const { _id, _creationTime, ...campaignData } = campaign;
@@ -359,6 +391,11 @@ export const updateAnalytics = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) throw new Error("Campaign not found");
+    await requireStoreOwner(ctx, campaign.storeId);
+
     await ctx.db.patch(args.campaignId, {
       analytics: args.analytics,
       updatedAt: Date.now(),
@@ -379,6 +416,7 @@ export const getCampaignStats = query({
     paused: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const campaigns = await ctx.db
       .query("marketingCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))

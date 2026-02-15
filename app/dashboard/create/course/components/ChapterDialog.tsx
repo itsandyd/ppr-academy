@@ -136,7 +136,7 @@ export function ChapterDialog({
   // Load existing chapter data when it's fetched
   useEffect(() => {
     if (existingChapterData) {
-      // console.log(...);
+
       
       // Only update chapter data if we don't have editData (avoid overwriting form data)
       if (!editData) {
@@ -217,17 +217,17 @@ export function ChapterDialog({
           setActualChapterId(result.chapterId);
           // Store in localStorage for future sessions
           localStorage.setItem(`chapter_${chapterKey}_id`, result.chapterId);
-          // console.log(...);
+
           toast.success("Chapter saved to Convex!");
         } else if (idChanged) {
           // The function found an existing chapter with a different ID
           // This can happen when the localStorage had a stale ID and the function found the real chapter
           setActualChapterId(result.chapterId);
           localStorage.setItem(`chapter_${chapterKey}_id`, result.chapterId);
-          // console.log(...);
+
           toast.success("Chapter updated!");
         } else {
-          // console.log(...);
+
           toast.success("Chapter updated!");
         }
       } else {
@@ -422,7 +422,7 @@ export function ChapterDialog({
       const result = await response.json();
       
       toast.success(`Video generated successfully! Duration: ${result.duration}s`);
-      // console.log(...);
+
       
     } catch (error) {
       console.error("Video generation error:", error);

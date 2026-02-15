@@ -285,10 +285,19 @@ export const awardBonusCredits = mutation({
     newBalance: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Verify caller is authenticated (admin check should be done at the route level)
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Unauthorized: Authentication required to award bonus credits");
+      throw new Error("Not authenticated");
+    }
+
+    // Verify caller is admin
+    const callingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!callingUser || callingUser.admin !== true) {
+      throw new Error("Unauthorized: Admin access required");
     }
 
     let userCredits = await ctx.db

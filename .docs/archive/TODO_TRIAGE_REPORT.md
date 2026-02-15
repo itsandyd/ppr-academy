@@ -147,7 +147,7 @@ totalRevenue: products.reduce((sum, product) => sum + (product.price * 0), 0), /
 ---
 
 ### 9. Missing Post-Purchase Actions (Lines 18-19)
-**File:** `app/api/webhooks/stripe-library/route.ts:65-66`
+**File:** ~~`app/api/webhooks/stripe-library/route.ts:65-66`~~ **REMOVED** — now handled by `app/api/webhooks/stripe/route.ts`
 
 **Issue:** No confirmation email or workflows after purchase  
 **Impact:** Poor user experience, no order confirmation  

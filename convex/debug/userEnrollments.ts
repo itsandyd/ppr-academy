@@ -1,4 +1,4 @@
-import { query, mutation } from "../_generated/server";
+import { internalQuery, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -6,7 +6,7 @@ import { v } from "convex/values";
  * 
  * Check a user's enrollment and purchase data to diagnose access issues
  */
-export const debugUserEnrollments = query({
+export const debugUserEnrollments = internalQuery({
   args: { clerkId: v.string() },
   returns: v.object({
     userExists: v.boolean(),
@@ -125,7 +125,7 @@ export const debugUserEnrollments = query({
  * 
  * Create missing enrollment records for users who have purchases but no enrollments
  */
-export const syncEnrollmentsFromPurchases = mutation({
+export const syncEnrollmentsFromPurchases = internalMutation({
   args: { clerkId: v.string() },
   returns: v.object({
     created: v.number(),

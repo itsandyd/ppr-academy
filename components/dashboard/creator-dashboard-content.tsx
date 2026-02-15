@@ -138,35 +138,45 @@ export function CreatorDashboardContent() {
 
   // Quick actions for music creators
   const quickActions = useMemo(() => {
-    const baseStoreId = storeId || 'setup';
+    if (!storeId) {
+      return [
+        {
+          title: "View Analytics",
+          description: "Track your performance",
+          icon: BarChart3,
+          color: "from-indigo-500 to-purple-500",
+          href: "/home/analytics"
+        }
+      ];
+    }
     return [
       {
         title: "Upload Sample Pack",
         description: "Share your beats and loops",
         icon: Music,
         color: "from-purple-500 to-pink-500",
-        href: `/store/${baseStoreId}/products`
+        href: `/store/${storeId}/products`
       },
       {
         title: "Create Preset",
         description: "Upload synth presets",
         icon: Package,
-        color: "from-blue-500 to-cyan-500", 
-        href: `/store/${baseStoreId}/products`
+        color: "from-blue-500 to-cyan-500",
+        href: `/store/${storeId}/products`
       },
       {
         title: "New Course",
         description: "Teach production skills",
         icon: Play,
         color: "from-green-500 to-emerald-500",
-        href: `/store/${baseStoreId}/course/create`
+        href: `/store/${storeId}/course/create`
       },
       {
         title: "Offer Coaching",
         description: "1-on-1 mentoring",
         icon: Headphones,
         color: "from-orange-500 to-red-500",
-        href: `/store/${baseStoreId}/products/coaching-call/create`
+        href: `/store/${storeId}/products/coaching-call/create`
       },
       {
         title: "View Analytics",
@@ -614,7 +624,7 @@ export function CreatorDashboardContent() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Recent Releases</h2>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/store/${storeId || 'setup'}/products`}>View All</Link>
+              <Link href={storeId ? `/store/${storeId}/products` : '/dashboard'}>View All</Link>
             </Button>
           </div>
           <div className="space-y-4">

@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 export const upsertCustomer = mutation({
   args: {
@@ -15,6 +16,7 @@ export const upsertCustomer = mutation({
   },
   returns: v.id("customers"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const existingCustomer = await ctx.db
       .query("customers")
       .withIndex("by_email_and_store", (q) => q.eq("email", args.email).eq("storeId", args.storeId))
@@ -99,6 +101,7 @@ export const getCustomerCount = query({
     lastUpdated: v.optional(v.number()), // When the count was last updated
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // ONLY use cached count - never count in real-time to avoid exceeding limits
     const cachedCount = await ctx.db
       .query("fanCounts")
@@ -194,6 +197,7 @@ export const getFansForStore = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Get store to find the admin user
     const store = await ctx.db
       .query("stores")
@@ -204,15 +208,15 @@ export const getFansForStore = query({
       return [];
     }
 
-    // 1. Get customers for this store (up to 5000 to stay under 32k read limit)
+    // 1. Get customers for this store — reduced from 5000 to limit bandwidth
     const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
-      .take(5000);
+      .take(1000);
 
-    // 2. Get all users (registered accounts) - up to 5000
-    const allUsers = await ctx.db.query("users").order("desc").take(5000);
+    // 2. Get registered users — reduced from 5000 to limit bandwidth
+    const allUsers = await ctx.db.query("users").order("desc").take(1000);
 
     // 3. Deduplicate by email (customers take priority over users)
     const customerEmails = new Set(customers.map((c) => c.email.toLowerCase()));
@@ -311,6 +315,7 @@ export const getCustomersForStore = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Convex has a hard limit of 8,192 items in array returns
     // For large datasets, return up to 5,000 customers
     const customers = await ctx.db
@@ -335,6 +340,7 @@ export const getCustomersForStorePaginated = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     return await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -409,6 +415,7 @@ export const searchCustomersForStore = query({
     })
   ),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     if (!args.searchTerm || args.searchTerm.length < 2) {
       return [];
     }
@@ -468,6 +475,7 @@ export const debugEmailDomains = query({
     ),
   }),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -549,6 +557,7 @@ export const createPurchase = mutation({
   },
   returns: v.id("purchases"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const purchaseId = await ctx.db.insert("purchases", {
       userId: args.userId,
       customerId: args.customerId,
@@ -613,6 +622,7 @@ export const createSubscription = mutation({
   },
   returns: v.id("subscriptions"),
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const nextBillingDate =
       Date.now() +
       (args.billingInterval === "monthly"

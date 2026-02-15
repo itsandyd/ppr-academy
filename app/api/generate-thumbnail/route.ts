@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -10,11 +11,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // console.log(...);
+
     
     // Check if OpenAI API key is available
     if (!process.env.OPENAI_API_KEY) {
-      console.error("❌ OpenAI API key not found in environment variables");
       return NextResponse.json(
         { error: "OpenAI API key not configured" },
         { status: 500 }
@@ -27,14 +27,18 @@ export async function POST(request: NextRequest) {
     });
 
     const { userId, getToken } = await auth();
-    
+
     if (!userId) {
-      console.error("❌ No user ID found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // console.log(...);
-    
+    // SECURITY: Rate limiting (strict - 5 requests/min)
+    const identifier = getRateLimitIdentifier(request, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
+
     // Get Clerk JWT token for Convex authentication
     const token = await getToken({ template: "convex" });
     
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     convex.setAuth(token!);
 
     const { title, description, category, type } = await request.json();
-    console.log("📝 Request data:", { title, description, category, type });
+
 
     // Validate required fields
     if (!title) {
@@ -59,9 +63,9 @@ export async function POST(request: NextRequest) {
     const prompt = type === "pack" 
       ? createPackThumbnailPrompt(title, description, category)
       : createThumbnailPrompt(title, description, category);
-    // console.log(...);
 
-    // console.log(...);
+
+
     // Generate image with gpt-image-1 (new state-of-the-art model)
     const response = await openai.images.generate({
       model: "gpt-image-1",
@@ -71,9 +75,9 @@ export async function POST(request: NextRequest) {
       quality: "medium" // low, medium, or high for gpt-image-1
     });
     
-    // console.log(...);
 
-    // console.log(...);
+
+
     
     // Handle both URL and base64 responses
     const imageData = response.data?.[0];
@@ -87,13 +91,13 @@ export async function POST(request: NextRequest) {
     const imageUrl = imageData.url;
     const imageB64 = imageData.b64_json;
     
-    // console.log(...);
+
 
     let imageFile: File;
 
     if (imageUrl) {
       // Download the image from OpenAI URL
-      // console.log(...);
+
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
         throw new Error("Failed to download generated image");
@@ -105,7 +109,7 @@ export async function POST(request: NextRequest) {
       });
     } else if (imageB64) {
       // Convert base64 to file
-      // console.log(...);
+
       const binaryString = atob(imageB64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -122,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload to Convex storage
-    // console.log(...);
+
     
     // First, get the upload URL from Convex
     const uploadUrl = await convex.mutation(filesApi.generateUploadUrl, {});
@@ -149,9 +153,9 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to get storage URL from Convex");
     }
     
-    // console.log(...);
 
-    // console.log(...);
+
+
     return NextResponse.json({
       success: true,
       imageUrl: permanentUrl, // Use the permanent Convex storage URL
@@ -159,14 +163,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("❌ Error generating thumbnail:", error);
-    console.error("Error details:", {
-      message: error.message,
-      type: error?.error?.type,
-      code: error?.error?.code,
-      status: error?.status,
-      stack: error.stack
-    });
+    console.error("Error generating thumbnail:", error.message);
     
     // Handle specific OpenAI errors
     if (error?.error?.type === "invalid_request_error") {
@@ -217,16 +214,15 @@ function createThumbnailPrompt(title: string, description: string, category?: st
   
   // Ensure prompt isn't too long (DALL-E has a limit)
   if (prompt.length > 1000) {
-    console.warn("⚠️ Prompt is very long, truncating...");
     return prompt.substring(0, 1000);
   }
-  
+
   return prompt;
 }
 
 function createPackThumbnailPrompt(title: string, description?: string, packType?: string): string {
   const baseStyle = "Create a professional sample pack/preset pack cover art in landscape format (1536x1024). Use bold typography, vibrant colors, and modern design trends from music production marketing.";
-  
+
   const packTypeStyle = packType === "sample-pack"
     ? "This is an audio sample pack. Include visual elements like waveforms, audio meters, drum pads, or vinyl records."
     : packType === "preset-pack"
@@ -234,22 +230,21 @@ function createPackThumbnailPrompt(title: string, description?: string, packType
     : packType === "midi-pack"
     ? "This is a MIDI pack with melodies and chord progressions. Include visual elements like colorful MIDI note blocks in a piano roll grid, DAW timeline patterns, waveforms, or abstract geometric shapes representing melody. IMPORTANT: Do NOT include piano keys, treble clefs, bass clefs, musical staffs, or sheet music notation - these render poorly in AI images."
     : "This is a music production pack.";
-  
+
   const titleFocus = `The pack is titled "${title}" - make the title PROMINENT and READABLE in the design with bold, eye-catching typography.`;
-  
-  const descriptionHint = description 
+
+  const descriptionHint = description
     ? `Pack description: ${description.substring(0, 100)}. Use this to inform the visual style and color palette.`
     : "";
-  
+
   const styleGuide = "Design inspiration: professional music marketplace (Splice, ADSR, Loopmasters). Use gradients, modern fonts, and high-contrast colors. The title text should be the focal point.";
-  
+
   const techSpecs = "Professional quality, suitable for product listings. Clean and sharp at thumbnail size.";
-  
+
   const prompt = `${baseStyle} ${packTypeStyle} ${titleFocus} ${descriptionHint} ${styleGuide} ${techSpecs}`;
-  
+
   // Ensure prompt isn't too long
   if (prompt.length > 1000) {
-    console.warn("⚠️ Prompt is very long, truncating...");
     return prompt.substring(0, 1000);
   }
   

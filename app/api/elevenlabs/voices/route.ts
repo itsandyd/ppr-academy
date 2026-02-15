@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 
 export async function GET() {
   try {
@@ -77,11 +78,18 @@ export async function GET() {
 }
 
 // Also create a POST endpoint to test a specific voice
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // SECURITY: Rate limiting (strict - 5 requests/min, costs money)
+    const identifier = getRateLimitIdentifier(request, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
     }
 
     const { voice_id, text = "Hello! This is a test of this voice." } = await request.json();

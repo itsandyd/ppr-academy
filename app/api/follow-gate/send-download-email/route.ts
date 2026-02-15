@@ -3,9 +3,17 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { sendLeadMagnetEmail } from "@/lib/email";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP (anonymous users, strict to prevent email abuse)
+    const identifier = getRateLimitIdentifier(request);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
+
     const { submissionId, productId } = await request.json();
 
     if (!submissionId || !productId) {

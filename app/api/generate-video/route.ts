@@ -1,8 +1,25 @@
 import { NextResponse } from 'next/server';
 import { stripHtmlTags, extractImagesFromHtml } from '@/lib/text-utils';
+import { requireAuth } from '@/lib/auth-helpers';
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    // Auth check
+    let user;
+    try {
+      user = await requireAuth();
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Rate limit check
+    const identifier = getRateLimitIdentifier(request, user.id);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
+
     const { htmlContent, audioUrl, chapterId, title } = await request.json();
 
     if (!htmlContent) {
@@ -29,14 +46,6 @@ export async function POST(request: Request) {
     //    - Third-party APIs like Synthesia, D-ID, or similar
     //    - Cloud services like AWS Elemental MediaConvert
     
-    console.log('Video generation request:', {
-      chapterId,
-      title,
-      audioUrl,
-      imageCount: images.length,
-      textLength: cleanText.length,
-    });
-
     // Simulate video generation process
     const videoGenerationResult = await simulateVideoGeneration({
       audioUrl,

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Mux from "@mux/mux-node";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import crypto from "crypto";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -22,24 +23,66 @@ type MuxWebhookEvent = {
   };
 };
 
+function verifyMuxSignature(body: string, signature: string, secret: string): boolean {
+  try {
+    // Mux signature format: "t=<timestamp>,v1=<hash>"
+    const parts = signature.split(",");
+    const timestampPart = parts.find((p) => p.startsWith("t="));
+    const signaturePart = parts.find((p) => p.startsWith("v1="));
+
+    if (!timestampPart || !signaturePart) return false;
+
+    const timestamp = timestampPart.replace("t=", "");
+    const expectedSignature = signaturePart.replace("v1=", "");
+
+    const payload = `${timestamp}.${body}`;
+    const hmac = crypto.createHmac("sha256", secret);
+    const digest = hmac.update(payload).digest("hex");
+
+    return crypto.timingSafeEqual(
+      Buffer.from(digest),
+      Buffer.from(expectedSignature)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const headersList = await headers();
     const signature = headersList.get("mux-signature");
+    const muxWebhookSecret = process.env.MUX_WEBHOOK_SECRET;
 
-    // In production, verify the webhook signature
-    // For now, we'll process all webhooks
-    if (process.env.NODE_ENV === "production" && !signature) {
-      console.warn("Missing Mux webhook signature in production");
+    // Reject in production if secret is not configured
+    if (!muxWebhookSecret && process.env.NODE_ENV === "production") {
+      console.error("MUX_WEBHOOK_SECRET not configured in production");
+      return NextResponse.json(
+        { error: "Webhook secret not configured" },
+        { status: 500 }
+      );
     }
 
     const body = await request.text();
-    const event: MuxWebhookEvent = JSON.parse(body);
 
-    console.log(`Mux webhook received: ${event.type}`, {
-      assetId: event.data.id,
-      uploadId: event.data.upload_id,
-    });
+    // Verify signature when secret is available
+    if (muxWebhookSecret) {
+      if (!signature) {
+        return NextResponse.json(
+          { error: "Missing webhook signature" },
+          { status: 401 }
+        );
+      }
+
+      if (!verifyMuxSignature(body, signature, muxWebhookSecret)) {
+        return NextResponse.json(
+          { error: "Invalid webhook signature" },
+          { status: 401 }
+        );
+      }
+    }
+
+    const event: MuxWebhookEvent = JSON.parse(body);
 
     switch (event.type) {
       case "video.asset.ready": {
@@ -57,7 +100,7 @@ export async function POST(request: NextRequest) {
             videoDuration: duration,
           });
 
-          console.log(`Asset ${assetId} ready with playback ID ${playbackId}`);
+
         }
         break;
       }
@@ -80,12 +123,12 @@ export async function POST(request: NextRequest) {
         const uploadId = event.data.upload_id;
         const assetId = event.data.id;
 
-        console.log(`Upload ${uploadId} created asset ${assetId}`);
+
         break;
       }
 
       default:
-        console.log(`Unhandled Mux event type: ${event.type}`);
+
     }
 
     return NextResponse.json({ received: true });

@@ -118,10 +118,12 @@ export const getActiveStoreIds = internalQuery({
   returns: v.array(v.string()),
   handler: async (ctx) => {
     // Get queued emails ordered by priority and queue time
+    // Reduced from 500 to 100 to limit bandwidth — each record has full HTML body (2-5KB)
+    // This only needs enough records to find unique storeIds, not all queued emails
     const queuedEmails = await ctx.db
       .query("emailSendQueue")
       .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "queued"))
-      .take(500);
+      .take(100);
 
     // Extract unique store IDs while preserving first-seen order
     const seen = new Set<string>();
@@ -266,25 +268,27 @@ export const getQueueStats = internalQuery({
   args: {},
   returns: v.any(),
   handler: async (ctx) => {
+    // Reduced from 10000 but kept high enough for accurate counts
+    // These are only called from admin dashboard, not by crons
     const queued = await ctx.db
       .query("emailSendQueue")
       .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "queued"))
-      .take(10000);
+      .take(2000);
 
     const sending = await ctx.db
       .query("emailSendQueue")
       .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "sending"))
-      .take(1000);
+      .take(200);
 
     const sent = await ctx.db
       .query("emailSendQueue")
       .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "sent"))
-      .take(10000);
+      .take(2000);
 
     const failed = await ctx.db
       .query("emailSendQueue")
       .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "failed"))
-      .take(1000);
+      .take(200);
 
     // Per-store breakdown of queued
     const perStore: Record<string, number> = {};

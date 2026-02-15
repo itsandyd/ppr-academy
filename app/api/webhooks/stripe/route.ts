@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { serverLogger } from "@/lib/server-logger";
+import * as Sentry from "@sentry/nextjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -18,10 +19,41 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     serverLogger.error("Webhook signature verification failed", err);
+    Sentry.captureException(err, { tags: { component: "stripe-webhook", stage: "signature-verification" } });
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // console.log(...);
+  serverLogger.webhook("Event received", { type: event.type, id: event.id });
+
+  // Idempotency check: skip already-processed events, allow retry of failed ones
+  try {
+    const { fetchQuery: fetchQueryIdempotency } = await import("convex/nextjs");
+    const { api: apiIdempotency } = await import("@/convex/_generated/api");
+
+    const existingEvent = await fetchQueryIdempotency(
+      apiIdempotency.webhookEvents.getWebhookEvent,
+      { stripeEventId: event.id }
+    );
+
+    if (existingEvent?.status === "processed") {
+      serverLogger.info("Webhook", "Duplicate webhook event, skipping", {
+        stripeEventId: event.id,
+        eventType: event.type,
+      });
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
+
+    if (existingEvent?.status === "failed") {
+      serverLogger.info("Webhook", "Retrying previously failed webhook event", {
+        stripeEventId: event.id,
+        eventType: event.type,
+      });
+    }
+  } catch (idempotencyError) {
+    // If the idempotency check itself fails, log and continue processing
+    // (better to risk a duplicate than to drop an event)
+    serverLogger.error("Idempotency check failed, continuing with processing", idempotencyError);
+  }
 
   try {
     switch (event.type) {
@@ -96,6 +128,10 @@ export async function POST(request: NextRequest) {
           }
         } catch (error) {
           serverLogger.error("Failed to update user Stripe status", error);
+          Sentry.captureException(error, {
+            tags: { component: "stripe-webhook", eventType: event.type, productType: "account_update" },
+            extra: { stripeEventId: event.id, accountId: account.id, metadata: account.metadata },
+          });
           // Don't throw - we still want to acknowledge the webhook
         }
 
@@ -104,7 +140,7 @@ export async function POST(request: NextRequest) {
       case "account.application.authorized":
         // When a user completes Connect onboarding
         const application = event.data.object as any;
-        // console.log(...);
+
         break;
 
       case "payment_intent.succeeded":
@@ -176,6 +212,10 @@ export async function POST(request: NextRequest) {
               }
             } catch (error) {
               serverLogger.error("Failed to create PPR Pro subscription", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "ppr_pro" },
+                extra: { userId, stripeEventId: event.id, stripeSessionId: session.id, subscriptionId: session.subscription },
+              });
             }
           }
         }
@@ -210,7 +250,7 @@ export async function POST(request: NextRequest) {
               trialEndsAt: subscription.trial_end ? subscription.trial_end * 1000 : undefined,
             });
 
-            // console.log(...);
+
           }
           // Handle membership subscriptions
           else if (productType === "membership" && userId) {
@@ -261,6 +301,10 @@ export async function POST(request: NextRequest) {
               }
             } catch (error) {
               serverLogger.error("Failed to create membership subscription", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "membership" },
+                extra: { userId, tierId, stripeEventId: event.id, stripeSessionId: session.id, subscriptionId: session.subscription },
+              });
             }
           }
           // Handle content subscription (existing)
@@ -281,7 +325,7 @@ export async function POST(request: NextRequest) {
               stripeSubscriptionId: session.subscription as string,
             });
 
-            // console.log(...);
+
           }
         }
 
@@ -331,6 +375,10 @@ export async function POST(request: NextRequest) {
               }
             } catch (error) {
               serverLogger.error("Failed to create course enrollment", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "course" },
+                extra: { userId, courseId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -340,13 +388,11 @@ export async function POST(request: NextRequest) {
           const { userId, productId, amount, currency, productTitle, customerEmail, customerName } = session.metadata;
 
           if (userId && productId && amount) {
-            console.log("📦 Processing digital product purchase:", {
-              userId,
-              productId,
+            serverLogger.payment("Processing digital product purchase", {
+              type: "digitalProduct",
+              id: productId,
               amount: parseInt(amount) / 100,
               currency: currency || "USD",
-              sessionId: session.id,
-              paymentIntentId: session.payment_intent,
             });
 
             const { fetchMutation: fetchMutationProduct } = await import("convex/nextjs");
@@ -365,11 +411,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Digital product purchase created:", {
-                purchaseId,
-                userId,
-                productId,
-              });
+              serverLogger.info("Digital Product", "Purchase created successfully");
 
               // Send digital product purchase email
               try {
@@ -382,12 +424,16 @@ export async function POST(request: NextRequest) {
                   amount: parseInt(amount) / 100,
                   currency: currency || "USD",
                 });
-                console.log("✅ Digital product purchase email sent");
+                serverLogger.debug("Email", "Digital product purchase email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send digital product purchase email:", emailError);
+                serverLogger.error("Failed to send digital product purchase email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create digital product purchase:", error);
+              serverLogger.error("Failed to create digital product purchase", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "digitalProduct" },
+                extra: { userId, productId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -396,13 +442,11 @@ export async function POST(request: NextRequest) {
           const { userId, bundleId, amount, currency, bundleTitle, itemCount, customerEmail, customerName } = session.metadata;
 
           if (userId && bundleId && amount) {
-            console.log("📦 Processing bundle purchase:", {
-              userId,
-              bundleId,
+            serverLogger.payment("Processing bundle purchase", {
+              type: "bundle",
+              id: bundleId,
               amount: parseInt(amount) / 100,
               currency: currency || "USD",
-              sessionId: session.id,
-              paymentIntentId: session.payment_intent,
             });
 
             const { fetchMutation: fetchMutationBundle } = await import("convex/nextjs");
@@ -418,11 +462,7 @@ export async function POST(request: NextRequest) {
                 transactionId: session.payment_intent as string,
               });
 
-              console.log("✅ Bundle purchase created:", {
-                purchaseId,
-                userId,
-                bundleId,
-              });
+              serverLogger.info("Bundle", "Purchase created successfully");
 
               // Send bundle purchase email
               try {
@@ -435,12 +475,16 @@ export async function POST(request: NextRequest) {
                   amount: parseInt(amount) / 100,
                   currency: currency || "USD",
                 });
-                console.log("✅ Bundle purchase email sent");
+                serverLogger.debug("Email", "Bundle purchase email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send bundle purchase email:", emailError);
+                serverLogger.error("Failed to send bundle purchase email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create bundle purchase:", error);
+              serverLogger.error("Failed to create bundle purchase", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "bundle" },
+                extra: { userId, bundleId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -450,15 +494,11 @@ export async function POST(request: NextRequest) {
           const { userId, beatId, tierType, tierName, storeId, amount, currency, customerEmail, customerName } = session.metadata;
 
           if (userId && beatId && tierType && storeId && amount) {
-            console.log("🎵 Processing beat lease purchase:", {
-              userId,
-              beatId,
-              tierType,
-              tierName,
+            serverLogger.payment("Processing beat lease purchase", {
+              type: "beatLease",
+              id: beatId,
               amount: parseInt(amount) / 100,
               currency: currency || "USD",
-              sessionId: session.id,
-              paymentIntentId: session.payment_intent,
             });
 
             const { fetchMutation: fetchMutationBeatLease, fetchQuery: fetchQueryBeat } = await import("convex/nextjs");
@@ -470,9 +510,9 @@ export async function POST(request: NextRequest) {
                 productId: beatId as any,
               });
 
-              // Create the beat license purchase
+              // Create the beat license purchase (internal mutation - no user auth in webhook context)
               const result = await fetchMutationBeatLease(
-                apiBeatLease.beatLeases.createBeatLicensePurchase,
+                internalBeatLease.beatLeases.createBeatLicensePurchase as any,
                 {
                   beatId: beatId as any,
                   tierType: tierType as "basic" | "premium" | "exclusive" | "unlimited",
@@ -488,13 +528,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Beat license purchase created:", {
-                purchaseId: result.purchaseId,
-                beatLicenseId: result.beatLicenseId,
-                userId,
-                beatId,
-                tierType,
-              });
+              serverLogger.info("Beat Lease", "License purchase created successfully");
 
               // Send beat purchase email
               try {
@@ -508,9 +542,9 @@ export async function POST(request: NextRequest) {
                   amount: parseInt(amount) / 100,
                   currency: currency || "USD",
                 });
-                console.log("✅ Beat purchase email sent");
+                serverLogger.debug("Email", "Beat purchase email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send beat purchase email:", emailError);
+                serverLogger.error("Failed to send beat purchase email", emailError);
               }
 
               // If exclusive tier, mark beat as sold (hides from marketplace)
@@ -522,13 +556,17 @@ export async function POST(request: NextRequest) {
                     userId,
                     purchaseId: result.purchaseId,
                   });
-                  console.log("✅ Beat marked as exclusively sold:", { beatId });
+                  serverLogger.info("Beat Lease", "Beat marked as exclusively sold");
                 } catch (exclusiveError) {
-                  console.error("❌ Failed to mark beat as exclusively sold:", exclusiveError);
+                  serverLogger.error("Failed to mark beat as exclusively sold", exclusiveError);
                 }
               }
             } catch (error) {
-              console.error("❌ Failed to create beat license purchase:", error);
+              serverLogger.error("Failed to create beat license purchase", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "beatLease" },
+                extra: { userId, beatId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -540,11 +578,10 @@ export async function POST(request: NextRequest) {
           const bonusAmount = parseInt(bonusCredits || "0");
           const totalCredits = creditsAmount + bonusAmount;
 
-          console.log("🪙 Processing credit purchase:", {
-            userId,
-            packageId,
-            totalCredits,
-            sessionId: session.id,
+          serverLogger.payment("Processing credit purchase", {
+            type: "credit_package",
+            id: packageId,
+            amount: totalCredits,
           });
 
           if (userId && totalCredits > 0) {
@@ -579,12 +616,7 @@ export async function POST(request: NextRequest) {
                 });
               }
 
-              console.log("✅ Credits added successfully:", {
-                userId,
-                purchased: creditsAmount,
-                bonus: bonusAmount,
-                total: totalCredits,
-              });
+              serverLogger.info("Credits", "Credits added successfully");
 
               // Send credits purchase email
               try {
@@ -598,12 +630,16 @@ export async function POST(request: NextRequest) {
                   amount: (session.amount_total || 0) / 100,
                   currency: session.currency || "usd",
                 });
-                console.log("✅ Credits purchase email sent");
+                serverLogger.debug("Email", "Credits purchase email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send credits purchase email:", emailError);
+                serverLogger.error("Failed to send credits purchase email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to add credits:", error);
+              serverLogger.error("Failed to add credits", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "credit_package" },
+                extra: { userId, packageId, totalCredits, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -614,13 +650,10 @@ export async function POST(request: NextRequest) {
             session.metadata;
 
           if (submitterId && creatorId && trackId && playlistId) {
-            console.log("🎵 Processing playlist submission payment:", {
-              submitterId,
-              creatorId,
-              playlistId,
-              trackId,
+            serverLogger.payment("Processing playlist submission payment", {
+              type: "playlist_submission",
+              id: playlistId,
               amount: parseInt(amount || "0") / 100,
-              sessionId: session.id,
             });
 
             const { fetchMutation: fetchMutationSubmission, fetchQuery: fetchQuerySubmission } = await import("convex/nextjs");
@@ -651,11 +684,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Playlist submission created:", {
-                submissionId,
-                submitterId,
-                playlistId,
-              });
+              serverLogger.info("Playlist Submission", "Submission created successfully");
 
               // Send playlist submission confirmation email
               try {
@@ -669,12 +698,16 @@ export async function POST(request: NextRequest) {
                   currency: session.currency || "usd",
                   message: message || undefined,
                 });
-                console.log("✅ Playlist submission confirmation email sent");
+                serverLogger.debug("Email", "Playlist submission confirmation email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send playlist submission email:", emailError);
+                serverLogger.error("Failed to send playlist submission email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create playlist submission:", error);
+              serverLogger.error("Failed to create playlist submission", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "playlist_submission" },
+                extra: { submitterId, playlistId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -699,13 +732,10 @@ export async function POST(request: NextRequest) {
           } = session.metadata;
 
           if (userId && creatorId && productId && selectedTier) {
-            console.log("🎚️ Processing mixing service purchase:", {
-              userId,
-              creatorId,
-              productId,
-              serviceType,
-              totalPrice: parseInt(totalPrice || "0"),
-              sessionId: session.id,
+            serverLogger.payment("Processing mixing service purchase", {
+              type: "mixingService",
+              id: productId,
+              amount: parseInt(totalPrice || "0") / 100,
             });
 
             const { fetchMutation: fetchMutationService, fetchQuery: fetchQueryService } = await import("convex/nextjs");
@@ -741,12 +771,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Mixing service order created:", {
-                orderId,
-                userId,
-                creatorId,
-                productId,
-              });
+              serverLogger.info("Mixing Service", "Order created successfully");
 
               // Send mixing service confirmation email
               try {
@@ -778,12 +803,16 @@ export async function POST(request: NextRequest) {
                   currency: session.currency || "usd",
                   customerNotes: customerNotes || undefined,
                 });
-                console.log("✅ Mixing service confirmation email sent");
+                serverLogger.debug("Email", "Mixing service confirmation email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send mixing service email:", emailError);
+                serverLogger.error("Failed to send mixing service email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create mixing service order:", error);
+              serverLogger.error("Failed to create mixing service order", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "mixingService" },
+                extra: { userId, productId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -805,13 +834,10 @@ export async function POST(request: NextRequest) {
           } = session.metadata;
 
           if (userId && productId && scheduledDate && startTime) {
-            console.log("💬 Processing coaching session purchase:", {
-              userId,
-              productId,
-              scheduledDate,
-              startTime,
+            serverLogger.payment("Processing coaching session purchase", {
+              type: "coaching",
+              id: productId,
               amount: parseInt(amount || "0") / 100,
-              sessionId: session.id,
             });
 
             const { fetchMutation: fetchMutationCoaching, fetchQuery: fetchQueryCoaching } = await import("convex/nextjs");
@@ -831,12 +857,7 @@ export async function POST(request: NextRequest) {
               );
 
               if (result.success) {
-                console.log("✅ Coaching session booked:", {
-                  sessionId: result.sessionId,
-                  userId,
-                  productId,
-                  scheduledDate: new Date(parseInt(scheduledDate)).toISOString(),
-                });
+                serverLogger.info("Coaching", "Session booked successfully");
 
                 // Create a purchase record for the coaching session with correct productType
                 const product = await fetchQueryCoaching(
@@ -858,7 +879,7 @@ export async function POST(request: NextRequest) {
                       transactionId: session.payment_intent as string,
                     }
                   );
-                  console.log("✅ Coaching purchase record created");
+                  serverLogger.info("Coaching", "Purchase record created");
 
                   // Send coaching confirmation email
                   try {
@@ -874,16 +895,20 @@ export async function POST(request: NextRequest) {
                       amount: parseInt(amount || "0") / 100,
                       currency: currency || "USD",
                     });
-                    console.log("✅ Coaching confirmation email sent");
+                    serverLogger.debug("Email", "Coaching confirmation email sent");
                   } catch (emailError) {
-                    console.error("❌ Failed to send coaching confirmation email:", emailError);
+                    serverLogger.error("Failed to send coaching confirmation email", emailError);
                   }
                 }
               } else {
-                console.error("❌ Failed to book coaching session:", result.error);
+                serverLogger.error("Failed to book coaching session", result.error);
               }
             } catch (error) {
-              console.error("❌ Failed to process coaching purchase:", error);
+              serverLogger.error("Failed to process coaching purchase", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "coaching" },
+                extra: { userId, productId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -894,14 +919,11 @@ export async function POST(request: NextRequest) {
             session.metadata;
 
           if (userId && tipJarId && amount) {
-            console.log("💝 Processing tip purchase:", {
-              userId,
-              tipJarId,
-              tipJarTitle,
+            serverLogger.payment("Processing tip purchase", {
+              type: "tip",
+              id: tipJarId,
               amount: parseInt(amount) / 100,
               currency: currency || "USD",
-              sessionId: session.id,
-              paymentIntentId: session.payment_intent,
             });
 
             const { fetchMutation: fetchMutationTip } = await import("convex/nextjs");
@@ -921,12 +943,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Tip purchase created:", {
-                purchaseId,
-                userId,
-                tipJarId,
-                amount: parseInt(amount) / 100,
-              });
+              serverLogger.info("Tip", "Purchase created successfully");
 
               // Send tip confirmation email
               try {
@@ -939,13 +956,16 @@ export async function POST(request: NextRequest) {
                   currency: currency || "USD",
                   message: message || undefined,
                 });
-                console.log("✅ Tip confirmation email sent");
+                serverLogger.debug("Email", "Tip confirmation email sent");
               } catch (emailError) {
-                console.error("❌ Failed to send tip confirmation email:", emailError);
-                // Don't fail the webhook if email fails
+                serverLogger.error("Failed to send tip confirmation email", emailError);
               }
             } catch (error) {
-              console.error("❌ Failed to create tip purchase:", error);
+              serverLogger.error("Failed to create tip purchase", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "tip" },
+                extra: { userId, tipJarId, stripeEventId: event.id, stripeSessionId: session.id },
+              });
             }
           }
         }
@@ -955,10 +975,10 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
         // Handle subscription status changes
         const updatedSubscription = event.data.object as any;
-        console.log("🔄 Subscription updated:", {
+        serverLogger.payment("Subscription updated", {
           id: updatedSubscription.id,
+          type: "subscription",
           status: updatedSubscription.status,
-          currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
         });
 
         const { fetchMutation: fetchMutationUpdate } = await import("convex/nextjs");
@@ -1006,9 +1026,10 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.deleted":
         // Handle subscription cancellation
         const deletedSubscription = event.data.object as Stripe.Subscription;
-        console.log("❌ Subscription canceled:", {
+        serverLogger.payment("Subscription cancelled", {
           id: deletedSubscription.id,
-          canceledAt: deletedSubscription.canceled_at,
+          type: "subscription",
+          status: "cancelled",
         });
 
         const { fetchMutation: fetchMutationDelete } = await import("convex/nextjs");
@@ -1067,8 +1088,9 @@ export async function POST(request: NextRequest) {
         // Handle successful subscription renewal
         const invoice = event.data.object as any;
         if (invoice.subscription) {
-          console.log("💰 Subscription payment succeeded:", {
-            subscriptionId: invoice.subscription,
+          serverLogger.payment("Subscription payment succeeded", {
+            id: invoice.subscription,
+            type: "invoice",
             amount: invoice.amount_paid / 100,
           });
 
@@ -1080,7 +1102,7 @@ export async function POST(request: NextRequest) {
         // Handle failed subscription payment
         const failedInvoice = event.data.object as any;
         if (failedInvoice.subscription) {
-          console.log("❌ Subscription payment failed:", {
+          serverLogger.error("Subscription payment failed", {
             subscriptionId: failedInvoice.subscription,
             attemptCount: failedInvoice.attempt_count,
           });
@@ -1115,7 +1137,7 @@ export async function POST(request: NextRequest) {
               }
             }
           } catch (pprProError) {
-            console.error("Failed to handle PPR Pro payment failure:", pprProError);
+            serverLogger.error("Failed to handle PPR Pro payment failure", pprProError);
           }
         }
         break;
@@ -1123,9 +1145,8 @@ export async function POST(request: NextRequest) {
       case "payment_intent.payment_failed":
         // Handle failed payments
         const failedPayment = event.data.object as Stripe.PaymentIntent;
-        console.log("❌ Payment failed:", {
+        serverLogger.error("Payment failed", {
           id: failedPayment.id,
-          lastPaymentError: failedPayment.last_payment_error,
           metadata: failedPayment.metadata,
         });
 
@@ -1145,11 +1166,10 @@ export async function POST(request: NextRequest) {
               currency: failedPayment.currency || "usd",
               failureReason: failedPayment.last_payment_error?.message || "Payment declined",
             });
-            // console.log(...);
+
           }
         } catch (error) {
-          console.error("❌ Failed to send payment failure notification:", error);
-          // Don't throw - we still want to acknowledge the webhook
+          serverLogger.error("Failed to send payment failure notification", error);
         }
 
         break;
@@ -1157,10 +1177,10 @@ export async function POST(request: NextRequest) {
       case "transfer.created":
         // When money is transferred to a Connect account
         const transfer = event.data.object as Stripe.Transfer;
-        console.log("💸 Transfer created:", {
+        serverLogger.payment("Transfer created", {
           id: transfer.id,
           amount: transfer.amount / 100,
-          destination: transfer.destination,
+          type: "transfer",
         });
         break;
 
@@ -1168,21 +1188,65 @@ export async function POST(request: NextRequest) {
         if ((event.type as string) === "transfer.paid") {
           // When transfer is completed
           const paidTransfer = event.data.object as Stripe.Transfer;
-          // console.log(...);
+
         } else {
-          // console.log(...);
+
         }
+    }
+
+    // Record successful processing for idempotency
+    try {
+      const { fetchMutation: fetchMutationRecord } = await import("convex/nextjs");
+      const { api: apiRecord } = await import("@/convex/_generated/api");
+      const successMetadata = (event.data.object as any)?.metadata;
+      await fetchMutationRecord(apiRecord.webhookEvents.recordWebhookEvent, {
+        stripeEventId: event.id,
+        eventType: event.type,
+        productType: successMetadata?.productType || "unknown",
+        status: "processed" as const,
+      });
+    } catch (recordError) {
+      serverLogger.error("Failed to record webhook event success", recordError);
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("❌ Webhook handler error:", error);
-    return NextResponse.json(
-      {
-        error: "Webhook handler failed",
-        details: error instanceof Error ? error.message : "Unknown error",
+    // CRITICAL: Return 200 even on processing errors to prevent Stripe retries
+    // that could cause duplicate processing. Errors are logged for investigation.
+    serverLogger.error("Webhook handler error", {
+      eventType: event.type,
+      eventId: event.id,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+    const metadata = (event.data.object as any)?.metadata;
+    Sentry.captureException(error, {
+      tags: {
+        component: "stripe-webhook",
+        eventType: event.type,
+        productType: metadata?.productType || "unknown",
       },
-      { status: 500 }
-    );
+      extra: {
+        stripeEventId: event.id,
+        userId: metadata?.userId,
+        productId: metadata?.productId || metadata?.courseId || metadata?.bundleId,
+      },
+    });
+
+    // Record failed processing for idempotency (allows retry)
+    try {
+      const { fetchMutation: fetchMutationFail } = await import("convex/nextjs");
+      const { api: apiFail } = await import("@/convex/_generated/api");
+      await fetchMutationFail(apiFail.webhookEvents.recordWebhookEvent, {
+        stripeEventId: event.id,
+        eventType: event.type,
+        productType: metadata?.productType || "unknown",
+        status: "failed" as const,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    } catch (recordError) {
+      serverLogger.error("Failed to record webhook event failure", recordError);
+    }
+
+    return NextResponse.json({ received: true, error: "Processing error logged" });
   }
 }

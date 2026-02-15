@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, Music, Package, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -219,20 +220,12 @@ export default function DownloadsPage() {
           </div>
         </div>
       ) : (
-        <Card className="p-12 text-center">
-          <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-xl font-semibold">No Downloads Yet</h3>
-          <p className="mb-6 text-muted-foreground">
-            Purchase sample packs, MIDI packs, or preset packs from the marketplace to build your
-            library.
-          </p>
-          <Link href="/marketplace/samples">
-            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-              <Package className="mr-2 h-4 w-4" />
-              Browse Samples
-            </Button>
-          </Link>
-        </Card>
+        <EmptyState
+          icon={Download}
+          title="No downloads yet"
+          description="Purchase sample packs, MIDI packs, or preset packs from the marketplace to build your library."
+          action={{ label: "Browse Products", href: "/marketplace/samples" }}
+        />
       )}
     </div>
   );

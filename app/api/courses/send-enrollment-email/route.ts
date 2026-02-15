@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import { sendCourseEnrollmentEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
     // Require authentication to prevent abuse
     await requireAuth();
+
+    // SECURITY: Rate limiting (standard - 30 requests/min, sends emails)
+    const identifier = getRateLimitIdentifier(request);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.standard);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
 
     const {
       customerEmail,
@@ -36,12 +44,6 @@ export async function POST(request: NextRequest) {
       currency: currency || "USD",
       creatorName,
       storeName,
-    });
-
-    console.log("Enrollment confirmation email sent:", {
-      to: customerEmail,
-      course: courseTitle,
-      result,
     });
 
     return NextResponse.json({

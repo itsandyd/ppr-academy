@@ -26,7 +26,7 @@
 
 | Task | File(s) | Priority | Est. Hours |
 |------|---------|----------|------------|
-| Send purchase confirmation emails | `/app/api/webhooks/stripe-library/route.ts` | P0 | 4 |
+| Send purchase confirmation emails | `/app/api/webhooks/stripe/route.ts` (legacy route removed) | P0 | 4 |
 | Send course enrollment emails | `/app/api/courses/payment-success/route.ts` | P0 | 4 |
 | Create email templates for confirmations | `/emails/` | P0 | 6 |
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import * as Sentry from "@sentry/nextjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -98,15 +99,6 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log("✅ Bundle checkout session created:", {
-      sessionId: session.id,
-      bundleName,
-      amount: bundlePrice,
-      platformFee: platformFeeAmount / 100,
-      customer: customerName,
-      itemCount: (courseIds?.length || 0) + (productIds?.length || 0),
-    });
-
     return NextResponse.json({
       success: true,
       checkoutUrl: session.url,
@@ -118,6 +110,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("❌ Bundle checkout session creation failed:", error);
+    Sentry.captureException(error, {
+      tags: { component: "checkout-session", productType: "bundle" },
+    });
 
     return NextResponse.json(
       {

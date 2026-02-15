@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -9,7 +10,14 @@ export async function POST(request: NextRequest) {
   try {
     // ✅ SECURITY: Require authentication
     await requireAuth();
-    
+
+    // SECURITY: Rate limiting (strict - 5 requests/min)
+    const identifier = getRateLimitIdentifier(request);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
+
     const { courseId, customerEmail, customerName, coursePrice, courseTitle, creatorStripeAccountId } = await request.json();
 
     if (!courseId || !customerEmail || !customerName || coursePrice === undefined) {
@@ -41,13 +49,6 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
-
-    console.log("✅ Payment Intent created:", {
-      id: paymentIntent.id,
-      amount: courseAmount / 100,
-      platformFee: platformFeeAmount / 100,
-      destination: creatorStripeAccountId || "platform",
-    });
 
     return NextResponse.json({ 
       success: true,

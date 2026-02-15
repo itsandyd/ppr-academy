@@ -22,7 +22,7 @@ export async function submitCoachApplication(data: CoachApplicationData) {
     // You could also add a status field to the User model to track coach status
     
     // For demonstration, we'll log the application
-    console.log("Coach application received:", data);
+
     
     // You could send an email to admins here
     // Or create a record in a CoachApplications table

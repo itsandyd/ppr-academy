@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
 
@@ -7,7 +7,7 @@ import { Id } from "../_generated/dataModel";
  * - Students: People who purchased courses (source: course_enrollment, student_sync)
  * - Leads: People who subscribed but haven't purchased (source: activecampaign_import, etc.)
  */
-export const tagStudentsVsLeads = mutation({
+export const tagStudentsVsLeads = internalMutation({
   args: {
     storeId: v.string(), // Clerk User ID
     batchSize: v.optional(v.number()),

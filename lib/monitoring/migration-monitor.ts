@@ -63,7 +63,7 @@ class MigrationMonitor {
   startMonitoring(intervalMs = 30000) {
     if (this.isMonitoring) return;
 
-    // console.log(...);
+
     this.isMonitoring = true;
 
     this.monitoringInterval = setInterval(async () => {
@@ -85,7 +85,7 @@ class MigrationMonitor {
       this.monitoringInterval = undefined;
     }
     this.isMonitoring = false;
-    // console.log(...);
+
   }
 
   // Collect system metrics
@@ -205,11 +205,9 @@ class MigrationMonitor {
     
     // Log to console based on severity
     if (type === 'error') {
-      console.error('🚨 MIGRATION ALERT:', message, metadata);
+      console.error('MIGRATION ALERT:', message);
     } else if (type === 'warning') {
-      console.warn('⚠️ MIGRATION WARNING:', message, metadata);
-    } else {
-      console.info('ℹ️ MIGRATION INFO:', message, metadata);
+      console.warn('MIGRATION WARNING:', message);
     }
 
     // Keep only last 100 alerts
@@ -243,7 +241,7 @@ class MigrationMonitor {
           description: 'Disable marketplace feature flags',
           action: async () => {
             // In production, this would update environment variables or database
-            // console.log(...);
+
           },
           validation: async () => {
             return !features.useNewMarketplace;
@@ -255,7 +253,7 @@ class MigrationMonitor {
           description: 'Clear application cache',
           action: async () => {
             // Clear Redis cache, CDN cache, etc.
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: false,
@@ -286,7 +284,7 @@ class MigrationMonitor {
           id: 'pause-migration-jobs',
           description: 'Pause migration background jobs',
           action: async () => {
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: true,
@@ -295,7 +293,7 @@ class MigrationMonitor {
           id: 'notify-admins',
           description: 'Notify administrators of pause',
           action: async () => {
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: false,
@@ -315,7 +313,7 @@ class MigrationMonitor {
           id: 'backup-current-state',
           description: 'Create backup of current state',
           action: async () => {
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: true,
@@ -324,7 +322,7 @@ class MigrationMonitor {
           id: 'disable-all-new-features',
           description: 'Disable all new marketplace features',
           action: async () => {
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: true,
@@ -333,10 +331,10 @@ class MigrationMonitor {
           id: 'restore-database',
           description: 'Restore database to pre-migration state',
           action: async () => {
-            // console.log(...);
+
           },
           rollbackAction: async () => {
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: true,
@@ -345,7 +343,7 @@ class MigrationMonitor {
           id: 'clear-all-caches',
           description: 'Clear all application caches',
           action: async () => {
-            // console.log(...);
+
           },
           validation: async () => true,
           critical: false,
@@ -413,7 +411,7 @@ class MigrationMonitor {
 
   // Rollback executed steps if critical step fails
   private async rollbackExecutedSteps(steps: RollbackStep[], executedStepIds: string[]) {
-    // console.log(...);
+
     
     for (const stepId of executedStepIds.reverse()) {
       const step = steps.find(s => s.id === stepId);

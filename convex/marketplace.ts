@@ -55,26 +55,24 @@ export const getPlatformStats = query({
     totalStudents: v.number(),
   }),
   handler: async (ctx) => {
-    // Count unique stores (creators)
-    const stores = await ctx.db.query("stores").collect();
+    // Use bounded queries to limit bandwidth — only need counts
+    const stores = await ctx.db.query("stores").take(500);
     const totalCreators = stores.length;
 
-    // Count published courses
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
     const totalCourses = courses.length;
 
-    // Count published products
     const products = await ctx.db
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
     const totalProducts = products.length;
 
-    // Count unique students (users who have made purchases)
-    const purchases = await ctx.db.query("purchases").collect();
+    // Count unique students — cap at 1000 purchases to limit bandwidth
+    const purchases = await ctx.db.query("purchases").take(1000);
     const uniqueStudents = new Set(purchases.map((p) => p.userId));
     const totalStudents = uniqueStudents.size;
 
@@ -106,46 +104,40 @@ export const getCreatorSpotlight = query({
     v.null()
   ),
   handler: async (ctx) => {
-    // Get all stores
-    const stores = await ctx.db.query("stores").collect();
+    // Get stores — bounded to limit bandwidth
+    const stores = await ctx.db.query("stores").take(100);
 
     if (stores.length === 0) {
       return null;
     }
 
-    // Calculate stats for each store
-    const storesWithStats = await Promise.all(
-      stores.map(async (store) => {
-        // Count published courses
-        const coursesCount = await ctx.db
-          .query("courses")
-          .filter((q) =>
-            q.and(q.eq(q.field("storeId"), store._id), q.eq(q.field("isPublished"), true))
-          )
-          .collect()
-          .then((c) => c.length);
+    // Fetch courses and products once (not per-store) to avoid N+1 pattern
+    const allCourses = await ctx.db
+      .query("courses")
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .take(500);
 
-        // Count published products
-        const productsCount = await ctx.db
-          .query("digitalProducts")
-          .filter((q) => q.eq(q.field("storeId"), store._id))
-          .collect()
-          .then((p) => p.length);
+    const allProducts = await ctx.db
+      .query("digitalProducts")
+      .take(500);
 
-        // Count unique students for this store
-        const storePurchases = await ctx.db
-          .query("purchases")
-          .filter((q) => q.eq(q.field("storeId"), store._id))
-          .collect();
-        const uniqueStudents = new Set(storePurchases.map((p) => p.userId));
+    const allPurchases = await ctx.db
+      .query("purchases")
+      .take(1000);
 
-        return {
-          store,
-          totalProducts: coursesCount + productsCount,
-          totalStudents: uniqueStudents.size,
-        };
-      })
-    );
+    // Calculate stats for each store from the pre-fetched data
+    const storesWithStats = stores.map((store) => {
+      const coursesCount = allCourses.filter((c) => c.storeId === store._id).length;
+      const productsCount = allProducts.filter((p) => p.storeId === store._id).length;
+      const storePurchases = allPurchases.filter((p) => p.storeId === store._id);
+      const uniqueStudents = new Set(storePurchases.map((p) => p.userId));
+
+      return {
+        store,
+        totalProducts: coursesCount + productsCount,
+        totalStudents: uniqueStudents.size,
+      };
+    });
 
     // Sort by total products (most active creator)
     storesWithStats.sort((a, b) => b.totalProducts - a.totalProducts);

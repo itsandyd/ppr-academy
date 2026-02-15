@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import { ConvexHttpClient } from "convex/browser";
 import { api, internal } from "@/convex/_generated/api";
 import {
@@ -48,6 +49,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // SECURITY: Rate limiting (strict - 5 requests/min)
+    const identifier = getRateLimitIdentifier(request, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
+
     // Parse request body
     const body = await request.json();
     const { 
@@ -77,10 +85,10 @@ export async function POST(request: NextRequest) {
     // Check if we're in agent mode (has specific tools)
     const isAgentMode = !!agentId || (agentEnabledTools && agentEnabledTools.length > 0);
     
-    console.log(`[AI Chat] Starting pipeline for conversation: ${conversationId || "new"}`);
-    console.log(`[AI Chat] Settings: preset=${chatSettings.preset}, web=${chatSettings.enableWebResearch}, fact=${chatSettings.enableFactVerification}`);
+
+
     if (isAgentMode) {
-      console.log(`[AI Chat] Agent mode: ${agentId}, tools: ${agentEnabledTools?.join(", ") || "all"}`);
+
     }
 
     // Create a streaming response with simulated progress
@@ -320,6 +328,13 @@ export async function GET(request: NextRequest) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // SECURITY: Rate limiting (strict - 5 requests/min)
+    const identifier = getRateLimitIdentifier(request, userId);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
     }
 
     const searchParams = request.nextUrl.searchParams;

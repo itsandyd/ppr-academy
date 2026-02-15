@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // Tier type definition
 const tierTypeValidator = v.union(
@@ -30,9 +31,9 @@ function getDeliveredFilesForTier(
 
 /**
  * Create a beat license purchase
- * Called from webhook after successful Stripe payment
+ * Called internally from Stripe webhook after successful payment
  */
-export const createBeatLicensePurchase = mutation({
+export const createBeatLicensePurchase = internalMutation({
   args: {
     beatId: v.id("digitalProducts"),
     tierType: tierTypeValidator,
@@ -318,6 +319,8 @@ export const getCreatorBeatSales = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const limit = args.limit ?? 50;
 
     const licenses = await ctx.db
@@ -481,9 +484,15 @@ export const markContractGenerated = mutation({
     beatLicenseId: v.id("beatLicenses"),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const license = await ctx.db.get(args.beatLicenseId);
     if (!license) {
       throw new Error("License not found");
+    }
+
+    // Verify the caller owns this license
+    if (license.userId !== identity.subject) {
+      throw new Error("Unauthorized: you don't own this license");
     }
 
     await ctx.db.patch(args.beatLicenseId, {

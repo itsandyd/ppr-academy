@@ -37,7 +37,7 @@ crons.interval(
 
 crons.interval(
   "process email workflow executions",
-  { seconds: 10 },
+  { seconds: 60 },
   internal.emailWorkflowActions.processEmailWorkflowExecutions,
   {}
 );
@@ -53,6 +53,13 @@ crons.interval(
   "process email send queue",
   { seconds: 30 },
   internal.emailSendQueueActions.processEmailSendQueue,
+  {}
+);
+
+crons.interval(
+  "cleanup old webhook events",
+  { hours: 24 },
+  internal.webhookEvents.cleanupOldWebhookEvents,
   {}
 );
 

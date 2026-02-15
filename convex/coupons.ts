@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 /**
  * COUPON & DISCOUNT CODE SYSTEM
@@ -144,6 +145,7 @@ export const getCouponsByStore = query({
     includeInactive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     let coupons = await ctx.db
       .query("coupons")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
@@ -179,6 +181,7 @@ export const getCouponsByStore = query({
 export const getCouponDetails = query({
   args: { couponId: v.id("coupons") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const coupon = await ctx.db.get(args.couponId);
     if (!coupon) return null;
 
@@ -201,6 +204,7 @@ export const getCouponDetails = query({
 export const getUserCouponUsages = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const usages = await ctx.db
       .query("couponUsages")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
@@ -247,6 +251,7 @@ export const createCoupon = mutation({
     stackable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Check if code already exists (case-insensitive)
     const existing = await ctx.db
       .query("coupons")
@@ -299,6 +304,7 @@ export const updateCoupon = mutation({
     stackable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { couponId, ...updates } = args;
 
     await ctx.db.patch(couponId, {
@@ -313,6 +319,7 @@ export const updateCoupon = mutation({
 export const deactivateCoupon = mutation({
   args: { couponId: v.id("coupons") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.couponId, {
       isActive: false,
       updatedAt: Date.now(),
@@ -330,6 +337,7 @@ export const applyCoupon = mutation({
     orderId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const coupon = await ctx.db.get(args.couponId);
     if (!coupon) {
       throw new Error("Coupon not found");
@@ -357,6 +365,7 @@ export const applyCoupon = mutation({
 export const deleteCoupon = mutation({
   args: { couponId: v.id("coupons") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const coupon = await ctx.db.get(args.couponId);
     if (!coupon) {
       throw new Error("Coupon not found");
@@ -403,6 +412,7 @@ export const bulkCreateCoupons = mutation({
     validUntil: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     if (args.count > 100) {
       throw new Error("Maximum 100 coupons per bulk creation");
     }

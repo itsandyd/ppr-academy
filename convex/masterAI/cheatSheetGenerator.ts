@@ -1,4 +1,3 @@
-// @ts-nocheck - Convex type instantiation is too deep
 "use node";
 
 import { action } from "../_generated/server";

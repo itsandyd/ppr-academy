@@ -473,7 +473,7 @@ export default function AdminCourseBuilderPage() {
       
       // Set queue ID to enable real-time subscription
       setCurrentQueueId(result.queueId);
-      console.log("🚀 Background generation started:", result.queueId);
+
       
       toast.success("Background generation started!", {
         description: "You can navigate away - generation will continue in the background.",

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       type: "account_onboarding",
     });
 
-    console.log("✅ Stripe onboarding link created for account:", accountId);
+
 
     return NextResponse.json({ 
       success: true,

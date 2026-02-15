@@ -1,4 +1,4 @@
-import { mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -8,7 +8,7 @@ import { v } from "convex/values";
  */
 
 // Check and fix a specific user's enrollment issues
-export const fixUserEnrollments = mutation({
+export const fixUserEnrollments = internalMutation({
   args: { 
     clerkId: v.string(),
     courseSlug: v.optional(v.string()) // Specific course to fix
@@ -111,7 +111,7 @@ export const fixUserEnrollments = mutation({
 });
 
 // Bulk fix all users with enrollment issues
-export const fixAllEnrollmentIssues = mutation({
+export const fixAllEnrollmentIssues = internalMutation({
   args: {},
   returns: v.object({
     usersProcessed: v.number(),

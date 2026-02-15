@@ -42,7 +42,7 @@ export async function getUserFromClerk(clerkId: string) {
  */
 export async function getFeaturedCourses() {
   try {
-    // console.log(...);
+
     const courses = await fetchQuery(api.courses.getCourses, {});
 
     // Return first 6 courses as "featured"
@@ -59,7 +59,7 @@ export async function getFeaturedCourses() {
  */
 export async function getPopularCourses() {
   try {
-    // console.log(...);
+
     const courses = await fetchQuery(api.courses.getCourses, {});
 
     // Return first 10 courses as "popular" (can be enhanced with enrollment stats later)
@@ -154,7 +154,7 @@ export async function getCourses(filters?: {
   includeUnpublished?: boolean;
 }) {
   try {
-    // console.log(...);
+
 
     // For now, just fetch all courses
     // You can add filtering logic in the Convex query later

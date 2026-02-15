@@ -88,14 +88,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, message: "Unknown event type" });
     }
 
-    // Log event details
-    console.log(`[Resend Webhook] Event: ${type}`, {
-      emailId: data.email_id,
-      to: data.to,
-      subject: data.subject,
-      createdAt: created_at,
-    });
-
     // Validate required data
     if (!data.email_id) {
       console.warn("[Resend Webhook] No email_id in webhook data");
@@ -177,7 +169,7 @@ export async function POST(req: NextRequest) {
             email: recipientEmail,
             reason: "Spam complaint - auto-unsubscribed",
           });
-          console.log(`[Resend Webhook] Auto-unsubscribed ${recipientEmail} due to spam complaint`);
+
         } catch (err) {
           console.error(`[Resend Webhook] Failed to auto-unsubscribe ${recipientEmail}:`, err);
         }
@@ -194,7 +186,7 @@ export async function POST(req: NextRequest) {
             email: recipientEmail,
             reason: `Bounce (${bounceType}) - auto-suppressed`,
           });
-          console.log(`[Resend Webhook] Auto-suppressed ${recipientEmail} due to ${bounceType} bounce`);
+
         } catch (err) {
           console.error(`[Resend Webhook] Failed to auto-suppress bounced ${recipientEmail}:`, err);
         }

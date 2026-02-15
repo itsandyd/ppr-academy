@@ -1,4 +1,3 @@
-// @ts-nocheck - Convex type instantiation is too deep
 "use client";
 
 import { useState, useCallback } from "react";
@@ -50,9 +49,11 @@ interface OutlineItem {
   isWarning?: boolean;
 }
 
+type SectionType = "key_takeaways" | "quick_reference" | "step_by_step" | "tips" | "comparison" | "glossary" | "custom";
+
 interface OutlineSection {
   heading: string;
-  type: string;
+  type: SectionType;
   items: OutlineItem[];
 }
 
@@ -122,15 +123,16 @@ export default function CheatSheetGeneratorPage() {
   const deleteCheatSheetMutation = useMutation(api.cheatSheetMutations.deleteCheatSheet);
 
   // Group chapters by module
-  const chaptersByModule = chapters
-    ? Object.entries(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chaptersByModule: [string, any[]][] = chapters
+    ? (Object.entries(
         chapters.reduce((acc: Record<string, typeof chapters>, ch: any) => {
           const key = ch.moduleTitle || "Ungrouped";
           if (!acc[key]) acc[key] = [];
           acc[key].push(ch);
           return acc;
         }, {} as Record<string, typeof chapters>)
-      )
+      ) as [string, any[]][])
     : [];
 
   const selectedCourse = courses.find((c: any) => c._id === selectedCourseId);
@@ -513,7 +515,7 @@ export default function CheatSheetGeneratorPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {chaptersByModule.map(([moduleName, moduleChapters]: [string, any[]]) => (
+                {chaptersByModule.map(([moduleName, moduleChapters]) => (
                   <div key={moduleName}>
                     <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
                       {moduleName}
@@ -637,7 +639,7 @@ export default function CheatSheetGeneratorPage() {
                     />
                     <Select
                       value={section.type}
-                      onValueChange={(v) => updateSection(sIdx, { type: v })}
+                      onValueChange={(v) => updateSection(sIdx, { type: v as SectionType })}
                     >
                       <SelectTrigger className="w-44">
                         <SelectValue />

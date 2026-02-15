@@ -767,39 +767,37 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   const generateAudio = async (chapterId: string, text: string) => {
     setGeneratingAudio(chapterId);
     try {
-      // console.log(...);
+
       
       const result = await generateChapterAudio(chapterId, {
         text: text,
         voiceId: selectedVoice
       });
 
-      // console.log(...);
+
 
       if (result.success) {
-        // console.log(...);
+
         toast({
           title: "Audio Generated",
           description: result.message || "Audio has been generated successfully. Note: This is a reference - implement cloud storage for production.",
         });
         router.refresh();
       } else {
-        console.error(`❌ Audio generation failed:`, result.error);
-        toast({
+          toast({
           title: "Generation Failed",
           description: result.error || "Failed to generate audio",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error(`💥 Audio generation error:`, error);
       toast({
         title: "Generation Failed",
         description: "Failed to generate audio. Please try again.",
         variant: "destructive",
       });
     } finally {
-      // console.log(...);
+
       setGeneratingAudio(null);
     }
   };
@@ -1197,7 +1195,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         moduleIndex: moduleIndex
       });
 
-      // console.log(...);
+
 
       if (result.success) {
         toast({
@@ -1209,10 +1207,9 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
           title: "",
           description: ""
         });
-        // console.log(...);
+
         router.refresh();
       } else {
-        console.error(`🎯 createLesson failed:`, result.error);
         toast({
           title: "Add Failed",
           description: result.error || "Failed to add lesson",
@@ -1220,7 +1217,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         });
       }
     } catch (error) {
-      console.error(`🎯 addNewLesson error:`, error);
       toast({
         title: "Add Failed",
         description: "Failed to add lesson. Please try again.",
@@ -1273,7 +1269,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
       const newIndex = moduleChapterIds.findIndex(id => id === (overId.startsWith('module-') ? modules.find(m => m.id === parseInt(overId.replace('module-', '')))?.chapterId : overId));
 
       if (oldIndex === -1 || newIndex === -1) {
-        console.error("Could not find module indices");
         return;
       }
 
@@ -1325,7 +1320,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
       const newIndex = lessonChapterIds.findIndex(id => id === overChapterId);
       
       if (oldIndex === -1 || newIndex === -1) {
-        console.error("Could not find lesson indices for reordering");
         return;
       }
       
@@ -1377,7 +1371,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
     }
 
     if (targetLessonChapters.length === 0) {
-      console.error("Could not find lesson containing the dragged chapter");
       return;
     }
 
@@ -1385,7 +1378,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
     const newIndex = targetLessonChapters.findIndex(chapter => chapter.id === overId);
 
     if (oldIndex === -1 || newIndex === -1) {
-      console.error("Could not find chapter indices");
       return;
     }
 
@@ -1428,7 +1420,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
     const targetModule = modules.find(m => m.title === moduleTitle);
     
     if (!targetModule) {
-      console.error(`❌ Module not found: "${moduleTitle}"`);
       toast({
         title: "Module Not Found",
         description: `Could not find module "${moduleTitle}" to delete.`,
@@ -1462,7 +1453,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         result = await deleteFallbackModule(courseId, moduleTitle);
       }
       
-      // console.log(...);
+
       
       if (result.success) {
         const deletedLessons = (result as any).deletedLessons || 0;
@@ -1475,7 +1466,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         
         router.refresh();
       } else {
-        console.error(`❌ Delete failed:`, result.error);
         toast({
           title: "Delete Failed",
           description: result.error || "Failed to delete module. Please try again.",
@@ -1483,7 +1473,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         });
       }
     } catch (error) {
-      console.error('❌ Error deleting module:', error);
       toast({
         title: "Delete Failed",
         description: "An unexpected error occurred. Please try again.",
@@ -1506,7 +1495,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
     }
 
     if (!targetLesson) {
-      console.error(`❌ Lesson not found: "${lessonTitle}"`);
       toast({
         title: "Lesson Not Found",
         description: `Could not find lesson "${lessonTitle}" to delete.`,
@@ -1536,11 +1524,11 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         result = await deleteLesson(targetLesson.chapterId);
       } else {
         // This is a fallback lesson - delete orphaned chapters
-        // console.log(...);
+
         result = await deleteOrphanedChapters(courseId);
       }
 
-      // console.log(...);
+
 
       if (result.success) {
         const deletedChapters = (result as any).deletedChapters || (result as any).deletedCount || 0;
@@ -1558,7 +1546,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         });
       }
     } catch (error) {
-      console.error('❌ Error deleting lesson:', error);
       toast({
         title: "Delete Failed",
         description: "Failed to delete lesson. Please try again.",
@@ -1604,7 +1591,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
                   variant="outline"
                   onClick={async () => {
                     const result = await debugModuleStructure(courseId);
-                    // console.log(...);
+
                     
                     if (result.success && (result as any).realModules) {
                       // Debug info logged to console in development

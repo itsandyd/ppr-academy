@@ -196,12 +196,12 @@ export function NoProductsEmptyState({ storeId }: { storeId?: string }) {
       actions={[
         {
           label: "Create Product",
-          href: `/store/${storeId || 'setup'}/products`,
+          href: storeId ? `/store/${storeId}/products` : '/dashboard',
           icon: Sparkles
         },
         {
           label: "Create Course",
-          href: `/store/${storeId || 'setup'}/course/create`,
+          href: storeId ? `/store/${storeId}/course/create` : '/dashboard',
           variant: "outline",
           icon: Video
         }
@@ -301,7 +301,7 @@ export function NoSamplesEmptyState({ storeId }: { storeId?: string }) {
       actions={[
         {
           label: "Upload Samples",
-          href: `/store/${storeId || 'setup'}/samples/upload`,
+          href: storeId ? `/store/${storeId}/samples/upload` : '/dashboard',
           icon: Sparkles
         }
       ]}

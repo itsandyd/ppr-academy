@@ -142,16 +142,6 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionData);
 
-    console.log("Beat lease checkout session created:", {
-      sessionId: session.id,
-      beatTitle: beat.title,
-      tierType,
-      tierName: selectedTier.name,
-      amount: selectedTier.price,
-      platformFee: platformFeeAmount / 100,
-      customer: customerName,
-    });
-
     return NextResponse.json({
       success: true,
       checkoutUrl: session.url,

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 // ============================================================================
 // EMAIL ANALYTICS - Mutations & Queries for dashboard
@@ -28,6 +29,7 @@ export const logEmailEvent = mutation({
     metadata: v.any(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Look up campaignId and storeId from resendLogs → resendConnections
     const log = await ctx.db
       .query("resendLogs")
@@ -160,59 +162,94 @@ export const checkAlertThresholds = internalMutation({
 export const getOverviewStats = query({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     const now = Date.now();
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
-    const allEvents = await ctx.db.query("webhookEmailEvents").collect();
+    // Count per event type using the by_eventType_timestamp index
+    // This avoids collecting the entire webhookEmailEvents table
+    const eventTypes = ["sent", "delivered", "bounced", "complained", "opened", "clicked"] as const;
 
-    const allTime = {
-      sent: allEvents.filter((e) => e.eventType === "sent").length,
-      delivered: allEvents.filter((e) => e.eventType === "delivered").length,
-      bounced: allEvents.filter((e) => e.eventType === "bounced").length,
-      complained: allEvents.filter((e) => e.eventType === "complained").length,
-      opened: allEvents.filter((e) => e.eventType === "opened").length,
-      clicked: allEvents.filter((e) => e.eventType === "clicked").length,
-    };
+    const allTime: Record<string, number> = {};
+    const last7Days: Record<string, number> = {};
+    const last30Days: Record<string, number> = {};
 
-    const last7Days = {
-      sent: allEvents.filter((e) => e.eventType === "sent" && e.timestamp >= sevenDaysAgo).length,
-      delivered: allEvents.filter((e) => e.eventType === "delivered" && e.timestamp >= sevenDaysAgo).length,
-      bounced: allEvents.filter((e) => e.eventType === "bounced" && e.timestamp >= sevenDaysAgo).length,
-      complained: allEvents.filter((e) => e.eventType === "complained" && e.timestamp >= sevenDaysAgo).length,
-    };
+    for (const eventType of eventTypes) {
+      // All-time count: use take with a reasonable cap
+      const allTimeEvents = await ctx.db
+        .query("webhookEmailEvents")
+        .withIndex("by_eventType_timestamp", (q) => q.eq("eventType", eventType))
+        .collect();
+      allTime[eventType] = allTimeEvents.length;
 
-    const last30Days = {
-      sent: allEvents.filter((e) => e.eventType === "sent" && e.timestamp >= thirtyDaysAgo).length,
-      delivered: allEvents.filter((e) => e.eventType === "delivered" && e.timestamp >= thirtyDaysAgo).length,
-      bounced: allEvents.filter((e) => e.eventType === "bounced" && e.timestamp >= thirtyDaysAgo).length,
-      complained: allEvents.filter((e) => e.eventType === "complained" && e.timestamp >= thirtyDaysAgo).length,
-    };
+      // Last 7 days
+      const last7Events = await ctx.db
+        .query("webhookEmailEvents")
+        .withIndex("by_eventType_timestamp", (q) =>
+          q.eq("eventType", eventType).gte("timestamp", sevenDaysAgo)
+        )
+        .collect();
+      last7Days[eventType] = last7Events.length;
+
+      // Last 30 days
+      const last30Events = await ctx.db
+        .query("webhookEmailEvents")
+        .withIndex("by_eventType_timestamp", (q) =>
+          q.eq("eventType", eventType).gte("timestamp", thirtyDaysAgo)
+        )
+        .collect();
+      last30Days[eventType] = last30Events.length;
+    }
 
     // Calculate rates from last 30 days
-    const bounceRate = last30Days.sent > 0
-      ? (last30Days.bounced / last30Days.sent) * 100
+    const bounceRate = (last30Days.sent ?? 0) > 0
+      ? ((last30Days.bounced ?? 0) / last30Days.sent) * 100
       : 0;
-    const complaintRate = last30Days.sent > 0
-      ? (last30Days.complained / last30Days.sent) * 100
+    const complaintRate = (last30Days.sent ?? 0) > 0
+      ? ((last30Days.complained ?? 0) / last30Days.sent) * 100
       : 0;
-    const deliveryRate = last30Days.sent > 0
-      ? (last30Days.delivered / last30Days.sent) * 100
+    const deliveryRate = (last30Days.sent ?? 0) > 0
+      ? ((last30Days.delivered ?? 0) / last30Days.sent) * 100
       : 0;
 
-    // Health score from suppression list
-    const allPrefs = await ctx.db.query("resendPreferences").collect();
-    const totalContacts = allPrefs.length;
-    const suppressedContacts = allPrefs.filter((p) => p.isUnsubscribed).length;
+    // Health score — count only unsub'd prefs with a bounded query
+    const suppressedPrefs = await ctx.db
+      .query("resendPreferences")
+      .filter((q) => q.eq(q.field("isUnsubscribed"), true))
+      .collect();
+    const suppressedContacts = suppressedPrefs.length;
+
+    const allPrefsCount = await ctx.db
+      .query("resendPreferences")
+      .collect();
+    const totalContacts = allPrefsCount.length;
     const activeContacts = totalContacts - suppressedContacts;
     const healthScore = totalContacts > 0
       ? Math.round((activeContacts / totalContacts) * 100)
       : 100;
 
     return {
-      allTime,
-      last7Days,
-      last30Days,
+      allTime: {
+        sent: allTime.sent ?? 0,
+        delivered: allTime.delivered ?? 0,
+        bounced: allTime.bounced ?? 0,
+        complained: allTime.complained ?? 0,
+        opened: allTime.opened ?? 0,
+        clicked: allTime.clicked ?? 0,
+      },
+      last7Days: {
+        sent: last7Days.sent ?? 0,
+        delivered: last7Days.delivered ?? 0,
+        bounced: last7Days.bounced ?? 0,
+        complained: last7Days.complained ?? 0,
+      },
+      last30Days: {
+        sent: last30Days.sent ?? 0,
+        delivered: last30Days.delivered ?? 0,
+        bounced: last30Days.bounced ?? 0,
+        complained: last30Days.complained ?? 0,
+      },
       bounceRate: Math.round(bounceRate * 100) / 100,
       complaintRate: Math.round(complaintRate * 1000) / 1000,
       deliveryRate: Math.round(deliveryRate * 100) / 100,
@@ -230,6 +267,7 @@ export const getOverviewStats = query({
 export const getTrendData = query({
   args: { days: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const numDays = args.days || 30;
     const now = Date.now();
     const startTime = now - numDays * 24 * 60 * 60 * 1000;
@@ -237,7 +275,7 @@ export const getTrendData = query({
     const events = await ctx.db
       .query("webhookEmailEvents")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", startTime))
-      .collect();
+      .take(10000);
 
     // Group by day
     const dayMap = new Map<string, {
@@ -283,11 +321,12 @@ export const getTrendData = query({
 export const getActiveAlerts = query({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     return await ctx.db
       .query("emailAlerts")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
       .order("desc")
-      .collect();
+      .take(50);
   },
 });
 
@@ -297,6 +336,7 @@ export const getActiveAlerts = query({
 export const getAllAlerts = query({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     return await ctx.db
       .query("emailAlerts")
       .order("desc")
@@ -313,6 +353,7 @@ export const acknowledgeAlert = mutation({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.alertId, {
       isActive: false,
       acknowledgedAt: Date.now(),
@@ -341,7 +382,8 @@ export const getCampaignAnalytics = query({
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
   handler: async (ctx, args) => {
-    const campaigns = await ctx.db.query("resendCampaigns").collect();
+    await requireAuth(ctx);
+    const campaigns = await ctx.db.query("resendCampaigns").take(200);
 
     const campaignData = campaigns.map((c) => {
       const bounceRate = c.sentCount > 0 ? (c.bouncedCount / c.sentCount) * 100 : 0;
@@ -403,14 +445,15 @@ export const getCampaignAnalytics = query({
 export const getCampaignDetail = query({
   args: { campaignId: v.id("resendCampaigns") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return null;
 
-    // Get events for this campaign
+    // Get events for this campaign — bounded to limit bandwidth
     const events = await ctx.db
       .query("webhookEmailEvents")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     // Get alerts for this campaign
     const alerts = await ctx.db
@@ -480,7 +523,8 @@ export const getSuppressionList = query({
     reasonFilter: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const allPrefs = await ctx.db.query("resendPreferences").collect();
+    await requireAuth(ctx);
+    const allPrefs = await ctx.db.query("resendPreferences").take(5000);
     let suppressed = allPrefs.filter((p) => p.isUnsubscribed);
 
     // Filter by reason
@@ -533,6 +577,7 @@ export const removeSuppression = mutation({
     prefId: v.id("resendPreferences"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const pref = await ctx.db.get(args.prefId);
     if (!pref) return { success: false, message: "Not found" };
 
@@ -560,6 +605,7 @@ export const addSuppression = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const email = args.email.toLowerCase().trim();
 
     const existing = await ctx.db
@@ -610,7 +656,8 @@ export const addSuppression = mutation({
 export const getListHealth = query({
   args: {},
   handler: async (ctx) => {
-    const allPrefs = await ctx.db.query("resendPreferences").collect();
+    await requireAuth(ctx);
+    const allPrefs = await ctx.db.query("resendPreferences").take(10000);
 
     // Categorize by reason
     let active = 0;
@@ -703,6 +750,7 @@ export const getListHealth = query({
 export const getCreatorOverviewStats = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const now = Date.now();
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -779,6 +827,7 @@ export const getCreatorOverviewStats = query({
 export const getCreatorTrendData = query({
   args: { storeId: v.string(), days: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const numDays = args.days || 30;
     const now = Date.now();
     const startTime = now - numDays * 24 * 60 * 60 * 1000;
@@ -830,12 +879,13 @@ export const getCreatorTrendData = query({
 export const getCreatorActiveAlerts = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     return await ctx.db
       .query("emailAlerts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isActive"), true))
       .order("desc")
-      .collect();
+      .take(50);
   },
 });
 
@@ -856,6 +906,7 @@ export const getCreatorCampaignAnalytics = query({
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Find creator's connections by their Clerk userId
     const connections = await ctx.db
       .query("resendConnections")
@@ -865,7 +916,7 @@ export const getCreatorCampaignAnalytics = query({
     const connectionIds = new Set(connections.map((c) => c._id));
 
     // Get campaigns belonging to these connections
-    const allCampaigns = await ctx.db.query("resendCampaigns").collect();
+    const allCampaigns = await ctx.db.query("resendCampaigns").take(200);
     const campaigns = allCampaigns.filter(
       (c) => c.connectionId && connectionIds.has(c.connectionId)
     );
@@ -932,6 +983,7 @@ export const getCreatorCampaignDetail = query({
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return null;
 
@@ -946,12 +998,12 @@ export const getCreatorCampaignDetail = query({
     const events = await ctx.db
       .query("webhookEmailEvents")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(5000);
 
     const alerts = await ctx.db
       .query("emailAlerts")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(100);
 
     const eventsByType: Record<string, number> = {};
     for (const e of events) {
@@ -993,6 +1045,7 @@ export const getCreatorSubscribers = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     const maxResults = args.limit || 100;
 
     // Use indexed query - order by creation time descending (most recent first)
@@ -1059,6 +1112,7 @@ export const getCreatorSubscribers = query({
 export const getCreatorSubscriberStats = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     let total = 0;
     let subscribed = 0;
     let unsubscribed = 0;
@@ -1102,6 +1156,7 @@ export const getCreatorSubscriberStats = query({
 export const getCreatorListHealth = query({
   args: { storeId: v.string() },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
     // Use getCreatorSubscriberStats-style counting with a hard cap
     // to stay under the 32k document read limit.
     // We sample up to 20,000 contacts max for status counts.

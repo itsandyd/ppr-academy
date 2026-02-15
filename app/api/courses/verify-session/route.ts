@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       transactionId: (session.payment_intent as string) || `session_${sessionId}`,
     });
 
-    console.log("Enrollment created via session verification:", { purchaseId, sessionId });
+
 
     return NextResponse.json({ success: true, enrolled: true, purchaseId });
   } catch (error) {

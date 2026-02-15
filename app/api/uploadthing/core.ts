@@ -13,8 +13,8 @@ export const ourFileRouter = {
     })
     .onUploadComplete(async ({ metadata, file }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Audio upload complete for userId:", metadata.userId);
-      console.log("Audio file URL:", file.url);
+
+
 
       // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
       return { uploadedBy: metadata.userId, url: file.url };
@@ -29,8 +29,8 @@ export const ourFileRouter = {
     })
     .onUploadComplete(async ({ metadata, file }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Image upload complete for userId:", metadata.userId);
-      console.log("Image file URL:", file.url);
+
+
 
       // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
       return { uploadedBy: metadata.userId, url: file.url };
@@ -45,8 +45,8 @@ export const ourFileRouter = {
     })
     .onUploadComplete(async ({ metadata, file }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Avatar upload complete for userId:", metadata.userId);
-      console.log("Avatar file URL:", file.url);
+
+
 
       // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
       return { uploadedBy: metadata.userId, url: file.url };
@@ -68,9 +68,9 @@ export const ourFileRouter = {
     })
     .onUploadComplete(async ({ metadata, file }) => {
       // This code RUNS ON YOUR SERVER after upload
-      console.log("Document upload complete for userId:", metadata.userId);
-      console.log("Document file URL:", file.url);
-      console.log("Document file type:", file.type);
+
+
+
 
       // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
       return { uploadedBy: metadata.userId, url: file.url, name: file.name, type: file.type };
