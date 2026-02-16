@@ -140,7 +140,7 @@ export default function DripCampaignsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl p-8">
+    <div className="mx-auto max-w-7xl p-4 md:p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="flex items-center gap-3 text-3xl font-bold">
@@ -267,7 +267,7 @@ export default function DripCampaignsPage() {
                 {campaign.description && <CardDescription>{campaign.description}</CardDescription>}
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-blue-600" />
                     <span className="font-medium">{campaign.totalEnrolled || 0}</span>

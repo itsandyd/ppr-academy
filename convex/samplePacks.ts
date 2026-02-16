@@ -31,19 +31,19 @@ export const getAllPublishedSamplePacks = query({
     const samplePacks = await ctx.db
       .query("samplePacks")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
 
     const packsWithDetails = await Promise.all(
       samplePacks.map(async (pack) => {
         const downloads = await ctx.db
           .query("sampleDownloads")
           .filter((q) => q.eq(q.field("packId"), pack._id))
-          .collect();
+          .take(500);
 
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(500);
         const store = stores.find(s => s._id === pack.storeId);
 
         if (store) {
@@ -92,7 +92,7 @@ export const getPacksByStore = query({
     const packs = await ctx.db
       .query("samplePacks")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     return packs;
   },

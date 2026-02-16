@@ -114,7 +114,7 @@ export default function VideoStudioPage() {
   const recentJobs = jobs ?? [];
 
   return (
-    <div className="space-y-8">
+    <div className="p-4 md:p-6 space-y-6 md:space-y-8">
       {/* Prompt Input Area */}
       <Card className="p-6 bg-card border-border">
         <div className="space-y-5">

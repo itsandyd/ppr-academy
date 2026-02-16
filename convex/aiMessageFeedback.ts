@@ -118,10 +118,10 @@ export const getFeedbackStats = query({
       ? await ctx.db
           .query("aiMessageFeedback")
           .withIndex("by_userId", (q) => q.eq("userId", args.userId as string))
-          .collect()
+          .take(1000)
       : await ctx.db
           .query("aiMessageFeedback")
-          .collect();
+          .take(1000);
 
     let upvotes = 0;
     let downvotes = 0;
@@ -194,7 +194,7 @@ export const getFeedbackForConversation = query({
       .query("aiMessageFeedback")
       .withIndex("by_conversationId", (q) => q.eq("conversationId", args.conversationId))
       .filter((q) => q.eq(q.field("userId"), args.userId))
-      .collect();
+      .take(1000);
 
     return feedback.map((f) => ({
       messageId: f.messageId,

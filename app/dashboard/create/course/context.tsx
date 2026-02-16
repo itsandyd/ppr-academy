@@ -25,9 +25,9 @@ const CourseCreationContext = createContext<CourseCreationContextType | undefine
 
 const validateStepWithData = (step: keyof StepCompletion, data: CourseData): boolean => {
   switch (step) {
-    case "course": return !!(data.title && data.description && data.category && data.subcategory && data.skillLevel);
+    case "course": return !!(data.title && data.title.length >= 3 && data.title.length <= 100 && data.description && data.description.length >= 10 && data.category && data.subcategory && data.skillLevel);
     case "pricing": return !!data.pricingModel;
-    case "checkout": return data.pricingModel === "paid" ? !!(data.price && data.checkoutHeadline) : true;
+    case "checkout": return data.pricingModel === "paid" ? !!(data.price && parseFloat(data.price) >= 0 && data.checkoutHeadline) : true;
     case "followGate": return data.pricingModel === "free_with_gate" ? !!(data.followGateEnabled && data.followGateRequirements) : true;
     case "options": return !!(data.enableSharing !== undefined || data.seoTitle || data.seoDescription || data.enableComments !== undefined || data.enableProgress !== undefined || data.enableCertificates !== undefined);
     default: return false;

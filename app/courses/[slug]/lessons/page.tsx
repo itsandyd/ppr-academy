@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { getUserFromClerk } from "@/lib/data";
+import { getUserFromClerk } from "@/lib/convex-data";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 

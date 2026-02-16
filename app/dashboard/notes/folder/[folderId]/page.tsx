@@ -45,6 +45,7 @@ import {
   Globe,
   Upload,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
 
@@ -286,9 +287,9 @@ export default function FolderNotesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/dashboard/notes?mode=create">
@@ -299,14 +300,14 @@ export default function FolderNotesPage() {
           <div>
             <div className="flex items-center gap-2">
               <FolderOpen className="h-6 w-6 text-muted-foreground" />
-              <h1 className="text-3xl font-bold">{folder.name}</h1>
+              <h1 className="text-xl md:text-3xl font-bold">{folder.name}</h1>
             </div>
             <p className="mt-1 text-muted-foreground">
               {stats.total} notes in this folder
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AINoteGenerator
             userId={user.id}
             storeId={storeId!}
@@ -346,7 +347,7 @@ export default function FolderNotesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -389,22 +390,12 @@ export default function FolderNotesPage() {
 
         <TabsContent value={activeTab} className="mt-4 space-y-4">
           {filteredNotes.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  {searchQuery
-                    ? "No notes match your search"
-                    : "No notes in this folder yet"}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={handleCreateNote} className="mt-4 gap-2">
-                    <PlusCircle className="h-4 w-4" />
-                    Create Note
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={FileText}
+              title={searchQuery ? "No notes match your search" : "No notes in this folder yet"}
+              description={searchQuery ? "Try adjusting your search terms." : "Create your first note to get started."}
+              action={!searchQuery ? { label: "Create Note", onClick: handleCreateNote } : undefined}
+            />
           ) : (
             filteredNotes.map((note: any) => (
               <NoteCard
@@ -454,7 +445,7 @@ function NoteCard({
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-2xl">
               {note.icon || "📝"}
@@ -507,7 +498,7 @@ function NoteCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/notes/${note._id}/edit?mode=create`}>
                 <Pencil className="mr-2 h-4 w-4" />

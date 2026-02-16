@@ -79,12 +79,14 @@ export default async function PresetPackDetailPage({
   }
 
   return (
-    <PresetPackDetailClient
-      productId={product._id}
-      slug={product.slug || slug}
-      initialProduct={product}
-      initialStore={product.store}
-    />
+    <div className="min-h-screen px-4 md:px-0">
+      <PresetPackDetailClient
+        productId={product._id}
+        slug={product.slug || slug}
+        initialProduct={product}
+        initialStore={product.store}
+      />
+    </div>
   );
 }
 

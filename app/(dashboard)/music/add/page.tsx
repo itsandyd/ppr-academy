@@ -72,7 +72,7 @@ export default function AddTrackPage() {
   // Show create profile option if no profile exists
   if (artistProfile === null) {
     return (
-      <div className="max-w-2xl mx-auto py-12">
+      <div className="max-w-2xl mx-auto px-4 md:px-0 py-8 md:py-12">
         <div className="mb-6">
           <Button variant="ghost" asChild>
             <Link href="/music/showcase">
@@ -117,10 +117,10 @@ export default function AddTrackPage() {
 
   // Show the add track form
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto px-4 md:px-0 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <Button variant="ghost" asChild>
             <Link href="/music/showcase">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -128,7 +128,7 @@ export default function AddTrackPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Add Track to Your Showcase</h1>
+            <h1 className="text-xl md:text-2xl font-bold">Add Track to Your Showcase</h1>
             <p className="text-muted-foreground">
               Paste a URL from Spotify, SoundCloud, YouTube, Apple Music, or Bandcamp
             </p>

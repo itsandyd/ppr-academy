@@ -56,7 +56,7 @@ export const validateCoupon = query({
         .withIndex("by_user", (q: any) => 
           q.eq("userId", args.userId).eq("couponId", coupon._id)
         )
-        .collect();
+        .take(1000);
 
       if (userUsages.length >= coupon.maxUsesPerUser) {
         return { valid: false, error: "You have already used this coupon the maximum number of times" };
@@ -149,7 +149,7 @@ export const getCouponsByStore = query({
     let coupons = await ctx.db
       .query("coupons")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     if (!args.includeInactive) {
       coupons = coupons.filter((c) => c.isActive);
@@ -161,7 +161,7 @@ export const getCouponsByStore = query({
         const usages = await ctx.db
           .query("couponUsages")
           .withIndex("by_coupon", (q: any) => q.eq("couponId", coupon._id))
-          .collect();
+          .take(1000);
 
         const totalRevenue = usages.reduce((sum, u) => sum + u.discountApplied, 0);
 
@@ -188,7 +188,7 @@ export const getCouponDetails = query({
     const usages = await ctx.db
       .query("couponUsages")
       .withIndex("by_coupon", (q: any) => q.eq("couponId", args.couponId))
-      .collect();
+      .take(1000);
 
     const totalDiscountGiven = usages.reduce((sum, u) => sum + u.discountApplied, 0);
 
@@ -208,7 +208,7 @@ export const getUserCouponUsages = query({
     const usages = await ctx.db
       .query("couponUsages")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     // Enrich with coupon details
     const enriched = await Promise.all(
@@ -375,7 +375,7 @@ export const deleteCoupon = mutation({
     const usages = await ctx.db
       .query("couponUsages")
       .withIndex("by_coupon", (q: any) => q.eq("couponId", args.couponId))
-      .collect();
+      .take(1000);
 
     if (usages.length > 0) {
       // Soft delete by deactivating

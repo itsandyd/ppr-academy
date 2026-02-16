@@ -38,7 +38,7 @@ export const getQuestionsByLesson = query({
       .withIndex("by_lesson", (q) =>
         q.eq("courseId", args.courseId).eq("lessonId", args.lessonId)
       )
-      .collect();
+      .take(1000);
 
     // Sort based on preference
     if (args.sortBy === "votes") {
@@ -96,7 +96,7 @@ export const getQuestionsByCourse = query({
       return await query.take(args.limit);
     }
 
-    return await query.collect();
+    return await query.take(1000);
   },
 });
 
@@ -154,7 +154,7 @@ export const getAnswersByQuestion = query({
     const answers = await ctx.db
       .query("answers")
       .withIndex("by_question", (q) => q.eq("questionId", args.questionId))
-      .collect();
+      .take(1000);
 
     // Sort: accepted first, then by votes, then by date
     answers.sort((a, b) => {
@@ -478,7 +478,7 @@ export const deleteQuestion = mutation({
       const answers = await ctx.db
         .query("answers")
         .withIndex("by_question", (q) => q.eq("questionId", args.questionId))
-        .collect();
+        .take(1000);
 
       for (const answer of answers) {
         await ctx.db.delete(answer._id);
@@ -490,7 +490,7 @@ export const deleteQuestion = mutation({
         .withIndex("by_target", (q) =>
           q.eq("targetType", "question").eq("targetId", args.questionId)
         )
-        .collect();
+        .take(1000);
 
       for (const vote of votes) {
         await ctx.db.delete(vote._id);

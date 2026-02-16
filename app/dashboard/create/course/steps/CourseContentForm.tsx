@@ -122,8 +122,13 @@ function CourseBasicInfoCard() {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  const getFieldError = (field: keyof typeof touched, value: any) => {
-    return touched[field] && !value;
+  const getFieldError = (field: keyof typeof touched, value: any): string | false => {
+    if (!touched[field]) return false;
+    if (!value) return "required";
+    if (field === "title" && typeof value === "string" && value.length < 3) return "min";
+    if (field === "title" && typeof value === "string" && value.length > 100) return "max";
+    if (field === "description" && typeof value === "string" && value.length < 10) return "min";
+    return false;
   };
 
   return (
@@ -152,7 +157,12 @@ function CourseBasicInfoCard() {
           placeholder="e.g., Mastering Hip-Hop Drums"
           required
           help={courseFieldHelp.title}
-          error={getFieldError("title", state.data?.title) ? "Course title is required" : undefined}
+          error={
+            getFieldError("title", state.data?.title) === "required" ? "Course title is required" :
+            getFieldError("title", state.data?.title) === "min" ? "Title must be at least 3 characters" :
+            getFieldError("title", state.data?.title) === "max" ? "Title must be at most 100 characters" :
+            undefined
+          }
         />
 
         <FormFieldWithHelp
@@ -164,7 +174,11 @@ function CourseBasicInfoCard() {
           placeholder="Describe what students will learn in this course..."
           required
           help={courseFieldHelp.description}
-          error={getFieldError("description", state.data?.description) ? "Course description is required" : undefined}
+          error={
+            getFieldError("description", state.data?.description) === "required" ? "Course description is required" :
+            getFieldError("description", state.data?.description) === "min" ? "Description must be at least 10 characters" :
+            undefined
+          }
           rows={6}
         />
 
@@ -187,8 +201,8 @@ function CourseBasicInfoCard() {
             handleInputChange("tags", value);
           }}
           errors={{
-            category: getFieldError("category", state.data?.category),
-            subcategory: getFieldError("subcategory", state.data?.subcategory),
+            category: !!getFieldError("category", state.data?.category),
+            subcategory: !!getFieldError("subcategory", state.data?.subcategory),
           }}
         />
 
@@ -560,7 +574,8 @@ export function CourseContentForm() {
   
   const handleNextOld = () => {
     // Check if basic info is complete before proceeding
-    const isBasicInfoComplete = state.data?.title && state.data?.description && 
+    const isBasicInfoComplete = state.data?.title && state.data.title.length >= 3 &&
+                               state.data?.description && state.data.description.length >= 10 &&
                                state.data?.category && state.data?.skillLevel;
     
     if (!isBasicInfoComplete) {
@@ -576,7 +591,8 @@ export function CourseContentForm() {
     updateData("course", data);
   };
 
-  const isValid = state.data?.title && state.data?.description && 
+  const isValid = state.data?.title && state.data.title.length >= 3 && state.data.title.length <= 100 &&
+                 state.data?.description && state.data.description.length >= 10 &&
                  state.data?.category && state.data?.skillLevel;
 
   return (
@@ -612,13 +628,13 @@ export function CourseContentForm() {
               Back
             </Button>
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={saveCourse}
               disabled={state.isSaving}
               className="gap-2 h-12 flex-1"
             >
-              <Save className="w-4 h-4" />
+              {state.isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {state.isSaving ? "Saving..." : "Save"}
             </Button>
           </div>
@@ -632,13 +648,13 @@ export function CourseContentForm() {
           </Button>
           
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={saveCourse}
               disabled={state.isSaving}
               className="gap-2 h-10"
             >
-              <Save className="w-4 h-4" />
+              {state.isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {state.isSaving ? "Saving..." : "Save Course"}
             </Button>
           

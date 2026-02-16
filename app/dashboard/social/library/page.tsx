@@ -58,9 +58,9 @@ export default function ScriptLibraryPage() {
   // Show error if no stores
   if (!storeId) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Script Library</h1>
+          <h1 className="text-xl md:text-3xl font-bold mb-2">Script Library</h1>
           <p className="text-muted-foreground">
             Pre-generated scripts from your course content
           </p>
@@ -90,7 +90,7 @@ export default function ScriptLibraryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -100,7 +100,7 @@ export default function ScriptLibraryPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Script Library</h1>
+          <h1 className="text-xl md:text-3xl font-bold">Script Library</h1>
           <p className="text-muted-foreground">
             Pre-generated scripts from your course content
           </p>

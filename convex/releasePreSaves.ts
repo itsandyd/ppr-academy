@@ -117,7 +117,7 @@ export const getByRelease = query({
       .query("releasePreSaves")
       .withIndex("by_release", (q) => q.eq("releaseId", args.releaseId))
       .order("desc")
-      .collect();
+      .take(5000);
 
     return preSaves.map((ps) => ({
       _id: ps._id,
@@ -147,7 +147,7 @@ export const getCount = query({
     const preSaves = await ctx.db
       .query("releasePreSaves")
       .withIndex("by_release", (q) => q.eq("releaseId", args.releaseId))
-      .collect();
+      .take(5000);
 
     return {
       total: preSaves.length,
@@ -189,7 +189,7 @@ export const getByCreator = query({
 
     const preSaves = args.limit
       ? await baseQuery.take(args.limit)
-      : await baseQuery.collect();
+      : await baseQuery.take(5000);
 
     return preSaves.map((ps) => ({
       _id: ps._id,
@@ -316,7 +316,7 @@ export const getPreSavesNeedingEmail = query({
           q.eq(q.field(fieldMap[args.emailType]), false)
         )
       )
-      .collect();
+      .take(5000);
 
     const preSaves = allPreSaves.slice(0, args.limit || 100);
 

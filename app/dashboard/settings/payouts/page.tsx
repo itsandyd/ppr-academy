@@ -275,7 +275,7 @@ export default function PayoutSettingsPage() {
 
   if (!user || !convexUser || userStore === undefined) {
     return (
-      <div className="max-w-4xl mx-auto px-8 pt-10 pb-24">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-24">
         <div className="animate-pulse">
           <div className="h-8 bg-muted rounded w-1/4 mb-8"></div>
           <div className="h-64 bg-muted rounded"></div>
@@ -287,7 +287,7 @@ export default function PayoutSettingsPage() {
   // If user doesn't have a store yet, show a message
   if (!userStore) {
     return (
-      <div className="max-w-4xl mx-auto px-8 pt-10 pb-24">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-24">
         <Card>
           <CardContent className="p-8 text-center">
             <h2 className="text-xl font-semibold mb-2">No Store Found</h2>
@@ -301,7 +301,7 @@ export default function PayoutSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-8 pt-10 pb-24 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-24 space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-2">Payout Settings</h1>
@@ -449,7 +449,7 @@ export default function PayoutSettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               <div className="text-center p-4 bg-green-500/10 dark:bg-green-500/20 rounded-lg border border-green-500/20">
                 <div className="text-2xl font-bold text-green-700 dark:text-green-400">
                   {formatCurrency(totalEarnings + (pendingEarnings?.netEarnings || 0))}
@@ -479,7 +479,7 @@ export default function PayoutSettingsPage() {
             {/* Request Payout Section */}
             {pendingEarnings && pendingEarnings.netEarnings > 0 && (
               <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h4 className="font-medium text-foreground">Ready to cash out?</h4>
                     <p className="text-sm text-muted-foreground">
@@ -629,7 +629,7 @@ export default function PayoutSettingsPage() {
             <p className="text-sm text-muted-foreground">
               If you're having trouble with your payout setup or have questions about fees and payments, we're here to help.
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <Button variant="outline" size="sm">
                 Contact Support
               </Button>

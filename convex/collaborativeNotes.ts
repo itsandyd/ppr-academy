@@ -118,7 +118,7 @@ export const getChapterNotes = query({
       .withIndex("by_chapter_user", (q) =>
         q.eq("chapterId", args.chapterId).eq("userId", args.userId)
       )
-      .collect();
+      .take(500);
 
     let notes = userNotes;
 
@@ -130,7 +130,7 @@ export const getChapterNotes = query({
           q.eq("chapterId", args.chapterId).eq("isPublic", true)
         )
         .filter((q) => q.neq(q.field("userId"), args.userId))
-        .collect();
+        .take(500);
 
       notes = [...userNotes, ...publicNotes];
     }
@@ -197,7 +197,7 @@ export const getNotesAtTimestamp = query({
     const allNotes = await ctx.db
       .query("courseNotes")
       .withIndex("by_chapter", (q) => q.eq("chapterId", args.chapterId))
-      .collect();
+      .take(500);
 
     // Filter by time window and visibility
     const filteredNotes = allNotes.filter((note) => {

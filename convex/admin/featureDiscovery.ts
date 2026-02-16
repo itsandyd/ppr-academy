@@ -76,14 +76,14 @@ export const getCoursesForAnalysis = query({
     totalContentLength: v.number(),
   })),
   handler: async (ctx) => {
-    const courses = await ctx.db.query("courses").collect();
-    
+    const courses = await ctx.db.query("courses").take(1000);
+
     const coursesWithContent = await Promise.all(
       courses.map(async (course) => {
         // Get chapters directly for this course (they have courseId field)
         const chapters = await ctx.db.query("courseChapters")
           .withIndex("by_courseId", q => q.eq("courseId", course._id))
-          .collect();
+          .take(1000);
         
         // Calculate total content length
         const totalContentLength = chapters.reduce((acc, ch) => 
@@ -148,7 +148,7 @@ export const getSavedSuggestions = query({
       query = query.filter(q => q.eq(q.field("status"), args.status));
     }
     
-    const suggestions = await query.order("desc").collect();
+    const suggestions = await query.order("desc").take(1000);
     
     if (args.category) {
       return suggestions.filter(s => s.category === args.category);
@@ -178,7 +178,7 @@ export const getFeatureStats = query({
     lastAnalysisAt: v.optional(v.number()),
   }),
   handler: async (ctx) => {
-    const suggestions = await ctx.db.query("suggestedFeatures").collect();
+    const suggestions = await ctx.db.query("suggestedFeatures").take(1000);
     
     const byStatus = {
       new: suggestions.filter(s => s.status === "new").length,
@@ -234,7 +234,7 @@ export const quickFeatureGapScan = query({
     courseTopics: v.array(v.string()),
   }),
   handler: async (ctx) => {
-    const courses = await ctx.db.query("courses").collect();
+    const courses = await ctx.db.query("courses").take(1000);
     const chapters = await ctx.db.query("courseChapters").take(1000);
     
     // Extract all text to scan

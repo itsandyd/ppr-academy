@@ -58,7 +58,7 @@ export default function AdminDashboard() {
   const reportStats = useQuery(
     // @ts-ignore - Convex type instantiation is excessively deep
     api.reports.getReportStats,
-    user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
+    user?.id && adminCheck?.isAdmin ? {} : "skip"
   );
   const recentActivity = useQuery(
     // @ts-ignore - Convex type instantiation is excessively deep

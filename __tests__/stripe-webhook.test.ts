@@ -9,6 +9,16 @@
  * - Logic tests for the business rules that the handler enforces
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  buildCheckoutSession,
+  buildCourseCheckoutMetadata,
+  buildDigitalProductCheckoutMetadata,
+  buildPprProCheckoutMetadata,
+  buildBundleCheckoutMetadata,
+  buildStripeSubscription,
+  createMockRequest,
+  createApiProxy,
+} from "./helpers/factories";
 
 // ---- Mocks ----
 
@@ -39,28 +49,6 @@ vi.mock("convex/nextjs", () => ({
   fetchQuery: (...args: any[]) => mockFetchQuery(...args),
 }));
 
-// Mock Convex API references - create objects that track their path
-function createApiProxy(path: string[] = []): any {
-  const pathStr = path.join(".");
-  return new Proxy(
-    function () {} as any,
-    {
-      get(_, prop) {
-        // Handle Symbol properties (Symbol.toPrimitive, Symbol.toStringTag, etc.)
-        if (typeof prop === "symbol") {
-          if (prop === Symbol.toPrimitive) return () => pathStr;
-          if (prop === Symbol.toStringTag) return pathStr;
-          return undefined;
-        }
-        if (prop === "toString") return () => pathStr;
-        if (prop === "_name") return pathStr;
-        const newPath = [...path, prop];
-        return createApiProxy(newPath);
-      },
-    }
-  );
-}
-
 vi.mock("@/convex/_generated/api", () => ({
   api: createApiProxy(["api"]),
   internal: createApiProxy(["internal"]),
@@ -85,15 +73,7 @@ vi.mock("@/lib/email", () => ({
 }));
 
 // Mock Stripe
-const mockSubscription = {
-  id: "sub_test123",
-  customer: "cus_test123",
-  current_period_start: Math.floor(Date.now() / 1000),
-  current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400,
-  status: "active",
-  metadata: {},
-  items: { data: [{ price: { recurring: { interval: "month" } } }] },
-};
+const mockSubscription = buildStripeSubscription();
 
 const mockStripeConstructEvent = vi.fn();
 const mockStripeSubscriptionsRetrieve = vi.fn().mockResolvedValue(mockSubscription);
@@ -121,12 +101,6 @@ vi.mock("next/headers", () => ({
 
 // ---- Test helpers ----
 
-function createMockRequest(body: string = "{}"): any {
-  return {
-    text: vi.fn().mockResolvedValue(body),
-  };
-}
-
 function createStripeEvent(type: string, data: any): any {
   return {
     id: `evt_${Date.now()}`,
@@ -135,28 +109,18 @@ function createStripeEvent(type: string, data: any): any {
   };
 }
 
-function createCheckoutSession(
+function createCheckoutSessionWithMetadata(
   productType: string,
   metadata: Record<string, string>,
   overrides: any = {}
 ): any {
-  return {
-    id: `cs_test_${Date.now()}`,
-    mode: overrides.mode || "payment",
-    amount_total: 2999,
-    currency: "usd",
-    payment_intent: "pi_test123",
-    subscription: overrides.subscription || null,
-    customer_details: {
-      email: "buyer@test.com",
-      name: "Test Buyer",
-    },
+  return buildCheckoutSession({
+    ...overrides,
     metadata: {
       productType,
       ...metadata,
     },
-    ...overrides,
-  };
+  });
 }
 
 // ---- Tests ----
@@ -190,15 +154,8 @@ describe("Stripe Webhook Handler", () => {
   // ---- checkout.session.completed: Course ----
 
   it("handles checkout.session.completed for course purchase", async () => {
-    const session = createCheckoutSession("course", {
-      userId: "user_clerk123",
-      courseId: "course_abc",
-      amount: "2999",
-      currency: "usd",
-      courseTitle: "Music Production 101",
-      customerEmail: "buyer@test.com",
-      customerName: "Test Buyer",
-    });
+    const metadata = buildCourseCheckoutMetadata();
+    const session = createCheckoutSessionWithMetadata("course", metadata);
     const event = createStripeEvent("checkout.session.completed", session);
     mockStripeConstructEvent.mockReturnValue(event);
 
@@ -215,8 +172,8 @@ describe("Stripe Webhook Handler", () => {
     );
     expect(enrollmentCall).toBeTruthy();
     expect(enrollmentCall![1]).toMatchObject({
-      userId: "user_clerk123",
-      courseId: "course_abc",
+      userId: metadata.userId,
+      courseId: metadata.courseId,
       amount: 2999,
       paymentMethod: "stripe",
     });
@@ -225,15 +182,8 @@ describe("Stripe Webhook Handler", () => {
   // ---- checkout.session.completed: Digital Product ----
 
   it("handles checkout.session.completed for digital product purchase", async () => {
-    const session = createCheckoutSession("digitalProduct", {
-      userId: "user_clerk456",
-      productId: "product_xyz",
-      amount: "1499",
-      currency: "usd",
-      productTitle: "Lo-Fi Sample Pack",
-      customerEmail: "buyer@test.com",
-      customerName: "Test Buyer",
-    });
+    const metadata = buildDigitalProductCheckoutMetadata();
+    const session = createCheckoutSessionWithMetadata("digitalProduct", metadata);
     const event = createStripeEvent("checkout.session.completed", session);
     mockStripeConstructEvent.mockReturnValue(event);
 
@@ -249,8 +199,8 @@ describe("Stripe Webhook Handler", () => {
     );
     expect(productCall).toBeTruthy();
     expect(productCall![1]).toMatchObject({
-      userId: "user_clerk456",
-      productId: "product_xyz",
+      userId: metadata.userId,
+      productId: metadata.productId,
       amount: 1499,
       paymentMethod: "stripe",
     });
@@ -259,20 +209,11 @@ describe("Stripe Webhook Handler", () => {
   // ---- checkout.session.completed: PPR Pro Subscription ----
 
   it("handles checkout.session.completed for PPR Pro subscription", async () => {
-    const session = createCheckoutSession(
-      "ppr_pro",
-      {
-        userId: "user_clerk789",
-        plan: "monthly",
-        productType: "ppr_pro",
-        customerEmail: "pro@test.com",
-        customerName: "Pro User",
-      },
-      {
-        mode: "subscription",
-        subscription: "sub_test123",
-      }
-    );
+    const metadata = buildPprProCheckoutMetadata();
+    const session = createCheckoutSessionWithMetadata("ppr_pro", metadata, {
+      mode: "subscription",
+      subscription: "sub_test123",
+    });
     const event = createStripeEvent("checkout.session.completed", session);
     mockStripeConstructEvent.mockReturnValue(event);
 
@@ -288,7 +229,7 @@ describe("Stripe Webhook Handler", () => {
     );
     expect(subCall).toBeTruthy();
     expect(subCall![1]).toMatchObject({
-      userId: "user_clerk789",
+      userId: metadata.userId,
       plan: "monthly",
       stripeSubscriptionId: "sub_test123",
       stripeCustomerId: "cus_test123",
@@ -329,10 +270,11 @@ describe("Stripe Webhook Handler", () => {
   // ---- invoice.payment_failed: PPR Pro ----
 
   it("handles invoice.payment_failed for PPR Pro", async () => {
-    mockStripeSubscriptionsRetrieve.mockResolvedValue({
-      ...mockSubscription,
-      metadata: { productType: "ppr_pro", userId: "user_clerk789" },
-    });
+    mockStripeSubscriptionsRetrieve.mockResolvedValue(
+      buildStripeSubscription({
+        metadata: { productType: "ppr_pro", userId: "user_clerk789" },
+      })
+    );
 
     const invoice = {
       subscription: "sub_test123",
@@ -374,7 +316,7 @@ describe("Stripe Webhook Handler", () => {
   // ---- Missing Metadata ----
 
   it("handles missing metadata gracefully for course purchase", async () => {
-    const session = createCheckoutSession("course", {
+    const session = createCheckoutSessionWithMetadata("course", {
       // Missing required fields: userId, courseId, amount
     });
     const event = createStripeEvent("checkout.session.completed", session);
@@ -395,7 +337,7 @@ describe("Stripe Webhook Handler", () => {
   });
 
   it("handles missing metadata gracefully for digital product purchase", async () => {
-    const session = createCheckoutSession("digitalProduct", {
+    const session = createCheckoutSessionWithMetadata("digitalProduct", {
       // Missing userId, productId, amount
     });
     const event = createStripeEvent("checkout.session.completed", session);
@@ -416,16 +358,8 @@ describe("Stripe Webhook Handler", () => {
   // ---- Bundle Purchase ----
 
   it("handles checkout.session.completed for bundle purchase", async () => {
-    const session = createCheckoutSession("bundle", {
-      userId: "user_clerk123",
-      bundleId: "bundle_abc",
-      amount: "4999",
-      currency: "usd",
-      bundleTitle: "Producer Starter Kit",
-      itemCount: "3",
-      customerEmail: "buyer@test.com",
-      customerName: "Test Buyer",
-    });
+    const metadata = buildBundleCheckoutMetadata();
+    const session = createCheckoutSessionWithMetadata("bundle", metadata);
     const event = createStripeEvent("checkout.session.completed", session);
     mockStripeConstructEvent.mockReturnValue(event);
 
@@ -440,8 +374,8 @@ describe("Stripe Webhook Handler", () => {
     );
     expect(bundleCall).toBeTruthy();
     expect(bundleCall![1]).toMatchObject({
-      userId: "user_clerk123",
-      bundleId: "bundle_abc",
+      userId: metadata.userId,
+      bundleId: metadata.bundleId,
       amount: 4999,
       paymentMethod: "stripe",
     });
@@ -453,12 +387,8 @@ describe("Stripe Webhook Handler", () => {
     // Force the handler to throw by making Convex mutation fail
     mockFetchMutation.mockRejectedValueOnce(new Error("Convex mutation failed"));
 
-    const session = createCheckoutSession("course", {
-      userId: "user_clerk123",
-      courseId: "course_abc",
-      amount: "2999",
-      currency: "usd",
-    });
+    const metadata = buildCourseCheckoutMetadata();
+    const session = createCheckoutSessionWithMetadata("course", metadata);
     const event = createStripeEvent("checkout.session.completed", session);
     mockStripeConstructEvent.mockReturnValue(event);
 

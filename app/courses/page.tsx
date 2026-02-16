@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Image from "next/image";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function CoursesPage() {
   const { user } = useUser();
@@ -81,19 +82,16 @@ export default function CoursesPage() {
       {/* Course Grid */}
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {filteredCourses.length === 0 ? (
-          <Card className="mx-auto max-w-2xl">
-            <CardContent className="p-12 text-center">
-              <BookOpen className="mx-auto mb-6 h-16 w-16 text-muted-foreground" />
-              <h3 className="mb-4 text-2xl font-bold text-foreground">
-                {searchTerm ? "No courses found" : "No courses available"}
-              </h3>
-              <p className="text-muted-foreground">
-                {searchTerm
-                  ? "Try adjusting your search or browse all courses."
-                  : "Be the first to create a course and share your knowledge!"}
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={BookOpen}
+            title={searchTerm ? "No courses found" : "No courses available"}
+            description={
+              searchTerm
+                ? "Try adjusting your search or browse all courses."
+                : "Be the first to create a course and share your knowledge!"
+            }
+            action={!searchTerm ? { label: "Create Course", href: "/dashboard/create/course" } : undefined}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {filteredCourses.map((course: any, index: number) => (

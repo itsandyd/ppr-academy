@@ -109,7 +109,7 @@ export const getUserMemoriesInternal = internalQuery({
       .query("aiMemories")
       .withIndex("by_userId_importance", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(500);
 
     // Filter active memories (not archived, not expired)
     const now = Date.now();
@@ -145,7 +145,7 @@ export const getEmbeddingStats = internalQuery({
     })),
   }),
   handler: async (ctx) => {
-    const embeddings = await ctx.db.query("embeddings").collect();
+    const embeddings = await ctx.db.query("embeddings").take(500);
     
     const bySourceType: Record<string, number> = {};
     const byCategory: Record<string, number> = {};

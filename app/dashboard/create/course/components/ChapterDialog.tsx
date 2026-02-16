@@ -239,36 +239,59 @@ export function ChapterDialog({
     }
   };
 
-  const handleSave = () => {
+  const [isSavingChapter, setIsSavingChapter] = useState(false);
+  const [chapterErrors, setChapterErrors] = useState<Record<string, string>>({});
+
+  const validateChapter = (): boolean => {
+    const errors: Record<string, string> = {};
     if (!chapterData.title.trim()) {
-      alert("Chapter title is required");
-      return;
+      errors.title = "Chapter title is required";
+    } else if (chapterData.title.trim().length < 3) {
+      errors.title = "Title must be at least 3 characters";
     }
+    if (!chapterData.content.trim()) {
+      errors.content = "Chapter content is required";
+    }
+    setChapterErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
-    const chapterToSave = {
-      title: chapterData.title.trim(),
-      content: chapterData.content.trim(),
-      videoUrl: chapterData.videoUrl.trim(),
-      duration: chapterData.duration || 0,
-      orderIndex: isEditing ? editData!.orderIndex : existingChapters.length + 1,
-      generatedAudioData: generatedAudioData || undefined, // Include generated audio data
-    };
+  const handleSave = async () => {
+    if (isSavingChapter) return; // Prevent double-submit
+    if (!validateChapter()) return;
 
-    if (isEditing && onChapterEdit) {
-      onChapterEdit(chapterToSave);
-    } else {
-      onChapterAdd(chapterToSave);
+    setIsSavingChapter(true);
+    try {
+      const chapterToSave = {
+        title: chapterData.title.trim(),
+        content: chapterData.content.trim(),
+        videoUrl: chapterData.videoUrl.trim(),
+        duration: chapterData.duration || 0,
+        orderIndex: isEditing ? editData!.orderIndex : existingChapters.length + 1,
+        generatedAudioData: generatedAudioData || undefined,
+      };
+
+      if (isEditing && onChapterEdit) {
+        onChapterEdit(chapterToSave);
+      } else {
+        onChapterAdd(chapterToSave);
+      }
+
+      // Reset form and close dialog
+      if (!isEditing) {
+        setChapterData({ title: "", content: "", videoUrl: "", duration: 0 });
+      }
+      // Clear generated audio
+      setGeneratedAudioData(null);
+      setAudioMetadata(null);
+      setShowAudioPreview(false);
+      setChapterErrors({});
+      setIsOpen(false);
+    } catch (error) {
+      toast.error("Failed to save chapter. Please try again.");
+    } finally {
+      setIsSavingChapter(false);
     }
-    
-    // Reset form and close dialog
-    if (!isEditing) {
-      setChapterData({ title: "", content: "", videoUrl: "", duration: 0 });
-    }
-    // Clear generated audio
-    setGeneratedAudioData(null);
-    setAudioMetadata(null);
-    setShowAudioPreview(false);
-    setIsOpen(false);
   };
 
   const handleCancel = () => {
@@ -465,12 +488,19 @@ export function ChapterDialog({
               id="chapter-title"
               placeholder="e.g., Introduction to EQ3 Controls"
               value={chapterData.title}
-              onChange={(e) => setChapterData(prev => ({ ...prev, title: e.target.value }))}
-              className="h-10 sm:h-12"
+              onChange={(e) => {
+                setChapterData(prev => ({ ...prev, title: e.target.value }));
+                if (chapterErrors.title) setChapterErrors(prev => ({ ...prev, title: "" }));
+              }}
+              className={`h-10 sm:h-12 ${chapterErrors.title ? "border-red-500 focus:border-red-500" : ""}`}
             />
-            <p className="text-xs text-muted-foreground">
-              {isEditing ? `Editing Chapter ${editData?.orderIndex} in ${lessonTitle}` : `This will be Chapter ${existingChapters.length + 1} in ${lessonTitle}`}
-            </p>
+            {chapterErrors.title ? (
+              <p className="text-xs text-red-600 font-medium">{chapterErrors.title}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {isEditing ? `Editing Chapter ${editData?.orderIndex} in ${lessonTitle}` : `This will be Chapter ${existingChapters.length + 1} in ${lessonTitle}`}
+              </p>
+            )}
           </div>
 
           {/* Chapter Content */}
@@ -478,13 +508,20 @@ export function ChapterDialog({
             <Label htmlFor="chapter-content">Chapter Content *</Label>
             <WysiwygEditor
               content={chapterData.content}
-              onChange={(content) => setChapterData(prev => ({ ...prev, content }))}
+              onChange={(content) => {
+                setChapterData(prev => ({ ...prev, content }));
+                if (chapterErrors.content) setChapterErrors(prev => ({ ...prev, content: "" }));
+              }}
               placeholder="Write your chapter content here. Use the toolbar to format text, add headings, lists, images, and more..."
               className="min-h-[300px]"
             />
-            <p className="text-xs text-muted-foreground">
-              Use the rich text editor to format your content with headings, bold text, lists, images, and more. Perfect for comprehensive explanations like your EQ3 content.
-            </p>
+            {chapterErrors.content ? (
+              <p className="text-xs text-red-600 font-medium">{chapterErrors.content}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Use the rich text editor to format your content with headings, bold text, lists, images, and more. Perfect for comprehensive explanations like your EQ3 content.
+              </p>
+            )}
           </div>
 
           {/* Video URL */}
@@ -725,13 +762,13 @@ export function ChapterDialog({
             <X className="w-4 h-4 mr-2" />
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
-            disabled={!chapterData.title.trim() || !chapterData.content.trim()}
+            disabled={!chapterData.title.trim() || !chapterData.content.trim() || isSavingChapter}
             className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto order-1 sm:order-2"
           >
-            <Save className="w-4 h-4 mr-2" />
-            {isEditing ? "Update Chapter" : "Add Chapter"}
+            {isSavingChapter ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {isSavingChapter ? "Saving..." : isEditing ? "Update Chapter" : "Add Chapter"}
           </Button>
         </div>
       </DialogContent>

@@ -100,11 +100,13 @@ export default async function GuideDetailPage({ params }: GuideDetailPageProps) 
   } catch {}
 
   return (
-    <GuideDetailClient
-      productId={product._id}
-      slug={product.slug || slug}
-      initialProduct={product}
-      initialStore={store}
-    />
+    <div className="min-h-screen px-4 md:px-0">
+      <GuideDetailClient
+        productId={product._id}
+        slug={product.slug || slug}
+        initialProduct={product}
+        initialStore={store}
+      />
+    </div>
   );
 }

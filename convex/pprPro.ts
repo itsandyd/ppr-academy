@@ -18,7 +18,7 @@ export const getPlans = query({
     return await ctx.db
       .query("pprProPlans")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
-      .collect();
+      .take(1000);
   },
 });
 
@@ -48,7 +48,7 @@ export const seedPlans = mutation({
     const existing = await ctx.db
       .query("pprProPlans")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
-      .collect();
+      .take(1000);
 
     if (existing.length > 0) {
       return { seeded: false, message: "Plans already exist", plans: existing };

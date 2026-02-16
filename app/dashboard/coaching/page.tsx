@@ -124,14 +124,14 @@ export default function CoachingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500">
             <Video className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">My Coaching Sessions</h1>
+            <h1 className="text-xl md:text-2xl font-bold">My Coaching Sessions</h1>
             <p className="text-muted-foreground">
               {studentSessions && studentSessions.length > 0
                 ? `${upcomingSessions.length} upcoming, ${pastSessions.length} past`
@@ -139,14 +139,14 @@ export default function CoachingPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Link href="/marketplace/creators">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               Find Coaches
             </Button>
           </Link>
           <Link href="/dashboard?mode=learn">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>

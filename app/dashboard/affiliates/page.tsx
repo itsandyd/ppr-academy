@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   Ban,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -165,9 +166,9 @@ export default function AffiliatesPage() {
   // No store yet
   if (!store) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-xl md:text-3xl font-bold">
             Affiliate Program
           </h1>
           <p className="mt-1 text-muted-foreground">
@@ -204,11 +205,11 @@ export default function AffiliatesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-xl md:text-3xl font-bold">
             Affiliate Program
           </h1>
           <p className="mt-1 text-muted-foreground">
@@ -223,7 +224,7 @@ export default function AffiliatesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Active Affiliates</CardTitle>
@@ -347,11 +348,11 @@ export default function AffiliatesPage() {
 
                       <div className="flex items-center gap-2">
                         {affiliate.status === "pending" && (
-                          <>
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <Button
                               size="sm"
                               onClick={() => setApproveDialog(affiliate)}
-                              className="bg-green-600 hover:bg-green-700"
+                              className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                             >
                               <CheckCircle2 className="mr-1 h-4 w-4" />
                               Approve
@@ -360,11 +361,12 @@ export default function AffiliatesPage() {
                               size="sm"
                               variant="destructive"
                               onClick={() => setRejectDialog(affiliate)}
+                              className="w-full sm:w-auto"
                             >
                               <XCircle className="mr-1 h-4 w-4" />
                               Reject
                             </Button>
-                          </>
+                          </div>
                         )}
 
                         {affiliate.status === "active" && (
@@ -405,21 +407,17 @@ export default function AffiliatesPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex min-h-[200px] items-center justify-center">
-                  <div className="text-center">
-                    <UserPlus className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-                    <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-                      {selectedTab === "pending"
-                        ? "No pending applications"
-                        : selectedTab === "active"
-                        ? "No active affiliates yet"
-                        : "No affiliates yet"}
-                    </p>
-                    <p className="mt-2 text-sm text-zinc-400">
-                      Share your affiliate link to attract partners who can promote your products
-                    </p>
-                  </div>
-                </div>
+                <EmptyState
+                  icon={UserPlus}
+                  title={
+                    selectedTab === "pending"
+                      ? "No pending applications"
+                      : selectedTab === "active"
+                      ? "No active affiliates yet"
+                      : "No affiliates yet"
+                  }
+                  description="Share your affiliate link to attract partners who can promote your products."
+                />
               )}
             </TabsContent>
           </Tabs>

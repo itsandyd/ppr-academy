@@ -57,7 +57,7 @@ export const getCourseReviews = query({
       .query("courseReviews")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(1000);
 
     const totalCount = allReviews.length;
 
@@ -151,7 +151,7 @@ export const getCourseRatingSummary = query({
       .query("courseReviews")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(1000);
 
     const totalReviews = reviews.length;
 
@@ -494,7 +494,7 @@ export const getCourseAverageRating = internalQuery({
       .query("courseReviews")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(1000);
 
     if (reviews.length === 0) {
       return { averageRating: 0, totalReviews: 0 };

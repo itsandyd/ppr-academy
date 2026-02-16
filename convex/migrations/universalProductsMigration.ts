@@ -29,8 +29,8 @@ export const previewUniversalProductsMigration = internalQuery({
     breakdown: v.any(),
   }),
   handler: async (ctx) => {
-    const products = await ctx.db.query("digitalProducts").collect();
-    
+    const products = await ctx.db.query("digitalProducts").take(10000);
+
     const breakdown: Record<string, number> = {};
     let productsToMigrate = 0;
     
@@ -94,8 +94,8 @@ export const runUniversalProductsMigration = internalMutation({
     errors: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    const products = await ctx.db.query("digitalProducts").collect();
-    
+    const products = await ctx.db.query("digitalProducts").take(10000);
+
     let productsUpdated = 0;
     const errors: string[] = [];
     
@@ -174,10 +174,10 @@ export const rollbackUniversalProductsMigration = internalMutation({
     productsUpdated: v.number(),
   }),
   handler: async (ctx) => {
-    const products = await ctx.db.query("digitalProducts").collect();
-    
+    const products = await ctx.db.query("digitalProducts").take(10000);
+
     let productsUpdated = 0;
-    
+
     for (const product of products) {
       if (product.productCategory) {
         await ctx.db.patch(product._id, {
@@ -299,8 +299,8 @@ export const getMigrationStatus = internalQuery({
     migrationComplete: v.boolean(),
   }),
   handler: async (ctx) => {
-    const products = await ctx.db.query("digitalProducts").collect();
-    const playlists = await ctx.db.query("curatorPlaylists").collect();
+    const products = await ctx.db.query("digitalProducts").take(10000);
+    const playlists = await ctx.db.query("curatorPlaylists").take(10000);
     
     const productsWithCategory = products.filter(p => p.productCategory).length;
     const playlistsLinkedToProducts = playlists.filter(p => p.linkedProductId).length;

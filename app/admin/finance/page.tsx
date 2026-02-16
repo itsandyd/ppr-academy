@@ -31,6 +31,7 @@ const financeCards = [
 
 export default function FinancePage() {
   return (
+    <div className="p-4 md:p-6 lg:p-8">
     <AdminCategoryPage
       title="Finance"
       description="Monitor revenue, track activity, and optimize conversions"
@@ -38,5 +39,6 @@ export default function FinancePage() {
       iconColor="bg-green-500"
       cards={financeCards}
     />
+    </div>
   );
 }

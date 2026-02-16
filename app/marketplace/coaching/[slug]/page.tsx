@@ -91,11 +91,13 @@ export default async function CoachingDetailPage({ params }: CoachingDetailPageP
   } catch {}
 
   return (
-    <CoachingDetailClient
-      productId={product._id}
-      slug={product.slug || slug}
-      initialProduct={product}
-      initialStore={store}
-    />
+    <div className="min-h-screen px-4 md:px-0">
+      <CoachingDetailClient
+        productId={product._id}
+        slug={product.slug || slug}
+        initialProduct={product}
+        initialStore={store}
+      />
+    </div>
   );
 }

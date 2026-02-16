@@ -53,7 +53,7 @@ export default function EditLandingPagePage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="border-b px-4 py-2">
+      <div className="border-b px-4 md:px-6 py-2">
         <Button asChild variant="ghost" size="sm">
           <Link href="/dashboard/landing-pages">
             <ArrowLeft className="mr-2 h-4 w-4" />

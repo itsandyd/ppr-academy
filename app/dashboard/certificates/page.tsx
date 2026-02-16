@@ -63,14 +63,14 @@ export default function CertificatesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500">
             <Award className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Certificates</h1>
+            <h1 className="text-xl md:text-2xl font-bold">Certificates</h1>
             <p className="text-muted-foreground">
               {userCertificates && userCertificates.length > 0
                 ? `${userCertificates.length} certificate${userCertificates.length !== 1 ? "s" : ""} earned`

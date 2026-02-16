@@ -38,7 +38,7 @@ export const getSamplesFromPacks = query({
     const packs = await ctx.db
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(500);
     
     // Filter for pack types only
     const packProducts = packs.filter(p => 
@@ -60,7 +60,7 @@ export const getSamplesFromPacks = query({
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
         
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(500);
         const store = stores.find(s => s._id === pack.storeId);
         
         if (store) {

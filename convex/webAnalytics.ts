@@ -443,7 +443,7 @@ export const getStoreReferrers = query({
       .filter((q) =>
         q.and(q.gte(q.field("timestamp"), cutoff), q.neq(q.field("referrer"), undefined))
       )
-      .collect();
+      .take(10000);
 
     // Aggregate by referrer domain
     const referrerCounts: Record<string, number> = {};
@@ -480,7 +480,7 @@ export const getStoreDevices = query({
       .query("webAnalyticsEvents")
       .withIndex("by_store_slug", (q) => q.eq("storeSlug", storeSlug))
       .filter((q) => q.gte(q.field("timestamp"), cutoff))
-      .collect();
+      .take(10000);
 
     const deviceCounts: Record<string, number> = {
       desktop: 0,
@@ -519,7 +519,7 @@ export const getStoreTrafficOverTime = query({
       .filter((q) =>
         q.and(q.gte(q.field("timestamp"), cutoff), q.eq(q.field("eventType"), "pageview"))
       )
-      .collect();
+      .take(10000);
 
     // Group by day
     const dayBuckets: Record<string, { views: number; visitors: Set<number | undefined> }> = {};
@@ -561,7 +561,7 @@ export const getStoreCountries = query({
       .query("webAnalyticsEvents")
       .withIndex("by_store_slug", (q) => q.eq("storeSlug", storeSlug))
       .filter((q) => q.gte(q.field("timestamp"), cutoff))
-      .collect();
+      .take(10000);
 
     const countryCounts: Record<string, number> = {};
     for (const event of events) {

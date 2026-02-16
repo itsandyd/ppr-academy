@@ -34,7 +34,7 @@ export const listPublished = query({
       .withIndex("by_productCategory", (q) =>
         q.eq("productCategory", "preset-pack")
       )
-      .collect();
+      .take(500);
 
     // Filter to only published products
     products = products.filter((p) => p.isPublished === true);
@@ -364,7 +364,7 @@ export const getRelated = query({
       .withIndex("by_productCategory", (q) =>
         q.eq("productCategory", "preset-pack")
       )
-      .collect();
+      .take(500);
 
     // Filter published and exclude current product
     let related = allPacks.filter(

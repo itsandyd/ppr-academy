@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -98,6 +98,11 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
+  // Pagination state for contacts
+  const [contactCursor, setContactCursor] = useState<string | undefined>(undefined);
+  const [accumulatedContacts, setAccumulatedContacts] = useState<any[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // Personalization variables available for email templates
   const personalizationVariables = [
     // Basic Info
@@ -159,8 +164,33 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
   const workflows = useQuery(api.emailWorkflows.listWorkflows, storeId ? { storeId } : 'skip');
   const contactsResult = useQuery(
     api.emailContacts.listContacts,
-    storeId ? { storeId, limit: 50 } : 'skip'
+    storeId ? { storeId, limit: 50, cursor: contactCursor } : 'skip'
   );
+
+  // Accumulate contacts across pages
+  useEffect(() => {
+    if (!contactsResult) return;
+    if (contactCursor) {
+      // Appending a new page
+      setAccumulatedContacts(prev => {
+        const existingIds = new Set(prev.map((c: any) => c._id));
+        const newContacts = contactsResult.contacts.filter((c: any) => !existingIds.has(c._id));
+        return [...prev, ...newContacts];
+      });
+      setIsLoadingMore(false);
+    } else {
+      // First page or reset
+      setAccumulatedContacts(contactsResult.contacts);
+    }
+  }, [contactsResult, contactCursor]);
+
+  const nextCursor = contactsResult?.nextCursor ?? null;
+  const handleLoadMore = useCallback(() => {
+    if (nextCursor) {
+      setIsLoadingMore(true);
+      setContactCursor(nextCursor);
+    }
+  }, [nextCursor]);
 
   // Mutations
   const createContact = useMutation(api.emailContacts.createContact);
@@ -250,7 +280,7 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
     }
   };
 
-  const contacts = contactsResult?.contacts || [];
+  const contacts = accumulatedContacts;
   const totalContacts = contactStats?.total || 0;
   const subscribedContacts = contactStats?.subscribed || 0;
   const totalTags = tags?.length || 0;
@@ -674,22 +704,39 @@ export function CreateEmailsView({ convexUser }: CreateEmailsViewProps) {
                 </Button>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {contacts.map((contact: any) => (
-                  <ContactCard
-                    key={contact._id}
-                    contact={contact}
-                    onDelete={async () => {
-                      try {
-                        await deleteContact({ userId: user?.id || '', contactId: contact._id });
-                        toast({ title: 'Contact deleted' });
-                      } catch (error: any) {
-                        toast({ title: 'Failed to delete', variant: 'destructive' });
-                      }
-                    }}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {contacts.map((contact: any) => (
+                    <ContactCard
+                      key={contact._id}
+                      contact={contact}
+                      onDelete={async () => {
+                        try {
+                          await deleteContact({ userId: user?.id || '', contactId: contact._id });
+                          toast({ title: 'Contact deleted' });
+                        } catch (error: any) {
+                          toast({ title: 'Failed to delete', variant: 'destructive' });
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {contactsResult?.hasMore && (
+                  <div className="flex justify-center pt-4">
+                    {isLoadingMore ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Loading more contacts...</span>
+                      </div>
+                    ) : (
+                      <Button variant="outline" onClick={handleLoadMore}>
+                        Load More Contacts
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 

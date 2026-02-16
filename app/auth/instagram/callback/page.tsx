@@ -79,7 +79,7 @@ export default function InstagramCallbackPage() {
   }, [searchParams, handleOAuthCallback, router, convexUser]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 md:p-8">
       <Card className="max-w-md w-full">
         <CardContent className="pt-12 pb-12">
           <div className="text-center">

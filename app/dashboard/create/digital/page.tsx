@@ -229,6 +229,7 @@ export default function DigitalProductCreator() {
   };
 
   const handlePublish = async () => {
+    if (isPublishing) return; // Prevent double-submit
     if (!storeId || !user?.id) {
       toast({
         title: "Error",
@@ -239,6 +240,7 @@ export default function DigitalProductCreator() {
       return;
     }
 
+    setIsPublishing(true);
     try {
       if (isEditing && productId) {
         // Update existing product
@@ -252,7 +254,7 @@ export default function DigitalProductCreator() {
         };
 
         await updateProduct(updateData);
-        
+
         toast({
           title: "Product updated! 🎉",
           description: `"${formData.title}" has been updated successfully.`,
@@ -261,7 +263,7 @@ export default function DigitalProductCreator() {
       } else {
         // Create new product
         const productType = "digital";
-        
+
         // Build the product data
         const productData: any = {
           title: formData.title || 'Untitled Product',
@@ -290,7 +292,7 @@ export default function DigitalProductCreator() {
         }
 
         await createProduct(productData);
-        
+
         toast({
           title: "Product created! 🎉",
           description: `"${formData.title}" has been published successfully.`,
@@ -308,12 +310,14 @@ export default function DigitalProductCreator() {
         variant: "destructive",
         className: "bg-white dark:bg-black",
       });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
   const canPublish = Boolean(
-    formData.title &&
-    formData.description &&
+    formData.title && formData.title.trim().length >= 3 &&
+    formData.description && formData.description.trim().length >= 10 &&
     (formData.pricingModel === 'free_with_gate' || (formData.pricingModel === 'paid' && formData.price && formData.price > 0)));
 
   // Render current step
@@ -354,6 +358,7 @@ export default function DigitalProductCreator() {
             formData={formData}
             onBack={handleBack}
             onPublish={handlePublish}
+            isPublishing={isPublishing}
           />
         );
       
@@ -365,7 +370,7 @@ export default function DigitalProductCreator() {
   // Show loading state while fetching existing product
   if (isEditing && existingProduct === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen p-4 md:p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading product...</p>

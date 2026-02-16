@@ -144,7 +144,7 @@ export default async function BeatDetailPage({ params }: BeatDetailPageProps) {
   });
 
   return (
-    <>
+    <div className="min-h-screen px-4 md:px-0">
       {/* JSON-LD Structured Data */}
       <script type="application/ld+json" dangerouslySetInnerHTML={musicRecordingData} />
       <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbData} />
@@ -154,6 +154,6 @@ export default async function BeatDetailPage({ params }: BeatDetailPageProps) {
         initialProduct={product}
         initialStore={store}
       />
-    </>
+    </div>
   );
 }

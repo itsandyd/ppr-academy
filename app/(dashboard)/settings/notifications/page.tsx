@@ -207,10 +207,10 @@ export default function NotificationPreferencesPage() {
   ];
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-4xl">
+    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2">Notification Preferences</h1>
+        <h1 className="text-xl md:text-3xl font-bold mb-2">Notification Preferences</h1>
         <p className="text-muted-foreground">
           Control how and when you receive notifications from PPR Academy
         </p>
@@ -231,7 +231,7 @@ export default function NotificationPreferencesPage() {
           <div className="space-y-2">
             <Label>Email Digest Frequency</Label>
             <Select value={emailDigest} onValueChange={handleDigestChange}>
-              <SelectTrigger className="bg-white dark:bg-black">
+              <SelectTrigger className="w-full md:w-96 bg-white dark:bg-black">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-black">
@@ -261,7 +261,7 @@ export default function NotificationPreferencesPage() {
       {/* Email Notification Categories */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
@@ -271,11 +271,11 @@ export default function NotificationPreferencesPage() {
                 Choose which notifications you want to receive via email
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleEnableAll}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" size="sm" onClick={handleEnableAll} className="w-full sm:w-auto">
                 Enable All
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDisableAll}>
+              <Button variant="outline" size="sm" onClick={handleDisableAll} className="w-full sm:w-auto">
                 Disable All
               </Button>
             </div>

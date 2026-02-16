@@ -37,6 +37,7 @@ const communicationsCards = [
 
 export default function CommunicationsPage() {
   return (
+    <div className="p-4 md:p-6 lg:p-8">
     <AdminCategoryPage
       title="Communications"
       description="Manage emails, notifications, and platform announcements"
@@ -44,5 +45,6 @@ export default function CommunicationsPage() {
       iconColor="bg-orange-500"
       cards={communicationsCards}
     />
+    </div>
   );
 }

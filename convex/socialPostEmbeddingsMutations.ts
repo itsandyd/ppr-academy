@@ -95,7 +95,7 @@ export const getPostsForAutomation = internalQuery({
     return await ctx.db
       .query("posts")
       .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
-      .collect();
+      .take(1000);
   },
 });
 

@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getUserFromClerk } from "@/lib/data";
+import { getUserFromClerk } from "@/lib/convex-data";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";

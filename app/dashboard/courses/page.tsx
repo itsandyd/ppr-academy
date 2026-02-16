@@ -90,11 +90,11 @@ export default function CoursesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-xl md:text-3xl font-bold">
             {mode === 'learn' ? 'My Courses' : 'Created Courses'}
           </h1>
           <p className="text-muted-foreground">
@@ -104,7 +104,7 @@ export default function CoursesPage() {
           </p>
         </div>
         {mode === 'create' && (
-          <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500">
+          <Button asChild className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500">
             <Link href="/dashboard/create/course?category=course">
               <Plus className="w-4 h-4 mr-2" />
               Create Course
@@ -112,7 +112,7 @@ export default function CoursesPage() {
           </Button>
         )}
         {mode === 'learn' && (
-          <Button onClick={() => window.location.href = '/'}>
+          <Button onClick={() => window.location.href = '/'} className="w-full sm:w-auto">
             <BookOpen className="w-4 h-4 mr-2" />
             Browse Courses
           </Button>
@@ -167,7 +167,7 @@ export default function CoursesPage() {
 
 function LoadingState() {
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <Skeleton className="h-32 w-full" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3, 4, 5, 6].map((i) => (

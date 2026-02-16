@@ -52,7 +52,7 @@ export const unsubscribeByEmail = mutation({
     const contacts = await ctx.db
       .query("emailContacts")
       .withIndex("by_email", (q) => q.eq("email", email))
-      .collect();
+      .take(5000);
 
     for (const contact of contacts) {
       if (contact.status !== "unsubscribed") {
@@ -75,7 +75,7 @@ export const unsubscribeByEmail = mutation({
           q.neq(q.field("status"), "cancelled")
         )
       )
-      .collect();
+      .take(5000);
 
     for (const execution of activeExecutions) {
       await ctx.db.patch(execution._id, {
@@ -93,7 +93,7 @@ export const unsubscribeByEmail = mutation({
           q.eq(q.field("status"), "active")
         )
       )
-      .collect();
+      .take(5000);
 
     for (const enrollment of activeEnrollments) {
       await ctx.db.patch(enrollment._id, {
@@ -206,7 +206,7 @@ export const checkSuppressionBatch = internalQuery({
       const contacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_email", (q) => q.eq("email", emailLower))
-        .collect();
+        .take(5000);
       const contactSuppressed = contacts.some(
         (c) => c.status === "unsubscribed" || c.status === "complained"
       );
@@ -240,19 +240,19 @@ export const getUnsubscribeStats = query({
     const bouncedLogs = await ctx.db
       .query("resendLogs")
       .withIndex("by_status", (q) => q.eq("status", "bounced"))
-      .collect();
+      .take(5000);
     const uniqueBounced = new Set(bouncedLogs.map((l) => l.recipientEmail.toLowerCase()));
 
     const complainedLogs = await ctx.db
       .query("resendLogs")
       .withIndex("by_status", (q) => q.eq("status", "complained"))
-      .collect();
+      .take(5000);
     const uniqueComplained = new Set(complainedLogs.map((l) => l.recipientEmail.toLowerCase()));
 
     // For unsubscribed prefs, we still need to scan since there's no isUnsubscribed index,
     // but resendPreferences is a much smaller table than users (only people who have prefs set).
     // Use take() to cap the scan for the count + recent list.
-    const allPrefs = await ctx.db.query("resendPreferences").collect();
+    const allPrefs = await ctx.db.query("resendPreferences").take(5000);
     const unsubscribed = allPrefs.filter((p) => p.isUnsubscribed);
 
     const recentUnsubscribes = unsubscribed

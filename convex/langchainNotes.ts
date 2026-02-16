@@ -228,7 +228,7 @@ export const getSourcesByUser = internalQuery({
         q.eq("userId", args.userId).eq("storeId", args.storeId)
       );
     
-    const results = await query.order("desc").collect();
+    const results = await query.order("desc").take(500);
     
     // Filter by sourceType if specified
     let filtered = args.sourceType 

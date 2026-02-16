@@ -161,7 +161,7 @@ export const getUserAnalyses = query({
       .query("leadMagnetAnalyses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(1000);
     
     // Return summary without full chapter data for list view
     return analyses.map(a => ({
@@ -204,7 +204,7 @@ export const getCourseAnalyses = query({
         q.eq("userId", args.userId).eq("courseId", args.courseId)
       )
       .order("desc")
-      .collect();
+      .take(1000);
     
     return analyses.map(a => ({
       _id: a._id,

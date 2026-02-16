@@ -18,7 +18,7 @@ export const getDeliverabilityHealth = query({
       .withIndex("by_storeId_timestamp", (q) =>
         q.eq("storeId", args.storeId).gte("timestamp", thirtyDaysAgo)
       )
-      .collect();
+      .take(5000);
 
     // Count by event type
     const eventCounts = {
@@ -169,7 +169,7 @@ export const getDomainReputation = query({
     const domains = await ctx.db
       .query("emailDomainReputation")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     return domains;
   },
@@ -248,7 +248,7 @@ export const getBounceRateByDomain = query({
           q.eq(q.field("eventType"), "soft_bounce")
         )
       )
-      .collect();
+      .take(5000);
 
     // Group by recipient domain
     const domainStats: Record<string, { total: number; hard: number; soft: number }> = {};
@@ -362,7 +362,7 @@ export const updateDeliverabilityStats = internalMutation({
       .withIndex("by_storeId_timestamp", (q) =>
         q.eq("storeId", args.storeId).gte("timestamp", periodStart)
       )
-      .collect();
+      .take(5000);
 
     // Count events
     let hardBounces = 0;
@@ -411,7 +411,7 @@ export const updateDeliverabilityStats = internalMutation({
           .query("resendLogs")
           .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
           .filter((q) => q.gte(q.field("sentAt"), periodStart))
-          .collect();
+          .take(5000);
         totalSent = emailLogs.length;
       }
     }
@@ -510,7 +510,7 @@ export const cleanBouncedContacts = mutation({
           q.eq(q.field("eventType"), "soft_bounce")
         );
       })
-      .collect();
+      .take(5000);
 
     const processedEmails = new Set<string>();
     let cleanedCount = 0;

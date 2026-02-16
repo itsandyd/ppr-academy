@@ -142,8 +142,7 @@ export default function SubmissionsPage() {
         feedback: feedback.trim(),
       });
 
-      // Update to "reviewed" status instead of "declined"
-      // TODO: Add separate markAsReviewed mutation
+      // POST-LAUNCH: Add dedicated markAsReviewed mutation (currently uses decline with feedback)
 
       toast({
         title: "Feedback Sent!",
@@ -190,11 +189,11 @@ export default function SubmissionsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-7xl p-4 md:p-6 space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="mb-2 text-3xl font-bold">Submissions</h1>
+          <h1 className="mb-1 text-xl md:text-3xl font-bold">Submissions</h1>
           <p className="text-muted-foreground">
             Review and manage track submissions to your playlists
           </p>
@@ -247,9 +246,9 @@ export default function SubmissionsPage() {
 
       {/* Filters */}
       {allSubmissions && allSubmissions.length > 0 && (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <Select value={playlistFilter} onValueChange={setPlaylistFilter}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="All Playlists" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black">
@@ -263,7 +262,7 @@ export default function SubmissionsPage() {
           </Select>
 
           <Select value={genreFilter} onValueChange={setGenreFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="All Genres" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black">
@@ -280,7 +279,7 @@ export default function SubmissionsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="grid w-full max-w-2xl grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="inbox" className="gap-2">
             <Inbox className="h-4 w-4" />
             Inbox ({stats?.inbox || 0})
@@ -304,7 +303,7 @@ export default function SubmissionsPage() {
               {filteredSubmissions.map((submission: any) => (
                 <Card key={submission._id}>
                   <CardContent className="p-6">
-                    <div className="flex items-start gap-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                       <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20">
                         <Music className="h-8 w-8 text-purple-600" />
                       </div>

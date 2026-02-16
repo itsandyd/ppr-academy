@@ -14,25 +14,25 @@ export const getPlatformStats = query({
   }),
   handler: async (ctx) => {
     // Count total users
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
     const totalUsers = users.length;
 
     // Count total published courses
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(10000);
     const totalCourses = courses.length;
 
     // Count total stores (creators)
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(10000);
     const totalCreators = stores.length;
 
     // Count total published digital products
     const products = await ctx.db
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(10000);
     const totalProducts = products.length;
 
     return {

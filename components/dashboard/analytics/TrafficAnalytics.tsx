@@ -194,7 +194,7 @@ export function TrafficAnalytics({ storeSlug, plan = "free" }: TrafficAnalyticsP
   return (
     <div className="space-y-6">
       {/* Header with Time Toggle */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Eye className="h-5 w-5 text-blue-600" />
@@ -291,6 +291,8 @@ export function TrafficAnalytics({ storeSlug, plan = "free" }: TrafficAnalyticsP
                 <CardTitle className="text-base">Traffic Over Time</CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="w-full overflow-x-auto">
+                  <div className="min-w-[400px]">
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={trafficOverTime}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
@@ -333,6 +335,8 @@ export function TrafficAnalytics({ storeSlug, plan = "free" }: TrafficAnalyticsP
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -414,8 +418,9 @@ export function TrafficAnalytics({ storeSlug, plan = "free" }: TrafficAnalyticsP
                 <CardTitle className="text-base">Device Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-8">
-                  <ResponsiveContainer width={150} height={150}>
+                <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+                  <div className="w-[150px] h-[150px] flex-shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={devices.filter((d: DeviceData) => d.count > 0)}
@@ -440,6 +445,7 @@ export function TrafficAnalytics({ storeSlug, plan = "free" }: TrafficAnalyticsP
                       />
                     </PieChart>
                   </ResponsiveContainer>
+                  </div>
                   <div className="space-y-2">
                     {devices
                       .filter((d: DeviceData) => d.count > 0)

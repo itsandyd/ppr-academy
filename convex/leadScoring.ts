@@ -24,7 +24,7 @@ export const getScoringRules = query({
     const rules = await ctx.db
       .query("leadScoringRules")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     return rules;
   },
@@ -40,7 +40,7 @@ export const getActiveScoringRules = query({
     const rules = await ctx.db
       .query("leadScoringRules")
       .withIndex("by_active", (q) => q.eq("storeId", args.storeId).eq("isActive", true))
-      .collect();
+      .take(5000);
 
     return rules;
   },
@@ -129,7 +129,7 @@ export const calculateContactScore = query({
     const activeRuleSets = await ctx.db
       .query("leadScoringRules")
       .withIndex("by_active", (q) => q.eq("storeId", args.storeId).eq("isActive", true))
-      .collect();
+      .take(5000);
 
     let totalScore = 0;
     const breakdown: Array<{ rule: string; points: number; matched: boolean }> = [];

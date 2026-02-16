@@ -51,5 +51,9 @@ export default async function LandingPageRoute({ params }: Props) {
     notFound();
   }
 
-  return <PublicLandingPage page={page} storeSlug={slug} />;
+  return (
+    <div className="min-h-screen px-4 md:px-0">
+      <PublicLandingPage page={page} storeSlug={slug} />
+    </div>
+  );
 }

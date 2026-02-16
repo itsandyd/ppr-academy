@@ -3,15 +3,16 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  CheckCircle, 
-  ArrowLeft, 
+import {
+  CheckCircle,
+  ArrowLeft,
   Sparkles,
   Package,
   DollarSign,
   Gift,
   Tag,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Loader2
 } from 'lucide-react';
 import { BaseProductFormData } from '../types';
 
@@ -19,12 +20,14 @@ interface PublishStepProps {
   formData: Partial<BaseProductFormData>;
   onBack: () => void;
   onPublish: () => void;
+  isPublishing?: boolean;
 }
 
 export function PublishStep({
   formData,
   onBack,
   onPublish,
+  isPublishing = false,
 }: PublishStepProps) {
   return (
     <div className="space-y-6">
@@ -134,10 +137,11 @@ export function PublishStep({
         </Button>
         <Button
           onClick={onPublish}
+          disabled={isPublishing}
           className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
         >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Publish Product
+          {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+          {isPublishing ? "Publishing..." : "Publish Product"}
         </Button>
       </div>
     </div>

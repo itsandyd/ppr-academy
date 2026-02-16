@@ -96,7 +96,7 @@ export const fixCourseStoreId = internalMutation({
       const userStores = await ctx.db
         .query("stores")
         .withIndex("by_userId", (q) => q.eq("userId", userClerkId))
-        .collect();
+        .take(10000);
       
       if (userStores.length === 0) {
         return { success: false, error: "No store found for user" };

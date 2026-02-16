@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import { getUserFromClerk } from "@/lib/data";
+import { getUserFromClerk } from "@/lib/convex-data";
 import CoachApplicationForm from "@/components/coach-application-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

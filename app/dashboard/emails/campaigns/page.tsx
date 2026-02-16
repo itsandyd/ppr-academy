@@ -28,6 +28,7 @@ import {
   Tooltip,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Id } from "@/convex/_generated/dataModel";
 
 type SortField = "date" | "bounceRate" | "complaintRate" | "name";
@@ -306,9 +307,13 @@ export default function CreatorCampaignsPage() {
         </div>
 
         {campaigns.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-            No campaigns yet. Create one from Email Campaigns.
-          </div>
+          <EmptyState
+            icon={Send}
+            title="No campaigns sent"
+            description="Create your first email campaign to reach your audience."
+            action={{ label: "Create Campaign", href: "/dashboard/emails/campaigns" }}
+            compact
+          />
         ) : (
           campaigns.map((c: any) => (
             <button

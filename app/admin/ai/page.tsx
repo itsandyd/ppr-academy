@@ -52,6 +52,7 @@ const aiCards = [
 
 export default function AIPage() {
   return (
+    <div className="p-4 md:p-6 lg:p-8">
     <AdminCategoryPage
       title="AI Platform"
       description="Manage AI-powered tools, content generation, and automation"
@@ -59,5 +60,6 @@ export default function AIPage() {
       iconColor="bg-pink-500"
       cards={aiCards}
     />
+    </div>
   );
 }

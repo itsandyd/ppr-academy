@@ -17,7 +17,7 @@ export const getStoreSamples = query({
     const samples = await ctx.db
       .query("audioSamples")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     return samples;
   },
@@ -106,7 +106,7 @@ export const getUserLibrary = query({
     const downloads = await ctx.db
       .query("sampleDownloads")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(1000);
 
     // Get the actual sample data
     const samples = await Promise.all(
@@ -146,7 +146,7 @@ export const getFavoriteSamples = query({
     const favorites = await ctx.db
       .query("sampleFavorites")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(1000);
 
     // Get the actual sample data
     const samples = await Promise.all(
@@ -203,7 +203,7 @@ export const getSampleStats = query({
       .withIndex("by_user_published", (q) =>
         q.eq("userId", userId).eq("isPublished", true)
       )
-      .collect();
+      .take(1000);
 
     const totalDownloads = samples.reduce((sum, s) => sum + s.downloads, 0);
     const totalPlays = samples.reduce((sum, s) => sum + s.plays, 0);
@@ -627,7 +627,7 @@ export const getSamplesByPackId = query({
     }
 
     // Fallback: query samples that have this packId in their packIds array
-    const allSamples = await ctx.db.query("audioSamples").collect();
+    const allSamples = await ctx.db.query("audioSamples").take(1000);
     return allSamples.filter(
       (sample) => sample.packIds && sample.packIds.includes(args.packId)
     );
@@ -645,7 +645,7 @@ export const getCreatorSamplesForPacks = query({
     const samples = await ctx.db
       .query("audioSamples")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     // Return with pack membership info
     return samples.map((sample) => ({
@@ -854,7 +854,7 @@ export const checkFullSampleOwnership = query({
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
+      .take(5000);
 
     for (const purchase of purchases) {
       if (purchase.productId && sample.packIds.includes(purchase.productId)) {

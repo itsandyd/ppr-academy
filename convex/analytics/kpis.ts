@@ -149,19 +149,19 @@ export const getQuickStats = query({
       const courses = await ctx.db
         .query("courses")
         .withIndex("by_userId", (q) => q.eq("userId", store.userId))
-        .collect();
+        .take(10000);
       
       // Get creator's enrollments
       const enrollments = await ctx.db
         .query("purchases")
         .withIndex("by_adminUserId", (q) => q.eq("adminUserId", store.userId))
-        .collect();
+        .take(10000);
       
       // Get creator's revenue events
       const revenueEvents = await ctx.db
         .query("revenueEvents")
         .withIndex("by_storeId", (q) => q.eq("storeId", storeId))
-        .collect();
+        .take(10000);
       
       const totalRevenue = revenueEvents.reduce((sum, e) => sum + e.netAmount, 0);
       
@@ -169,7 +169,7 @@ export const getQuickStats = query({
       const campaigns = await ctx.db
         .query("campaigns")
         .filter((q) => q.eq(q.field("createdBy"), store.userId))
-        .collect();
+        .take(10000);
       
       const activeCampaigns = campaigns.filter(
         (c) => c.status === "active" || c.status === "scheduled"

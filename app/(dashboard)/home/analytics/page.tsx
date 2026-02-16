@@ -236,8 +236,8 @@ export default function CreatorAnalyticsPage() {
   if (!user || !convexUser || analyticsData === undefined) {
     return (
       <StoreRequiredGuard redirectTo="/home">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
+        <div className="p-4 md:p-6 space-y-6 md:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <Link href="/home">
                 <Button variant="ghost" size="sm">
@@ -246,7 +246,7 @@ export default function CreatorAnalyticsPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+                <h1 className="text-xl md:text-3xl font-bold">Analytics Dashboard</h1>
                 <p className="text-muted-foreground">
                   Track your performance and grow your music business
                 </p>
@@ -283,7 +283,7 @@ export default function CreatorAnalyticsPage() {
 
   return (
     <StoreRequiredGuard redirectTo="/home">
-      <div className="space-y-8">
+      <div className="p-4 md:p-6 space-y-6 md:space-y-8">
         {/* Header */}
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-4">
@@ -294,7 +294,7 @@ export default function CreatorAnalyticsPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+              <h1 className="text-xl md:text-3xl font-bold">Analytics Dashboard</h1>
               <p className="text-muted-foreground">
                 Track your performance and grow your music business
               </p>
@@ -390,7 +390,7 @@ export default function CreatorAnalyticsPage() {
 
         {/* Main Analytics Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="audience">Audience</TabsTrigger>

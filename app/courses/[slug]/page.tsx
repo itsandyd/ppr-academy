@@ -54,7 +54,7 @@ export default function PublicCoursePage() {
   // Course not found - show helpful debug info
   if (course === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-2xl font-bold text-foreground">Course Not Found</h1>
           <p className="text-muted-foreground">

@@ -68,9 +68,9 @@ export default function CalendarPage() {
   // Show error if no stores
   if (!storeId) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Content Calendar</h1>
+          <h1 className="text-xl md:text-3xl font-bold mb-2">Content Calendar</h1>
           <p className="text-muted-foreground">
             Schedule your content for the week
           </p>
@@ -101,7 +101,7 @@ export default function CalendarPage() {
   // Show error if profile not found
   if (!profile) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -111,7 +111,7 @@ export default function CalendarPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Content Calendar</h1>
+            <h1 className="text-xl md:text-3xl font-bold">Content Calendar</h1>
             <p className="text-muted-foreground">Profile not found</p>
           </div>
         </div>
@@ -141,8 +141,8 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -153,7 +153,7 @@ export default function CalendarPage() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{profile.name}</h1>
+              <h1 className="text-xl md:text-3xl font-bold">{profile.name}</h1>
               <Badge variant="outline" className="capitalize">
                 {profile.platform}
               </Badge>

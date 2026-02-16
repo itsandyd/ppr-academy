@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireAuth } from "./lib/auth";
 
 /**
  * Service Orders Management
@@ -35,7 +36,7 @@ export const getOrderById = query({
       .query("serviceOrderMessages")
       .withIndex("by_orderId", (q) => q.eq("orderId", args.orderId))
       .order("asc")
-      .collect();
+      .take(500);
 
     // Convert storage IDs to URLs for files
     const getFileUrls = async (files: any[] | undefined) => {
@@ -108,13 +109,13 @@ export const getCustomerOrders = query({
           q.eq("customerId", args.userId).eq("status", args.status!)
         )
         .order("desc")
-        .collect();
+        .take(1000);
     } else {
       orders = await ctx.db
         .query("serviceOrders")
         .withIndex("by_customerId", (q) => q.eq("customerId", args.userId))
         .order("desc")
-        .collect();
+        .take(1000);
     }
 
     // Enrich with product info
@@ -164,13 +165,13 @@ export const getCreatorOrders = query({
           q.eq("creatorId", args.userId).eq("status", args.status!)
         )
         .order("desc")
-        .collect();
+        .take(1000);
     } else {
       orders = await ctx.db
         .query("serviceOrders")
         .withIndex("by_creatorId", (q) => q.eq("creatorId", args.userId))
         .order("desc")
-        .collect();
+        .take(1000);
     }
 
     // Enrich with customer info and product info
@@ -261,7 +262,7 @@ export const getOrderStats = query({
     const orders = await ctx.db
       .query("serviceOrders")
       .withIndex(indexName, (q) => q.eq(args.role === "customer" ? "customerId" : "creatorId", args.userId))
-      .collect();
+      .take(1000);
 
     const stats = {
       total: orders.length,
@@ -284,7 +285,6 @@ export const getOrderStats = query({
 // Create a new service order (called after payment)
 export const createServiceOrder = mutation({
   args: {
-    customerId: v.string(),
     creatorId: v.string(),
     productId: v.id("digitalProducts"),
     storeId: v.string(),
@@ -310,6 +310,9 @@ export const createServiceOrder = mutation({
     transactionId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const customerId = identity.subject;
+
     const now = Date.now();
     const orderNumber = generateOrderNumber();
 
@@ -317,7 +320,7 @@ export const createServiceOrder = mutation({
     const dueDate = now + args.selectedTier.turnaroundDays * 24 * 60 * 60 * 1000;
 
     const orderId = await ctx.db.insert("serviceOrders", {
-      customerId: args.customerId,
+      customerId,
       creatorId: args.creatorId,
       productId: args.productId,
       storeId: args.storeId,
@@ -367,8 +370,10 @@ export const uploadCustomerFiles = mutation({
     referenceTrackUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    if (order.customerId !== identity.subject) throw new Error("Not authorized");
 
     const now = Date.now();
 
@@ -417,8 +422,13 @@ export const updateOrderStatus = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    // Only creator or customer can update status
+    if (order.creatorId !== identity.subject && order.customerId !== identity.subject) {
+      throw new Error("Not authorized");
+    }
 
     const now = Date.now();
     const updates: any = { status: args.status };
@@ -474,8 +484,10 @@ export const deliverFiles = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    if (order.creatorId !== identity.subject) throw new Error("Not authorized");
 
     const now = Date.now();
 
@@ -526,8 +538,10 @@ export const requestRevision = mutation({
     feedback: v.string(),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    if (order.customerId !== identity.subject) throw new Error("Not authorized");
 
     if (order.revisionsUsed >= order.revisionsAllowed) {
       throw new Error("No revisions remaining. Please contact the creator for additional revision options.");
@@ -559,8 +573,10 @@ export const approveDelivery = mutation({
     orderId: v.id("serviceOrders"),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    if (order.customerId !== identity.subject) throw new Error("Not authorized");
 
     const now = Date.now();
 
@@ -587,7 +603,6 @@ export const approveDelivery = mutation({
 export const sendMessage = mutation({
   args: {
     orderId: v.id("serviceOrders"),
-    senderId: v.string(),
     senderType: v.union(v.literal("customer"), v.literal("creator")),
     content: v.string(),
     attachments: v.optional(
@@ -603,14 +618,20 @@ export const sendMessage = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    // Verify caller is a participant in this order
+    if (order.customerId !== identity.subject && order.creatorId !== identity.subject) {
+      throw new Error("Not authorized");
+    }
+    const senderId = identity.subject;
 
     const now = Date.now();
 
     const messageId = await ctx.db.insert("serviceOrderMessages", {
       orderId: args.orderId,
-      senderId: args.senderId,
+      senderId,
       senderType: args.senderType,
       content: args.content,
       attachments: args.attachments,
@@ -632,12 +653,16 @@ export const sendMessage = mutation({
 export const markMessagesRead = mutation({
   args: {
     orderId: v.id("serviceOrders"),
-    userId: v.string(),
     userType: v.union(v.literal("customer"), v.literal("creator")),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const order = await ctx.db.get(args.orderId);
     if (!order) throw new Error("Order not found");
+    // Verify caller is a participant
+    if (order.customerId !== identity.subject && order.creatorId !== identity.subject) {
+      throw new Error("Not authorized");
+    }
 
     const now = Date.now();
 
@@ -645,7 +670,7 @@ export const markMessagesRead = mutation({
     const messages = await ctx.db
       .query("serviceOrderMessages")
       .withIndex("by_orderId", (q) => q.eq("orderId", args.orderId))
-      .collect();
+      .take(500);
 
     const otherType = args.userType === "customer" ? "creator" : "customer";
 

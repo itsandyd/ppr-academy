@@ -34,7 +34,7 @@ export const getStoreLinks = query({
     const links = await ctx.db
       .query("linkInBioLinks")
       .withIndex("by_storeId_order", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
 
     // Sort by order
     return links.sort((a, b) => a.order - b.order);
@@ -62,7 +62,7 @@ export const getPublicStoreLinks = query({
       .query("linkInBioLinks")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(200);
 
     // Sort and return only public fields
     return links
@@ -102,7 +102,7 @@ export const createLink = mutation({
     const existingLinks = await ctx.db
       .query("linkInBioLinks")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
 
     const now = Date.now();
     const order = existingLinks.length;
@@ -190,7 +190,7 @@ export const deleteLink = mutation({
     const remainingLinks = await ctx.db
       .query("linkInBioLinks")
       .withIndex("by_storeId", (q) => q.eq("storeId", link.storeId))
-      .collect();
+      .take(200);
 
     const sortedLinks = remainingLinks
       .filter((l) => l._id !== args.linkId)
@@ -327,7 +327,7 @@ export const getLinkAnalytics = query({
       .withIndex("by_linkId_clickedAt", (q) =>
         q.eq("linkId", args.linkId).gte("clickedAt", cutoff)
       )
-      .collect();
+      .take(10000);
 
     // Aggregate by source
     const sourceMap = new Map<string, number>();
@@ -413,7 +413,7 @@ export const getStoreLinksAnalytics = query({
     const links = await ctx.db
       .query("linkInBioLinks")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
 
     // Get all clicks in the time period
     const clicks = await ctx.db
@@ -421,7 +421,7 @@ export const getStoreLinksAnalytics = query({
       .withIndex("by_storeId_clickedAt", (q) =>
         q.eq("storeId", args.storeId).gte("clickedAt", cutoff)
       )
-      .collect();
+      .take(10000);
 
     const totalClicks = clicks.length;
 

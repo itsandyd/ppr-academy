@@ -37,7 +37,7 @@ export const getPublishedProjectFiles = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(500);
 
     // Apply filters
     if (args.dawType) {
@@ -85,7 +85,7 @@ export const getPublishedProjectFiles = query({
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(500);
         const store = stores.find((s) => s._id === project.storeId);
 
         if (store) {
@@ -144,7 +144,7 @@ export const getProjectFileBySlug = query({
     let creatorAvatar: string | undefined = undefined;
     let creatorBio: string | undefined = undefined;
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(500);
     const store = stores.find((s) => s._id === project.storeId);
 
     if (store) {
@@ -228,7 +228,7 @@ export const getCreatorProjectFiles = query({
           q.eq(q.field("productCategory"), "project-files")
         )
       )
-      .collect();
+      .take(500);
 
     // Filter by published status if needed
     if (!args.includeUnpublished) {
@@ -273,7 +273,7 @@ export const getProjectFileGenres = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(500);
 
     const genreSet = new Set<string>();
     projects.forEach((p) => {

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Zap, Plus, Instagram, Play, Pause, Settings, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -261,30 +262,16 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
           })}
         </div>
       ) : (
-        <Card className="border-2 border-dashed">
-          <CardContent className="pb-12 pt-12">
-            <div className="mx-auto max-w-2xl text-center">
-              <Zap className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-blue-100 text-purple-600 dark:from-purple-900 dark:to-blue-900" />
-              <h3 className="mb-3 text-2xl font-bold">
-                {selectedAccountFilter === "all"
-                  ? "No automations yet"
-                  : `No automations for @${connectedInstagramAccounts.find((a: any) => a._id === selectedAccountFilter)?.platformUsername}`}
-              </h3>
-              <p className="mb-6 text-muted-foreground">
-                Create your first automation to start capturing leads and driving sales on Instagram
-              </p>
-              <Button
-                size="lg"
-                onClick={handleCreateAutomation}
-                disabled={creatingAutomation}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                {creatingAutomation ? "Creating..." : "Create Your First Automation"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Zap}
+          title={
+            selectedAccountFilter === "all"
+              ? "No automations yet"
+              : `No automations for @${connectedInstagramAccounts.find((a: any) => a._id === selectedAccountFilter)?.platformUsername}`
+          }
+          description="Create your first automation to start capturing leads and driving sales on Instagram."
+          action={{ label: creatingAutomation ? "Creating..." : "Create Automation", onClick: handleCreateAutomation }}
+        />
       )}
     </div>
   );

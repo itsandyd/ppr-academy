@@ -190,9 +190,9 @@ export default function BlogEditorPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <Button asChild variant="ghost" size="sm">
           <Link href="/dashboard/create">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -205,7 +205,7 @@ export default function BlogEditorPage() {
         {/* Main Content */}
         <Card>
           <CardHeader>
-            <CardTitle>Create New Blog Post</CardTitle>
+            <CardTitle className="text-xl md:text-2xl">Create New Blog Post</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Title */}
@@ -343,7 +343,7 @@ export default function BlogEditorPage() {
             </div>
 
             {/* Category & Tags */}
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select onValueChange={(value) => setValue("category", value)}>
@@ -419,7 +419,7 @@ export default function BlogEditorPage() {
         {/* SEO Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>SEO Settings</CardTitle>
+            <CardTitle className="text-xl md:text-2xl">SEO Settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Meta Title */}
@@ -486,7 +486,7 @@ export default function BlogEditorPage() {
         </Card>
 
         {/* Submit Actions */}
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <Button type="submit" size="lg" className="flex-1">
             <Save className="w-4 h-4 mr-2" />
             {watch("status") === "published" ? "Publish" : "Save Draft"}

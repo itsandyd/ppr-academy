@@ -2036,7 +2036,7 @@ export const getUsersForWeeklyDigest = internalQuery({
     const preferences = await ctx.db
       .query("resendPreferences")
       .filter((q) => q.eq(q.field("weeklyDigest"), true))
-      .collect();
+      .take(5000);
 
     const users: Array<{
       userId: string;
@@ -2078,7 +2078,7 @@ export const getUserDigestData = internalQuery({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(5000);
 
     const courseIds = enrollments.map((e) => e.courseId);
 
@@ -2129,7 +2129,7 @@ export const getUserDigestData = internalQuery({
       .filter((q) =>
         q.and(q.eq(q.field("userId"), args.userId), q.gt(q.field("issueDate"), oneWeekAgo))
       )
-      .collect();
+      .take(5000);
 
     return {
       user: {

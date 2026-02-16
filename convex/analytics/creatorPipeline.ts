@@ -55,7 +55,7 @@ export const getCreatorsByStage = query({
       const pipelineCreators = await ctx.db
         .query("creatorPipeline")
         .withIndex("by_stage_and_updatedAt", (q) => q.eq("stage", stage))
-        .collect();
+        .take(10000);
 
       return Promise.all(
         pipelineCreators.map(async (creator) => {
@@ -213,7 +213,7 @@ export const getStuckCreators = query({
       .query("creatorPipeline")
       .withIndex("by_stage_and_updatedAt", (q) => q.eq("stage", "drafting"))
       .filter((q) => q.lt(q.field("draftingAt"), threeDaysAgo))
-      .collect();
+      .take(10000);
     
     // Get creators who haven't had first sale 14+ days after publishing
     const fourteenDaysAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
@@ -221,7 +221,7 @@ export const getStuckCreators = query({
       .query("creatorPipeline")
       .withIndex("by_stage_and_updatedAt", (q) => q.eq("stage", "published"))
       .filter((q) => q.lt(q.field("publishedAt"), fourteenDaysAgo))
-      .collect();
+      .take(10000);
     
     const allStuck = [...drafting, ...noSale];
     
@@ -730,14 +730,14 @@ export const getCreatorOnboardingStatus = query({
       ? await ctx.db
           .query("courses")
           .withIndex("by_userId", (q) => q.eq("userId", userId))
-          .collect()
+          .take(10000)
       : [];
 
     const products = store
       ? await ctx.db
           .query("digitalProducts")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .collect()
+          .take(10000)
       : [];
 
     const purchases = store

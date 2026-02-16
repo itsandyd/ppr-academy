@@ -1,7 +1,29 @@
 import { auth } from "@clerk/nextjs/server";
 import { preloadQuery } from "convex/nextjs";
+import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+
+// Get or create user from Clerk ID
+export async function getUserFromClerk(clerkId: string) {
+  try {
+    const user = await fetchQuery(api.users.getUserFromClerk, { clerkId });
+
+    if (user) {
+      return {
+        ...user,
+        id: user._id,
+        createdAt: new Date(user._creationTime),
+        updatedAt: new Date(user._creationTime),
+      };
+    }
+
+    return user;
+  } catch (error) {
+    console.error("Error fetching user from Convex:", error);
+    return null;
+  }
+}
 
 // Helper function to get authenticated user
 export async function getAuthenticatedUser() {

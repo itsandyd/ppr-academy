@@ -24,7 +24,7 @@ export const backfillCustomersFromPurchases = internalMutation({
       const purchases = await ctx.db
         .query("purchases")
         .withIndex("by_status", (q) => q.eq("status", "completed"))
-        .collect();
+        .take(10000);
 
       for (const purchase of purchases) {
         try {

@@ -122,7 +122,7 @@ export function VideoAnalytics({ userId, className }: VideoAnalyticsProps) {
       </CardHeader>
       <CardContent>
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
             <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/20">
               <Clock className="h-4 w-4 text-blue-500" />
@@ -156,8 +156,10 @@ export function VideoAnalytics({ userId, className }: VideoAnalyticsProps) {
 
         {/* Views Chart */}
         {chartData.length > 0 && (
-          <div className="h-[180px] mb-6">
+          <div className="mb-6">
             <p className="text-sm font-medium mb-2">Views by Chapter</p>
+            <div className="w-full overflow-x-auto">
+              <div className="min-w-[350px] h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -166,7 +168,7 @@ export function VideoAnalytics({ userId, className }: VideoAnalyticsProps) {
                   dataKey="name"
                   type="category"
                   tick={{ fontSize: 10 }}
-                  width={100}
+                  width={80}
                 />
                 <Tooltip
                   contentStyle={{
@@ -198,6 +200,8 @@ export function VideoAnalytics({ userId, className }: VideoAnalyticsProps) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         )}
 

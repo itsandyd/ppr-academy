@@ -45,7 +45,7 @@ export const getUserCertificates = query({
       .query("certificates")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(1000);
 
     return certificates.map(cert => ({
       _id: cert._id,

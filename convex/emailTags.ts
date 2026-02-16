@@ -81,7 +81,7 @@ export const deleteTag = mutation({
     const contacts = await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", tag.storeId))
-      .collect();
+      .take(1000);
 
     for (const contact of contacts) {
       if (contact.tagIds.includes(args.tagId)) {
@@ -113,7 +113,7 @@ export const listTags = query({
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
-      .collect();
+      .take(1000);
   },
 });
 
@@ -145,7 +145,7 @@ export const getTagStats = query({
     const tags = await ctx.db
       .query("emailTags")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     const totalTaggedContacts = tags.reduce((sum, tag) => sum + tag.contactCount, 0);
 
@@ -191,7 +191,7 @@ export const mergeTags = mutation({
     const contacts = await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", sourceTag.storeId))
-      .collect();
+      .take(1000);
 
     let mergedCount = 0;
     for (const contact of contacts) {

@@ -37,7 +37,7 @@ export const getCourseProgress = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(200);
 
     const totalChapters = chapters.length;
 
@@ -58,7 +58,7 @@ export const getCourseProgress = query({
       .withIndex("by_user_course_completed", (q) =>
         q.eq("userId", args.userId).eq("courseId", args.courseId).eq("isCompleted", true)
       )
-      .collect();
+      .take(10000);
 
     // Create a set of completed chapter IDs for efficient lookup
     const completedChapterIds = new Set(progressRecords.map((p) => p.chapterId));
@@ -108,7 +108,7 @@ export const getUserCourseProgressList = query({
     const progressRecords = await ctx.db
       .query("userProgress")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(10000);
 
     // Group by courseId
     const courseIds = [...new Set(progressRecords.map((p) => p.courseId).filter(Boolean))] as Id<"courses">[];
@@ -127,7 +127,7 @@ export const getUserCourseProgressList = query({
               q.eq(q.field("isPublished"), true)
             )
           )
-          .collect();
+          .take(200);
 
         const totalChapters = chapters.length;
         if (totalChapters === 0) return null;
@@ -187,7 +187,7 @@ export const calculateCourseProgressInternal = internalQuery({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(200);
 
     const totalChapters = chapters.length;
     if (totalChapters === 0) {
@@ -200,7 +200,7 @@ export const calculateCourseProgressInternal = internalQuery({
       .withIndex("by_user_course_completed", (q) =>
         q.eq("userId", args.userId).eq("courseId", args.courseId).eq("isCompleted", true)
       )
-      .collect();
+      .take(10000);
 
     const completedChapterIds = new Set(progressRecords.map((p) => p.chapterId));
     const completedChapters = chapters.filter((ch) =>
@@ -325,7 +325,7 @@ export const markChapterComplete = mutation({
         .withIndex("by_user_completed", (q: any) =>
           q.eq("userId", args.userId).eq("isCompleted", true)
         )
-        .collect();
+        .take(10000);
 
       await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerLessonsMilestone, {
         userId: args.userId,

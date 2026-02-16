@@ -199,7 +199,7 @@ export const getUserSubscriptions = query({
       .withIndex("by_user_status", (q) =>
         q.eq("userId", args.userId).eq("status", "active")
       )
-      .collect();
+      .take(1000);
 
     const result = [];
     for (const sub of subscriptions) {
@@ -243,7 +243,7 @@ export const getSubscriptionAccessibleContent = query({
       .withIndex("by_user_status", (q) =>
         q.eq("userId", args.userId).eq("status", "active")
       )
-      .collect();
+      .take(1000);
 
     if (subscriptions.length === 0) return [];
 
@@ -256,7 +256,7 @@ export const getSubscriptionAccessibleContent = query({
         .query("contentAccess")
         .withIndex("by_creatorId", (q) => q.eq("creatorId", subscription.creatorId))
         .filter((q) => q.eq(q.field("accessType"), "subscription"))
-        .collect();
+        .take(1000);
 
       for (const access of contentAccessRecords) {
         // Filter by resource type if specified

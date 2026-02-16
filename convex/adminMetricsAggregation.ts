@@ -9,7 +9,7 @@ import { internal } from "./_generated/api";
 export const countUsers = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const newUsersThisMonth = users.filter((u) => u._creationTime > thirtyDaysAgo).length;
     const creators = users.filter((u) => u.isCreator === true).length;
@@ -38,7 +38,7 @@ export const countUsers = internalQuery({
 export const countCourses = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const courses = await ctx.db.query("courses").collect();
+    const courses = await ctx.db.query("courses").take(10000);
     return {
       totalCourses: courses.length,
       totalPublishedCourses: courses.filter((c) => c.isPublished).length,
@@ -49,7 +49,7 @@ export const countCourses = internalQuery({
 export const countProducts = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const products = await ctx.db.query("digitalProducts").collect();
+    const products = await ctx.db.query("digitalProducts").take(10000);
     return { totalProducts: products.length };
   },
 });
@@ -57,7 +57,7 @@ export const countProducts = internalQuery({
 export const countStores = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(10000);
     return { totalStores: stores.length };
   },
 });
@@ -65,7 +65,7 @@ export const countStores = internalQuery({
 export const countEnrollments = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const enrollments = await ctx.db.query("enrollments").collect();
+    const enrollments = await ctx.db.query("enrollments").take(10000);
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     // Active users from recent enrollments
@@ -95,7 +95,7 @@ export const countEnrollments = internalQuery({
 export const countPurchases = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const purchases = await ctx.db.query("purchases").collect();
+    const purchases = await ctx.db.query("purchases").take(10000);
     const completedPurchases = purchases.filter((p) => p.status === "completed");
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 

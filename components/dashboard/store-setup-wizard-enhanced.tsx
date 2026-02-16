@@ -113,7 +113,7 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
         userId: user.id,
       });
       
-      // TODO: Update store with description and logo after creation
+      // POST-LAUNCH: Pass description and logo to updateStore mutation after initial creation
       // if (formData.description || formData.logoUrl) {
       //   await updateStore({
       //     storeId,

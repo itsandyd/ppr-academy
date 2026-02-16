@@ -169,7 +169,7 @@ export const getAllStoreIds = internalQuery({
   args: {},
   returns: v.array(v.string()),
   handler: async (ctx) => {
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(10000);
     return stores.map(s => s._id);
   },
 });

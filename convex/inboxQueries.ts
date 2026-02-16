@@ -80,7 +80,7 @@ export const getCreatorInbox = query({
       .query("emailReplies")
       .withIndex("by_storeId", q => q.eq("storeId", args.storeId))
       .order("desc")
-      .collect();
+      .take(500);
 
     // Apply status filter in memory if needed (secondary filter)
     const replies = args.status
@@ -180,7 +180,7 @@ export const getInboxStats = query({
     const allReplies = await ctx.db
       .query("emailReplies")
       .filter(q => q.eq(q.field("storeId"), args.storeId))
-      .collect();
+      .take(500);
     
     return {
       total: allReplies.length,

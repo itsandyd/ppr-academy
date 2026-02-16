@@ -297,7 +297,7 @@ export default function CreateSamplePage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       {/* Hidden audio element */}
       <audio
         ref={audioRef}
@@ -306,7 +306,7 @@ export default function CreateSamplePage() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/dashboard?mode=create">
             <Button variant="ghost" size="icon">
@@ -314,8 +314,8 @@ export default function CreateSamplePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Upload Sample</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl md:text-2xl font-bold">Upload Sample</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Create an individual sample that can be sold separately or added to packs
             </p>
           </div>
@@ -325,7 +325,7 @@ export default function CreateSamplePage() {
       {/* File Upload */}
       <Card>
         <CardHeader>
-          <CardTitle>Audio File *</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Audio File *</CardTitle>
           <CardDescription>Upload your sample (WAV, MP3, AIFF, FLAC - max 50MB)</CardDescription>
         </CardHeader>
         <CardContent>
@@ -390,7 +390,7 @@ export default function CreateSamplePage() {
       {/* Basic Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Sample Information</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Sample Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -414,7 +414,7 @@ export default function CreateSamplePage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Genre *</Label>
               <Select
@@ -454,7 +454,7 @@ export default function CreateSamplePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="bpm">BPM (optional)</Label>
               <Input
@@ -482,7 +482,7 @@ export default function CreateSamplePage() {
       {/* Pricing & License */}
       <Card>
         <CardHeader>
-          <CardTitle>Pricing & License</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Pricing & License</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -536,7 +536,7 @@ export default function CreateSamplePage() {
       {/* Tags */}
       <Card>
         <CardHeader>
-          <CardTitle>Tags</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Tags</CardTitle>
           <CardDescription>Add tags to help buyers find your sample</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -568,15 +568,16 @@ export default function CreateSamplePage() {
       </Card>
 
       {/* Actions */}
-      <div className="flex justify-between pt-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-4 pt-4">
         <Link href="/dashboard?mode=create">
-          <Button variant="outline">Cancel</Button>
+          <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
         </Link>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
             onClick={() => handlePublish(true)}
             disabled={!canPublish || isPublishing || isUploading}
+            className="w-full sm:w-auto"
           >
             {isUploading ? (
               <>
@@ -590,6 +591,7 @@ export default function CreateSamplePage() {
           <Button
             onClick={() => handlePublish(false)}
             disabled={!canPublish || isPublishing || isUploading}
+            className="w-full sm:w-auto"
           >
             {isPublishing ? (
               <>

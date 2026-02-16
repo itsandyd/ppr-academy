@@ -24,7 +24,7 @@ export const getUserAchievements = query({
     const userAchievements = await ctx.db
       .query("userAchievements")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     return userAchievements.map(achievement => ({
       achievementId: achievement.achievementId,

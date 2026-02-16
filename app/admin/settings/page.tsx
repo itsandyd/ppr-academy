@@ -43,6 +43,7 @@ const settingsCards = [
 
 export default function AdminSettingsPage() {
   return (
+    <div className="p-4 md:p-6 lg:p-8">
     <AdminCategoryPage
       title="Settings"
       description="Configure platform settings and preferences"
@@ -50,5 +51,6 @@ export default function AdminSettingsPage() {
       iconColor="bg-slate-500"
       cards={settingsCards}
     />
+    </div>
   );
 }

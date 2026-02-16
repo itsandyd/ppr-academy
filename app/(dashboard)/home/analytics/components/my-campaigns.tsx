@@ -48,14 +48,14 @@ export function MyCampaigns({ userId }: MyCampaignsProps) {
   return (
     <Card className="bg-white dark:bg-black">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <CardTitle className="text-lg font-semibold">My Campaigns</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {activeCampaigns.length} active · {completedCampaigns.length} completed
             </p>
           </div>
-          <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+          <Button size="sm" className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto">
             Create Campaign
           </Button>
         </div>
@@ -260,7 +260,7 @@ function MyCampaignsSkeleton() {
               <div className="flex-1">
                 <Skeleton className="mb-2 h-5 w-48" />
                 <Skeleton className="h-4 w-32" />
-                <div className="mt-3 grid grid-cols-4 gap-3">
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />

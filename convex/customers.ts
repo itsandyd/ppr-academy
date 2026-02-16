@@ -87,7 +87,7 @@ export const getCustomersForAdmin = query({
       .query("customers")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
       .order("desc")
-      .collect();
+      .take(5000);
   },
 });
 
@@ -674,7 +674,7 @@ export const getCustomerStats = query({
     const stores = await ctx.db
       .query("stores")
       .withIndex("by_userId", (q) => q.eq("userId", args.adminUserId))
-      .collect();
+      .take(5000);
 
     if (stores.length === 0) {
       return {
@@ -766,7 +766,7 @@ export const getPurchasesForCustomer = query({
       .query("purchases")
       .withIndex("by_customerId", (q) => q.eq("customerId", args.customerId))
       .order("desc")
-      .collect();
+      .take(5000);
   },
 });
 

@@ -142,9 +142,9 @@ export const getTemplates = query({
       templates = await ctx.db
         .query("workflowTemplates")
         .withIndex("by_category", (q) => q.eq("category", args.category!))
-        .collect();
+        .take(500);
     } else {
-      templates = await ctx.db.query("workflowTemplates").collect();
+      templates = await ctx.db.query("workflowTemplates").take(500);
     }
 
     // If no templates in DB, return system templates
@@ -316,13 +316,13 @@ export const getGoalStats = query({
     const completions = await ctx.db
       .query("workflowGoalCompletions")
       .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .collect();
+      .take(500);
 
     // Get total executions
     const executions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .collect();
+      .take(500);
 
     const totalExecutions = executions.length;
     const completedGoals = completions.length;

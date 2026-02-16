@@ -1399,7 +1399,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             <Button
               onClick={() => {
                 setShowDetailsDialog(false);
-                // TODO: Open flow builder
+                // POST-LAUNCH: Navigate to visual flow builder for this automation
               }}
             >
               <Edit3 className="mr-2 h-4 w-4" />

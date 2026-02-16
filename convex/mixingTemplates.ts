@@ -34,7 +34,7 @@ export const getPublishedMixingTemplates = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(500);
 
     // Apply filters
     if (args.dawType) {
@@ -72,7 +72,7 @@ export const getPublishedMixingTemplates = query({
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(500);
         const store = stores.find((s) => s._id === template.storeId);
 
         if (store) {
@@ -130,7 +130,7 @@ export const getMixingTemplateBySlug = query({
     let creatorName = "Creator";
     let creatorAvatar: string | undefined = undefined;
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(500);
     const store = stores.find((s) => s._id === template.storeId);
 
     if (store) {

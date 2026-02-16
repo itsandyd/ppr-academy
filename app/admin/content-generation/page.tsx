@@ -113,7 +113,7 @@ export default function ContentGenerationPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-6xl">
+    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-6xl">
       <div className="flex items-center gap-3">
         <Sparkles className="h-8 w-8 text-primary" />
         <div>
@@ -164,7 +164,7 @@ export default function ContentGenerationPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Platform</Label>
                   <Select value={platform} onValueChange={(v: any) => setPlatform(v)}>
@@ -311,7 +311,7 @@ export default function ContentGenerationPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <Input

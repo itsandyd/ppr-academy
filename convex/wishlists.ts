@@ -256,7 +256,7 @@ export const getUserWishlist = query({
     let wishlistItems = await ctx.db
       .query("wishlists")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(500);
 
     if (args.filterType && args.filterType !== "all") {
       wishlistItems = wishlistItems.filter((item) => item.itemType === args.filterType);
@@ -358,7 +358,7 @@ export const getWishlistCount = query({
     const items = await ctx.db
       .query("wishlists")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(500);
 
     return items.length;
   },
@@ -377,7 +377,7 @@ export const getWishlistCategories = query({
     const wishlistItems = await ctx.db
       .query("wishlists")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(500);
 
     const categories = new Set<string>();
 
@@ -433,7 +433,7 @@ export const getWishlistItemsWithPriceDrops = query({
     const wishlistItems = await ctx.db
       .query("wishlists")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .take(500);
 
     const result = await Promise.all(
       wishlistItems.map(async (item) => {

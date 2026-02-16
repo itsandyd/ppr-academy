@@ -35,10 +35,10 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 md:p-6">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Messages</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Messages</h1>
           <p className="text-muted-foreground">Your direct message conversations</p>
         </div>
         <NewConversationDialog />
@@ -57,7 +57,7 @@ export default function MessagesPage() {
 
 function LoadingState() {
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="mt-2 h-4 w-48" />

@@ -145,10 +145,16 @@ export function PricingStep({
                   min="0"
                   step="1"
                   value={price}
-                  onChange={(e) => onPriceChange(parseFloat(e.target.value) || 0)}
-                  className="pl-8 text-2xl font-bold h-14"
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    onPriceChange(Math.max(0, val));
+                  }}
+                  className={`pl-8 text-2xl font-bold h-14 ${price < 0 ? "border-red-500" : ""}`}
                   placeholder="29"
                 />
+                {price < 0 && (
+                  <p className="text-sm text-red-600 mt-1">Price cannot be negative</p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

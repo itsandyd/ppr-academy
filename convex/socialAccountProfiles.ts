@@ -29,7 +29,7 @@ export const getAccountProfiles = query({
     return await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
   },
 });
 
@@ -45,7 +45,7 @@ export const getAccountProfilesByUserId = query({
     return await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(200);
   },
 });
 
@@ -75,7 +75,7 @@ export const getAccountProfilesByPlatform = query({
     const profiles = await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
 
     return profiles.filter((p) => p.platform === args.platform);
   },
@@ -93,7 +93,7 @@ export const getAccountProfilesWithAccounts = query({
     const profiles = await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
 
     // Fetch linked social accounts
     const profilesWithAccounts = await Promise.all(

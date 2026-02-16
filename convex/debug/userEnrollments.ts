@@ -54,7 +54,7 @@ export const debugUserEnrollments = internalQuery({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.clerkId))
-      .collect();
+      .take(10000);
 
     // Get course purchases
     const purchases = await ctx.db
@@ -66,7 +66,7 @@ export const debugUserEnrollments = internalQuery({
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(10000);
 
     // Get course details for enrollments
     const enrollmentDetails = await Promise.all(
@@ -145,7 +145,7 @@ export const syncEnrollmentsFromPurchases = internalMutation({
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(10000);
 
     for (const purchase of purchases) {
       if (!purchase.courseId) continue;

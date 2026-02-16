@@ -202,7 +202,7 @@ export default function BeatLandingPage({ params }: BeatPageProps) {
       toast.error("Please select a license tier");
       return;
     }
-    // TODO: Integrate with payment flow
+    // POST-LAUNCH: Integrate beat purchase with Stripe checkout flow
     toast.success(`Purchasing ${selectedLicense.name} license for $${selectedLicense.price}`);
   };
 

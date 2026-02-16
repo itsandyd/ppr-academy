@@ -72,6 +72,7 @@ import {
   Video,
   MessagesSquare,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import NodeSidebar from "./components/NodeSidebar";
@@ -2633,11 +2634,12 @@ export default function WorkflowBuilderPage() {
                       : "Loading contacts..."}
                   </div>
                 ) : filteredContacts.length === 0 ? (
-                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-                    {debouncedSearchQuery
-                      ? `No contacts found for "${debouncedSearchQuery}"`
-                      : "No contacts found"}
-                  </div>
+                  <EmptyState
+                    icon={Users}
+                    title={debouncedSearchQuery ? "No contacts found" : "No contacts yet"}
+                    description={debouncedSearchQuery ? `No contacts match "${debouncedSearchQuery}".` : "Add contacts to get started."}
+                    compact
+                  />
                 ) : (
                   filteredContacts.slice(0, 100).map((contact: any) => (
                     <div

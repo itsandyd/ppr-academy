@@ -152,9 +152,9 @@ export default function VideoJobDetailPage() {
   const videoAvailable = isCompleted && !!job.videoUrl;
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Back nav */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <Button
           variant="ghost"
           onClick={() => router.push(`/store/${storeId}/videos`)}
@@ -166,7 +166,7 @@ export default function VideoJobDetailPage() {
 
         {/* Version badges */}
         {versions && versions.length > 1 && (
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             {versions.map((v: { _id: string; version: number; iterationPrompt?: string; status: string; _creationTime: number }) => (
               <Button
                 key={v._id}
@@ -308,7 +308,7 @@ export default function VideoJobDetailPage() {
       )}
 
       {/* Main Content Area: Preview + Script */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Video Preview (2 cols) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Show Remotion Player preview when code is available */}

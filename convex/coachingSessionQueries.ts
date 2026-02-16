@@ -28,7 +28,7 @@ export const getSessionsNeedingSetup = internalQuery({
     const sessions = await ctx.db
       .query("coachingSessions")
       .filter((q) => q.eq(q.field("status"), "SCHEDULED"))
-      .collect();
+      .take(500);
 
     // Filter for sessions starting in 2-3 hours that haven't been set up
     return sessions.filter((session) => {
@@ -71,7 +71,7 @@ export const getSessionsNeedingCleanup = internalQuery({
           q.eq(q.field("status"), "IN_PROGRESS")
         )
       )
-      .collect();
+      .take(500);
 
     // Filter for sessions that ended >1 hour ago and haven't been cleaned
     return sessions.filter((session) => {
@@ -178,7 +178,7 @@ export const getSessionsNeedingReminders = query({
     const sessions = await ctx.db
       .query("coachingSessions")
       .filter((q) => q.eq(q.field("status"), "SCHEDULED"))
-      .collect();
+      .take(500);
 
     // Filter for sessions that need reminders
     return sessions.filter((session) => {

@@ -169,7 +169,7 @@ export const canAccessCourse = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(1000);
 
     const totalChapters = chapters.length;
     const freeChaptersCount = chapters.filter((ch) => ch.isFree === true).length;
@@ -307,7 +307,7 @@ export const getAccessibleChapters = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(1000);
 
     // If no user, only return free chapters
     if (!args.userId) {
@@ -374,7 +374,7 @@ async function checkBundleAccess(
   const bundles = await ctx.db
     .query("bundles")
     .filter((q: any) => q.eq(q.field("isActive"), true))
-    .collect();
+    .take(1000);
 
   const bundlesWithCourse = bundles.filter((b: any) =>
     b.courseIds?.includes(courseId)

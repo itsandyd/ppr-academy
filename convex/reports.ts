@@ -40,7 +40,7 @@ export const getReportsByStatus = query({
       .query("reports")
       .withIndex("by_status", (q) => q.eq("status", args.status))
       .order("desc")
-      .collect();
+      .take(500);
   },
 });
 
@@ -52,7 +52,7 @@ export const getAllReports = query({
     // Verify admin access
     await verifyAdmin(ctx);
 
-    return await ctx.db.query("reports").order("desc").collect();
+    return await ctx.db.query("reports").order("desc").take(500);
   },
 });
 
@@ -70,7 +70,7 @@ export const getReportStats = query({
   handler: async (ctx) => {
     await verifyAdmin(ctx);
 
-    const allReports = await ctx.db.query("reports").collect();
+    const allReports = await ctx.db.query("reports").take(500);
 
     return {
       pending: allReports.filter((r) => r.status === "pending").length,

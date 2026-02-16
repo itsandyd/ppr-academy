@@ -31,7 +31,7 @@ export const getPublishedMixingServices = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(500);
 
     // Apply filters
     if (args.serviceType) {
@@ -87,7 +87,7 @@ export const getPublishedMixingServices = query({
         let creatorAvatar: string | undefined = undefined;
         let creatorBio: string | undefined = undefined;
 
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(500);
         const store = stores.find((s) => s._id === service.storeId);
 
         if (store) {
@@ -161,7 +161,7 @@ export const getMixingServiceBySlug = query({
     let creatorId: string | undefined = undefined;
     let creatorStripeAccountId: string | undefined = undefined;
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(500);
     const store = stores.find((s) => s._id === service.storeId);
 
     if (store) {
@@ -258,7 +258,7 @@ export const getCreatorServices = query({
           q.eq(q.field("productCategory"), "mixing-service")
         )
       )
-      .collect();
+      .take(500);
 
     // Filter by published status if needed
     if (!args.includeUnpublished) {
@@ -308,7 +308,7 @@ export const getServiceTypes = query({
           q.eq(q.field("isPublished"), true)
         )
       )
-      .collect();
+      .take(500);
 
     const typeCounts: Record<string, number> = {
       mixing: 0,

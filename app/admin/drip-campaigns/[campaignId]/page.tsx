@@ -138,14 +138,14 @@ export default function CampaignEditorPage() {
 
   if (!campaign) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center p-4 md:p-8">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-8">
+    <div className="mx-auto max-w-5xl p-4 md:p-8">
       <div className="mb-6">
         <Link href="/admin/drip-campaigns">
           <Button variant="ghost" size="sm" className="mb-4 gap-2">
@@ -177,7 +177,7 @@ export default function CampaignEditorPage() {
         </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-3 gap-4">
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ export default function CampaignEditorPage() {
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Delay</Label>
                       <Input

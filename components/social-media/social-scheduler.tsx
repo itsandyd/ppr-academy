@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Calendar,
   Clock,
@@ -666,12 +667,12 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
             </div>
           ) : (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <TrendingUp className="mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-semibold">No published posts yet</h3>
-                <p className="text-center text-muted-foreground">
-                  Your published posts will appear here
-                </p>
+              <CardContent>
+                <EmptyState
+                  icon={TrendingUp}
+                  title="No published posts yet"
+                  description="Your published posts will appear here once scheduled posts go live."
+                />
               </CardContent>
             </Card>
           )}
@@ -689,15 +690,12 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
         {/* Analytics Tab */}
         <TabsContent value="analytics">
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <TrendingUp className="mb-4 h-12 w-12 text-muted-foreground" />
-              <h3 className="mb-2 text-lg font-semibold">Analytics Dashboard</h3>
-              <p className="mb-4 text-center text-muted-foreground">
-                Track your post performance across all platforms
-              </p>
-              <Button variant="outline" disabled>
-                Coming Soon
-              </Button>
+            <CardContent>
+              <EmptyState
+                icon={TrendingUp}
+                title="Analytics Dashboard"
+                description="Track your post performance across all platforms. Coming soon."
+              />
             </CardContent>
           </Card>
         </TabsContent>

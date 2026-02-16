@@ -138,7 +138,7 @@ export default function CampaignEditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
       <div>
         <Link href="/dashboard/emails?mode=create">
           <Button variant="ghost" size="sm" className="mb-4 gap-2">
@@ -147,9 +147,9 @@ export default function CampaignEditorPage() {
           </Button>
         </Link>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <h1 className="flex flex-wrap items-center gap-2 text-xl md:text-2xl font-bold">
               {campaign.name}
               <Badge variant={campaign.isActive ? "default" : "secondary"}>
                 {campaign.isActive ? "Active" : "Paused"}
@@ -168,7 +168,7 @@ export default function CampaignEditorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <Card>
           <CardContent className="flex items-center gap-3 pt-6">
             <Users className="h-8 w-8 text-blue-600" />

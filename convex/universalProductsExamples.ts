@@ -397,7 +397,7 @@ export const cleanUpTestProducts = internalMutation({
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
     
     let productsDeleted = 0;
     
@@ -433,7 +433,7 @@ export const exampleGetSamplePacks = internalQuery({
       .withIndex("by_productCategory", (q) => 
         q.eq("productCategory", "sample-pack")
       )
-      .collect();
+      .take(1000);
     
     return products.filter(p => 
       p.storeId === args.storeId && p.isPublished
@@ -453,7 +453,7 @@ export const exampleGetPlaylistProducts = internalQuery({
       .withIndex("by_productCategory", (q) => 
         q.eq("productCategory", "playlist-curation")
       )
-      .collect();
+      .take(1000);
     
     if (args.storeId) {
       products = products.filter(p => p.storeId === args.storeId);

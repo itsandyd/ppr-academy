@@ -55,7 +55,7 @@ export const getWorkflowABTests = query({
     return await ctx.db
       .query("workflowNodeABTests")
       .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .collect();
+      .take(1000);
   },
 });
 

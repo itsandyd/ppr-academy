@@ -19,13 +19,13 @@ export const getConversations = query({
     const asParticipant1 = await ctx.db
       .query("dmConversations")
       .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
-      .collect();
+      .take(500);
 
     // Get conversations where user is participant2
     const asParticipant2 = await ctx.db
       .query("dmConversations")
       .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
-      .collect();
+      .take(500);
 
     const allConversations = [...asParticipant1, ...asParticipant2];
 
@@ -128,12 +128,12 @@ export const getTotalUnreadCount = query({
     const asParticipant1 = await ctx.db
       .query("dmConversations")
       .withIndex("by_participant1", (q) => q.eq("participant1Id", userId))
-      .collect();
+      .take(500);
 
     const asParticipant2 = await ctx.db
       .query("dmConversations")
       .withIndex("by_participant2", (q) => q.eq("participant2Id", userId))
-      .collect();
+      .take(500);
 
     let total = 0;
     for (const conv of asParticipant1) {
@@ -164,7 +164,7 @@ export const searchUsersForDM = query({
     if (query.length < 2) return [];
 
     // Get all users and filter by name/email
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query("users").take(500);
 
     const matchingUsers = allUsers
       .filter((user) => {
@@ -391,7 +391,7 @@ export const markAsRead = mutation({
     const messages = await ctx.db
       .query("dmMessages")
       .withIndex("by_conversationId", (q) => q.eq("conversationId", args.conversationId))
-      .collect();
+      .take(500);
 
     for (const msg of messages) {
       if (msg.senderId !== userId && !msg.readAt) {

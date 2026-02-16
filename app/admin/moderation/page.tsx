@@ -51,12 +51,12 @@ export default function ContentModerationPage() {
   const reports =
     useQuery(
       (api as any).reports.getReportsByStatus,
-      user?.id ? { status: activeTab, clerkId: user.id } : "skip"
+      user?.id ? { status: activeTab } : "skip"
     ) || [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stats = useQuery(
     (api as any).reports.getReportStats,
-    user?.id ? { clerkId: user.id } : "skip"
+    user?.id ? {} : "skip"
   ) || {
     pending: 0,
     reviewed: 0,
@@ -134,9 +134,7 @@ export default function ContentModerationPage() {
 
     try {
       await markAsResolved({
-        clerkId: user.id,
         reportId,
-        reviewedBy: user.id,
         resolution: "Content removed by admin",
       });
       toast.success("Report approved and content removed");
@@ -153,9 +151,7 @@ export default function ContentModerationPage() {
 
     try {
       await markAsDismissed({
-        clerkId: user.id,
         reportId,
-        reviewedBy: user.id,
         resolution: "Report dismissed - no action needed",
       });
       toast.info("Report dismissed");
@@ -172,9 +168,7 @@ export default function ContentModerationPage() {
 
     try {
       await markAsReviewed({
-        clerkId: user.id,
         reportId,
-        reviewedBy: user.id,
       });
       toast.info("Report marked as under review");
     } catch (error) {

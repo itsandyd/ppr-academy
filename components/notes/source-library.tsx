@@ -34,6 +34,7 @@ import {
   FileStack,
   Filter,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 
@@ -220,15 +221,12 @@ export function SourceLibrary({ userId, storeId, folderId, onGenerateNotes }: So
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-2">
           {filteredSources.length === 0 ? (
-            <div className="px-4 py-8 text-center">
-              <FileStack className="mx-auto mb-3 h-12 w-12 text-gray-300 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {searchQuery ? "No sources found" : "No sources yet"}
-              </p>
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                Add YouTube videos, websites, or PDFs to generate notes
-              </p>
-            </div>
+            <EmptyState
+              icon={FileStack}
+              title={searchQuery ? "No sources found" : "No sources yet"}
+              description="Add YouTube videos, websites, or PDFs to generate notes."
+              compact
+            />
           ) : (
             filteredSources.map((source: any) => (
               <div

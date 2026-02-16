@@ -65,7 +65,7 @@ export function RevenueChart({ userId, days = 30 }: RevenueChartProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-emerald-500" />
             Revenue Trend
@@ -85,7 +85,8 @@ export function RevenueChart({ userId, days = 30 }: RevenueChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[400px] h-[250px] sm:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={formattedData}>
               <defs>
@@ -127,6 +128,7 @@ export function RevenueChart({ userId, days = 30 }: RevenueChartProps) {
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </div>
       </CardContent>
     </Card>

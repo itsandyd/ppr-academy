@@ -44,7 +44,7 @@ export const listCheatSheets = query({
       .query("cheatSheets")
       .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(500);
   },
 });
 
@@ -62,7 +62,7 @@ export const getCheatSheetsByCourse = query({
       .query("cheatSheets")
       .withIndex("by_courseId", (q: any) => q.eq("courseId", args.courseId))
       .order("desc")
-      .collect();
+      .take(500);
   },
 });
 

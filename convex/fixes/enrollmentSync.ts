@@ -52,7 +52,7 @@ export const fixUserEnrollments = internalMutation({
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.clerkId))
       .filter((q) => q.eq(q.field("productType"), "course"))
-      .collect();
+      .take(10000);
 
     const validPurchases = purchases.filter(p => 
       p.status === "completed" && 
@@ -132,7 +132,7 @@ export const fixAllEnrollmentIssues = internalMutation({
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(10000);
 
     // Group by user
     const purchasesByUser = allPurchases.reduce((acc, purchase) => {

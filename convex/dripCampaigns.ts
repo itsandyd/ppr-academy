@@ -398,7 +398,7 @@ export const enrollContactInternal = internalMutation({
     const steps = await ctx.db
       .query("dripCampaignSteps")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
+      .take(500);
 
     if (steps.length === 0) return null;
 

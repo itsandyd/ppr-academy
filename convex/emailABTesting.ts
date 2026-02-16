@@ -45,10 +45,10 @@ export const getAllABTests = query({
       return await ctx.db
         .query("emailABTests")
         .withIndex("by_status", (q) => q.eq("status", args.status as "draft" | "running" | "analyzing" | "completed"))
-        .collect();
+        .take(1000);
     }
     
-    return await ctx.db.query("emailABTests").collect();
+    return await ctx.db.query("emailABTests").take(1000);
   },
 });
 

@@ -78,13 +78,13 @@ export const getUserConversations = query({
           q.eq("userId", args.userId).eq("agentId", args.agentId)
         )
         .order("desc")
-        .collect();
+        .take(500);
     } else {
       conversations = await ctx.db
         .query("aiConversations")
         .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
         .order("desc")
-        .collect();
+        .take(500);
     }
 
     // Filter out archived unless requested
@@ -510,7 +510,7 @@ export const deleteConversation = mutation({
     const messages = await ctx.db
       .query("aiMessages")
       .withIndex("by_conversationId", (q) => q.eq("conversationId", args.conversationId))
-      .collect();
+      .take(500);
 
     for (const message of messages) {
       await ctx.db.delete(message._id);
@@ -600,7 +600,7 @@ export const searchConversations = query({
       .query("aiConversations")
       .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(500);
 
     // Filter by archived status
     const filteredConversations = args.includeArchived
@@ -639,7 +639,7 @@ export const searchConversations = query({
       const messages = await ctx.db
         .query("aiMessages")
         .withIndex("by_conversationId", (q) => q.eq("conversationId", conversation._id))
-        .collect();
+        .take(500);
 
       for (const message of messages) {
         if (message.content.toLowerCase().includes(searchLower)) {

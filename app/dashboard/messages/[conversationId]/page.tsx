@@ -86,9 +86,9 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const { otherUser } = conversationDetails;
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col">
+    <div className="flex h-[calc(100vh-8rem)] flex-col md:h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="flex items-center gap-4 border-b bg-background px-4 py-3">
+      <div className="flex items-center gap-2 md:gap-4 border-b bg-background px-3 md:px-4 py-3">
         <Link href="/dashboard/messages">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />

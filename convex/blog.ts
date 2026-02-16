@@ -40,7 +40,7 @@ export const getPublishedPosts = query({
       .withIndex("by_status", (q) => q.eq("status", "published"))
       .order("desc");
 
-    const posts = await query.collect();
+    const posts = await query.take(500);
 
     // Filter by category if provided
     let filtered = args.category
@@ -166,7 +166,7 @@ export const getPostsByCreator = query({
       .query("blogPosts")
       .withIndex("by_authorId", (q) => q.eq("authorId", args.authorId))
       .order("desc")
-      .collect();
+      .take(500);
 
     // Filter by status if provided
     const filtered = args.status
@@ -249,7 +249,7 @@ export const getCategories = query({
     const posts = await ctx.db
       .query("blogPosts")
       .withIndex("by_status", (q) => q.eq("status", "published"))
-      .collect();
+      .take(500);
 
     // Count posts by category
     const categoryMap: Record<string, number> = {};
@@ -423,7 +423,7 @@ export const deletePost = mutation({
     const comments = await ctx.db
       .query("blogComments")
       .withIndex("by_postId", (q) => q.eq("postId", args.postId))
-      .collect();
+      .take(500);
 
     for (const comment of comments) {
       await ctx.db.delete(comment._id);

@@ -43,6 +43,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatDistanceToNow } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -541,17 +542,12 @@ export default function ConversationSidebar({
 
             {/* Empty State */}
             {displayConversations.length === 0 && !isSearchLoading && (
-              <div className="p-8 text-center text-muted-foreground">
-                <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-20" />
-                <p className="text-sm">
-                  {isSearching ? "No conversations found" : "No conversations yet"}
-                </p>
-                {isSearching ? (
-                  <p className="mt-1 text-xs">Try different search terms</p>
-                ) : (
-                  <p className="mt-1 text-xs">Start a new conversation to begin</p>
-                )}
-              </div>
+              <EmptyState
+                icon={MessageSquare}
+                title={isSearching ? "No conversations found" : "No conversations yet"}
+                description={isSearching ? "Try different search terms." : "Start a new conversation to begin."}
+                compact
+              />
             )}
           </div>
         </ScrollArea>

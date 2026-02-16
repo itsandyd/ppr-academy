@@ -174,9 +174,9 @@ export default function SequencesPage() {
   };
 
   return (
-    <div className="container py-6 space-y-6">
+    <div className="container px-4 md:px-6 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard/emails?mode=create">
@@ -184,7 +184,7 @@ export default function SequencesPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl md:text-2xl font-bold">
               {activeFilterType ? (
                 <span className="flex items-center gap-2">
                   <activeFilterType.icon className={cn("h-6 w-6", activeFilterType.color)} />
@@ -202,7 +202,7 @@ export default function SequencesPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           New {activeFilterType ? activeFilterType.name : "Sequence"}
         </Button>
@@ -225,7 +225,7 @@ export default function SequencesPage() {
       )}
 
       {/* Search and Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -252,7 +252,7 @@ export default function SequencesPage() {
               }
             }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
@@ -293,7 +293,7 @@ export default function SequencesPage() {
           </Button>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredWorkflows?.map((workflow: any) => {
             const seqType = getSequenceType(workflow);
             const Icon = seqType?.icon || Workflow;
@@ -382,7 +382,7 @@ export default function SequencesPage() {
           <CardTitle className="text-lg">Quick Start Templates</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {sequenceTypes.slice(0, 8).map((type) => {
               const Icon = type.icon;
               return (

@@ -190,7 +190,7 @@ export const getActivitySummary = query({
     const now = Date.now();
     const startTime = now - days * 24 * 60 * 60 * 1000;
 
-    const logs = await ctx.db.query("adminActivityLogs").collect();
+    const logs = await ctx.db.query("adminActivityLogs").take(5000);
     const recentLogs = logs.filter((log) => log.timestamp >= startTime);
 
     // Count by action type
@@ -271,7 +271,7 @@ export const getResourceActivity = query({
     const logs = await ctx.db
       .query("adminActivityLogs")
       .withIndex("by_resourceType", (q) => q.eq("resourceType", resourceType))
-      .collect();
+      .take(5000);
 
     const resourceLogs = logs
       .filter((log) => log.resourceId === resourceId)

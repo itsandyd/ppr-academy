@@ -110,8 +110,7 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
     setIsSubmitting(true);
     try {
-      // TODO: Submit to Convex to store lead/contact
-      // Simulate API call
+      // POST-LAUNCH: Wire up lead capture to Convex emailContacts mutation
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       setHasSubmittedEmail(true);

@@ -103,23 +103,23 @@ function FunnelStep({ step, isFirst, isLast }: FunnelStepProps) {
   return (
     <div className="relative">
       {/* Step Content */}
-      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4 transition-colors hover:bg-muted">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3 sm:p-4 transition-colors hover:bg-muted">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           {/* Icon */}
-          <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/30">
-            <Icon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          <div className="rounded-full bg-purple-100 p-2 sm:p-3 dark:bg-purple-900/30 flex-shrink-0">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
           </div>
 
           {/* Step Info */}
-          <div>
-            <h4 className="font-semibold">{step.name}</h4>
-            <p className="text-sm text-muted-foreground">{step.count} users</p>
+          <div className="min-w-0">
+            <h4 className="font-semibold text-sm sm:text-base">{step.name}</h4>
+            <p className="text-xs sm:text-sm text-muted-foreground">{step.count} users</p>
           </div>
         </div>
 
         {/* Conversion Rate */}
-        <div className="text-right">
-          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+        <div className="text-right flex-shrink-0 ml-2">
+          <div className="text-lg sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
             {step.conversionRate.toFixed(1)}%
           </div>
           {!isFirst && (

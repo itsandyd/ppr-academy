@@ -34,7 +34,7 @@ export const getActiveCoachProfilesByUserId = query({
       .query("coachProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .filter((q) => q.eq(q.field("isActive"), true))
-      .collect();
+      .take(1000);
 
     // Return only public-facing fields
     return profiles.map((profile) => ({
@@ -112,7 +112,7 @@ export const getAllCoachProfiles = query({
   handler: async (ctx) => {
     await verifyAdmin(ctx);
 
-    const profiles = await ctx.db.query("coachProfiles").collect();
+    const profiles = await ctx.db.query("coachProfiles").take(1000);
 
     // Enrich with user info
     const enrichedProfiles = await Promise.all(
@@ -295,7 +295,7 @@ export const getCoachProfilesDebug = query({
   handler: async (ctx) => {
     await verifyAdmin(ctx);
 
-    const profiles = await ctx.db.query("coachProfiles").collect();
+    const profiles = await ctx.db.query("coachProfiles").take(1000);
 
     const debugInfo = await Promise.all(
       profiles.map(async (profile) => {
@@ -338,7 +338,7 @@ export const cleanupOrphanedProfiles = mutation({
   handler: async (ctx, args) => {
     await verifyAdmin(ctx);
 
-    const profiles = await ctx.db.query("coachProfiles").collect();
+    const profiles = await ctx.db.query("coachProfiles").take(1000);
     const orphanedIds: string[] = [];
 
     for (const profile of profiles) {

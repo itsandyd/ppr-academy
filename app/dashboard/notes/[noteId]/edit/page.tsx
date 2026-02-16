@@ -287,7 +287,7 @@ export default function NoteEditPage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-8">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link href="/dashboard/notes?mode=create">
@@ -295,11 +295,11 @@ export default function NoteEditPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Edit Note</h1>
+              <h1 className="text-xl md:text-2xl font-bold">Edit Note</h1>
               <p className="text-muted-foreground">{currentNote.title || "Untitled"}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Save Status */}
             {isSaving ? (
               <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -347,7 +347,7 @@ export default function NoteEditPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Side - Main Content */}
           <div className="flex-1">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -621,7 +621,7 @@ export default function NoteEditPage() {
 
           {/* Right Side - Source Library Panel */}
           {showSourceLibrary && storeId && (
-            <div className="w-80 flex-shrink-0">
+            <div className="w-full lg:w-80 flex-shrink-0">
               <Card className="sticky top-8">
                 <SourceLibrary
                   userId={user.id}

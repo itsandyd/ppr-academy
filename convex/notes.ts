@@ -3,13 +3,13 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
+import { requireAuth } from "./lib/auth";
 
 // ==================== NOTE FOLDERS ====================
 
 export const createFolder = mutation({
   args: {
     name: v.string(),
-    userId: v.string(),
     storeId: v.string(),
     parentId: v.optional(v.id("noteFolders")),
     description: v.optional(v.string()),
@@ -18,19 +18,22 @@ export const createFolder = mutation({
   },
   returns: v.id("noteFolders"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
     // Get position for new folder
     const existingFolders = await ctx.db
       .query("noteFolders")
-      .withIndex("by_user_and_parent", (q) => 
-        q.eq("userId", args.userId).eq("parentId", args.parentId || undefined)
+      .withIndex("by_user_and_parent", (q) =>
+        q.eq("userId", userId).eq("parentId", args.parentId || undefined)
       )
-      .collect();
-    
+      .take(500);
+
     const position = existingFolders.length;
-    
+
     return await ctx.db.insert("noteFolders", {
       name: args.name,
-      userId: args.userId,
+      userId,
       storeId: args.storeId,
       parentId: args.parentId,
       description: args.description,
@@ -64,12 +67,12 @@ export const getFoldersByUser = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("noteFolders")
-      .withIndex("by_user_and_parent", (q) => 
+      .withIndex("by_user_and_parent", (q) =>
         q.eq("userId", args.userId).eq("parentId", args.parentId || undefined)
       )
       .filter((q) => q.eq(q.field("storeId"), args.storeId))
       .filter((q) => q.eq(q.field("isArchived"), false))
-      .collect();
+      .take(500);
   },
 });
 
@@ -84,6 +87,11 @@ export const updateFolder = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder) throw new Error("Folder not found");
+    if (folder.userId !== identity.subject) throw new Error("Not authorized");
+
     const updates: any = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
@@ -103,11 +111,16 @@ export const deleteFolder = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const folder = await ctx.db.get(args.folderId);
+    if (!folder) throw new Error("Folder not found");
+    if (folder.userId !== identity.subject) throw new Error("Not authorized");
+
     // Move or orphan notes in this folder
     const notesInFolder = await ctx.db
       .query("notes")
       .withIndex("by_folderId", (q) => q.eq("folderId", args.folderId))
-      .collect();
+      .take(500);
     
     for (const note of notesInFolder) {
       await ctx.db.patch(note._id, { 
@@ -128,14 +141,13 @@ export const createNote = mutation({
   args: {
     title: v.string(),
     content: v.string(),
-    userId: v.string(),
     storeId: v.string(),
     folderId: v.optional(v.id("noteFolders")),
     tags: v.optional(v.array(v.string())),
     category: v.optional(v.string()),
     priority: v.optional(v.union(
       v.literal("low"),
-      v.literal("medium"), 
+      v.literal("medium"),
       v.literal("high"),
       v.literal("urgent")
     )),
@@ -144,20 +156,22 @@ export const createNote = mutation({
   },
   returns: v.id("notes"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
     const now = Date.now();
-    
+
     // Check if this is the user's first note and create templates if needed
     const existingNotes = await ctx.db
       .query("notes")
-      .withIndex("by_user_and_store", (q) => 
-        q.eq("userId", args.userId).eq("storeId", args.storeId)
+      .withIndex("by_user_and_store", (q) =>
+        q.eq("userId", userId).eq("storeId", args.storeId)
       )
       .take(1);
-    
+
     if (existingNotes.length === 0) {
       // First note - create default templates
       await ctx.scheduler.runAfter(0, internal.noteTemplates.createDefaultTemplates, {
-        userId: args.userId,
+        userId,
       });
     }
     
@@ -169,7 +183,7 @@ export const createNote = mutation({
     const noteId = await ctx.db.insert("notes", {
       title: args.title,
       content: args.content,
-      userId: args.userId,
+      userId,
       storeId: args.storeId,
       folderId: args.folderId,
       plainTextContent,
@@ -351,8 +365,12 @@ export const updateNoteLastViewed = mutation({
   args: { noteId: v.id("notes") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.noteId, { 
-      lastViewedAt: Date.now() 
+    const identity = await requireAuth(ctx);
+    const note = await ctx.db.get(args.noteId);
+    if (!note) throw new Error("Note not found");
+    if (note.userId !== identity.subject) throw new Error("Not authorized");
+    await ctx.db.patch(args.noteId, {
+      lastViewedAt: Date.now()
     });
     return null;
   },
@@ -721,8 +739,8 @@ export const getModulesForStyleAnalysis = internalQuery({
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .order("asc")
-      .collect();
-    
+      .take(500);
+
     return modules.map(m => ({
       title: m.title,
       description: m.description,

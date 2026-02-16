@@ -37,7 +37,7 @@ export const fixContactStoreIds = internalMutation({
       const existingContacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.clerkUserId))
-        .collect();
+        .take(10000);
 
       const existingEmails = new Set(existingContacts.map((c) => c.email.toLowerCase()));
 

@@ -327,21 +327,21 @@ export default function PlaylistsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="mx-auto max-w-6xl p-4 md:p-6 space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="mb-2 text-3xl font-bold">Playlists</h1>
+          <h1 className="mb-1 text-xl md:text-3xl font-bold">Playlists</h1>
           <p className="text-muted-foreground">Curate playlists and accept track submissions</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} size="lg">
+        <Button onClick={() => setShowCreateDialog(true)} size="lg" className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           New Playlist
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="text-2xl font-bold">{playlists?.length || 0}</div>

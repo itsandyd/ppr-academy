@@ -124,7 +124,7 @@ function CreateCourseContent() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-6">
       {/* Progress Indicator - Desktop */}
       <div className="hidden md:block">
         <StepProgressIndicator

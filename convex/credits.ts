@@ -143,7 +143,7 @@ export const getCreditTransactions = query({
       .query("creditTransactions")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .order("desc")
-      .collect();
+      .take(1000);
 
     const transactions = allTransactions.slice(offset, offset + limit).map((t) => ({
       _id: t._id,

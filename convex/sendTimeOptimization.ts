@@ -335,7 +335,7 @@ export const decayEngagementScores = internalMutation({
     updated: v.number(),
   }),
   handler: async (ctx) => {
-    const allPatterns = await ctx.db.query("userEngagementPatterns").collect();
+    const allPatterns = await ctx.db.query("userEngagementPatterns").take(1000);
     const now = Date.now();
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
     

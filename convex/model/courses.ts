@@ -30,7 +30,7 @@ export async function getCourseWithDetails(
     .query("courseModules")
     .filter((q) => q.eq(q.field("courseId"), args.courseId))
     .order("asc")
-    .collect();
+    .take(500);
 
   // Get lessons for each module
   const modulesWithLessons = await Promise.all(
@@ -39,7 +39,7 @@ export async function getCourseWithDetails(
         .query("courseLessons")
         .filter((q) => q.eq(q.field("moduleId"), module._id))
         .order("asc")
-        .collect();
+        .take(500);
 
       // Get chapters for each lesson
       const lessonsWithChapters = await Promise.all(
@@ -48,7 +48,7 @@ export async function getCourseWithDetails(
             .query("courseChapters")
             .filter((q) => q.eq(q.field("lessonId"), lesson._id))
             .order("asc")
-            .collect();
+            .take(500);
 
           return {
             ...lesson,
@@ -81,7 +81,7 @@ export async function getUserCoursesForGeneration(
   const courses = await ctx.db
     .query("courses")
     .filter((q) => q.eq(q.field("userId"), userId))
-    .collect();
+    .take(500);
 
   const courseContent = await Promise.all(
     courses.map(async (course) => {

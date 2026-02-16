@@ -54,17 +54,17 @@ export const getUserMemories = query({
     if (args.type) {
       memories = await ctx.db
         .query("aiMemories")
-        .withIndex("by_userId_type", (q) => 
+        .withIndex("by_userId_type", (q) =>
           q.eq("userId", args.userId).eq("type", args.type!)
         )
         .order("desc")
-        .collect();
+        .take(1000);
     } else {
       memories = await ctx.db
         .query("aiMemories")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
         .order("desc")
-        .collect();
+        .take(1000);
     }
 
     // Filter out archived unless requested
@@ -126,7 +126,7 @@ export const getRelevantMemories = query({
       .query("aiMemories")
       .withIndex("by_userId_importance", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(1000);
 
     // Filter active memories
     const now = Date.now();
@@ -311,17 +311,17 @@ export const clearMemories = mutation({
   }),
   handler: async (ctx, args) => {
     // Use separate query paths to avoid TypeScript issues with query builder reassignment
-    const memories = args.type 
+    const memories = args.type
       ? await ctx.db
           .query("aiMemories")
-          .withIndex("by_userId_type", (q) => 
+          .withIndex("by_userId_type", (q) =>
             q.eq("userId", args.userId).eq("type", args.type!)
           )
-          .collect()
+          .take(1000)
       : await ctx.db
           .query("aiMemories")
           .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-          .collect();
+          .take(1000);
     
     for (const memory of memories) {
       await ctx.db.delete(memory._id);

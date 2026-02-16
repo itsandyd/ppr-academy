@@ -36,9 +36,9 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="container py-8 space-y-6">
+    <div className="container p-4 md:p-6 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard/marketing">
@@ -46,7 +46,7 @@ export default function TemplatesPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
               <Megaphone className="h-6 w-6" />
               Campaign Templates
             </h1>

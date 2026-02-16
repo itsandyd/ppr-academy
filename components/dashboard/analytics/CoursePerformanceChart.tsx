@@ -90,7 +90,8 @@ export function CoursePerformanceChart({ userId }: CoursePerformanceChartProps) 
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[400px] h-[250px] sm:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={formattedData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -98,8 +99,8 @@ export function CoursePerformanceChart({ userId }: CoursePerformanceChartProps) 
               <YAxis
                 dataKey="displayTitle"
                 type="category"
-                tick={{ fontSize: 11 }}
-                width={120}
+                tick={{ fontSize: 10 }}
+                width={100}
               />
               <Tooltip
                 contentStyle={{
@@ -123,6 +124,7 @@ export function CoursePerformanceChart({ userId }: CoursePerformanceChartProps) 
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Course stats table */}
@@ -130,20 +132,20 @@ export function CoursePerformanceChart({ userId }: CoursePerformanceChartProps) 
           {formattedData.map((course: FormattedCourseData, index: number) => (
             <div
               key={course.courseId}
-              className="flex items-center justify-between text-sm py-2 border-b last:border-0"
+              className="flex items-center justify-between text-sm py-2 border-b last:border-0 gap-2"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
-                <span className="font-medium truncate max-w-[150px]">
+                <span className="font-medium truncate">
                   {course.title}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-muted-foreground">
+              <div className="flex items-center gap-2 sm:gap-4 text-muted-foreground flex-shrink-0 text-xs sm:text-sm">
                 <span>{course.enrollments} students</span>
-                <span>{course.completionRate}% completed</span>
+                <span className="hidden sm:inline">{course.completionRate}% completed</span>
                 <span className="text-emerald-600 font-medium">
                   ${course.revenue.toFixed(0)}
                 </span>

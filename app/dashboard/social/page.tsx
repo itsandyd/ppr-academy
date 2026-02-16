@@ -58,9 +58,9 @@ export default function DashboardSocialPage() {
   // Show error if no stores
   if (!storeId) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Social Media</h1>
+          <h1 className="text-xl md:text-3xl font-bold mb-2">Social Media</h1>
           <p className="text-muted-foreground">
             Schedule posts and automate Instagram DMs to grow your audience
           </p>

@@ -18,6 +18,7 @@ import {
   Users,
   Sparkles,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -124,15 +125,11 @@ export default function MembershipsMarketplacePage() {
             </div>
           )
         ) : (
-          <Card className="p-12 text-center">
-            <Crown className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-            <h3 className="mb-2 text-xl font-semibold">No memberships found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm
-                ? "Try adjusting your search terms"
-                : "No creator memberships are available yet"}
-            </p>
-          </Card>
+          <EmptyState
+            icon={Crown}
+            title={searchTerm ? "No memberships found" : "No memberships yet"}
+            description={searchTerm ? "Try adjusting your search terms." : "Creator memberships will appear here once available."}
+          />
         )}
       </div>
     </div>

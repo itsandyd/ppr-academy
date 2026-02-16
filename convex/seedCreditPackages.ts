@@ -8,7 +8,7 @@ export const seedDefaultPackages = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if packages already exist
-    const existing = await ctx.db.query("creditPackages").collect();
+    const existing = await ctx.db.query("creditPackages").take(100);
     if (existing.length > 0) {
       return { success: false, message: "Packages already exist", count: existing.length };
     }

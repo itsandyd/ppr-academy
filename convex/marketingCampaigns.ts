@@ -47,7 +47,7 @@ export const listCampaigns = query({
       .query("marketingCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
 
-    let campaigns = await query.collect();
+    let campaigns = await query.take(1000);
 
     // Filter by status if provided
     if (args.status) {
@@ -90,7 +90,7 @@ export const listAdminCampaigns = query({
     let campaigns = await ctx.db
       .query("marketingCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", "admin"))
-      .collect();
+      .take(1000);
 
     // Filter by status if provided
     if (args.status) {
@@ -420,7 +420,7 @@ export const getCampaignStats = query({
     const campaigns = await ctx.db
       .query("marketingCampaigns")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     const stats = {
       total: campaigns.length,

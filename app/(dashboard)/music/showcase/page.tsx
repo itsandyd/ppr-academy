@@ -62,7 +62,7 @@ export default function MusicShowcasePage() {
   // Show create profile option if no profile exists
   if (artistProfile === null) {
     return (
-      <div className="max-w-2xl mx-auto py-12">
+      <div className="max-w-2xl mx-auto px-4 md:px-0 py-8 md:py-12">
         <Card>
           <CardHeader className="text-center">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -118,16 +118,16 @@ export default function MusicShowcasePage() {
 
   // Show the artist showcase
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Your Music Showcase</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Your Music Showcase</h1>
           <p className="text-muted-foreground">
             Manage your artist profile and track collection
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" asChild>
             <Link href="/music/add">
               <Plus className="mr-2 h-4 w-4" />

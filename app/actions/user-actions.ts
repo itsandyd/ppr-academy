@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { getUserFromClerk } from "@/lib/data";
+import { getUserFromClerk } from "@/lib/convex-data";
 
 export async function checkUserRole() {
   try {

@@ -281,7 +281,7 @@ export const getRefundsByStore = query({
     let refunds = await ctx.db
       .query("refunds")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     if (args.status) {
       refunds = refunds.filter((r) => r.status === args.status);
@@ -297,7 +297,7 @@ export const getUserRefunds = query({
     const refunds = await ctx.db
       .query("refunds")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     return refunds.sort((a, b) => b.requestedAt - a.requestedAt);
   },
@@ -320,7 +320,7 @@ export const getCreatorPayouts = query({
     let payouts = await ctx.db
       .query("creatorPayouts")
       .withIndex("by_creator", (q: any) => q.eq("creatorId", args.creatorId))
-      .collect();
+      .take(1000);
 
     if (args.status) {
       payouts = payouts.filter((p) => p.status === args.status);
@@ -497,7 +497,7 @@ export const getCreatorPendingEarnings = query({
           q.eq(q.field("isPaidOut"), false)
         )
       )
-      .collect();
+      .take(1000);
 
     // Filter to this creator's purchases
     const creatorPurchases = [];
@@ -686,7 +686,7 @@ export const getUserReferrals = query({
     const referrals = await ctx.db
       .query("referrals")
       .withIndex("by_referrer", (q: any) => q.eq("referrerUserId", args.userId))
-      .collect();
+      .take(1000);
 
     return referrals.sort((a, b) => b.createdAt - a.createdAt);
   },

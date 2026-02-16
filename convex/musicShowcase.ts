@@ -471,7 +471,7 @@ export const searchMusic = query({
       const allArtists = await ctx.db
         .query("artistProfiles")
         .withIndex("by_isPublic", (q) => q.eq("isPublic", true))
-        .collect();
+        .take(500);
 
       artists = allArtists
         .filter(artist => 
@@ -495,7 +495,7 @@ export const searchMusic = query({
       const allTracks = await ctx.db
         .query("musicTracks")
         .withIndex("by_isPublic", (q) => q.eq("isPublic", true))
-        .collect();
+        .take(500);
 
       tracks = allTracks
         .filter(track => 

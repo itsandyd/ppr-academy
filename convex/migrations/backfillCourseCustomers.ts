@@ -29,7 +29,7 @@ export const backfillCourseCustomers = internalMutation({
         .query("purchases")
         .withIndex("by_productType", (q) => q.eq("productType", "course"))
         .filter((q) => q.eq(q.field("status"), "completed"))
-        .collect();
+        .take(10000);
 
       for (const purchase of coursePurchases) {
         try {
@@ -146,7 +146,7 @@ export const backfillSubscriptionCustomers = internalMutation({
       const subscriptions = await ctx.db
         .query("membershipSubscriptions")
         .filter((q) => q.eq(q.field("status"), "active"))
-        .collect();
+        .take(10000);
 
       for (const subscription of subscriptions) {
         try {

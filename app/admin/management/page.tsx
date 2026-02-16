@@ -46,6 +46,7 @@ const managementCards = [
 
 export default function ManagementPage() {
   return (
+    <div className="p-4 md:p-6 lg:p-8">
     <AdminCategoryPage
       title="Management"
       description="Manage users, products, creators, and platform moderation"
@@ -53,5 +54,6 @@ export default function ManagementPage() {
       iconColor="bg-purple-500"
       cards={managementCards}
     />
+    </div>
   );
 }

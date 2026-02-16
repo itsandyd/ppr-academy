@@ -29,6 +29,7 @@ import {
   Crown,
   ArrowUpRight,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -200,23 +201,12 @@ export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
 
       {/* Creators List */}
       {filteredCreators.length === 0 ? (
-        <Card className="border-dashed border-border/50">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50">
-              <Users className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-            <p className="font-medium text-muted-foreground">
-              {searchTerm
-                ? "No creators found matching your search"
-                : "No creators with products found"}
-            </p>
-            {searchTerm && (
-              <Button variant="ghost" onClick={() => setSearchTerm("")} className="mt-4">
-                Clear search
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Users}
+          title={searchTerm ? "No creators found" : "No creators with products"}
+          description={searchTerm ? "No creators match your search." : "Creators with products will appear here."}
+          action={searchTerm ? { label: "Clear Search", onClick: () => setSearchTerm("") } : undefined}
+        />
       ) : (
         <Accordion type="single" collapsible className="space-y-3">
           {filteredCreators.map((creator: any, index: number) => (

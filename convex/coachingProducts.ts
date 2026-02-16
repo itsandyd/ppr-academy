@@ -3,6 +3,7 @@ import { mutation, query, internalQuery, internalMutation } from "./_generated/s
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { generateSlug } from "./lib/utils";
+import { requireAuth, requireStoreOwner } from "./lib/auth";
 
 // ==================== QUERIES ====================
 
@@ -215,7 +216,6 @@ export const createCoachingProduct = mutation({
     price: v.number(),
     imageUrl: v.optional(v.string()),
     storeId: v.string(),
-    userId: v.string(),
     duration: v.number(), // session duration in minutes
     sessionType: v.string(), // 'video', 'audio', 'phone'
     customFields: v.optional(v.any()), // custom info fields to collect
@@ -229,12 +229,10 @@ export const createCoachingProduct = mutation({
   }),
   handler: async (ctx, args) => {
     try {
-      const store = await ctx.db
-        .query("stores")
-        .filter((q) => q.eq(q.field("_id"), args.storeId))
-        .first();
+      const { identity, store } = await requireStoreOwner(ctx, args.storeId);
+      const userId = identity.subject;
 
-      const storeName = store?.name || "coach";
+      const storeName = store.name || "coach";
       const baseSlug = generateSlug(`${args.title}-${storeName}`);
 
       const existing = await ctx.db
@@ -251,7 +249,7 @@ export const createCoachingProduct = mutation({
         price: args.price,
         imageUrl: args.imageUrl,
         storeId: args.storeId,
-        userId: args.userId,
+        userId,
         isPublished: false,
         orderBumpEnabled: false,
         affiliateEnabled: false,
@@ -300,6 +298,9 @@ export const updateCoachingProduct = mutation({
         return { success: false, error: "Product not found" };
       }
 
+      // Verify caller owns the product's store
+      await requireStoreOwner(ctx, product.storeId);
+
       const updates: Record<string, any> = { ...otherUpdates };
 
       if (title && title !== product.title) {
@@ -344,6 +345,9 @@ export const publishCoachingProduct = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const product = await ctx.db.get(args.productId);
+      if (!product) return { success: false, error: "Product not found" };
+      await requireStoreOwner(ctx, product.storeId);
       await ctx.db.patch(args.productId, { isPublished: true });
       return { success: true };
     } catch (error: any) {
@@ -361,6 +365,9 @@ export const unpublishCoachingProduct = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const product = await ctx.db.get(args.productId);
+      if (!product) return { success: false, error: "Product not found" };
+      await requireStoreOwner(ctx, product.storeId);
       await ctx.db.patch(args.productId, { isPublished: false });
       return { success: true };
     } catch (error: any) {
@@ -378,9 +385,14 @@ export const deleteCoachingSession = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const identity = await requireAuth(ctx);
       const session = await ctx.db.get(args.sessionId);
       if (!session) {
         return { success: false, error: "Session not found" };
+      }
+      // Verify caller is the coach
+      if (session.coachId !== identity.subject) {
+        return { success: false, error: "Not authorized" };
       }
 
       if (session.discordChannelId || session.discordRoleId) {
@@ -402,7 +414,6 @@ export const deleteCoachingSession = mutation({
 export const bookCoachingSession = mutation({
   args: {
     productId: v.id("digitalProducts"),
-    studentId: v.string(), // Clerk user ID
     scheduledDate: v.number(), // timestamp
     startTime: v.string(), // e.g., "14:00"
     notes: v.optional(v.string()),
@@ -416,6 +427,9 @@ export const bookCoachingSession = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const identity = await requireAuth(ctx);
+      const studentId = identity.subject;
+
       // Get the coaching product
       const product = await ctx.db.get(args.productId);
       if (!product) {
@@ -428,7 +442,7 @@ export const bookCoachingSession = mutation({
       // Check if user has Discord connected
       const discordConnection = await ctx.db
         .query("discordIntegrations")
-        .withIndex("by_userId", (q) => q.eq("userId", args.studentId))
+        .withIndex("by_userId", (q) => q.eq("userId", studentId))
         .unique();
 
       if (!discordConnection) {
@@ -450,7 +464,7 @@ export const bookCoachingSession = mutation({
       const sessionId = await ctx.db.insert("coachingSessions", {
         productId: args.productId,
         coachId,
-        studentId: args.studentId,
+        studentId,
         scheduledDate: args.scheduledDate,
         startTime: args.startTime,
         endTime,
@@ -467,14 +481,14 @@ export const bookCoachingSession = mutation({
       await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
         sessionId,
         coachId,
-        studentId: args.studentId,
+        studentId,
         productId: args.productId,
       });
 
       // Send confirmation emails
       const student = await ctx.db
         .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId))
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", studentId))
         .unique();
       const coach = await ctx.db
         .query("users")
@@ -611,6 +625,13 @@ export const updateSessionStatus = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const identity = await requireAuth(ctx);
+      const session = await ctx.db.get(args.sessionId);
+      if (!session) return { success: false, error: "Session not found" };
+      // Only coach or student can update status
+      if (session.coachId !== identity.subject && session.studentId !== identity.subject) {
+        return { success: false, error: "Not authorized" };
+      }
       const updates: Record<string, any> = { status: args.status };
       if (args.notes !== undefined) {
         updates.notes = args.notes;
@@ -1032,6 +1053,14 @@ export const backfillCoachingSlugs = mutation({
     skipped: v.number(),
   }),
   handler: async (ctx) => {
+    // Admin-only migration
+    const identity = await requireAuth(ctx);
+    const callingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!callingUser?.admin) throw new Error("Admin access required");
+
     const products = await ctx.db.query("digitalProducts").take(10000);
 
     const coachingProducts = products.filter(

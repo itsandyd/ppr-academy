@@ -45,7 +45,7 @@ export default function MembershipCreatePage() {
   return (
     <Suspense
       fallback={
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 md:p-6">
           <div className="animate-pulse">
             <div className="mb-4 h-8 w-3/4 rounded bg-muted"></div>
             <div className="mb-6 h-4 w-1/2 rounded bg-muted"></div>

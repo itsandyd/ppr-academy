@@ -74,7 +74,7 @@ export const getCreatorPlaylists = query({
     const playlists = await ctx.db
       .query("curatorPlaylists")
       .withIndex("by_creatorId", (q) => q.eq("creatorId", args.creatorId))
-      .collect();
+      .take(500);
 
     return playlists;
   },
@@ -141,7 +141,7 @@ export const addTrackToPlaylist = mutation({
     const existingTracks = await ctx.db
       .query("curatorPlaylistTracks")
       .withIndex("by_playlistId", (q) => q.eq("playlistId", args.playlistId))
-      .collect();
+      .take(500);
 
     await ctx.db.insert("curatorPlaylistTracks", {
       playlistId: args.playlistId,
@@ -174,7 +174,7 @@ export const getPlaylistTracks = query({
     const playlistTracks = await ctx.db
       .query("curatorPlaylistTracks")
       .withIndex("by_playlistId", (q) => q.eq("playlistId", args.playlistId))
-      .collect();
+      .take(500);
 
     // Get track details
     const tracksWithDetails = await Promise.all(

@@ -74,8 +74,8 @@ export const getChangelogStats = query({
       .first();
     if (!user?.admin) throw new Error("Unauthorized");
 
-    const entries = await ctx.db.query("changelogEntries").collect();
-    const releases = await ctx.db.query("changelogReleases").collect();
+    const entries = await ctx.db.query("changelogEntries").take(500);
+    const releases = await ctx.db.query("changelogReleases").take(500);
 
     const byCategory = {
       feature: entries.filter((e) => e.category === "feature").length,
@@ -374,7 +374,7 @@ export const sendChangelogNotification = mutation({
     const allUsers = await ctx.db
       .query("users")
       .filter((q) => q.neq(q.field("clerkId"), undefined))
-      .collect();
+      .take(500);
 
     let targetUserIds: string[] = [];
 
@@ -382,7 +382,7 @@ export const sendChangelogNotification = mutation({
       targetUserIds = allUsers.map((u) => u.clerkId).filter((id): id is string => !!id);
     } else if (targetType === "creators") {
       // Users with stores or courses
-      const stores = await ctx.db.query("stores").collect();
+      const stores = await ctx.db.query("stores").take(500);
       const storeUserIds = new Set(stores.map((s) => s.userId));
       targetUserIds = allUsers
         .filter((u) => u.clerkId && storeUserIds.has(u.clerkId))
@@ -390,7 +390,7 @@ export const sendChangelogNotification = mutation({
         .filter((id): id is string => !!id);
     } else if (targetType === "students") {
       // Users with enrollments
-      const enrollments = await ctx.db.query("purchases").collect();
+      const enrollments = await ctx.db.query("purchases").take(500);
       const enrolledUserIds = new Set(enrollments.map((e) => e.userId));
       targetUserIds = allUsers
         .filter((u) => u.clerkId && enrolledUserIds.has(u.clerkId))

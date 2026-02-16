@@ -44,7 +44,7 @@ function CounterNoticeForm() {
 
   if (!claimId) {
     return (
-      <div className="mx-auto max-w-3xl px-8 pt-10">
+      <div className="mx-auto max-w-3xl p-4 md:p-6 pt-10">
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Invalid Request</AlertTitle>
@@ -64,7 +64,7 @@ function CounterNoticeForm() {
 
   if (isSubmitted) {
     return (
-      <div className="mx-auto max-w-3xl px-8 pb-24 pt-10">
+      <div className="mx-auto max-w-3xl p-4 md:p-6 pb-24 pt-10">
         <Card>
           <CardContent className="py-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
@@ -149,7 +149,7 @@ function CounterNoticeForm() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-8 pb-24 pt-10">
+    <div className="mx-auto max-w-3xl p-4 md:p-6 pb-24 pt-10">
       <div className="mb-6">
         <Button variant="ghost" asChild size="sm">
           <Link href="/dashboard">
@@ -160,7 +160,7 @@ function CounterNoticeForm() {
       </div>
 
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">DMCA Counter-Notice</h1>
+        <h1 className="mb-2 text-xl md:text-3xl font-bold">DMCA Counter-Notice</h1>
         <p className="text-gray-600 dark:text-gray-400">
           Submit a formal counter-notice if you believe the copyright claim against your content is
           invalid
@@ -348,7 +348,7 @@ export default function CounterNoticePage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-3xl px-8 pt-10">
+        <div className="mx-auto max-w-3xl p-4 md:p-6 pt-10">
           <div className="animate-pulse space-y-4">
             <div className="h-8 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
             <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700" />

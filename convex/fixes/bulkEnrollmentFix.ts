@@ -32,7 +32,7 @@ export const fixAllUsersEnrollments = internalMutation({
             q.eq(q.field("status"), "completed")
           )
         )
-        .collect();
+        .take(10000);
 
       // Group by user
       const purchasesByUser = allPurchases.reduce((acc, purchase) => {
@@ -140,12 +140,12 @@ export const checkEnrollmentHealth = internalQuery({
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(10000);
 
     // Get all enrollments
     const allEnrollments = await ctx.db
       .query("enrollments")
-      .collect();
+      .take(10000);
 
     // Count unique users
     const usersWithPurchases = new Set(allPurchases.map(p => p.userId)).size;

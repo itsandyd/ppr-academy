@@ -213,20 +213,20 @@ export const userBulkActions: BulkAction[] = [
     id: "email",
     label: "Email Selected",
     icon: Mail,
-    action: (_ids) => { /* TODO: Implement email users */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement bulk email via emailSendQueue */ }
   },
   {
     id: "promote",
     label: "Promote to Creator",
     icon: Crown,
-    action: (_ids) => { /* TODO: Implement promote users */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement bulk promote to creator role */ }
   },
   {
     id: "suspend",
     label: "Suspend",
     icon: XCircle,
     variant: "destructive",
-    action: (_ids) => { /* TODO: Implement suspend users */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement bulk user suspension */ }
   }
 ];
 
@@ -235,26 +235,26 @@ export const productBulkActions: BulkAction[] = [
     id: "publish",
     label: "Publish",
     icon: CheckCircle2,
-    action: (_ids) => { /* TODO: Implement publish products */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement bulk product publish */ }
   },
   {
     id: "unpublish",
     label: "Unpublish",
     icon: XCircle,
-    action: (_ids) => { /* TODO: Implement unpublish products */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement bulk product unpublish */ }
   },
   {
     id: "export",
     label: "Export Data",
     icon: Download,
-    action: (_ids) => { /* TODO: Implement export products */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement product data CSV export */ }
   },
   {
     id: "delete",
     label: "Delete",
     icon: Trash2,
     variant: "destructive",
-    action: (_ids) => { /* TODO: Implement delete products */ }
+    action: (_ids) => { /* POST-LAUNCH: Implement bulk product deletion with confirmation */ }
   }
 ];
 

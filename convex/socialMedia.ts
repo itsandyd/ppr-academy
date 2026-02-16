@@ -39,7 +39,7 @@ export const getSocialAccounts = query({
     return await ctx.db
       .query("socialAccounts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
   },
 });
 
@@ -73,7 +73,7 @@ export const getInstagramTokenByBusinessId = query({
           q.eq(q.field("isActive"), true)
         )
       )
-      .collect();
+      .take(1000);
 
     for (const account of socialAccounts) {
       const platformData = account.platformData as any;
@@ -376,7 +376,7 @@ export const removeDuplicateSocialAccounts = mutation({
           q.eq(q.field("platform"), args.platform)
         )
       )
-      .collect();
+      .take(1000);
 
     if (accounts.length <= 1) {
       return { removed: 0, kept: accounts[0]?.platformUsername };

@@ -25,7 +25,7 @@ export default function ArtistProfilePage({ params }: ArtistProfilePageProps) {
   
   // Show loading while redirecting
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4 md:p-8">
       <div className="text-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
         <p className="text-muted-foreground">Redirecting...</p>

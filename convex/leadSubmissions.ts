@@ -315,7 +315,7 @@ export const getLeadsForAdmin = query({
       .query("leadSubmissions")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
       .order("desc")
-      .collect();
+      .take(5000);
 
     // Enrich with product information
     const enrichedSubmissions = await Promise.all(
@@ -352,7 +352,7 @@ export const getLeadsForProduct = query({
       .query("leadSubmissions")
       .withIndex("by_productId", (q) => q.eq("productId", args.productId))
       .order("desc")
-      .collect();
+      .take(5000);
   },
 });
 
@@ -378,7 +378,7 @@ export const getLeadsForStore = query({
       .query("leadSubmissions")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
-      .collect();
+      .take(5000);
 
     // Enrich with product information
     const enrichedSubmissions = await Promise.all(
@@ -408,7 +408,7 @@ export const getLeadStats = query({
     const submissions = await ctx.db
       .query("leadSubmissions")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
-      .collect();
+      .take(5000);
 
     const totalLeads = submissions.length;
     const totalDownloads = submissions.reduce((sum, sub) => sum + (sub.downloadCount || 0), 0);

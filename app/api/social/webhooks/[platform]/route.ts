@@ -314,8 +314,7 @@ async function handleLinkedInWebhook(payload: any) {
   if (payload.eventType === 'SHARE_STATISTICS_UPDATE') {
 
     
-    // Update analytics in database
-    // TODO: Call Convex mutation to update analytics
+    // POST-LAUNCH: Call Convex mutation to persist LinkedIn share analytics
   }
 }
 
@@ -326,11 +325,11 @@ async function handleTikTokWebhook(payload: any) {
   // Comment/DM automation requires Creator Marketplace API approval
   if (payload.event === 'video.publish.completed') {
 
-    // TODO: Update post status in database
+    // POST-LAUNCH: Update post status to published in socialPosts table
   }
 
   if (payload.event === 'video.upload.failed') {
 
-    // TODO: Update post status to failed
+    // POST-LAUNCH: Update post status to failed in socialPosts table
   }
 }

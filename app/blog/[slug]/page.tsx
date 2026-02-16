@@ -117,7 +117,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }
 
   return (
-    <>
+    <div className="min-h-screen px-4 md:px-0">
       {/* JSON-LD Structured Data */}
       {structuredDataHtml && (
         <script
@@ -132,6 +132,6 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         />
       )}
       <BlogPostPageClient slug={slug} />
-    </>
+    </div>
   );
 }

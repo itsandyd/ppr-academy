@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { StoreSetupWizard } from "./store-setup-wizard";
 import { StoreSetupWizardEnhanced } from "./store-setup-wizard-enhanced";
 import { PostSetupGuidance } from "./post-setup-guidance";
 import { GettingStartedModal } from "@/components/onboarding/getting-started-modal";
@@ -252,8 +251,8 @@ export function CreatorDashboardContent() {
           <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
             <Music className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
               Welcome back, {user.firstName || user.primaryEmailAddress?.emailAddress?.split('@')[0]}! 🎵
             </h1>
             <p className="text-muted-foreground">
@@ -292,7 +291,7 @@ export function CreatorDashboardContent() {
                   <p className="text-muted-foreground mb-4">
                     Point your domain (like beatsbymike.com) to your storefront and build your brand.
                   </p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground mb-4">
                     <div className="flex items-center gap-1">
                       <svg className="w-4 h-4 text-chart-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       <span>Professional branding</span>
@@ -306,9 +305,9 @@ export function CreatorDashboardContent() {
                       <span>Full control</span>
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <Link href={`/store/${storeId}/settings/domain`}>
-                      <Button className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90">
+                      <Button className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90 w-full sm:w-auto">
                         Connect Your Domain
                       </Button>
                     </Link>
@@ -395,7 +394,7 @@ export function CreatorDashboardContent() {
         transition={{ delay: 0.1 }}
       >
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickActions.map((action, index) => (
             <Card 
               key={action.title}
@@ -496,7 +495,7 @@ export function CreatorDashboardContent() {
           <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 border-blue-200 dark:border-blue-800">
             <CardContent className="p-4">
               <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">📊 Live Convex Data (Dev Only)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-xs">
                 <div>
                   <span className="text-blue-700 dark:text-blue-300">User ID:</span>
                   <span className="ml-1 font-mono">{convexUserId ? "✅" : "❌"}</span>
@@ -526,7 +525,7 @@ export function CreatorDashboardContent() {
         transition={{ delay: 0.3 }}
       >
         <h2 className="text-lg font-semibold mb-4">Content Breakdown</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="text-center">
             <CardContent className="p-6">
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -631,8 +630,8 @@ export function CreatorDashboardContent() {
             {products.slice(0, 3).map((product: any) => (
               <Card key={product._id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
                       product.type === 'bundle'
                         ? 'bg-gradient-to-r from-orange-500 to-amber-500'
                         : product.type === 'course'
@@ -640,26 +639,26 @@ export function CreatorDashboardContent() {
                           : 'bg-gradient-to-r from-purple-500 to-pink-500'
                     }`}>
                       {product.type === 'course' ? (
-                        <Play className="w-6 h-6 text-white" />
+                        <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       ) : product.type === 'bundle' ? (
-                        <Layers className="w-6 h-6 text-white" />
+                        <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       ) : (
-                        <Music className="w-6 h-6 text-white" />
+                        <Music className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground truncate">{product.title}</h3>
+                      <h3 className="font-medium text-foreground truncate text-sm sm:text-base">{product.title}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs">
                           {product.type === 'course' ? 'Course' : product.type === 'bundle' ? 'Bundle' : 'Digital Product'}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs sm:text-sm text-muted-foreground">
                           ${product.price || 0}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
                         {product.downloadCount || 0} downloads
                       </span>
                       <Button variant="ghost" size="sm">

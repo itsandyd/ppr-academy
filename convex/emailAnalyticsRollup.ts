@@ -74,7 +74,7 @@ export const rollupDomainAnalytics = internalMutation({
         q.gte(q.field("timestamp"), startOfDay),
         q.lte(q.field("timestamp"), endOfDay)
       ))
-      .collect();
+      .take(10000);
     
     // Aggregate metrics
     const metrics = {
@@ -222,7 +222,7 @@ export const rollupCreatorStats = internalMutation({
         q.gte(q.field("timestamp"), startOfDay),
         q.lte(q.field("timestamp"), endOfDay)
       ))
-      .collect();
+      .take(10000);
     
     // Group by storeId
     const storeEvents = new Map<string, typeof events>();
@@ -358,8 +358,8 @@ export const updateReputationScores = internalMutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    const domains = await ctx.db.query("emailDomains").collect();
-    
+    const domains = await ctx.db.query("emailDomains").take(10000);
+
     // Get last 7 days for reputation calculation
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -373,7 +373,7 @@ export const updateReputationScores = internalMutation({
           q.eq(q.field("domainId"), domain._id),
           q.gte(q.field("date"), sevenDaysAgoStr)
         ))
-        .collect();
+        .take(10000);
       
       if (recentAnalytics.length === 0) continue;
       
@@ -441,7 +441,7 @@ export const generateHealthAlerts = internalMutation({
     const analytics = await ctx.db
       .query("emailDomainAnalytics")
       .filter(q => q.eq(q.field("date"), args.date))
-      .collect();
+      .take(10000);
     
     for (const stat of analytics) {
       const domain = await ctx.db.get(stat.domainId);
@@ -501,7 +501,7 @@ export const getDomains = internalMutation({
     domain: v.string(),
   })),
   handler: async (ctx) => {
-    const domains = await ctx.db.query("emailDomains").collect();
+    const domains = await ctx.db.query("emailDomains").take(10000);
     return domains.map(d => ({ _id: d._id, domain: d.domain }));
   },
 });

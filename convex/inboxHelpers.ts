@@ -78,7 +78,7 @@ export const findStoreInSubject = internalMutation({
   })),
   handler: async (ctx, args) => {
     // Get all stores
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(500);
     
     const subjectLower = args.subject.toLowerCase();
     

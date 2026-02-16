@@ -54,7 +54,7 @@ export default function ProductsPage() {
 
 function LoadingState() {
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <Skeleton className="h-32 w-full" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3, 4, 5, 6].map((i) => (

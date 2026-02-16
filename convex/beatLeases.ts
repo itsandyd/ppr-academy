@@ -274,7 +274,7 @@ export const getUserBeatLicenses = query({
       .query("beatLicenses")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(500);
 
     // Enrich with beat details
     const enrichedLicenses = await Promise.all(
@@ -451,7 +451,7 @@ export const checkUserBeatLicense = query({
     if (args.tierType) {
       const licenses = await query
         .filter((q) => q.eq(q.field("tierType"), args.tierType))
-        .collect();
+        .take(500);
       return {
         hasLicense: licenses.length > 0,
         licenses: licenses.map((l) => ({
@@ -463,7 +463,7 @@ export const checkUserBeatLicense = query({
       };
     }
 
-    const licenses = await query.collect();
+    const licenses = await query.take(500);
     return {
       hasLicense: licenses.length > 0,
       licenses: licenses.map((l) => ({

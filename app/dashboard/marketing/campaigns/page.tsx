@@ -159,9 +159,9 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="container py-8 space-y-6">
+    <div className="container p-4 md:p-6 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard/marketing">
@@ -169,7 +169,7 @@ export default function CampaignsPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
               <Megaphone className="h-6 w-6" />
               My Campaigns
             </h1>
@@ -178,7 +178,7 @@ export default function CampaignsPage() {
             </p>
           </div>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link href="/dashboard/marketing/campaigns/new">
             <PlusCircle className="h-4 w-4 mr-2" />
             New Campaign
@@ -199,9 +199,9 @@ export default function CampaignsPage() {
                 className="pl-9"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-full sm:w-[140px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -214,7 +214,7 @@ export default function CampaignsPage() {
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Campaign Type" />
                 </SelectTrigger>
                 <SelectContent>

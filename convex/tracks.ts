@@ -79,7 +79,7 @@ export const getUserTracks = query({
     const tracks = await ctx.db
       .query("userTracks")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     return tracks;
   },

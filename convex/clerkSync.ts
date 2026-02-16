@@ -34,7 +34,7 @@ export const getSyncStats = query({
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
 
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(1000);
 
     // Get sync metadata if it exists
     const syncMeta = await ctx.db
@@ -297,7 +297,7 @@ export const getAllUsersInternal = internalQuery({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+    return await ctx.db.query("users").take(1000);
   },
 });
 

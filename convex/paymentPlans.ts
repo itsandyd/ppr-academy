@@ -23,7 +23,7 @@ export const getUserPaymentPlans = query({
     let plans = await ctx.db
       .query("paymentPlans")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     if (args.status) {
       plans = plans.filter((p) => p.status === args.status);
@@ -35,7 +35,7 @@ export const getUserPaymentPlans = query({
         const installments = await ctx.db
           .query("installmentPayments")
           .withIndex("by_plan", (q: any) => q.eq("paymentPlanId", plan._id))
-          .collect();
+          .take(1000);
 
         const paidInstallments = installments.filter((i) => i.status === "paid");
         const nextInstallment = installments.find((i) => i.status === "pending");
@@ -67,7 +67,7 @@ export const getPaymentPlanDetails = query({
     const installments = await ctx.db
       .query("installmentPayments")
       .withIndex("by_plan", (q: any) => q.eq("paymentPlanId", args.planId))
-      .collect();
+      .take(1000);
 
     return {
       ...plan,
@@ -88,13 +88,13 @@ export const getUpcomingPayments = query({
     const installments = await ctx.db
       .query("installmentPayments")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-      .filter((q: any) => 
+      .filter((q: any) =>
         q.and(
           q.eq(q.field("status"), "pending"),
           q.lte(q.field("dueDate"), futureDate)
         )
       )
-      .collect();
+      .take(1000);
 
     return installments.sort((a, b) => a.dueDate - b.dueDate);
   },
@@ -276,7 +276,7 @@ export const cancelPaymentPlan = mutation({
       .query("installmentPayments")
       .withIndex("by_plan", (q: any) => q.eq("paymentPlanId", args.planId))
       .filter((q: any) => q.eq(q.field("status"), "pending"))
-      .collect();
+      .take(1000);
 
     await Promise.all(
       pendingInstallments.map((installment) =>

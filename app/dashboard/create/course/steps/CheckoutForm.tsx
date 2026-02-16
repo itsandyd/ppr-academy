@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, DollarSign, CreditCard, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, DollarSign, CreditCard, Save, Loader2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-with-help";
@@ -74,8 +74,11 @@ export function CheckoutForm() {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  const getFieldError = (field: keyof typeof touched, value: any) => {
-    return touched[field] && !value;
+  const getFieldError = (field: keyof typeof touched, value: any): string | false => {
+    if (!touched[field]) return false;
+    if (!value) return "required";
+    if (field === "price" && parseFloat(value) < 0) return "negative";
+    return false;
   };
 
   const handleBack = () => {
@@ -90,7 +93,7 @@ export function CheckoutForm() {
     ? Math.round((1 - parseFloat(formData.price) / parseFloat(formData.originalPrice)) * 100)
     : 0;
 
-  const isValid = formData.price && formData.checkoutHeadline;
+  const isValid = formData.price && parseFloat(formData.price) >= 0 && formData.checkoutHeadline;
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -113,7 +116,11 @@ export function CheckoutForm() {
               placeholder="99.00"
               required
               help={courseFieldHelp.price}
-              error={getFieldError("price", formData.price) ? "Price is required" : undefined}
+              error={
+                getFieldError("price", formData.price) === "required" ? "Price is required" :
+                getFieldError("price", formData.price) === "negative" ? "Price cannot be negative" :
+                undefined
+              }
             />
 
             <div>
@@ -283,33 +290,33 @@ export function CheckoutForm() {
               Back
             </Button>
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={saveCourse}
               disabled={state.isSaving}
               className="gap-2 h-12 flex-1"
             >
-              <Save className="w-4 h-4" />
+              {state.isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {state.isSaving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
-        
+
         {/* Desktop: Horizontal layout */}
         <div className="hidden sm:flex justify-between">
           <Button variant="outline" onClick={handleBack} className="gap-2 h-10">
             <ArrowLeft className="w-4 h-4" />
             Back to Thumbnail
           </Button>
-          
+
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={saveCourse}
               disabled={state.isSaving}
               className="gap-2 h-10"
             >
-              <Save className="w-4 h-4" />
+              {state.isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {state.isSaving ? "Saving..." : "Save Course"}
             </Button>
           

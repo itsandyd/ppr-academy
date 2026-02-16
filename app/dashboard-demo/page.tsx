@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default function DashboardDemo() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F6FF] to-white flex items-center justify-center p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#F5F6FF] to-white flex items-center justify-center p-4 md:p-8">
       <Card className="max-w-2xl p-8 text-center">
         <h1 className="text-4xl font-bold text-[#0F0F0F] mb-4">
           Stan Dashboard Recreation

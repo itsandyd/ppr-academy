@@ -99,5 +99,9 @@ export default function DashboardPage() {
     );
   }
 
-  return <DashboardShell mode={mode} />;
+  return (
+    <div className="p-4 md:p-6 lg:p-0">
+      <DashboardShell mode={mode} />
+    </div>
+  );
 }

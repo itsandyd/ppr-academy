@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { getUserFromClerk } from "@/lib/data";
+import { getUserFromClerk } from "@/lib/convex-data";
 import NavbarClient from "./navbar-client";
 
 export default async function NavbarWrapper() {

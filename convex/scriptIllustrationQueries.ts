@@ -81,7 +81,7 @@ export const getIllustrationsByScript = query({
       .query("scriptIllustrations")
       .withIndex("by_scriptId_and_sentenceIndex", (q) => q.eq("scriptId", args.scriptId))
       .order("asc")
-      .collect();
+      .take(500);
   },
 });
 

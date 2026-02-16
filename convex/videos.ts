@@ -283,7 +283,7 @@ export const getVersionHistory = query({
       const children = await ctx.db
         .query("videoJobs")
         .filter((q) => q.eq(q.field("parentJobId"), parentId))
-        .collect();
+        .take(500);
       if (children.length === 0) break;
       // Take the most recent child (in case of multiple retries)
       const child = children.sort(
@@ -323,7 +323,7 @@ export const getCreatorCourses = query({
       .withIndex("by_instructorId", (q) =>
         q.eq("instructorId", user.clerkId ?? "")
       )
-      .collect();
+      .take(500);
 
     return courses.map((c) => ({
       _id: c._id,

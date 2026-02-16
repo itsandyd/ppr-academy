@@ -241,8 +241,8 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="mx-auto max-w-4xl p-4 md:p-6 py-8">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link href="/dashboard/coaching/sessions">
@@ -250,11 +250,11 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Edit Coaching</h1>
+              <h1 className="text-xl md:text-2xl font-bold">Edit Coaching</h1>
               <p className="text-muted-foreground">{product.title}</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={!hasChanges || isSaving}>
+          <Button onClick={handleSave} disabled={!hasChanges || isSaving} className="w-full sm:w-auto">
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

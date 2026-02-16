@@ -26,7 +26,7 @@ export const migrateAbletonRacksToEffectChains = internalMutation({
     // Find all products with ableton-rack category or abletonRack type
     const abletonProducts = await ctx.db
       .query("digitalProducts")
-      .collect();
+      .take(10000);
 
     const productsToMigrate = abletonProducts.filter(
       (p) => 
@@ -92,7 +92,7 @@ export const rollbackEffectChainMigration = internalMutation({
 
     const allProducts = await ctx.db
       .query("digitalProducts")
-      .collect();
+      .take(10000);
 
     const productsToRevert = allProducts.filter(
       (p) => 

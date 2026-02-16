@@ -27,6 +27,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Mail } from "lucide-react";
 
 export default function CreatorSubscribersPage() {
   const { user } = useUser();
@@ -223,12 +225,21 @@ export default function CreatorSubscribersPage() {
         </div>
 
         {subscribers.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
-              {search ? "No matching subscribers" : "No subscribers yet"}
-            </p>
-          </div>
+          <EmptyState
+            icon={search ? Users : Mail}
+            title={search ? "No matching subscribers" : "No contacts yet"}
+            description={
+              search
+                ? "Try a different search term or filter"
+                : "Import your email list or wait for subscribers to sign up."
+            }
+            action={
+              !search
+                ? { label: "Import Contacts", href: "/dashboard/emails/setup" }
+                : undefined
+            }
+            compact
+          />
         ) : (
           subscribers.map((sub: any) => (
             <div

@@ -164,11 +164,11 @@ export function ArtistShowcase({ artistProfileId, isOwner = false }: ArtistShowc
   }
 
   const handlePlayTrack = (_track: any) => {
-    // TODO: Track play analytics
+    // POST-LAUNCH: Record play event in analytics table for artist stats
   };
 
   const handleLikeTrack = (_track: any) => {
-    // TODO: Handle like functionality
+    // POST-LAUNCH: Persist like to user favorites and increment track like count
   };
 
   const handleShareTrack = (track: any) => {

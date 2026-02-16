@@ -68,7 +68,7 @@ export const getErrorRate = query({
           q.lte(q.field("timestamp"), args.endTime)
         )
       )
-      .collect();
+      .take(5000);
 
     const allEvents = await ctx.db
       .query("analyticsEvents")
@@ -78,7 +78,7 @@ export const getErrorRate = query({
           q.lte(q.field("timestamp"), args.endTime)
         )
       )
-      .collect();
+      .take(5000);
 
     const errorRate = allEvents.length > 0 
       ? (errors.length / allEvents.length) * 100 

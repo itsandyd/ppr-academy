@@ -65,7 +65,7 @@ export const cleanupOldWebhookEvents = internalMutation({
     const oldEvents = await ctx.db
       .query("webhookEvents")
       .filter((q) => q.lt(q.field("processedAt"), thirtyDaysAgo))
-      .collect();
+      .take(1000);
 
     let deleted = 0;
     for (const event of oldEvents) {

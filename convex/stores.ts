@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { requireAuth, requireStoreOwner } from "./lib/auth";
 
 // Reusable store validator for return types
 const storeValidator = v.object({
@@ -86,7 +87,7 @@ export const getStoresByUser = query({
     return await ctx.db
       .query("stores")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -98,7 +99,7 @@ export const getUserStores = query({
     return await ctx.db
       .query("stores")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
   },
 });
 
@@ -133,7 +134,15 @@ export const migrateStoresToPublic = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    const stores = await ctx.db.query("stores").collect();
+    // Admin-only migration
+    const identity = await requireAuth(ctx);
+    const callingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!callingUser?.admin) throw new Error("Admin access required");
+
+    const stores = await ctx.db.query("stores").take(500);
     let updated = 0;
 
     for (const store of stores) {
@@ -173,7 +182,7 @@ export const getAllStores = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("stores")
-      .collect();
+      .take(500);
   },
 });
 
@@ -192,7 +201,6 @@ const generateSlug = (name: string): string => {
 // Uses user's existing profile data for instant store setup
 export const createStoreFromProfile = mutation({
   args: {
-    userId: v.string(),
     // Optional override - if not provided, pulls from user profile
     name: v.optional(v.string()),
   },
@@ -202,10 +210,13 @@ export const createStoreFromProfile = mutation({
     storeSlug: v.string(),
   }),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
     // Check if user already has a store
     const existingStore = await ctx.db
       .query("stores")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
     if (existingStore) {
@@ -219,7 +230,7 @@ export const createStoreFromProfile = mutation({
     // Get user profile to pull name and avatar
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
       .first();
 
     // Determine store name: provided > firstName + lastName > name > email prefix > "My Store"
@@ -259,7 +270,7 @@ export const createStoreFromProfile = mutation({
     const storeId = await ctx.db.insert("stores", {
       name: storeName,
       slug,
-      userId: args.userId,
+      userId,
       avatar: user?.imageUrl || user?.avatarUrl,
       bio: user?.bio,
       socialLinks: user ? {
@@ -278,7 +289,7 @@ export const createStoreFromProfile = mutation({
 
     // Track creator_started event for analytics
     await ctx.db.insert("analyticsEvents", {
-      userId: args.userId,
+      userId,
       storeId,
       eventType: "creator_started",
       timestamp: Date.now(),
@@ -311,43 +322,45 @@ export const createStore = mutation({
   args: {
     name: v.string(),
     slug: v.optional(v.string()),
-    userId: v.string(),
   },
   returns: v.id("stores"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
     // Use provided slug or generate from name
     let slug = args.slug?.trim() || generateSlug(args.name);
-    
+
     // Ensure slug is unique
     let counter = 1;
     let originalSlug = slug;
-    
+
     while (true) {
       const existingStore = await ctx.db
         .query("stores")
         .withIndex("by_slug", (q) => q.eq("slug", slug))
         .unique();
-      
+
       if (!existingStore) break;
-      
+
       slug = `${originalSlug}-${counter}`;
       counter++;
     }
-    
+
     const storeId = await ctx.db.insert("stores", {
       name: args.name,
       slug,
-      userId: args.userId,
-      plan: "free", // Default to free plan - users can upgrade for more features
+      userId,
+      plan: "free",
       planStartedAt: Date.now(),
-      isPublic: true, // Public by default
-      isPublishedProfile: true, // Published by default
+      isPublic: true,
+      isPublishedProfile: true,
       subscriptionStatus: "active",
     });
 
     // Track creator_started event for analytics
     await ctx.db.insert("analyticsEvents", {
-      userId: args.userId,
+      userId,
       storeId,
       eventType: "creator_started",
       timestamp: Date.now(),
@@ -357,7 +370,7 @@ export const createStore = mutation({
     // Mark user as a creator (explicit role)
     const user = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
       .first();
 
     if (user && !user.isCreator) {
@@ -366,7 +379,7 @@ export const createStore = mutation({
         creatorSince: Date.now(),
         creatorLevel: 1,
         creatorXP: 0,
-        creatorBadges: ["first_store"], // Award first store badge
+        creatorBadges: ["first_store"],
       });
     }
 
@@ -380,22 +393,11 @@ export const updateStore = mutation({
     id: v.id("stores"),
     name: v.optional(v.string()),
     slug: v.optional(v.string()),
-    userId: v.string(), // Add userId for authorization
   },
   returns: v.union(storeValidator, v.null()),
   handler: async (ctx, args) => {
-    const { id, userId, ...updates } = args;
-    
-    // Get current store
-    const currentStore = await ctx.db.get(id);
-    if (!currentStore) {
-      throw new Error("Store not found");
-    }
-    
-    // Check if the user is the owner of this store
-    if (currentStore.userId !== userId) {
-      throw new Error("Unauthorized: You can only update your own stores");
-    }
+    const { identity } = await requireStoreOwner(ctx, args.id);
+    const { id, ...updates } = args;
     
     // Handle slug logic
     if (updates.name !== undefined) {
@@ -453,21 +455,10 @@ export const updateStore = mutation({
 export const deleteStore = mutation({
   args: {
     id: v.id("stores"),
-    userId: v.string(), // Required for authorization
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Get the store to verify ownership
-    const store = await ctx.db.get(args.id);
-    if (!store) {
-      throw new Error("Store not found");
-    }
-
-    // Authorization check: only store owner can delete
-    if (store.userId !== args.userId) {
-      throw new Error("Unauthorized: You can only delete your own stores");
-    }
-
+    await requireStoreOwner(ctx, args.id);
     await ctx.db.delete(args.id);
     return null;
   },
@@ -477,7 +468,6 @@ export const deleteStore = mutation({
 export const updateStoreProfile = mutation({
   args: {
     storeId: v.id("stores"),
-    userId: v.string(),
     // Basic info
     name: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -520,17 +510,13 @@ export const updateStoreProfile = mutation({
   },
   returns: v.union(storeValidator, v.null()),
   handler: async (ctx, args) => {
-    const { storeId, userId, ...updates } = args;
+    await requireStoreOwner(ctx, args.storeId);
+    const { storeId, ...updates } = args;
 
     // Get current store
     const store = await ctx.db.get(storeId);
     if (!store) {
       throw new Error("Store not found");
-    }
-
-    // Check authorization
-    if (store.userId !== userId) {
-      throw new Error("Unauthorized: You can only update your own store");
     }
 
     // If name is being updated, also update slug
@@ -566,7 +552,6 @@ export const updateStoreProfile = mutation({
 export const updateEmailConfig = mutation({
   args: {
     storeId: v.id("stores"),
-    userId: v.string(), // Required for authorization
     fromEmail: v.string(),
     fromName: v.optional(v.string()),
     replyToEmail: v.optional(v.string()),
@@ -577,15 +562,7 @@ export const updateEmailConfig = mutation({
   }),
   handler: async (ctx, args) => {
     try {
-      const store = await ctx.db.get(args.storeId);
-      if (!store) {
-        return { success: false, message: "Store not found" };
-      }
-
-      // Authorization check: only store owner can update email config
-      if (store.userId !== args.userId) {
-        return { success: false, message: "Unauthorized: You can only update your own store's email configuration" };
-      }
+      const { store } = await requireStoreOwner(ctx, args.storeId);
 
       // Update the store with email sender config
       await ctx.db.patch(args.storeId, {
@@ -611,7 +588,6 @@ export const updateEmailConfig = mutation({
 export const updateAdminNotificationSettings = mutation({
   args: {
     storeId: v.id("stores"),
-    userId: v.string(), // Required for authorization
     enabled: v.optional(v.boolean()),
     emailOnNewLead: v.optional(v.boolean()),
     emailOnReturningUser: v.optional(v.boolean()),
@@ -631,17 +607,9 @@ export const updateAdminNotificationSettings = mutation({
   }),
   handler: async (ctx, args) => {
     try {
-      const store = await ctx.db.get(args.storeId);
-      if (!store) {
-        return { success: false, message: "Store not found" };
-      }
+      const { store } = await requireStoreOwner(ctx, args.storeId);
 
-      // Authorization check: only store owner can update notification settings
-      if (store.userId !== args.userId) {
-        return { success: false, message: "Unauthorized: You can only update your own store's notification settings" };
-      }
-
-      const { storeId, userId, ...notificationSettings } = args;
+      const { storeId, ...notificationSettings } = args;
 
       // Update the store with admin notification settings, preserving existing config
       const existingConfig = store.emailConfig;
@@ -724,7 +692,6 @@ export const getStoreEmailConfigInternal = query({
 export const updateNotificationIntegrations = mutation({
   args: {
     storeId: v.id("stores"),
-    userId: v.string(), // Required for authorization
     notificationIntegrations: v.object({
       slackWebhookUrl: v.optional(v.string()),
       slackEnabled: v.optional(v.boolean()),
@@ -738,15 +705,7 @@ export const updateNotificationIntegrations = mutation({
   }),
   handler: async (ctx, args) => {
     try {
-      const store = await ctx.db.get(args.storeId);
-      if (!store) {
-        return { success: false, message: "Store not found" };
-      }
-
-      // Authorization check: only store owner can update notification integrations
-      if (store.userId !== args.userId) {
-        return { success: false, message: "Unauthorized: You can only update your own store's notification integrations" };
-      }
+      const { store } = await requireStoreOwner(ctx, args.storeId);
 
       await ctx.db.patch(args.storeId, {
         notificationIntegrations: {
@@ -777,8 +736,8 @@ export const updateEmailUsage = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const store = await ctx.db.get(args.storeId);
-    if (!store?.emailConfig) return null;
+    const { store } = await requireStoreOwner(ctx, args.storeId);
+    if (!store.emailConfig) return null;
 
     const currentMonth = new Date().getMonth();
     const lastTestedMonth = store.emailConfig.lastTestedAt 
@@ -810,8 +769,8 @@ export const markEmailConfigVerified = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const store = await ctx.db.get(args.storeId);
-    if (!store?.emailConfig) return null;
+    const { store } = await requireStoreOwner(ctx, args.storeId);
+    if (!store.emailConfig) return null;
 
     await ctx.db.patch(args.storeId, {
       emailConfig: {

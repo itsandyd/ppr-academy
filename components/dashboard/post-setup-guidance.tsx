@@ -49,7 +49,7 @@ export function PostSetupGuidance({
       icon: Package,
       color: "from-purple-500 to-blue-500",
       href: `/store/${storeId}/products`,
-      completed: false // TODO: Check if user has products
+      completed: false // POST-LAUNCH: Query products table to check if user has created any products
     },
     {
       id: "payments",
@@ -58,7 +58,7 @@ export function PostSetupGuidance({
       icon: DollarSign,
       color: "from-green-500 to-emerald-500",
       href: `/store/${storeId}/settings/payouts`,
-      completed: false // TODO: Check if Stripe connected
+      completed: false // POST-LAUNCH: Check store.stripeAccountId to determine if Stripe is connected
     },
     {
       id: "promote",
@@ -67,7 +67,7 @@ export function PostSetupGuidance({
       icon: Users,
       color: "from-orange-500 to-red-500",
       href: `/store/${storeId}/social`,
-      completed: false // TODO: Check if social connected
+      completed: false // POST-LAUNCH: Check socialProfiles table for connected accounts
     }
   ];
 

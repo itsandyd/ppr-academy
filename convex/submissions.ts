@@ -95,7 +95,7 @@ export const getCreatorSubmissions = query({
       query = query.filter((q) => q.eq(q.field("status"), args.status));
     }
 
-    const submissions = await query.collect();
+    const submissions = await query.take(5000);
 
     // Enrich with track and submitter details
     const enriched = await Promise.all(
@@ -135,7 +135,7 @@ export const getUserSubmissions = query({
     const submissions = await ctx.db
       .query("trackSubmissions")
       .withIndex("by_submitterId", (q) => q.eq("submitterId", args.userId))
-      .collect();
+      .take(5000);
 
     const enriched = await Promise.all(
       submissions.map(async (submission) => {
@@ -181,7 +181,7 @@ export const acceptSubmission = mutation({
     const existingTracks = await ctx.db
       .query("curatorPlaylistTracks")
       .withIndex("by_playlistId", (q) => q.eq("playlistId", args.playlistId))
-      .collect();
+      .take(5000);
 
     await ctx.db.insert("curatorPlaylistTracks", {
       playlistId: args.playlistId,
@@ -315,7 +315,7 @@ export const getSubmissionStats = query({
     const allSubmissions = await ctx.db
       .query("trackSubmissions")
       .withIndex("by_creatorId", (q) => q.eq("creatorId", args.creatorId))
-      .collect();
+      .take(5000);
 
     return {
       inbox: allSubmissions.filter(s => s.status === "inbox").length,

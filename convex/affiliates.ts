@@ -38,7 +38,7 @@ export const getAffiliateByUser = query({
       .query("affiliates")
       .withIndex("by_affiliate_user", (q: any) => q.eq("affiliateUserId", args.userId));
 
-    const affiliates = await query.collect();
+    const affiliates = await query.take(1000);
 
     if (args.storeId) {
       return affiliates.find((a) => a.storeId === args.storeId) || null;
@@ -63,7 +63,7 @@ export const getAffiliatesByStore = query({
     let affiliates = await ctx.db
       .query("affiliates")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     if (args.status) {
       affiliates = affiliates.filter((a) => a.status === args.status);
@@ -84,7 +84,7 @@ export const getAffiliateStats = query({
     const sales = await ctx.db
       .query("affiliateSales")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
-      .collect();
+      .take(1000);
 
     const pendingSales = sales.filter((s) => s.commissionStatus === "pending");
     const approvedSales = sales.filter((s) => s.commissionStatus === "approved");
@@ -98,7 +98,7 @@ export const getAffiliateStats = query({
     const totalClicks = await ctx.db
       .query("affiliateClicks")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
-      .collect();
+      .take(1000);
 
     const convertedClicks = totalClicks.filter((c) => c.converted);
 
@@ -145,7 +145,7 @@ export const getAffiliateSales = query({
     let sales = await ctx.db
       .query("affiliateSales")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
-      .collect();
+      .take(1000);
 
     if (args.status) {
       sales = sales.filter((s) => s.commissionStatus === args.status);
@@ -168,7 +168,7 @@ export const getAffiliatePayouts = query({
     const payouts = await ctx.db
       .query("affiliatePayouts")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
-      .collect();
+      .take(1000);
 
     return payouts.sort((a, b) => b.createdAt - a.createdAt);
   },
@@ -185,7 +185,7 @@ export const getAffiliateClicks = query({
     let clicks = await ctx.db
       .query("affiliateClicks")
       .withIndex("by_affiliate", (q: any) => q.eq("affiliateId", args.affiliateId))
-      .collect();
+      .take(1000);
 
     if (args.startDate) {
       clicks = clicks.filter((c) => c.clickedAt >= args.startDate!);

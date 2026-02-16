@@ -267,8 +267,8 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
       : contact.email;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -277,10 +277,10 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{displayName}</h1>
+          <h1 className="text-xl md:text-2xl font-bold">{displayName}</h1>
           <p className="text-muted-foreground">{contact.email}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {contact.status === "subscribed" ? (
             <Button variant="outline" onClick={handleUnsubscribe}>
               <UserMinus className="mr-2 h-4 w-4" />
@@ -323,7 +323,7 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
             <CardContent>
               {isEditing ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>First Name</Label>
                       <Input
@@ -347,7 +347,7 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-muted-foreground">First Name</div>
                     <div className="font-medium">{contact.firstName || "—"}</div>

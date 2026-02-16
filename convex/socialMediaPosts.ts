@@ -397,7 +397,7 @@ export const getCTATemplatesByUser = query({
       .query("ctaTemplates")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .collect();
+      .take(1000);
   },
 });
 

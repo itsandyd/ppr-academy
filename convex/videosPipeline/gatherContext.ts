@@ -97,7 +97,7 @@ export const gatherContext = internalQuery({
         const modules = await ctx.db
           .query("courseModules")
           .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
-          .collect();
+          .take(500);
 
         // Get lesson counts per module
         const modulesWithLessons = await Promise.all(
@@ -106,7 +106,7 @@ export const gatherContext = internalQuery({
             const lessons = await ctx.db
               .query("courseLessons")
               .withIndex("by_moduleId", (q) => q.eq("moduleId", modIdStr))
-              .collect();
+              .take(500);
             return {
               title: mod.title,
               lessonCount: lessons.length,
@@ -120,13 +120,13 @@ export const gatherContext = internalQuery({
         const enrollments = await ctx.db
           .query("enrollments")
           .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-          .collect();
+          .take(500);
 
         // Get reviews — courseReviews.courseId is v.id("courses")
         const reviews = await ctx.db
           .query("courseReviews")
           .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-          .collect();
+          .take(500);
 
         const avgRating =
           reviews.length > 0
@@ -175,7 +175,7 @@ export const gatherContext = internalQuery({
         const productReviews = await ctx.db
           .query("productReviews")
           .withIndex("by_productId", (q) => q.eq("productId", product._id))
-          .collect();
+          .take(500);
 
         context.analytics.totalReviews += productReviews.length;
       }
@@ -200,7 +200,7 @@ export const gatherContext = internalQuery({
         const purchases = await ctx.db
           .query("purchases")
           .withIndex("by_storeId", (q) => q.eq("storeId", storeIdStr))
-          .collect();
+          .take(500);
 
         const completedPurchases = purchases.filter((p) => p.status === "completed");
         context.analytics.totalSales = completedPurchases.length;

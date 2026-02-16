@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { getUserFromClerk } from "@/lib/data";
+import { getUserFromClerk } from "@/lib/convex-data";
 import {
   generateAICourseFast as generateAICourseLib,
   searchTopicImages,
@@ -110,9 +110,7 @@ export async function approveCoach(profileId: string) {
   await checkAdminAuth();
 
   try {
-    const { userId: clerkId } = await auth();
     const result = await convex.mutation(api.adminCoach.approveCoachProfile, {
-      clerkId: clerkId!,
       profileId: profileId as Id<"coachProfiles">,
     });
 
@@ -135,9 +133,7 @@ export async function rejectCoach(profileId: string) {
   await checkAdminAuth();
 
   try {
-    const { userId: clerkId } = await auth();
     const result = await convex.mutation(api.adminCoach.rejectCoachProfile, {
-      clerkId: clerkId!,
       profileId: profileId as Id<"coachProfiles">,
     });
 
@@ -157,10 +153,7 @@ export async function debugCoachProfiles() {
   await checkAdminAuth();
 
   try {
-    const { userId: clerkId } = await auth();
-    const profiles = await convex.query(api.adminCoach.getCoachProfilesDebug, {
-      clerkId: clerkId!,
-    });
+    const profiles = await convex.query(api.adminCoach.getCoachProfilesDebug, {});
 
     return { success: true, profiles };
   } catch (error) {
@@ -172,9 +165,7 @@ export async function cleanupOrphanedCoachProfiles(dryRun: boolean = true) {
   await checkAdminAuth();
 
   try {
-    const { userId: clerkId } = await auth();
     const result = await convex.mutation(api.adminCoach.cleanupOrphanedProfiles, {
-      clerkId: clerkId!,
       dryRun,
     });
 

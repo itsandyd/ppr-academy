@@ -175,9 +175,9 @@ export default function CoachSessionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Coaching Sessions</h1>
+        <h1 className="text-xl md:text-3xl font-bold">Coaching Sessions</h1>
         <p className="mt-1 text-muted-foreground">Manage your coaching bookings</p>
       </div>
 
@@ -245,7 +245,7 @@ export default function CoachSessionsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{stats?.total || 0}</div>

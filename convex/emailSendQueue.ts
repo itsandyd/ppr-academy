@@ -65,7 +65,7 @@ export const enqueueEmail = internalMutation({
       const contacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_email", (q) => q.eq("email", emailLower))
-        .collect();
+        .take(5000);
       const isContactUnsubscribed = contacts.some(
         (c) => c.status === "unsubscribed" || c.status === "complained"
       );
@@ -165,7 +165,7 @@ export const enqueueEmailBatch = internalMutation({
       const contacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_email", (q) => q.eq("email", emailAddr))
-        .collect();
+        .take(5000);
       if (contacts.some((c) => c.status === "unsubscribed" || c.status === "complained")) {
         suppressedSet.add(emailAddr);
       }
@@ -268,15 +268,51 @@ export const claimBatchForStore = internalMutation({
       )
       .take(args.limit);
 
-    // Mark as sending
+    // Defense-in-depth: re-check suppression at claim time.
+    // The enqueue step already blocks unsubscribed recipients, but a user
+    // may have unsubscribed between enqueue and processing (race window).
+    const claimed = [];
     for (const email of emails) {
+      // Transactional emails (receipts, password resets) bypass suppression per CAN-SPAM
+      if (email.source !== "transactional") {
+        const emailLower = email.toEmail.toLowerCase().trim();
+
+        // Check resendPreferences (global unsubscribe)
+        const pref = await ctx.db
+          .query("resendPreferences")
+          .filter((q) => q.eq(q.field("userId"), emailLower))
+          .first();
+        if (pref?.isUnsubscribed) {
+          await ctx.db.patch(email._id, {
+            status: "failed",
+            lastError: "Blocked at send time: recipient unsubscribed",
+          });
+          continue;
+        }
+
+        // Check emailContacts status
+        const contacts = await ctx.db
+          .query("emailContacts")
+          .withIndex("by_email", (q) => q.eq("email", emailLower))
+          .take(10);
+        if (contacts.some((c) => c.status === "unsubscribed" || c.status === "complained")) {
+          await ctx.db.patch(email._id, {
+            status: "failed",
+            lastError: "Blocked at send time: contact unsubscribed",
+          });
+          continue;
+        }
+      }
+
+      // Mark as sending
       await ctx.db.patch(email._id, {
         status: "sending",
         attempts: email.attempts + 1,
       });
+      claimed.push(email);
     }
 
-    return emails;
+    return claimed;
   },
 });
 

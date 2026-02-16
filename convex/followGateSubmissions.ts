@@ -50,7 +50,7 @@ export const submitFollowGate = mutation({
       .query("followGateSubmissions")
       .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
       .filter((q) => q.gte(q.field("submittedAt"), oneHourAgo))
-      .collect();
+      .take(5000);
 
     if (recentSubmissions.length >= MAX_SUBMISSIONS_PER_WINDOW) {
       throw new Error("Too many requests. Please try again later.");
@@ -267,19 +267,19 @@ export const getFollowGateAnalytics = query({
       submissions = await ctx.db
         .query("followGateSubmissions")
         .withIndex("by_product", (q) => q.eq("productId", args.productId!))
-        .collect();
+        .take(5000);
     } else if (args.creatorId) {
       submissions = await ctx.db
         .query("followGateSubmissions")
         .withIndex("by_creator", (q) => q.eq("creatorId", args.creatorId!))
-        .collect();
+        .take(5000);
     } else if (args.storeId) {
       submissions = await ctx.db
         .query("followGateSubmissions")
         .withIndex("by_store", (q) => q.eq("storeId", args.storeId!))
-        .collect();
+        .take(5000);
     } else {
-      submissions = await ctx.db.query("followGateSubmissions").collect();
+      submissions = await ctx.db.query("followGateSubmissions").take(5000);
     }
 
     // Calculate analytics

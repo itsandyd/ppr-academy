@@ -33,13 +33,13 @@ export const checkCourseEnrollments = internalQuery({
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(10000);
 
     // Get all customers for this store
     const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(10000);
     // Check which enrollments don't have customer records
     let enrollmentsWithoutCustomers = 0;
     const sampleEnrollments = [];
@@ -134,13 +134,13 @@ export const checkUserEnrollments = internalQuery({
           q.eq(q.field("status"), "completed")
         )
       )
-      .collect();
+      .take(10000);
 
     // Get customer records
     const customerRecords = await ctx.db
       .query("customers")
       .withIndex("by_email", (q) => q.eq("email", user.email || ""))
-      .collect();
+      .take(10000);
 
     // Build enrollment details
     const enrollments = await Promise.all(
@@ -185,7 +185,7 @@ export const getStoreCustomerSummary = internalQuery({
   })),
   handler: async (ctx, args) => {
     // Get all stores
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(10000);
 
     const summary = await Promise.all(
       stores.map(async (store) => {
@@ -193,19 +193,19 @@ export const getStoreCustomerSummary = internalQuery({
         const customers = await ctx.db
           .query("customers")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .collect();
+          .take(10000);
 
         // Count enrollments
         const enrollments = await ctx.db
           .query("purchases")
           .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
-          .filter((q) => 
+          .filter((q) =>
             q.and(
               q.eq(q.field("productType"), "course"),
               q.eq(q.field("status"), "completed")
             )
           )
-          .collect();
+          .take(10000);
 
         return {
           storeId: store._id,

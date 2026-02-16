@@ -75,7 +75,7 @@ export const getLiveViewerCount = query({
       .query("liveViewers")
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
       .filter((q) => q.gt(q.field("expiresAt"), now))
-      .collect();
+      .take(500);
 
     // If querying for a specific chapter
     if (args.chapterId) {

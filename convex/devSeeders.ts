@@ -108,7 +108,7 @@ export const clearTestSubmissions = internalMutation({
     const submissions = await ctx.db
       .query("trackSubmissions")
       .withIndex("by_creatorId", (q) => q.eq("creatorId", args.creatorId))
-      .collect();
+      .take(1000);
 
     for (const submission of submissions) {
       await ctx.db.delete(submission._id);
@@ -118,7 +118,7 @@ export const clearTestSubmissions = internalMutation({
     const playlists = await ctx.db
       .query("curatorPlaylists")
       .withIndex("by_creatorId", (q) => q.eq("creatorId", args.creatorId))
-      .collect();
+      .take(1000);
 
     for (const playlist of playlists) {
       await ctx.db.patch(playlist._id, {

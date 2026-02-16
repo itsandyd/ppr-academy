@@ -111,7 +111,7 @@ export const getStorePurchaseStats = query({
     const allPurchases = await ctx.db
       .query("purchases")
       .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     const purchases =
       timeRange === "all"
@@ -356,7 +356,7 @@ export const getCreatorDashboardAnalytics = query({
     const allPurchases = await ctx.db
       .query("purchases")
       .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(5000);
 
     const completed = allPurchases.filter((p) => p.status === "completed");
 

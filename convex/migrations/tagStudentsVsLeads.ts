@@ -149,7 +149,7 @@ export const tagStudentsVsLeads = internalMutation({
     const allContacts = await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(10000);
 
     const studentCount = allContacts.filter((c) =>
       c.tagIds?.includes(studentTagId)

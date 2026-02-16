@@ -7,7 +7,8 @@ import { AffiliateDashboard } from "@/components/monetization/AffiliateDashboard
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Link2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function AffiliatePortalPage() {
   const { user } = useUser();
@@ -19,7 +20,7 @@ export default function AffiliatePortalPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto py-16 text-center">
+      <div className="container mx-auto px-4 py-8 md:py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
         <p className="text-muted-foreground">You need to be signed in to view your affiliate dashboard</p>
       </div>
@@ -28,7 +29,7 @@ export default function AffiliatePortalPage() {
 
   if (!affiliates) {
     return (
-      <div className="container mx-auto py-16 text-center">
+      <div className="container mx-auto px-4 py-8 md:py-16 text-center">
         <p>Loading...</p>
       </div>
     );
@@ -41,22 +42,15 @@ export default function AffiliatePortalPage() {
 
   if (affiliateArray.length === 0) {
     return (
-      <div className="container mx-auto py-16 max-w-2xl">
+      <div className="container mx-auto px-4 py-8 md:py-16 max-w-2xl">
         <Card>
-          <CardHeader>
-            <CardTitle>No Affiliate Accounts</CardTitle>
-            <CardDescription>
-              You haven't applied to any affiliate programs yet
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center py-8">
-            <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground mb-6">
-              Browse courses and apply to become an affiliate to start earning commissions
-            </p>
-            <Button asChild>
-              <Link href="/courses">Browse Courses</Link>
-            </Button>
+          <CardContent className="pt-6">
+            <EmptyState
+              icon={Link2}
+              title="No affiliates yet"
+              description="Browse courses and apply to become an affiliate to start earning commissions."
+              action={{ label: "Browse Courses", href: "/courses" }}
+            />
           </CardContent>
         </Card>
       </div>
@@ -64,7 +58,7 @@ export default function AffiliatePortalPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto px-4 py-6 md:py-8 space-y-8">
       {pendingAffiliates.length > 0 && (
         <Card className="border-yellow-500">
           <CardHeader>

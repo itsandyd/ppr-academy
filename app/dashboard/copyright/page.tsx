@@ -116,7 +116,7 @@ export default function CopyrightDashboardPage() {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-5xl px-8 pt-10">
+      <div className="mx-auto max-w-5xl p-4 md:p-6 pt-10">
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Not Authenticated</AlertTitle>
@@ -128,7 +128,7 @@ export default function CopyrightDashboardPage() {
 
   if (store === null) {
     return (
-      <div className="mx-auto max-w-5xl px-8 pt-10">
+      <div className="mx-auto max-w-5xl p-4 md:p-6 pt-10">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No Store Found</AlertTitle>
@@ -148,7 +148,7 @@ export default function CopyrightDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-5xl px-8 pt-10">
+      <div className="mx-auto max-w-5xl p-4 md:p-6 pt-10">
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
           <div className="h-32 rounded bg-gray-200 dark:bg-gray-700" />
@@ -162,7 +162,7 @@ export default function CopyrightDashboardPage() {
   const hasStrikes = strikeStatus && strikeStatus.strikes > 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-8 pb-24 pt-10">
+    <div className="mx-auto max-w-5xl p-4 md:p-6 pb-24 pt-10">
       <div className="mb-6">
         <Button variant="ghost" asChild size="sm">
           <Link href="/dashboard?mode=create">
@@ -173,7 +173,7 @@ export default function CopyrightDashboardPage() {
       </div>
 
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">Copyright & DMCA</h1>
+        <h1 className="mb-2 text-xl md:text-3xl font-bold">Copyright & DMCA</h1>
         <p className="text-gray-600 dark:text-gray-400">
           Manage copyright claims against your content
         </p>

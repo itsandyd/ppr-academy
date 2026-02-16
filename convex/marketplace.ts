@@ -349,7 +349,7 @@ export const searchMarketplace = query({
           const enrollments = await ctx.db
             .query("purchases")
             .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-            .collect();
+            .take(100);
 
           // Get creator info
           let creatorName = "Creator";
@@ -411,7 +411,7 @@ export const searchMarketplace = query({
           const purchases = await ctx.db
             .query("purchases")
             .withIndex("by_productId", (q) => q.eq("productId", product._id))
-            .collect();
+            .take(100);
 
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
@@ -468,7 +468,7 @@ export const searchMarketplace = query({
           const purchases = await ctx.db
             .query("purchases")
             .withIndex("by_productId", (q) => q.eq("productId", product._id))
-            .collect();
+            .take(100);
 
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
@@ -514,7 +514,7 @@ export const searchMarketplace = query({
       const plugins = await ctx.db
         .query("plugins")
         .withIndex("by_published", (q) => q.eq("isPublished", true))
-        .collect();
+        .take(100);
 
       const pluginsWithDetails = await Promise.all(
         plugins.map(async (plugin) => {

@@ -245,7 +245,7 @@ export const importCourseContent = mutation({
     const chapters = await ctx.db
       .query("courseChapters")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .take(1000);
 
     for (const chapter of chapters) {
       if (chapter.description) {

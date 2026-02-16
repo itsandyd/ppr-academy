@@ -8,7 +8,7 @@ export const getAllCreditPackages = internalQuery({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    return await ctx.db.query("creditPackages").collect();
+    return await ctx.db.query("creditPackages").take(100);
   },
 });
 

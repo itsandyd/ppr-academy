@@ -287,7 +287,7 @@ const getAllUsersInternal = internalQuery({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+    return await ctx.db.query("users").take(10000);
   },
 });
 
@@ -300,7 +300,7 @@ export const getUserByStripeAccountId = query({
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
     // Filter users by stripeConnectAccountId
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(10000);
     return users.find((u) => u.stripeConnectAccountId === args.stripeConnectAccountId) || null;
   },
 });
@@ -349,7 +349,7 @@ export const getUserStats = query({
     }
 
     // Get all users for stats
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query("users").take(10000);
 
     return {
       total: allUsers.length,

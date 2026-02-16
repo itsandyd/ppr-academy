@@ -32,7 +32,7 @@ export const getCalendarEntriesForAccount = query({
           .eq("accountProfileId", args.accountProfileId)
           .gte("scheduledDate", args.startDate)
       )
-      .collect();
+      .take(500);
 
     // Filter by end date
     const filtered = entries.filter((e) => e.scheduledDate <= args.endDate);
@@ -71,7 +71,7 @@ export const getCalendarEntriesForWeek = query({
           .eq("accountProfileId", args.accountProfileId)
           .gte("scheduledDate", args.weekStartDate)
       )
-      .collect();
+      .take(500);
 
     const filtered = entries.filter((e) => e.scheduledDate < weekEndDate);
 
@@ -126,7 +126,7 @@ export const getCalendarEntriesForDay = query({
           .eq("accountProfileId", args.accountProfileId)
           .gte("scheduledDate", args.date)
       )
-      .collect();
+      .take(500);
 
     const filtered = entries.filter((e) => e.scheduledDate < endOfDay);
 
@@ -166,7 +166,7 @@ export const getAllCalendarEntries = query({
     const entries = await ctx.db
       .query("scriptCalendarEntries")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(500);
 
     // Filter by date range
     const filtered = entries.filter(
@@ -267,7 +267,7 @@ export const scheduleScript = mutation({
           .eq("accountProfileId", args.accountProfileId)
           .gte("scheduledDate", startOfDay)
       )
-      .collect();
+      .take(500);
 
     const entriesForDay = existingEntriesForDay.filter(
       (e) => e.scheduledDate < endOfDay

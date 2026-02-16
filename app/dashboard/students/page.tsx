@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // Explicit types to avoid TypeScript deep recursion with Convex
 interface Store {
@@ -585,19 +586,20 @@ export default function StudentsPage() {
               </Table>
             </div>
           ) : (
-            <div className="flex min-h-[300px] items-center justify-center">
-              <div className="text-center">
-                <Users className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-                <h3 className="mt-4 text-lg font-medium text-zinc-900 dark:text-white">
-                  {searchQuery || productFilter !== "all" ? "No students found" : "No students yet"}
-                </h3>
-                <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-                  {searchQuery || productFilter !== "all"
-                    ? "Try a different search term or filter"
-                    : "Students will appear here once they purchase your products"}
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              icon={Users}
+              title={searchQuery || productFilter !== "all" ? "No students found" : "No students yet"}
+              description={
+                searchQuery || productFilter !== "all"
+                  ? "Try a different search term or filter"
+                  : "Students will appear here when they enroll in your courses."
+              }
+              action={
+                !(searchQuery || productFilter !== "all")
+                  ? { label: "Share Your Store", href: "/dashboard?mode=create" }
+                  : undefined
+              }
+            />
           )}
         </CardContent>
       </Card>

@@ -6,26 +6,21 @@
  * verify the data shapes and logic patterns used by the access system.
  */
 import { describe, it, expect } from "vitest";
+import {
+  buildCoursePurchaseRecord,
+  buildDigitalProductPurchaseRecord,
+  buildSubscriptionRecord,
+  buildCourseCheckoutMetadata,
+  buildDigitalProductCheckoutMetadata,
+  buildPprProCheckoutMetadata,
+} from "./helpers/factories";
 
 // ---- Access Logic Tests ----
 // These test the business rules that the Convex mutations enforce
 
 describe("Course Access Logic", () => {
   it("grants course access with correct purchase record shape", () => {
-    // This is the shape that library.createCourseEnrollment expects
-    const purchaseRecord = {
-      userId: "user_clerk123",
-      courseId: "course_abc",
-      amount: 2999,
-      currency: "USD",
-      status: "completed" as const,
-      paymentMethod: "stripe",
-      transactionId: "pi_test123",
-      productType: "course" as const,
-      accessGranted: true,
-      downloadCount: 0,
-      lastAccessedAt: Date.now(),
-    };
+    const purchaseRecord = buildCoursePurchaseRecord();
 
     expect(purchaseRecord.status).toBe("completed");
     expect(purchaseRecord.accessGranted).toBe(true);
@@ -36,19 +31,7 @@ describe("Course Access Logic", () => {
   });
 
   it("grants digital product access with correct purchase record shape", () => {
-    const purchaseRecord = {
-      userId: "user_clerk456",
-      productId: "product_xyz",
-      amount: 1499,
-      currency: "USD",
-      status: "completed" as const,
-      paymentMethod: "stripe",
-      transactionId: "pi_test456",
-      productType: "digitalProduct" as const,
-      accessGranted: true,
-      downloadCount: 0,
-      lastAccessedAt: Date.now(),
-    };
+    const purchaseRecord = buildDigitalProductPurchaseRecord();
 
     expect(purchaseRecord.status).toBe("completed");
     expect(purchaseRecord.accessGranted).toBe(true);
@@ -57,17 +40,7 @@ describe("Course Access Logic", () => {
   });
 
   it("activates PPR Pro subscription with correct record shape", () => {
-    const subscriptionRecord = {
-      userId: "user_clerk789",
-      plan: "monthly" as const,
-      stripeSubscriptionId: "sub_test123",
-      stripeCustomerId: "cus_test123",
-      currentPeriodStart: Date.now(),
-      currentPeriodEnd: Date.now() + 30 * 24 * 60 * 60 * 1000,
-      status: "active" as const,
-      cancelAtPeriodEnd: false,
-      createdAt: Date.now(),
-    };
+    const subscriptionRecord = buildSubscriptionRecord();
 
     expect(subscriptionRecord.status).toBe("active");
     expect(subscriptionRecord.plan).toBe("monthly");
@@ -76,11 +49,10 @@ describe("Course Access Logic", () => {
   });
 
   it("revokes PPR Pro access on subscription expiry", () => {
-    const expiredSubscription = {
-      stripeSubscriptionId: "sub_test123",
-      status: "expired" as const,
+    const expiredSubscription = buildSubscriptionRecord({
+      status: "expired" as any,
       cancelAtPeriodEnd: false,
-    };
+    });
 
     expect(expiredSubscription.status).toBe("expired");
     expect(expiredSubscription.cancelAtPeriodEnd).toBe(false);
@@ -89,15 +61,8 @@ describe("Course Access Logic", () => {
 
 describe("Webhook Metadata Validation", () => {
   it("validates course purchase metadata has required fields", () => {
-    const validMetadata = {
-      productType: "course",
-      userId: "user_clerk123",
-      courseId: "course_abc",
-      amount: "2999",
-      currency: "usd",
-    };
+    const validMetadata = buildCourseCheckoutMetadata();
 
-    // All required fields present
     expect(validMetadata.productType).toBe("course");
     expect(validMetadata.userId).toBeTruthy();
     expect(validMetadata.courseId).toBeTruthy();
@@ -106,13 +71,7 @@ describe("Webhook Metadata Validation", () => {
   });
 
   it("validates digital product metadata has required fields", () => {
-    const validMetadata = {
-      productType: "digitalProduct",
-      userId: "user_clerk456",
-      productId: "product_xyz",
-      amount: "1499",
-      currency: "usd",
-    };
+    const validMetadata = buildDigitalProductCheckoutMetadata();
 
     expect(validMetadata.productType).toBe("digitalProduct");
     expect(validMetadata.userId).toBeTruthy();
@@ -121,11 +80,7 @@ describe("Webhook Metadata Validation", () => {
   });
 
   it("validates PPR Pro metadata has required fields", () => {
-    const validMetadata = {
-      productType: "ppr_pro",
-      userId: "user_clerk789",
-      plan: "monthly",
-    };
+    const validMetadata = buildPprProCheckoutMetadata();
 
     expect(validMetadata.productType).toBe("ppr_pro");
     expect(validMetadata.userId).toBeTruthy();

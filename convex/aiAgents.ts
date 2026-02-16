@@ -34,7 +34,7 @@ export const getPublicAgents = query({
       .query("aiAgents")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
       .filter((q) => q.eq(q.field("visibility"), "public"))
-      .collect();
+      .take(500);
 
     return agents.map((agent) => ({
       _id: agent._id,
@@ -247,7 +247,7 @@ export const getAgentsByCategory = query({
           q.eq(q.field("visibility"), "public")
         )
       )
-      .collect();
+      .take(500);
 
     return agents.map((agent) => ({
       _id: agent._id,

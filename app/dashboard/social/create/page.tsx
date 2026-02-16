@@ -54,7 +54,7 @@ export default function CreateSocialPostPage() {
   return (
     <Suspense
       fallback={
-        <div className="space-y-6">
+        <div className="p-4 md:p-6 space-y-6">
           <div className="animate-pulse">
             <div className="mb-4 h-8 w-3/4 rounded bg-gray-200 dark:bg-gray-800"></div>
             <div className="mb-6 h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-800"></div>

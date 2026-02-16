@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 /**
  * SUBSCRIPTION MANAGEMENT
@@ -15,7 +16,7 @@ export const getUserSubscriptions = query({
     const subscriptions = await ctx.db
       .query("membershipSubscriptions")
       .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     // Enrich with plan details
     const enriched = await Promise.all(
@@ -111,10 +112,10 @@ export const getSubscriptionPlans = query({
   handler: async (ctx, args) => {
     const plans = await ctx.db
       .query("subscriptionPlans")
-      .withIndex("by_store", (q: any) => 
+      .withIndex("by_store", (q: any) =>
         q.eq("storeId", args.storeId).eq("isActive", true)
       )
-      .collect();
+      .take(1000);
 
     return plans.sort((a, b) => a.tier - b.tier);
   },
@@ -150,7 +151,7 @@ export const getStoreSubscriptionStats = query({
     const allSubscriptions = await ctx.db
       .query("membershipSubscriptions")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(1000);
 
     const active = allSubscriptions.filter((s) => s.status === "active");
     const trialing = allSubscriptions.filter((s) => s.status === "trialing");
@@ -188,6 +189,11 @@ export const createSubscription = mutation({
     startTrial: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    if (identity.subject !== args.userId) {
+      throw new Error("Cannot create subscription for another user");
+    }
+
     const plan = await ctx.db.get(args.planId);
     if (!plan || !plan.isActive) {
       throw new Error("Plan not found or inactive");
@@ -311,9 +317,15 @@ export const cancelSubscription = mutation({
     cancelImmediately: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
       throw new Error("Subscription not found");
+    }
+
+    if (subscription.userId !== identity.subject) {
+      throw new Error("Not authorized to cancel this subscription");
     }
 
     const now = Date.now();
@@ -340,9 +352,15 @@ export const cancelSubscription = mutation({
 export const reactivateSubscription = mutation({
   args: { subscriptionId: v.id("membershipSubscriptions") },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
       throw new Error("Subscription not found");
+    }
+
+    if (subscription.userId !== identity.subject) {
+      throw new Error("Not authorized to modify this subscription");
     }
 
     if (subscription.status !== "canceled") {
@@ -421,9 +439,15 @@ export const upgradeSubscription = mutation({
     newPlanId: v.id("subscriptionPlans"),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
       throw new Error("Subscription not found");
+    }
+
+    if (subscription.userId !== identity.subject) {
+      throw new Error("Not authorized to modify this subscription");
     }
 
     const currentPlan = await ctx.db.get(subscription.planId);
@@ -461,9 +485,15 @@ export const downgradeSubscription = mutation({
     newPlanId: v.id("subscriptionPlans"),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
       throw new Error("Subscription not found");
+    }
+
+    if (subscription.userId !== identity.subject) {
+      throw new Error("Not authorized to modify this subscription");
     }
 
     const currentPlan = await ctx.db.get(subscription.planId);
@@ -516,6 +546,8 @@ export const createSubscriptionPlan = mutation({
     trialDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     const now = Date.now();
 
     const planId = await ctx.db.insert("subscriptionPlans", {
@@ -562,6 +594,12 @@ export const updateSubscriptionPlan = mutation({
   handler: async (ctx, args) => {
     const { planId, ...updates } = args;
 
+    const plan = await ctx.db.get(planId);
+    if (!plan) {
+      throw new Error("Plan not found");
+    }
+    await requireStoreOwner(ctx, plan.storeId);
+
     await ctx.db.patch(planId, {
       ...updates,
       updatedAt: Date.now(),
@@ -578,14 +616,15 @@ export const deleteSubscriptionPlan = mutation({
     if (!plan) {
       throw new Error("Plan not found");
     }
+    await requireStoreOwner(ctx, plan.storeId);
 
     // Check if any active subscriptions
     const activeSubscriptions = await ctx.db
       .query("membershipSubscriptions")
-      .withIndex("by_plan", (q: any) => 
+      .withIndex("by_plan", (q: any) =>
         q.eq("planId", args.planId).eq("status", "active")
       )
-      .collect();
+      .take(1000);
 
     if (activeSubscriptions.length > 0) {
       throw new Error("Cannot delete plan with active subscriptions");

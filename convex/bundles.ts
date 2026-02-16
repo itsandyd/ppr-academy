@@ -28,7 +28,7 @@ export const getBundlesByStore = query({
     let bundles = await ctx.db
       .query("bundles")
       .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
 
     if (!args.includeUnpublished) {
       bundles = bundles.filter((b) => b.isPublished);
@@ -85,7 +85,7 @@ export const getPublishedBundles = query({
           )
         )
       )
-      .collect();
+      .take(200);
 
     return bundles;
   },
@@ -120,7 +120,7 @@ export const getAllPublishedBundles = query({
           )
         )
       )
-      .collect();
+      .take(200);
 
     // Filter by bundle type
     if (args.bundleType) {
@@ -154,7 +154,7 @@ export const getAllPublishedBundles = query({
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
-        const stores = await ctx.db.query("stores").collect();
+        const stores = await ctx.db.query("stores").take(200);
         const store = stores.find((s) => s._id === bundle.storeId);
 
         if (store) {
@@ -212,7 +212,7 @@ export const getBundleBySlug = query({
     let creatorAvatar: string | undefined = undefined;
     let stripeConnectAccountId: string | undefined = undefined;
 
-    const stores = await ctx.db.query("stores").collect();
+    const stores = await ctx.db.query("stores").take(200);
     const store = stores.find((s) => s._id === bundle.storeId);
 
     if (store) {

@@ -57,8 +57,7 @@ export function RealTimeAlerts({
   const [alerts, setAlerts] = useState<SystemAlert[]>(initialAlerts);
   const [muted, setMuted] = useState(false);
 
-  // TODO: Connect to real Convex subscriptions for live alerts
-  // Example: Subscribe to new enrollments, purchases, errors, etc.
+  // POST-LAUNCH: Replace static alerts with real-time Convex subscriptions (enrollments, purchases, errors)
   // useEffect(() => {
   //   const subscription = subscribeToSystemEvents((event) => {
   //     const alert: SystemAlert = {

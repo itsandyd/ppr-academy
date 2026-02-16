@@ -152,9 +152,9 @@ export default function LandingPagesPage() {
   // No store yet
   if (!store) {
     return (
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Landing Pages</h1>
+          <h1 className="text-xl md:text-3xl font-bold">Landing Pages</h1>
           <p className="mt-1 text-muted-foreground">
             Create custom landing pages for your products
           </p>
@@ -182,23 +182,23 @@ export default function LandingPagesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Landing Pages</h1>
+          <h1 className="text-xl md:text-3xl font-bold">Landing Pages</h1>
           <p className="mt-1 text-muted-foreground">
             Create high-converting landing pages for your products
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           New Landing Page
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Pages</CardTitle>

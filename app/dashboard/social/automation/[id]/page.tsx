@@ -250,9 +250,8 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
     );
   }
 
-  // TODO: Revert to subscription check when ready for production
-  // const isPro = automation?.user?.subscription?.plan === "PRO";
-  const isPro = true; // Temporarily unlocked for development/testing
+  // POST-LAUNCH: Revert to subscription check (isPro = plan === "PRO") when pricing tiers ship
+  const isPro = true;
   const hasCommentTrigger = selectedTriggers.includes("COMMENT");
 
   return (

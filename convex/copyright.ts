@@ -325,7 +325,7 @@ export const getStoreCopyrightClaims = query({
       .withIndex("by_store_id", (q) => q.eq("storeId", args.storeId as string))
       .filter((q) => q.eq(q.field("type"), "copyright"))
       .order("desc")
-      .collect();
+      .take(500);
   },
 });
 
@@ -374,7 +374,7 @@ export const getCopyrightReports = query({
         .query("reports")
         .withIndex("by_status", (q) => q.eq("status", args.status!))
         .order("desc")
-        .collect();
+        .take(500);
       return reports.filter((r) => r.type === "copyright");
     }
 
@@ -382,7 +382,7 @@ export const getCopyrightReports = query({
       .query("reports")
       .withIndex("by_type", (q) => q.eq("type", "copyright"))
       .order("desc")
-      .collect();
+      .take(500);
     return reports;
   },
 });

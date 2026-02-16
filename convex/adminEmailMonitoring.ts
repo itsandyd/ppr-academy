@@ -341,7 +341,7 @@ export const getDomainDetails = query({
         q.eq(q.field("domainId"), args.domainId),
         q.eq(q.field("resolved"), false)
       ))
-      .collect();
+      .take(5000);
     
     return {
       domain,
@@ -399,7 +399,7 @@ export const getFlaggedCreators = query({
           q.eq(q.field("sendingStatus"), "suspended")
         )
       ))
-      .collect();
+      .take(5000);
     
     const flaggedCreators = await Promise.all(
       creatorStats.map(async (stat) => {
@@ -630,7 +630,7 @@ export const getEmailAnalyticsChartData = query({
     const analytics = await ctx.db
       .query("emailDomainAnalytics")
       .filter(q => q.gte(q.field("date"), startDateStr))
-      .collect();
+      .take(5000);
 
     // Aggregate by date
     const dataByDate = new Map<string, {

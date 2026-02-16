@@ -26,7 +26,7 @@ export const getPackSamplesWithUrls = query({
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
+      .take(500);
 
     const samples: any[] = [];
 

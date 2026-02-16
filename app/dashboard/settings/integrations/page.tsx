@@ -119,14 +119,14 @@ export default function IntegrationsSettingsPage() {
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/dashboard/settings">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Notification Integrations</h1>
+          <h1 className="text-xl md:text-3xl font-bold text-foreground">Notification Integrations</h1>
           <p className="mt-1 text-muted-foreground">
             Connect Slack and Discord to receive workflow notifications
           </p>

@@ -60,7 +60,7 @@ export default function CourseCheckoutPage() {
   // Show sign-in required message if not authenticated
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
         <Card className="max-w-md w-full">
           <CardContent className="text-center py-8">
             <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

@@ -131,7 +131,7 @@ export const getLeadScoreDistribution = query({
     averageScore: v.number(),
   }),
   handler: async (ctx) => {
-    const allScores = await ctx.db.query("leadScores").collect();
+    const allScores = await ctx.db.query("leadScores").take(5000);
     
     const distribution = {
       totalLeads: allScores.length,
@@ -309,7 +309,7 @@ export const applyScoreDecay = internalMutation({
     const oneDayMs = 24 * 60 * 60 * 1000;
     
     // Get all scores
-    const allScores = await ctx.db.query("leadScores").collect();
+    const allScores = await ctx.db.query("leadScores").take(5000);
     
     let processed = 0;
     let decayed = 0;

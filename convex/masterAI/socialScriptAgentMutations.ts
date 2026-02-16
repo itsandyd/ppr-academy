@@ -97,7 +97,7 @@ export const completeJob = internalMutation({
     const scripts = await ctx.db
       .query("generatedScripts")
       .withIndex("by_storeId", (q) => q.eq("storeId", job.storeId))
-      .collect();
+      .take(500);
 
     const recentScripts = scripts.filter((s) => s.generationBatchId?.startsWith("batch-"));
 
@@ -214,7 +214,7 @@ export const getChaptersToProcess = internalQuery({
       courses = await ctx.db
         .query("courses")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .collect();
+        .take(500);
     }
 
     // Get all chapters from these courses
@@ -227,7 +227,7 @@ export const getChaptersToProcess = internalQuery({
       const chapters = await ctx.db
         .query("courseChapters")
         .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-        .collect();
+        .take(500);
 
       for (const chapter of chapters) {
         // For incremental, check if we already have a script for this chapter
@@ -259,7 +259,7 @@ export const getAccountProfiles = internalQuery({
     return await ctx.db
       .query("socialAccountProfiles")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .take(200);
   },
 });
 

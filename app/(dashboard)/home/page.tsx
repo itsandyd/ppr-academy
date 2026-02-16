@@ -6,5 +6,9 @@ import { CreatorDashboardContent } from "@/components/dashboard/creator-dashboar
 export const dynamic = 'force-dynamic';
 
 export default function DashboardHome() {
-  return <CreatorDashboardContent />;
+  return (
+    <div className="p-4 md:p-6 lg:p-8">
+      <CreatorDashboardContent />
+    </div>
+  );
 }

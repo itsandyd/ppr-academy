@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireStoreOwner, requireAuth } from "./lib/auth";
 
 export const getMembershipTiersByStore = query({
   args: {
@@ -246,6 +247,8 @@ export const createMembershipTier = mutation({
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+
     // Generate slug from tier name
     let baseSlug = args.tierName
       .toLowerCase()
@@ -332,6 +335,7 @@ export const updateMembershipTier = mutation({
     if (!tier) {
       throw new Error("Tier not found");
     }
+    await requireStoreOwner(ctx, tier.storeId);
 
     // Regenerate slug if tierName changes
     if (updates.tierName && updates.tierName !== tier.tierName) {
@@ -416,6 +420,7 @@ export const publishMembershipTier = mutation({
     if (!tier) {
       throw new Error("Tier not found");
     }
+    await requireStoreOwner(ctx, tier.storeId);
 
     await ctx.db.patch(args.tierId, { isActive: true });
     return { success: true };
@@ -425,6 +430,12 @@ export const publishMembershipTier = mutation({
 export const unpublishMembershipTier = mutation({
   args: { tierId: v.id("creatorSubscriptionTiers") },
   handler: async (ctx, args) => {
+    const tier = await ctx.db.get(args.tierId);
+    if (!tier) {
+      throw new Error("Tier not found");
+    }
+    await requireStoreOwner(ctx, tier.storeId);
+
     await ctx.db.patch(args.tierId, { isActive: false });
     return { success: true };
   },
@@ -437,6 +448,7 @@ export const deleteMembershipTier = mutation({
     if (!tier) {
       throw new Error("Tier not found");
     }
+    await requireStoreOwner(ctx, tier.storeId);
 
     const activeSubscribers = await ctx.db
       .query("userCreatorSubscriptions")
@@ -472,6 +484,11 @@ export const createMembershipSubscription = mutation({
     trialEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    if (identity.subject !== args.userId) {
+      throw new Error("Cannot create subscription for another user");
+    }
+
     const tier = await ctx.db.get(args.tierId);
     if (!tier) {
       throw new Error("Tier not found");
@@ -563,9 +580,15 @@ export const cancelMembership = mutation({
     cancelImmediately: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
       throw new Error("Subscription not found");
+    }
+
+    if (subscription.userId !== identity.subject) {
+      throw new Error("Not authorized to cancel this subscription");
     }
 
     if (args.cancelImmediately) {
@@ -590,6 +613,12 @@ export const updateStripePriceIds = mutation({
   },
   handler: async (ctx, args) => {
     const { tierId, ...updates } = args;
+
+    const tier = await ctx.db.get(tierId);
+    if (!tier) {
+      throw new Error("Tier not found");
+    }
+    await requireStoreOwner(ctx, tier.storeId);
 
     await ctx.db.patch(tierId, updates);
 
@@ -778,7 +807,7 @@ export const getUserMemberships = query({
     const subscriptions = await ctx.db
       .query("userCreatorSubscriptions")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(1000);
 
     const enriched = await Promise.all(
       subscriptions.map(async (sub) => {
@@ -827,13 +856,13 @@ export const getCreatorCoursesAndProducts = query({
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", store.userId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(1000);
 
     const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_userId", (q) => q.eq("userId", store.userId))
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .collect();
+      .take(1000);
 
     return { courses, products };
   },
@@ -850,6 +879,8 @@ export const updateMembershipTierPin = mutation({
     if (!tier) {
       throw new Error("Tier not found");
     }
+    await requireStoreOwner(ctx, tier.storeId);
+
     await ctx.db.patch(args.tierId, {
       isPinned: args.isPinned,
       pinnedAt: args.pinnedAt,

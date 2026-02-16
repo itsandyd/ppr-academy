@@ -83,7 +83,7 @@ export const getUserEnrollments = internalQuery({
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     return enrollments.map((e) => ({ courseId: e.courseId as any }));
   },

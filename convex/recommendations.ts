@@ -25,10 +25,10 @@ export const generateRecommendations = mutation({
       const userProgress = await ctx.db
         .query("studentProgress")
         .withIndex("by_user", (q) => q.eq("userId", args.userId))
-        .collect();
+        .take(500);
 
       // Get all courses
-      const allCourses = await ctx.db.query("courses").collect();
+      const allCourses = await ctx.db.query("courses").take(500);
 
       // Get completed course IDs
       const completedCourseIds = userProgress
