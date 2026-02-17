@@ -985,6 +985,7 @@ export default function WorkflowBuilderPage() {
   const userCourses = useQuery(api.courses.getCoursesByUser, user?.id ? { userId: user.id } : "skip");
   const userProducts = useQuery(api.digitalProducts.getProductsByStore, store?._id ? { storeId: store._id } : "skip");
   const membershipTiers = useQuery(api.memberships.getMembershipTiersByStore, storeId ? { storeId } : "skip");
+  const pprProPlans = useQuery(api.pprPro.getPlans, {});
 
   // Get contact stats for total count
   const contactStats = useQuery(
@@ -1290,10 +1291,22 @@ export default function WorkflowBuilderPage() {
       // Build membership context if membership is selected
       let effectiveContextType = sequenceContextType === "membership" ? "store" as const : sequenceContextType;
       let effectiveCustomPrompt = sequenceCustomPrompt || "";
-      if (sequenceContextType === "membership" && sequenceMembershipTierId && membershipTiers) {
-        const selectedTier = membershipTiers.find((t: any) => t._id === sequenceMembershipTierId);
-        if (selectedTier) {
-          const tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${selectedTier.name}\n- Price: $${(selectedTier.priceMonthly / 100).toFixed(0)}/month\n- This is a recurring subscription membership\n- Subscribers get access to all included courses and content\n- Cancel anytime\n${selectedTier.description ? `- Description: ${selectedTier.description}` : ""}\n${selectedTier.includedCourseIds?.length ? `- Includes ${selectedTier.includedCourseIds.length} courses` : ""}\n${selectedTier.includedProductIds?.length ? `- Includes ${selectedTier.includedProductIds.length} products` : ""}`;
+      if (sequenceContextType === "membership" && sequenceMembershipTierId) {
+        let tierInfo = "";
+        if (sequenceMembershipTierId.startsWith("pprpro:")) {
+          const planId = sequenceMembershipTierId.replace("pprpro:", "");
+          const plan = pprProPlans?.find((p: any) => p._id === planId);
+          if (plan) {
+            tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${plan.name}\n- Price: $${(plan.price / 100).toFixed(0)}/${plan.interval}\n- This is a recurring subscription membership (billed ${plan.interval}ly)\n- Subscribers get access to ALL courses on the platform\n- New courses added regularly are automatically included\n- Cancel anytime, no questions asked\n- This is a platform-wide membership giving access to every course in the library`;
+          }
+        } else if (sequenceMembershipTierId.startsWith("tier:")) {
+          const tierId = sequenceMembershipTierId.replace("tier:", "");
+          const selectedTier = membershipTiers?.find((t: any) => t._id === tierId);
+          if (selectedTier) {
+            tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${selectedTier.name || selectedTier.tierName}\n- Price: $${(selectedTier.priceMonthly / 100).toFixed(0)}/month\n- This is a recurring subscription membership\n- Subscribers get access to all included courses and content\n- Cancel anytime\n${selectedTier.description ? `- Description: ${selectedTier.description}` : ""}\n${selectedTier.benefits?.length ? `- Benefits: ${selectedTier.benefits.join(", ")}` : ""}\n${selectedTier.includedCourseIds?.length ? `- Includes ${selectedTier.includedCourseIds.length} courses` : ""}\n${selectedTier.includedProductIds?.length ? `- Includes ${selectedTier.includedProductIds.length} products` : ""}`;
+          }
+        }
+        if (tierInfo) {
           effectiveCustomPrompt = tierInfo + (effectiveCustomPrompt ? `\n${effectiveCustomPrompt}` : "");
         }
       }
@@ -3734,32 +3747,58 @@ export default function WorkflowBuilderPage() {
                       </div>
                     )}
 
-                    {sequenceContextType === 'membership' && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Select your membership tier</label>
-                        {membershipTiers && membershipTiers.length > 0 ? (
-                          <Select value={sequenceMembershipTierId} onValueChange={setSequenceMembershipTierId}>
-                            <SelectTrigger className="border-white/10 bg-white/5 text-white hover:bg-white/10">
-                              <SelectValue placeholder="Choose a membership..." />
-                            </SelectTrigger>
-                            <SelectContent className="border-white/10 bg-slate-900">
-                              {membershipTiers.map((tier: any) => (
-                                <SelectItem key={tier._id} value={tier._id} className="text-white focus:bg-white/10">
-                                  {tier.name} - ${(tier.priceMonthly / 100).toFixed(0)}/mo
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                            <p className="text-sm text-amber-200">You don't have any membership tiers yet.</p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              Create a membership tier first, or select "My Brand" to generate a general sequence.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {sequenceContextType === 'membership' && (() => {
+                      // Combine PPR Pro plans and store membership tiers into one list
+                      const allMemberships: Array<{ id: string; name: string; priceLabel: string; type: 'pprPro' | 'storeTier'; raw: any }> = [];
+                      if (pprProPlans) {
+                        for (const plan of pprProPlans) {
+                          allMemberships.push({
+                            id: `pprpro:${plan._id}`,
+                            name: plan.name,
+                            priceLabel: `$${(plan.price / 100).toFixed(0)}/${plan.interval}`,
+                            type: 'pprPro',
+                            raw: plan,
+                          });
+                        }
+                      }
+                      if (membershipTiers) {
+                        for (const tier of membershipTiers) {
+                          allMemberships.push({
+                            id: `tier:${tier._id}`,
+                            name: tier.name || tier.tierName,
+                            priceLabel: `$${(tier.priceMonthly / 100).toFixed(0)}/mo`,
+                            type: 'storeTier',
+                            raw: tier,
+                          });
+                        }
+                      }
+                      return (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-300">Select your membership</label>
+                          {allMemberships.length > 0 ? (
+                            <Select value={sequenceMembershipTierId} onValueChange={setSequenceMembershipTierId}>
+                              <SelectTrigger className="border-white/10 bg-white/5 text-white hover:bg-white/10">
+                                <SelectValue placeholder="Choose a membership..." />
+                              </SelectTrigger>
+                              <SelectContent className="border-white/10 bg-slate-900">
+                                {allMemberships.map((m) => (
+                                  <SelectItem key={m.id} value={m.id} className="text-white focus:bg-white/10">
+                                    {m.name} - {m.priceLabel}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                              <p className="text-sm text-amber-200">No memberships found.</p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                Set up a membership plan first, or select "My Brand" to generate a general sequence.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Sequence Length - Visual slider-like buttons */}
                     <div className="space-y-3">
