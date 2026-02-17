@@ -385,7 +385,7 @@ export const updateNote = mutation({
     category: v.optional(v.string()),
     priority: v.optional(v.union(
       v.literal("low"),
-      v.literal("medium"), 
+      v.literal("medium"),
       v.literal("high"),
       v.literal("urgent")
     )),
@@ -402,6 +402,11 @@ export const updateNote = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const note = await ctx.db.get(args.noteId);
+    if (!note) throw new Error("Note not found");
+    if (note.userId !== identity.subject) throw new Error("Not authorized");
+
     const updates: any = {
       lastEditedAt: Date.now(),
     };
