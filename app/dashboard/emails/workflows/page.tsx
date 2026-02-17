@@ -984,7 +984,7 @@ export default function WorkflowBuilderPage() {
   // Queries for AI email generation
   const userCourses = useQuery(api.courses.getCoursesByUser, user?.id ? { userId: user.id } : "skip");
   const userProducts = useQuery(api.digitalProducts.getProductsByStore, store?._id ? { storeId: store._id } : "skip");
-  const membershipTiers = useQuery(api.memberships.getMembershipTiersByStore, storeId ? { storeId } : "skip");
+  const membershipTiers = useQuery(api.memberships.getMembershipTiersByStore, store?._id ? { storeId: store._id as string } : "skip");
   const pprProPlans = useQuery(api.pprPro.getPlans, {});
   const subscriptionPlans = useQuery(api.subscriptions.getSubscriptionPlans, store?._id ? { storeId: store._id } : "skip");
 
@@ -1313,7 +1313,9 @@ export default function WorkflowBuilderPage() {
           const tierId = sequenceMembershipTierId.replace("tier:", "");
           const selectedTier = membershipTiers?.find((t: any) => t._id === tierId);
           if (selectedTier) {
-            tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${selectedTier.name || selectedTier.tierName}\n- Price: $${(selectedTier.priceMonthly / 100).toFixed(0)}/month\n- This is a recurring subscription membership\n- Subscribers get access to all included courses and content\n- Cancel anytime\n${selectedTier.description ? `- Description: ${selectedTier.description}` : ""}\n${selectedTier.benefits?.length ? `- Benefits: ${selectedTier.benefits.join(", ")}` : ""}\n${selectedTier.includedCourseIds?.length ? `- Includes ${selectedTier.includedCourseIds.length} courses` : ""}\n${selectedTier.includedProductIds?.length ? `- Includes ${selectedTier.includedProductIds.length} products` : ""}`;
+            // creatorSubscriptionTiers stores price in dollars (not cents)
+            const yearlyInfo = selectedTier.priceYearly ? `\n- Yearly Price: $${selectedTier.priceYearly}/year` : "";
+            tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${selectedTier.tierName || selectedTier.name}\n- Monthly Price: $${selectedTier.priceMonthly}/month${yearlyInfo}\n- This is a recurring subscription membership\n- Subscribers get access to all included courses and content\n- Cancel anytime\n${selectedTier.description ? `- Description: ${selectedTier.description}` : ""}\n${selectedTier.benefits?.length ? `- Benefits: ${selectedTier.benefits.join(", ")}` : ""}\n${selectedTier.includedCourseIds?.length ? `- Includes ${selectedTier.includedCourseIds.length} courses` : ""}\n${selectedTier.includedProductIds?.length ? `- Includes ${selectedTier.includedProductIds.length} products` : ""}`;
           }
         }
         if (tierInfo) {
@@ -3784,10 +3786,11 @@ export default function WorkflowBuilderPage() {
                       }
                       if (membershipTiers) {
                         for (const tier of membershipTiers) {
+                          // creatorSubscriptionTiers stores price in dollars (not cents)
                           allMemberships.push({
                             id: `tier:${tier._id}`,
-                            name: tier.name || tier.tierName,
-                            priceLabel: `$${(tier.priceMonthly / 100).toFixed(0)}/mo`,
+                            name: tier.tierName || tier.name,
+                            priceLabel: `$${tier.priceMonthly}/mo`,
                             type: 'storeTier',
                             raw: tier,
                           });
