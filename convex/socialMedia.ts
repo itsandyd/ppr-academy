@@ -27,7 +27,46 @@ export const getMediaUrls = query({
 });
 
 /**
- * Get social media accounts for a store
+ * Get social media accounts for a store (public-safe version).
+ * Returns only display fields — no tokens or secrets.
+ * Used on public store pages visible to unauthenticated visitors.
+ */
+export const getPublicSocialAccounts = query({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const accounts = await ctx.db
+      .query("socialAccounts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isConnected"), true),
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .take(20);
+
+    return accounts.map((a) => ({
+      _id: a._id,
+      _creationTime: a._creationTime,
+      platform: a.platform,
+      platformUsername: a.platformUsername,
+      platformDisplayName: a.platformDisplayName,
+      profileImageUrl: a.profileImageUrl,
+      isActive: a.isActive,
+      isConnected: a.isConnected,
+    }));
+  },
+});
+
+/**
+ * Get social media accounts for a store.
+ * If caller is the store owner: returns all fields (including tokens).
+ * If caller is unauthenticated or not the owner: returns public-safe data only.
+ * This graceful fallback prevents crashes on the public store page while
+ * the old frontend code is still deployed.
  */
 export const getSocialAccounts = query({
   args: {
@@ -35,11 +74,45 @@ export const getSocialAccounts = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
-    await requireStoreOwner(ctx, args.storeId);
-    return await ctx.db
+    const identity = await ctx.auth.getUserIdentity();
+
+    // If authenticated, check if store owner for full data
+    if (identity) {
+      const store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("_id"), args.storeId))
+        .first();
+      if (store && store.userId === identity.subject) {
+        // Store owner — return full data including tokens
+        return await ctx.db
+          .query("socialAccounts")
+          .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+          .take(1000);
+      }
+    }
+
+    // Not authenticated or not the owner — return public-safe data only
+    const accounts = await ctx.db
       .query("socialAccounts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .take(1000);
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isConnected"), true),
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .take(20);
+
+    return accounts.map((a) => ({
+      _id: a._id,
+      _creationTime: a._creationTime,
+      platform: a.platform,
+      platformUsername: a.platformUsername,
+      platformDisplayName: a.platformDisplayName,
+      profileImageUrl: a.profileImageUrl,
+      isActive: a.isActive,
+      isConnected: a.isConnected,
+    }));
   },
 });
 

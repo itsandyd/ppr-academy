@@ -55,9 +55,7 @@ export function StoreRequiredGuard({
         setIsCreating(true);
 
         try {
-          const result = await createStoreFromProfile({
-            userId: user.id,
-          });
+          const result = await createStoreFromProfile({});
 
           setCreatedStore({
             name: result.storeName,

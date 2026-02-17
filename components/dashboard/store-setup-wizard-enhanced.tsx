@@ -110,7 +110,6 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
       const storeId = await createStore({
         name: formData.storeName.trim(),
         slug: formData.storeSlug.trim() || undefined,
-        userId: user.id,
       });
       
       // POST-LAUNCH: Pass description and logo to updateStore mutation after initial creation

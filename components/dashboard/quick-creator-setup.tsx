@@ -60,7 +60,6 @@ export function QuickCreatorSetup({
       await createStore({
         name: producerName.trim(),
         slug: slug,
-        userId: user.id,
       });
 
       setCreatedSlug(slug);

@@ -159,7 +159,6 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         const noteId = await createNote({
           title: "Untitled",
           content: "<p>Start writing your thoughts...</p>",
-          userId,
           storeId,
           folderId: folderId ? (folderId as Id<"noteFolders">) : undefined,
           tags: [],
@@ -179,7 +178,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         });
       }
     },
-    [createNote, userId, storeId]
+    [createNote, storeId]
   );
 
   const handleCreateFolder = useCallback(
@@ -187,7 +186,6 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
       try {
         const folderId = await createFolder({
           name: "New Folder",
-          userId,
           storeId,
           parentId: parentId ? (parentId as Id<"noteFolders">) : undefined,
         });
@@ -203,7 +201,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         });
       }
     },
-    [createFolder, userId, storeId]
+    [createFolder, storeId]
   );
 
   const handleRenameFolder = useCallback(

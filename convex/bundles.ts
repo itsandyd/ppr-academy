@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireAuth, requireStoreOwner } from "./lib/auth";
 
 /**
  * COURSE & PRODUCT BUNDLES
@@ -260,7 +261,6 @@ export const getBundleBySlug = query({
 export const createBundle = mutation({
   args: {
     storeId: v.id("stores"),
-    creatorId: v.string(),
     name: v.string(),
     description: v.string(),
     bundleType: v.union(v.literal("course_bundle"), v.literal("mixed"), v.literal("product_bundle")),
@@ -273,6 +273,8 @@ export const createBundle = mutation({
     maxPurchases: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { identity } = await requireStoreOwner(ctx, args.storeId);
+    const creatorId = identity.subject;
     // Calculate original price
     let originalPrice = 0;
 
@@ -309,7 +311,7 @@ export const createBundle = mutation({
 
     const bundleId = await ctx.db.insert("bundles", {
       storeId: args.storeId,
-      creatorId: args.creatorId,
+      creatorId,
       name: args.name,
       slug,
       description: args.description,
@@ -383,6 +385,8 @@ export const updateBundle = mutation({
       throw new Error("Bundle not found");
     }
 
+    await requireStoreOwner(ctx, bundle.storeId);
+
     // Recalculate prices if items or price changed
     if (updates.courseIds || updates.productIds || updates.bundlePrice) {
       const courseIds = updates.courseIds || bundle.courseIds;
@@ -421,6 +425,9 @@ export const updateBundle = mutation({
 export const publishBundle = mutation({
   args: { bundleId: v.id("bundles") },
   handler: async (ctx, args) => {
+    const bundle = await ctx.db.get(args.bundleId);
+    if (!bundle) throw new Error("Bundle not found");
+    await requireStoreOwner(ctx, bundle.storeId);
     await ctx.db.patch(args.bundleId, {
       isPublished: true,
       updatedAt: Date.now(),
@@ -433,6 +440,9 @@ export const publishBundle = mutation({
 export const unpublishBundle = mutation({
   args: { bundleId: v.id("bundles") },
   handler: async (ctx, args) => {
+    const bundle = await ctx.db.get(args.bundleId);
+    if (!bundle) throw new Error("Bundle not found");
+    await requireStoreOwner(ctx, bundle.storeId);
     await ctx.db.patch(args.bundleId, {
       isPublished: false,
       updatedAt: Date.now(),
@@ -442,7 +452,7 @@ export const unpublishBundle = mutation({
   },
 });
 
-export const recordBundlePurchase = mutation({
+export const recordBundlePurchase = internalMutation({
   args: {
     bundleId: v.id("bundles"),
     amount: v.number(),
@@ -470,6 +480,8 @@ export const deleteBundle = mutation({
     if (!bundle) {
       throw new Error("Bundle not found");
     }
+
+    await requireStoreOwner(ctx, bundle.storeId);
 
     if (bundle.totalPurchases > 0) {
       // Soft delete

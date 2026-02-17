@@ -70,7 +70,7 @@ interface CourseCheckoutProps {
 
 export function CourseCheckout({ course, store, creator, user }: CourseCheckoutProps) {
   const router = useRouter();
-  const createCourseEnrollment = useMutation(api.library.createCourseEnrollment);
+  const enrollInFreeCourse = useMutation(api.library.enrollInFreeCourse);
   
   // Fetch creator's Stripe Connect account info
   const creatorUser = useQuery(
@@ -151,13 +151,8 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
         }
         
         // Create free enrollment in Convex
-        const purchaseId = await createCourseEnrollment({
-          userId: user.id,
+        const purchaseId = await enrollInFreeCourse({
           courseId: course._id as any,
-          amount: 0,
-          currency: "USD",
-          paymentMethod: "free",
-          transactionId: `free_${Date.now()}_${user.id}`,
         });
 
         // Send enrollment confirmation email for free course

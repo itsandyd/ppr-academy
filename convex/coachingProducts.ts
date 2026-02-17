@@ -539,6 +539,127 @@ export const bookCoachingSession = mutation({
   },
 });
 
+// Internal version for server-side callers (e.g. Stripe webhooks) that don't have user auth context
+export const internalBookCoachingSession = internalMutation({
+  args: {
+    productId: v.id("digitalProducts"),
+    studentId: v.string(),
+    scheduledDate: v.number(),
+    startTime: v.string(),
+    notes: v.optional(v.string()),
+    customFieldResponses: v.optional(v.any()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    sessionId: v.optional(v.id("coachingSessions")),
+    error: v.optional(v.string()),
+    requiresDiscordAuth: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const studentId = args.studentId;
+
+      const product = await ctx.db.get(args.productId);
+      if (!product) {
+        return { success: false, error: "Coaching product not found" };
+      }
+
+      const coachId = product.userId;
+      const duration = (product as any).duration || 60;
+
+      const discordConnection = await ctx.db
+        .query("discordIntegrations")
+        .withIndex("by_userId", (q) => q.eq("userId", studentId))
+        .unique();
+
+      if (!discordConnection) {
+        return {
+          success: false,
+          error: "Discord connection required",
+          requiresDiscordAuth: true,
+        };
+      }
+
+      const [hours, minutes] = args.startTime.split(":").map(Number);
+      const endMinutes = hours * 60 + minutes + duration;
+      const endHours = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+      const sessionId = await ctx.db.insert("coachingSessions", {
+        productId: args.productId,
+        coachId,
+        studentId,
+        scheduledDate: args.scheduledDate,
+        startTime: args.startTime,
+        endTime,
+        duration,
+        status: "SCHEDULED",
+        notes: args.notes,
+        sessionType: (product as any).sessionType || "video",
+        totalCost: product.price,
+        discordSetupComplete: false,
+        reminderSent: false,
+      });
+
+      await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
+        sessionId,
+        coachId,
+        studentId,
+        productId: args.productId,
+      });
+
+      const student = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", studentId))
+        .unique();
+      const coach = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", coachId))
+        .unique();
+
+      if (student?.email && coach?.email) {
+        const sessionDate = new Date(args.scheduledDate).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        const studentName = student.name || student.firstName || "Student";
+        const coachName = coach.name || coach.firstName || "Coach";
+
+        await ctx.scheduler.runAfter(0, internal.coachingEmails.sendBookingConfirmationEmail, {
+          studentName,
+          studentEmail: student.email,
+          sessionTitle: product.title,
+          coachName,
+          sessionDate,
+          sessionTime: args.startTime,
+          duration,
+        });
+
+        await ctx.scheduler.runAfter(0, internal.coachingEmails.sendNewBookingNotificationEmail, {
+          coachName,
+          coachEmail: coach.email,
+          studentName,
+          studentEmail: student.email,
+          sessionTitle: product.title,
+          sessionDate,
+          sessionTime: args.startTime,
+          duration,
+          amount: product.price,
+          notes: args.notes,
+        });
+      }
+
+      return { success: true, sessionId };
+    } catch (error: any) {
+      console.error("Error booking coaching session:", error);
+      return { success: false, error: error.message };
+    }
+  },
+});
+
 // ==================== COACH SESSION MANAGEMENT ====================
 
 export const getCoachSessions = query({

@@ -194,7 +194,7 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
           followGateMessage: followGateEnabled && followGateConfig ? followGateConfig.customMessage : undefined,
         });
       } else {
-        const result = await createBundleMutation({ storeId, creatorId: user.id, name: state.data.title || "Untitled Bundle", description: state.data.description || "", bundleType, courseIds: courseIds.length > 0 ? courseIds : undefined, productIds: productIds.length > 0 ? productIds : undefined, bundlePrice: state.data.price ? parseFloat(state.data.price) : 0, imageUrl: state.data.thumbnail });
+        const result = await createBundleMutation({ storeId, name: state.data.title || "Untitled Bundle", description: state.data.description || "", bundleType, courseIds: courseIds.length > 0 ? courseIds : undefined, productIds: productIds.length > 0 ? productIds : undefined, bundlePrice: state.data.price ? parseFloat(state.data.price) : 0, imageUrl: state.data.thumbnail });
         if (result?.bundleId) {
           const newBundleId = String(result.bundleId);
           setState(prev => ({ ...prev, bundleId: newBundleId }));

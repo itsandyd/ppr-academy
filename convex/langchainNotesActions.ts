@@ -349,7 +349,6 @@ export const generateNotesFromSource = action({
       const noteId = await ctx.runMutation(api.notes.createNote, {
         title: noteTitle,
         content: htmlContent,
-        userId: args.userId,
         storeId: args.storeId,
         folderId: args.folderId,
         tags: source.tags || [],

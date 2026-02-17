@@ -104,7 +104,6 @@ export default function CoursePlayerPage() {
 
     try {
       await updateProgress({
-        userId: user.id,
         slug,
         chapterId,
         isCompleted: true,

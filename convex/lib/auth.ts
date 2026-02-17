@@ -51,3 +51,25 @@ export async function requireAuth(ctx: QueryCtx | MutationCtx) {
   }
   return identity;
 }
+
+/**
+ * Verify the caller is authenticated and is an admin.
+ * Throws if not authenticated or not an admin.
+ */
+export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+    .first();
+
+  if (!user?.admin) {
+    throw new Error("Admin access required");
+  }
+
+  return { identity, user };
+}

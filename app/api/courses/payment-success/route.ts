@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
       
       // Create course enrollment in Convex
       if (metadata.userId && metadata.courseId) {
-        const { fetchMutation } = await import("convex/nextjs");
+        const { fetchAction } = await import("convex/nextjs");
         const { api } = await import("@/convex/_generated/api");
 
         try {
-          const purchaseId = await fetchMutation(api.library.createCourseEnrollment, {
+          const purchaseId = await fetchAction(api.serverActions.serverCreateCourseEnrollment, {
             userId: metadata.userId,
             courseId: metadata.courseId as any,
             amount: paymentIntent.amount,

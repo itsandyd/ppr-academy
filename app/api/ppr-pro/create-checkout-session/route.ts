@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
-import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { fetchQuery, fetchAction } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import * as Sentry from "@sentry/nextjs";
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Auto-seed plans if they don't exist yet
     if (!dbPlan) {
-      await fetchMutation(api.pprPro.seedPlans, {});
+      await fetchAction(api.serverActions.serverSeedPlans, {});
       dbPlan = await fetchQuery(api.pprPro.getPlanByInterval, { interval });
     }
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
       // Persist Stripe IDs back to the database for future checkouts
       try {
-        await fetchMutation(api.pprPro.updatePlanStripeIds, {
+        await fetchAction(api.serverActions.serverUpdatePlanStripeIds, {
           interval,
           stripeProductId,
           stripePriceId: stripePrice.id,

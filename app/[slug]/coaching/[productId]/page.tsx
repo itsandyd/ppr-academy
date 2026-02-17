@@ -162,7 +162,6 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
       } else {
         const result = await bookSession({
           productId: product._id,
-          studentId: user.id,
           scheduledDate: selectedDate.getTime(),
           startTime: selectedSlot,
           notes: notes || undefined,

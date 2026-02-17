@@ -448,8 +448,13 @@ export const deleteNote = mutation({
   args: { noteId: v.id("notes") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const note = await ctx.db.get(args.noteId);
+    if (!note) throw new Error("Note not found");
+    if (note.userId !== identity.subject) throw new Error("Not authorized");
+
     // Archive the note instead of deleting to preserve RAG embeddings
-    await ctx.db.patch(args.noteId, { 
+    await ctx.db.patch(args.noteId, {
       isArchived: true,
       lastEditedAt: Date.now(),
     });
@@ -632,10 +637,10 @@ export const createNoteTemplate = mutation({
     tags: v.array(v.string()),
     icon: v.optional(v.string()),
     isPublic: v.boolean(),
-    createdBy: v.string(),
   },
   returns: v.id("noteTemplates"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     return await ctx.db.insert("noteTemplates", {
       name: args.name,
       description: args.description,
@@ -644,7 +649,7 @@ export const createNoteTemplate = mutation({
       tags: args.tags,
       icon: args.icon,
       isPublic: args.isPublic,
-      createdBy: args.createdBy,
+      createdBy: identity.subject,
       usageCount: 0,
     });
   },
@@ -697,28 +702,29 @@ export const getNoteTemplates = query({
 export const useNoteTemplate: any = mutation({
   args: {
     templateId: v.id("noteTemplates"),
-    userId: v.string(),
     storeId: v.string(),
     title: v.string(),
     folderId: v.optional(v.id("noteFolders")),
   },
   returns: v.id("notes"),
   handler: async (ctx, args): Promise<any> => {
+    // Auth is checked by the createNote call, but verify here too
+    await requireAuth(ctx);
+
     const template = await ctx.db.get(args.templateId);
     if (!template) {
       throw new Error("Template not found");
     }
-    
+
     // Increment usage count
     await ctx.db.patch(args.templateId, {
       usageCount: template.usageCount + 1,
     });
-    
-    // Create note from template
+
+    // Create note from template (createNote handles auth internally)
     return await ctx.runMutation(api.notes.createNote, {
       title: args.title,
       content: template.content,
-      userId: args.userId,
       storeId: args.storeId,
       folderId: args.folderId,
       tags: template.tags,

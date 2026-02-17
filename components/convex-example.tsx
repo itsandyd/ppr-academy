@@ -40,7 +40,6 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
     try {
       await createStore({
         name: storeName,
-        userId: userId,
       });
 
       toast({
@@ -63,7 +62,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
   // Handle store deletion
   const handleDeleteStore = async (storeId: string, name: string) => {
     try {
-      await deleteStore({ id: storeId as any, userId });
+      await deleteStore({ id: storeId as any });
 
       toast({
         title: "Store deleted",

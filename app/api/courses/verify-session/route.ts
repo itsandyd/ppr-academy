@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
-import { fetchMutation, fetchQuery } from "convex/nextjs";
+import { fetchAction, fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Enrollment doesn't exist — create it now (webhook must have missed it)
     const amount = session.amount_total || 0;
-    const purchaseId = await fetchMutation(api.library.createCourseEnrollment, {
+    const purchaseId = await fetchAction(api.serverActions.serverCreateCourseEnrollment, {
       userId: metadata.userId,
       courseId: metadata.courseId as Id<"courses">,
       amount,

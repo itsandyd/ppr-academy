@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, action, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { requireAuth, requireAdmin, requireStoreOwner } from "./lib/auth";
 
 /**
  * TAX, CURRENCY, REFUNDS & PAYOUTS
@@ -78,6 +79,7 @@ export const createTaxRate = mutation({
     stripeTaxCodeId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
 
     const taxRateId = await ctx.db.insert("taxRates", {
@@ -152,6 +154,7 @@ export const updateCurrencyRate = mutation({
     source: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
 
     const rateId = await ctx.db.insert("currencyRates", {
@@ -171,7 +174,6 @@ export const updateCurrencyRate = mutation({
 export const requestRefund = mutation({
   args: {
     orderId: v.string(),
-    userId: v.string(),
     storeId: v.id("stores"),
     creatorId: v.string(),
     itemType: v.union(
@@ -187,12 +189,14 @@ export const requestRefund = mutation({
     revokeAccess: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
     const now = Date.now();
     const refundType = args.refundAmount === args.originalAmount ? "full" : "partial";
 
     const refundId = await ctx.db.insert("refunds", {
       orderId: args.orderId,
-      userId: args.userId,
+      userId,
       storeId: args.storeId,
       creatorId: args.creatorId,
       itemType: args.itemType,
@@ -202,7 +206,7 @@ export const requestRefund = mutation({
       refundType,
       reason: args.reason,
       status: "requested",
-      requestedBy: args.userId,
+      requestedBy: userId,
       revokeAccess: args.revokeAccess || true,
       requestedAt: now,
       createdAt: now,
@@ -216,12 +220,12 @@ export const requestRefund = mutation({
 export const approveRefund = mutation({
   args: {
     refundId: v.id("refunds"),
-    approvedBy: v.string(),
   },
   handler: async (ctx, args) => {
+    const { identity } = await requireAdmin(ctx);
     await ctx.db.patch(args.refundId, {
       status: "approved",
-      approvedBy: args.approvedBy,
+      approvedBy: identity.subject,
       updatedAt: Date.now(),
     });
 
@@ -235,6 +239,7 @@ export const processRefund = mutation({
     stripeRefundId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
 
     await ctx.db.patch(args.refundId, {
@@ -251,13 +256,13 @@ export const processRefund = mutation({
 export const denyRefund = mutation({
   args: {
     refundId: v.id("refunds"),
-    approvedBy: v.string(),
     reason: v.string(),
   },
   handler: async (ctx, args) => {
+    const { identity } = await requireAdmin(ctx);
     await ctx.db.patch(args.refundId, {
       status: "denied",
-      approvedBy: args.approvedBy,
+      approvedBy: identity.subject,
       denialReason: args.reason,
       updatedAt: Date.now(),
     });
@@ -349,6 +354,7 @@ export const createCreatorPayout = mutation({
     taxWithheld: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
 
     const payoutId = await ctx.db.insert("creatorPayouts", {
@@ -382,6 +388,7 @@ export const completeCreatorPayout = mutation({
     stripeTransferId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
 
     await ctx.db.patch(args.payoutId, {
@@ -401,6 +408,7 @@ export const failCreatorPayout = mutation({
     reason: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     await ctx.db.patch(args.payoutId, {
       status: "failed",
       failureReason: args.reason,
@@ -425,7 +433,6 @@ export const getPayoutSchedule = query({
 
 export const createPayoutSchedule = mutation({
   args: {
-    creatorId: v.string(),
     storeId: v.id("stores"),
     frequency: v.union(v.literal("weekly"), v.literal("biweekly"), v.literal("monthly")),
     dayOfWeek: v.optional(v.number()),
@@ -433,6 +440,8 @@ export const createPayoutSchedule = mutation({
     minimumPayout: v.number(),
   },
   handler: async (ctx, args) => {
+    const { identity } = await requireStoreOwner(ctx, args.storeId);
+    const creatorId = identity.subject;
     const now = Date.now();
 
     // Calculate next payout date
@@ -446,7 +455,7 @@ export const createPayoutSchedule = mutation({
     }
 
     const scheduleId = await ctx.db.insert("payoutSchedules", {
-      creatorId: args.creatorId,
+      creatorId,
       storeId: args.storeId,
       frequency: args.frequency,
       dayOfWeek: args.dayOfWeek,
@@ -472,6 +481,15 @@ export const updatePayoutSchedule = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const schedule = await ctx.db.get(args.scheduleId);
+    if (!schedule) {
+      throw new Error("Payout schedule not found");
+    }
+    if (schedule.creatorId !== identity.subject) {
+      throw new Error("Unauthorized: you don't own this payout schedule");
+    }
+
     const { scheduleId, ...updates } = args;
 
     await ctx.db.patch(scheduleId, {
@@ -559,6 +577,7 @@ export const markPurchasesAsPaidOut = mutation({
     payoutId: v.id("creatorPayouts"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     for (const purchaseId of args.purchaseIds) {
       await ctx.db.patch(purchaseId, {
         isPaidOut: true,
@@ -584,6 +603,7 @@ export const processPayoutRequest = mutation({
     processingFee: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const now = Date.now();
     const periodStart = now - 30 * 24 * 60 * 60 * 1000; // Last 30 days
     const periodEnd = now;
@@ -616,19 +636,19 @@ export const processPayoutRequest = mutation({
 // ===== REFERRALS =====
 
 export const createReferralCode = mutation({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
     // Generate unique referral code
-    const code = args.userId.substring(0, 8).toUpperCase() + 
+    const code = userId.substring(0, 8).toUpperCase() +
                  Math.random().toString(36).substring(2, 6).toUpperCase();
 
     const now = Date.now();
     const expiresAt = now + 365 * 24 * 60 * 60 * 1000; // 1 year
 
     const referralId = await ctx.db.insert("referrals", {
-      referrerUserId: args.userId,
+      referrerUserId: userId,
       referredUserId: "", // Will be filled when someone uses the code
       referralCode: code,
       status: "pending",
@@ -648,9 +668,10 @@ export const createReferralCode = mutation({
 export const applyReferralCode = mutation({
   args: {
     referralCode: v.string(),
-    referredUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const referredUserId = identity.subject;
     const referral = await ctx.db
       .query("referrals")
       .withIndex("by_code", (q: any) => q.eq("referralCode", args.referralCode))
@@ -671,7 +692,7 @@ export const applyReferralCode = mutation({
     }
 
     await ctx.db.patch(referral._id, {
-      referredUserId: args.referredUserId,
+      referredUserId,
       status: "completed",
       createdAt: now,
     });

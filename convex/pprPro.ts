@@ -41,7 +41,7 @@ export const getPlanByInterval = query({
 /**
  * Seed default PPR Pro plans (call once from admin or on first checkout)
  */
-export const seedPlans = mutation({
+export const seedPlans = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if plans already exist
@@ -75,7 +75,7 @@ export const seedPlans = mutation({
 /**
  * Update Stripe IDs on a plan (called from checkout route after creating product/price)
  */
-export const updatePlanStripeIds = mutation({
+export const updatePlanStripeIds = internalMutation({
   args: {
     interval: v.union(v.literal("month"), v.literal("year")),
     stripeProductId: v.optional(v.string()),
@@ -188,7 +188,7 @@ export const isPprProMemberInternal = internalQuery({
 /**
  * Create a new PPR Pro subscription (called from webhook)
  */
-export const createSubscription = mutation({
+export const createSubscription = internalMutation({
   args: {
     userId: v.string(),
     plan: v.union(v.literal("monthly"), v.literal("yearly")),
@@ -247,7 +247,7 @@ export const createSubscription = mutation({
 /**
  * Update subscription status (called from webhook on subscription.updated)
  */
-export const updateSubscriptionStatus = mutation({
+export const updateSubscriptionStatus = internalMutation({
   args: {
     stripeSubscriptionId: v.string(),
     status: v.union(
@@ -299,7 +299,7 @@ export const updateSubscriptionStatus = mutation({
 /**
  * Mark subscription as expired (called from webhook on subscription.deleted)
  */
-export const expireSubscription = mutation({
+export const expireSubscription = internalMutation({
   args: {
     stripeSubscriptionId: v.string(),
   },

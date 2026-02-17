@@ -424,7 +424,6 @@ export default function ProfilePage() {
 
       await updateStoreProfile({
         storeId: store._id,
-        userId: user.id,
         name: formData.name || undefined,
         bio: formData.bio || undefined,
         avatar: formData.avatar || undefined,

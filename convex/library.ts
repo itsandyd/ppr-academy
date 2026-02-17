@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { requireAuth } from "./lib/auth";
 
 // Check if user already has access to a specific course
 export const hasUserPurchasedCourse = query({
@@ -410,7 +411,6 @@ export const verifyProductAccess = query({
 // Update user progress
 export const updateProgress = mutation({
   args: {
-    userId: v.string(),
     slug: v.string(),
     chapterId: v.string(),
     moduleId: v.optional(v.string()),
@@ -420,6 +420,8 @@ export const updateProgress = mutation({
   },
   returns: v.id("userProgress"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
     // First, get the course by slug
     const course = await ctx.db
       .query("courses")
@@ -433,12 +435,12 @@ export const updateProgress = mutation({
     const existingProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_user_chapter", (q) =>
-        q.eq("userId", args.userId).eq("chapterId", args.chapterId)
+        q.eq("userId", userId).eq("chapterId", args.chapterId)
       )
       .unique();
 
     const progressData = {
-      userId: args.userId,
+      userId,
       courseId: course._id,
       moduleId: args.moduleId,
       lessonId: args.lessonId,
@@ -460,8 +462,8 @@ export const updateProgress = mutation({
 
     // Update learning streak and award XP when completing a chapter
     if (args.isCompleted && !existingProgress?.isCompleted) {
-      await updateLearningStreakInternal(ctx, args.userId);
-      await awardChapterCompletionXP(ctx, args.userId);
+      await updateLearningStreakInternal(ctx, userId);
+      await awardChapterCompletionXP(ctx, userId);
     }
 
     return progressId;
@@ -562,7 +564,6 @@ async function updateLearningStreakInternal(ctx: any, userId: string) {
 // Track library session
 export const trackLibrarySession = mutation({
   args: {
-    userId: v.string(),
     sessionType: v.union(
       v.literal("course"),
       v.literal("download"),
@@ -576,8 +577,9 @@ export const trackLibrarySession = mutation({
   },
   returns: v.id("librarySessions"),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     return await ctx.db.insert("librarySessions", {
-      userId: args.userId,
+      userId: identity.subject,
       sessionType: args.sessionType,
       resourceId: args.resourceId,
       startedAt: Date.now(),
@@ -592,15 +594,15 @@ export const trackLibrarySession = mutation({
 // Update download count for digital product
 export const trackDownload = mutation({
   args: {
-    userId: v.string(),
     productId: v.id("digitalProducts"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
     const purchase = await ctx.db
       .query("purchases")
       .withIndex("by_user_product", (q) =>
-        q.eq("userId", args.userId).eq("productId", args.productId)
+        q.eq("userId", identity.subject).eq("productId", args.productId)
       )
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
@@ -814,8 +816,8 @@ export const getCourseWithProgress = query({
   },
 });
 
-// Create course enrollment (purchase)
-export const createCourseEnrollment = mutation({
+// Create course enrollment (purchase) - internal only, called from webhooks/server routes
+export const createCourseEnrollment = internalMutation({
   args: {
     userId: v.string(),
     courseId: v.id("courses"),
@@ -1000,7 +1002,7 @@ export const createCourseEnrollment = mutation({
   },
 });
 
-export const createDigitalProductPurchase = mutation({
+export const createDigitalProductPurchase = internalMutation({
   args: {
     userId: v.string(),
     productId: v.id("digitalProducts"),
@@ -1127,7 +1129,7 @@ export const createDigitalProductPurchase = mutation({
   },
 });
 
-export const createBundlePurchase = mutation({
+export const createBundlePurchase = internalMutation({
   args: {
     userId: v.string(),
     bundleId: v.id("bundles"),
@@ -1311,6 +1313,264 @@ export const createBundlePurchase = mutation({
         amount: args.amount,
       });
     }
+
+    return purchaseId;
+  },
+});
+
+// ===== PUBLIC AUTH-GATED MUTATIONS FOR FREE ENROLLMENTS =====
+
+/**
+ * Enroll in a free course (public, auth-gated).
+ * Only allows amount=0. Paid enrollments go through Stripe webhook → internalMutation.
+ */
+export const enrollInFreeCourse = mutation({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.id("purchases"),
+  handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
+    const course = await ctx.db.get(args.courseId);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
+    // Only allow free enrollment for free courses
+    if (course.price && course.price > 0) {
+      throw new Error("This course requires payment. Please use the checkout flow.");
+    }
+
+    // Check if user already has this course
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .withIndex("by_user_course", (q) => q.eq("userId", userId).eq("courseId", args.courseId))
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .first();
+
+    if (existingPurchase) {
+      throw new Error("You already have access to this course");
+    }
+
+    // Create purchase record
+    const purchaseId = await ctx.db.insert("purchases", {
+      userId,
+      courseId: args.courseId,
+      storeId: course.storeId || course.userId,
+      adminUserId: course.userId,
+      amount: 0,
+      currency: "USD",
+      status: "completed",
+      paymentMethod: "free",
+      transactionId: `free_${Date.now()}_${userId}`,
+      productType: "course",
+      accessGranted: true,
+      downloadCount: 0,
+      lastAccessedAt: Date.now(),
+    });
+
+    // Track analytics
+    const storeIdForAnalytics = course.storeId || course.userId;
+    await ctx.db.insert("analyticsEvents", {
+      userId,
+      storeId: storeIdForAnalytics,
+      eventType: "purchase",
+      resourceId: args.courseId,
+      resourceType: "course",
+      timestamp: Date.now(),
+      metadata: { value: 0, currency: "USD" },
+    });
+
+    await ctx.db.insert("analyticsEvents", {
+      userId,
+      storeId: storeIdForAnalytics,
+      eventType: "enrollment",
+      resourceId: args.courseId,
+      resourceType: "course",
+      timestamp: Date.now(),
+      metadata: {},
+    });
+
+    // Create enrollment record
+    const existingEnrollment = await ctx.db
+      .query("enrollments")
+      .withIndex("by_user_course", (q) => q.eq("userId", userId).eq("courseId", args.courseId))
+      .unique();
+
+    if (!existingEnrollment) {
+      await ctx.db.insert("enrollments", {
+        userId,
+        courseId: args.courseId,
+        progress: 0,
+      });
+    }
+
+    // Trigger email workflows
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
+      .unique();
+
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerProductPurchaseWorkflows, {
+        storeId: course.storeId || course.userId,
+        customerEmail: user.email,
+        customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        courseId: args.courseId,
+        courseName: course.title,
+        productType: "course",
+        orderId: purchaseId,
+        amount: 0,
+      });
+
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromEnrollment, {
+        storeId: course.storeId || course.userId,
+        email: user.email,
+        userId,
+        courseId: args.courseId,
+      });
+    }
+
+    // Trigger conversion nudge
+    await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerFirstEnrollment, {
+      userId,
+      courseId: args.courseId,
+    });
+
+    return purchaseId;
+  },
+});
+
+/**
+ * Claim a free bundle (public, auth-gated).
+ * Only allows amount=0. Paid bundles go through Stripe webhook → internalMutation.
+ */
+export const claimFreeBundle = mutation({
+  args: {
+    bundleId: v.id("bundles"),
+  },
+  returns: v.id("purchases"),
+  handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
+    const bundle = await ctx.db.get(args.bundleId);
+    if (!bundle) {
+      throw new Error("Bundle not found");
+    }
+
+    // Only allow free claims for free bundles
+    if (bundle.bundlePrice && bundle.bundlePrice > 0) {
+      throw new Error("This bundle requires payment. Please use the checkout flow.");
+    }
+
+    // Check existing purchase
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .filter((q) =>
+        q.and(q.eq(q.field("bundleId"), args.bundleId), q.eq(q.field("status"), "completed"))
+      )
+      .first();
+
+    if (existingPurchase) {
+      throw new Error("You already have access to this bundle");
+    }
+
+    const purchaseId = await ctx.db.insert("purchases", {
+      userId,
+      bundleId: args.bundleId,
+      storeId: bundle.storeId as any,
+      adminUserId: bundle.creatorId,
+      amount: 0,
+      currency: "USD",
+      status: "completed",
+      paymentMethod: "free",
+      productType: "bundle",
+      accessGranted: true,
+      downloadCount: 0,
+      lastAccessedAt: Date.now(),
+    });
+
+    // Grant access to individual items in bundle
+    for (const courseId of bundle.courseIds) {
+      const existingCoursePurchase = await ctx.db
+        .query("purchases")
+        .withIndex("by_user_course", (q) => q.eq("userId", userId).eq("courseId", courseId))
+        .filter((q) => q.eq(q.field("status"), "completed"))
+        .first();
+
+      if (!existingCoursePurchase) {
+        const course = await ctx.db.get(courseId);
+        if (course) {
+          await ctx.db.insert("purchases", {
+            userId,
+            courseId,
+            storeId: course.storeId || course.userId,
+            adminUserId: course.userId,
+            amount: 0,
+            currency: "USD",
+            status: "completed",
+            paymentMethod: "bundle",
+            productType: "course",
+            accessGranted: true,
+            downloadCount: 0,
+            lastAccessedAt: Date.now(),
+            bundleId: args.bundleId,
+          });
+
+          const existingEnrollment = await ctx.db
+            .query("enrollments")
+            .withIndex("by_user_course", (q) => q.eq("userId", userId).eq("courseId", courseId))
+            .unique();
+
+          if (!existingEnrollment) {
+            await ctx.db.insert("enrollments", {
+              userId,
+              courseId,
+              progress: 0,
+            });
+          }
+        }
+      }
+    }
+
+    for (const productId of bundle.productIds) {
+      const existingProductPurchase = await ctx.db
+        .query("purchases")
+        .withIndex("by_user_product", (q) => q.eq("userId", userId).eq("productId", productId))
+        .filter((q) => q.eq(q.field("status"), "completed"))
+        .first();
+
+      if (!existingProductPurchase) {
+        const product = await ctx.db.get(productId);
+        if (product) {
+          await ctx.db.insert("purchases", {
+            userId,
+            productId,
+            storeId: product.storeId,
+            adminUserId: product.userId,
+            amount: 0,
+            currency: "USD",
+            status: "completed",
+            paymentMethod: "bundle",
+            productType: "digitalProduct",
+            accessGranted: true,
+            downloadCount: 0,
+            lastAccessedAt: Date.now(),
+            bundleId: args.bundleId,
+          });
+        }
+      }
+    }
+
+    // Update bundle stats
+    await ctx.db.patch(args.bundleId, {
+      totalPurchases: bundle.totalPurchases + 1,
+      updatedAt: Date.now(),
+    });
 
     return purchaseId;
   },

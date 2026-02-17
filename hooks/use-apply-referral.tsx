@@ -42,7 +42,6 @@ export function useApplyReferral() {
         // Apply the referral code
         const result = await applyReferralCode({
           referralCode: code,
-          referredUserId: user.id,
         });
 
         if (result.success) {

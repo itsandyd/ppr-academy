@@ -50,7 +50,7 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
   const [followGateCompleted, setFollowGateCompleted] = useState(false);
 
   // Mutations
-  const createBundlePurchase = useMutation(api.library.createBundlePurchase);
+  const claimFreeBundle = useMutation(api.library.claimFreeBundle);
   const submitLead = useMutation(api.leadSubmissions.submitLead);
 
   // Build follow gate steps from bundle config (must be before early returns)
@@ -114,12 +114,8 @@ export default function BundleDetailPage({ params }: BundleDetailPageProps) {
 
     setIsClaimingFree(true);
     try {
-      await createBundlePurchase({
-        userId: user.id,
+      await claimFreeBundle({
         bundleId: bundle._id,
-        amount: 0,
-        currency: "USD",
-        paymentMethod: "free",
       });
       setFreeBundleClaimed(true);
       toast.success("Bundle claimed! You now have access to all items.");

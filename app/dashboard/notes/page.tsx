@@ -159,7 +159,6 @@ export default function DashboardNotesPage() {
       const noteId = await createNote({
         title: "Untitled Note",
         content: "<p>Start writing your thoughts...</p>",
-        userId: user.id,
         storeId,
         tags: [],
         priority: "medium",
@@ -184,7 +183,6 @@ export default function DashboardNotesPage() {
     try {
       await createFolder({
         name: "New Folder",
-        userId: user.id,
         storeId,
       });
       toast({

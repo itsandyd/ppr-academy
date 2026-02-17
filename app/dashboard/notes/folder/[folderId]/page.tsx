@@ -165,7 +165,6 @@ export default function FolderNotesPage() {
       const noteId = await createNote({
         title: "Untitled Note",
         content: "<p>Start writing your thoughts...</p>",
-        userId: user.id,
         storeId,
         folderId: folderId as Id<"noteFolders">,
         tags: [],

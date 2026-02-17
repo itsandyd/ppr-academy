@@ -73,7 +73,6 @@ export function OneClickCreatorSetup({
 
     try {
       const result = await createStoreFromProfile({
-        userId: user.id,
         name: customName || undefined, // Only pass if customized
       });
 

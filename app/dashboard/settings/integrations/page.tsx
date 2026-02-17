@@ -42,7 +42,6 @@ export default function IntegrationsSettingsPage() {
     setIsSaving(true);
     try {
       await updateStoreIntegrations({
-        userId: user?.id || '',
         storeId: store._id,
         notificationIntegrations: {
           slackWebhookUrl: slackWebhookUrl || undefined,

@@ -413,9 +413,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { storeId: store._id } : "skip"
   );
 
-  // Fetch connected social accounts for this store
+  // Fetch connected social accounts for this store (public-safe, no tokens)
   const socialAccounts = useQuery(
-    api.socialMedia?.getSocialAccounts as any,
+    api.socialMedia.getPublicSocialAccounts,
     store ? { storeId: store._id } : "skip"
   );
 

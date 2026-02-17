@@ -71,6 +71,7 @@ import {
   Headphones,
   Video,
   MessagesSquare,
+  Crown,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -916,10 +917,12 @@ export default function WorkflowBuilderPage() {
     // Product-type specific sequences
     | "sample_pack_launch" | "preset_pack_launch" | "midi_pack_launch" | "beat_lease_launch"
     | "coaching_launch" | "mixing_service_launch" | "pdf_guide_launch" | "community_launch"
+    | "membership_launch"
   >("product_launch");
-  const [sequenceContextType, setSequenceContextType] = useState<"course" | "product" | "store">("store");
+  const [sequenceContextType, setSequenceContextType] = useState<"course" | "product" | "store" | "membership">("store");
   const [sequenceCourseId, setSequenceCourseId] = useState<string>("");
   const [sequenceProductId, setSequenceProductId] = useState<string>("");
+  const [sequenceMembershipTierId, setSequenceMembershipTierId] = useState<string>("");
   const [sequenceCustomPrompt, setSequenceCustomPrompt] = useState("");
   const [sequenceLength, setSequenceLength] = useState(5);
   const [sequenceTone, setSequenceTone] = useState<"professional" | "friendly" | "casual" | "urgent" | "educational">("friendly");
@@ -981,6 +984,7 @@ export default function WorkflowBuilderPage() {
   // Queries for AI email generation
   const userCourses = useQuery(api.courses.getCoursesByUser, user?.id ? { userId: user.id } : "skip");
   const userProducts = useQuery(api.digitalProducts.getProductsByStore, store?._id ? { storeId: store._id } : "skip");
+  const membershipTiers = useQuery(api.memberships.getMembershipTiersByStore, storeId ? { storeId } : "skip");
 
   // Get contact stats for total count
   const contactStats = useQuery(
@@ -1283,13 +1287,24 @@ export default function WorkflowBuilderPage() {
 
     setIsGeneratingSequence(true);
     try {
+      // Build membership context if membership is selected
+      let effectiveContextType = sequenceContextType === "membership" ? "store" as const : sequenceContextType;
+      let effectiveCustomPrompt = sequenceCustomPrompt || "";
+      if (sequenceContextType === "membership" && sequenceMembershipTierId && membershipTiers) {
+        const selectedTier = membershipTiers.find((t: any) => t._id === sequenceMembershipTierId);
+        if (selectedTier) {
+          const tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${selectedTier.name}\n- Price: $${(selectedTier.priceMonthly / 100).toFixed(0)}/month\n- This is a recurring subscription membership\n- Subscribers get access to all included courses and content\n- Cancel anytime\n${selectedTier.description ? `- Description: ${selectedTier.description}` : ""}\n${selectedTier.includedCourseIds?.length ? `- Includes ${selectedTier.includedCourseIds.length} courses` : ""}\n${selectedTier.includedProductIds?.length ? `- Includes ${selectedTier.includedProductIds.length} products` : ""}`;
+          effectiveCustomPrompt = tierInfo + (effectiveCustomPrompt ? `\n${effectiveCustomPrompt}` : "");
+        }
+      }
+
       const result = await generateWorkflowSequence({
         storeId,
         campaignType: sequenceCampaignType,
-        contextType: sequenceContextType,
+        contextType: effectiveContextType,
         courseId: sequenceContextType === "course" && sequenceCourseId ? sequenceCourseId as Id<"courses"> : undefined,
         productId: sequenceContextType === "product" && sequenceProductId ? sequenceProductId as Id<"digitalProducts"> : undefined,
-        customPrompt: sequenceCustomPrompt || undefined,
+        customPrompt: effectiveCustomPrompt || undefined,
         sequenceLength,
         tone: sequenceTone,
       });
@@ -3582,13 +3597,18 @@ export default function WorkflowBuilderPage() {
                           { id: 'mixing_service_launch', icon: Headphones, color: 'sky', label: 'Mix/Master', desc: 'Mixing & mastering' },
                           { id: 'pdf_guide_launch', icon: FileText, color: 'lime', label: 'PDF/Guide', desc: 'Ebooks & tutorials' },
                           { id: 'community_launch', icon: MessagesSquare, color: 'violet', label: 'Community', desc: 'Memberships & groups' },
+                          { id: 'membership_launch', icon: Crown, color: 'amber', label: 'Membership', desc: 'Recurring subscriptions' },
                         ].map(({ id, icon: Icon, color, label, desc }) => (
                           <button
                             key={id}
                             onClick={() => {
                               setSequenceCampaignType(id as any);
-                              // All product-specific types should select product context
-                              setSequenceContextType('product');
+                              // Membership uses its own context type
+                              if (id === 'membership_launch') {
+                                setSequenceContextType('membership');
+                              } else {
+                                setSequenceContextType('product');
+                              }
                             }}
                             className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
                               sequenceCampaignType === id
@@ -3631,11 +3651,12 @@ export default function WorkflowBuilderPage() {
                     {/* Context Type Cards */}
                     <div className="space-y-3">
                       <label className="text-sm font-medium text-slate-300">This campaign is for:</label>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         {[
                           { id: 'store', icon: Store, label: 'My Brand' },
                           { id: 'course', icon: BookOpen, label: 'A Course' },
                           { id: 'product', icon: Package, label: 'A Product' },
+                          { id: 'membership', icon: Crown, label: 'Membership' },
                         ].map(({ id, icon: Icon, label }) => (
                           <button
                             key={id}
@@ -3643,6 +3664,7 @@ export default function WorkflowBuilderPage() {
                               setSequenceContextType(id as any);
                               setSequenceCourseId('');
                               setSequenceProductId('');
+                              setSequenceMembershipTierId('');
                             }}
                             className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
                               sequenceContextType === id
@@ -3706,6 +3728,33 @@ export default function WorkflowBuilderPage() {
                             <p className="text-sm text-amber-200">You don't have any products yet.</p>
                             <p className="mt-1 text-xs text-slate-400">
                               Create a product first, or select "My Brand" to generate a general sequence.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {sequenceContextType === 'membership' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-300">Select your membership tier</label>
+                        {membershipTiers && membershipTiers.length > 0 ? (
+                          <Select value={sequenceMembershipTierId} onValueChange={setSequenceMembershipTierId}>
+                            <SelectTrigger className="border-white/10 bg-white/5 text-white hover:bg-white/10">
+                              <SelectValue placeholder="Choose a membership..." />
+                            </SelectTrigger>
+                            <SelectContent className="border-white/10 bg-slate-900">
+                              {membershipTiers.map((tier: any) => (
+                                <SelectItem key={tier._id} value={tier._id} className="text-white focus:bg-white/10">
+                                  {tier.name} - ${(tier.priceMonthly / 100).toFixed(0)}/mo
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                            <p className="text-sm text-amber-200">You don't have any membership tiers yet.</p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              Create a membership tier first, or select "My Brand" to generate a general sequence.
                             </p>
                           </div>
                         )}

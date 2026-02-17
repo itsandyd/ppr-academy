@@ -56,7 +56,6 @@ export function useCreateCoachingProduct() {
         const result = await createProduct({
           ...data,
           storeId,
-          userId: user.id,
         });
 
         if (result.success && result.productId) {
@@ -191,7 +190,6 @@ export function useBookCoachingSession() {
       try {
         const result = await bookSession({
           productId,
-          studentId: user.id,
           scheduledDate: scheduledDate.getTime(),
           startTime,
           notes,

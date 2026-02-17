@@ -256,7 +256,8 @@ export const generateWorkflowSequence = action({
       v.literal("coaching_launch"),
       v.literal("mixing_service_launch"),
       v.literal("pdf_guide_launch"),
-      v.literal("community_launch")
+      v.literal("community_launch"),
+      v.literal("membership_launch")
     ),
     contextType: v.union(
       v.literal("course"),
@@ -504,6 +505,15 @@ STORE/BRAND INFORMATION:
 - Email 4: How active the community is, what the vibe is like
 - Email 5: FAQ - cancellation, access, private vs public
 - Final: Founding member pricing or limited-time bonus`,
+      membership_launch: `MEMBERSHIP/SUBSCRIPTION LAUNCH PSYCHOLOGY:
+- Email 1: The problem with buying courses one-by-one (expensive, overwhelming)
+- Email 2: Introducing the membership - everything included for one monthly price
+- Email 3: What's included - full course library, new content added regularly
+- Email 4: Member success story - how the membership accelerated their growth
+- Email 5: The math - membership cost vs buying individually (massive savings)
+- Email 6: FAQ - cancel anytime, what happens to progress, how billing works
+- Email 7: Risk reversal - try it for a month, cancel if it's not for you
+- Final: Limited-time launch pricing or bonus for early members`,
       custom: args.customPrompt || `A custom email sequence based on the provided context.`,
     };
 
@@ -1090,6 +1100,59 @@ STORE/BRAND INFORMATION:
           focus: "Warm invitation",
         },
       ],
+      // MEMBERSHIP/SUBSCRIPTION LAUNCH TEMPLATES
+      membership_launch: [
+        {
+          purpose: "problem",
+          structure: "The frustration of buying courses one-by-one. Expensive. Overwhelming. Not knowing which one to pick.",
+          focus: "Agitate the pain of the current model",
+        },
+        {
+          purpose: "introduction",
+          structure: "Introduce the membership. One monthly price, access to everything. Simple. No more guessing.",
+          focus: "Position membership as the obvious solution",
+        },
+        {
+          purpose: "whats_included",
+          structure: "Full breakdown of what's included. Course library. New content added regularly. All future releases.",
+          focus: "Make the value tangible and overwhelming",
+        },
+        {
+          purpose: "success_story",
+          structure: "Member who went from stuck to skilled. Specific results. How having access to everything changed their approach.",
+          focus: "Show the transformation membership enables",
+        },
+        {
+          purpose: "the_math",
+          structure: "Cost of membership vs buying courses individually. Show the savings. Monthly price vs total catalog value.",
+          focus: "Make the financial case undeniable",
+        },
+        {
+          purpose: "faq",
+          structure: "Cancel anytime. What happens to progress if you cancel. How billing works. When new content drops.",
+          focus: "Remove commitment fear and uncertainty",
+        },
+        {
+          purpose: "risk_reversal",
+          structure: "Try it for a month. If it's not for you, cancel. No questions. No hassle. You keep everything you learned.",
+          focus: "Make saying yes feel risk-free",
+        },
+        {
+          purpose: "new_content",
+          structure: "Preview what's coming next. New courses in the pipeline. The membership keeps getting more valuable.",
+          focus: "Show ongoing value and growth",
+        },
+        {
+          purpose: "urgency",
+          structure: "Launch pricing won't last. Lock in this rate before it goes up. Early members get the best deal.",
+          focus: "Create authentic urgency to act now",
+        },
+        {
+          purpose: "final_call",
+          structure: "Everything they get. The price. The guarantee. One link. Make the decision easy.",
+          focus: "Confident close with clear next step",
+        },
+      ],
     };
 
     // Use the appropriate templates or default to course_launch
@@ -1256,7 +1319,8 @@ STYLE CHECKLIST (Russell Brunson / Frank Kern):
     const salesSequenceTypes = [
       "course_launch", "product_launch", "promotion",
       "sample_pack_launch", "preset_pack_launch", "midi_pack_launch", "beat_lease_launch",
-      "coaching_launch", "mixing_service_launch", "pdf_guide_launch", "community_launch"
+      "coaching_launch", "mixing_service_launch", "pdf_guide_launch", "community_launch",
+      "membership_launch"
     ];
     const isSalesSequence = salesSequenceTypes.includes(args.campaignType);
     const exitNodeId = `exit-purchased-${Date.now()}`;

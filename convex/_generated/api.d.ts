@@ -3232,7 +3232,8 @@ export declare const api: {
           | "coaching_launch"
           | "mixing_service_launch"
           | "pdf_guide_launch"
-          | "community_launch";
+          | "community_launch"
+          | "membership_launch";
         contextType: "course" | "product" | "store";
         courseId?: Id<"courses">;
         customPrompt?: string;
@@ -5045,7 +5046,6 @@ export declare const api: {
         bundlePrice: number;
         bundleType: "course_bundle" | "mixed" | "product_bundle";
         courseIds?: Array<Id<"courses">>;
-        creatorId: string;
         description: string;
         imageUrl?: string;
         maxPurchases?: number;
@@ -5098,12 +5098,6 @@ export declare const api: {
       "mutation",
       "public",
       { bundleId: Id<"bundles"> },
-      any
-    >;
-    recordBundlePurchase: FunctionReference<
-      "mutation",
-      "public",
-      { amount: number; bundleId: Id<"bundles"> },
       any
     >;
     unpublishBundle: FunctionReference<
@@ -5560,7 +5554,6 @@ export declare const api: {
         productId: Id<"digitalProducts">;
         scheduledDate: number;
         startTime: string;
-        studentId: string;
       },
       {
         error?: string;
@@ -5593,7 +5586,6 @@ export declare const api: {
         storeId: string;
         thumbnailStyle?: string;
         title: string;
-        userId: string;
       },
       { error?: string; productId?: Id<"digitalProducts">; success: boolean }
     >;
@@ -6698,19 +6690,13 @@ export declare const api: {
         lessonId?: string;
         moduleId?: string;
         timeSpent?: number;
-        userId: string;
       },
       any
     >;
     updateChapterTimeSpent: FunctionReference<
       "mutation",
       "public",
-      {
-        chapterId: string;
-        courseId: Id<"courses">;
-        timeSpent: number;
-        userId: string;
-      },
+      { chapterId: string; courseId: Id<"courses">; timeSpent: number },
       any
     >;
   };
@@ -13675,43 +13661,16 @@ export declare const api: {
     >;
   };
   library: {
-    createBundlePurchase: FunctionReference<
+    claimFreeBundle: FunctionReference<
       "mutation",
       "public",
-      {
-        amount: number;
-        bundleId: Id<"bundles">;
-        currency?: string;
-        paymentMethod?: string;
-        transactionId?: string;
-        userId: string;
-      },
+      { bundleId: Id<"bundles"> },
       Id<"purchases">
     >;
-    createCourseEnrollment: FunctionReference<
+    enrollInFreeCourse: FunctionReference<
       "mutation",
       "public",
-      {
-        amount: number;
-        courseId: Id<"courses">;
-        currency?: string;
-        paymentMethod?: string;
-        transactionId?: string;
-        userId: string;
-      },
-      Id<"purchases">
-    >;
-    createDigitalProductPurchase: FunctionReference<
-      "mutation",
-      "public",
-      {
-        amount: number;
-        currency?: string;
-        paymentMethod?: string;
-        productId: Id<"digitalProducts">;
-        transactionId?: string;
-        userId: string;
-      },
+      { courseId: Id<"courses"> },
       Id<"purchases">
     >;
     getCourseWithProgress: FunctionReference<
@@ -13850,7 +13809,7 @@ export declare const api: {
     trackDownload: FunctionReference<
       "mutation",
       "public",
-      { productId: Id<"digitalProducts">; userId: string },
+      { productId: Id<"digitalProducts"> },
       null
     >;
     trackLibrarySession: FunctionReference<
@@ -13862,7 +13821,6 @@ export declare const api: {
         resourceId?: string;
         sessionType: "course" | "download" | "coaching" | "browse";
         userAgent?: string;
-        userId: string;
       },
       Id<"librarySessions">
     >;
@@ -13876,7 +13834,6 @@ export declare const api: {
         moduleId?: string;
         slug: string;
         timeSpent?: number;
-        userId: string;
       },
       Id<"userProgress">
     >;
@@ -15479,13 +15436,13 @@ export declare const api: {
     applyReferralCode: FunctionReference<
       "mutation",
       "public",
-      { referralCode: string; referredUserId: string },
+      { referralCode: string },
       any
     >;
     approveRefund: FunctionReference<
       "mutation",
       "public",
-      { approvedBy: string; refundId: Id<"refunds"> },
+      { refundId: Id<"refunds"> },
       any
     >;
     calculateTax: FunctionReference<
@@ -15532,7 +15489,6 @@ export declare const api: {
       "mutation",
       "public",
       {
-        creatorId: string;
         dayOfMonth?: number;
         dayOfWeek?: number;
         frequency: "weekly" | "biweekly" | "monthly";
@@ -15541,12 +15497,7 @@ export declare const api: {
       },
       any
     >;
-    createReferralCode: FunctionReference<
-      "mutation",
-      "public",
-      { userId: string },
-      any
-    >;
+    createReferralCode: FunctionReference<"mutation", "public", {}, any>;
     createTaxRate: FunctionReference<
       "mutation",
       "public",
@@ -15563,7 +15514,7 @@ export declare const api: {
     denyRefund: FunctionReference<
       "mutation",
       "public",
-      { approvedBy: string; reason: string; refundId: Id<"refunds"> },
+      { reason: string; refundId: Id<"refunds"> },
       any
     >;
     failCreatorPayout: FunctionReference<
@@ -15667,7 +15618,6 @@ export declare const api: {
         refundAmount: number;
         revokeAccess?: boolean;
         storeId: Id<"stores">;
-        userId: string;
       },
       any
     >;
@@ -15934,7 +15884,6 @@ export declare const api: {
         name: string;
         parentId?: Id<"noteFolders">;
         storeId: string;
-        userId: string;
       },
       Id<"noteFolders">
     >;
@@ -15951,7 +15900,6 @@ export declare const api: {
         storeId: string;
         tags?: Array<string>;
         title: string;
-        userId: string;
       },
       Id<"notes">
     >;
@@ -15961,7 +15909,6 @@ export declare const api: {
       {
         category: string;
         content: string;
-        createdBy: string;
         description: string;
         icon?: string;
         isPublic: boolean;
@@ -16140,7 +16087,6 @@ export declare const api: {
         storeId: string;
         templateId: Id<"noteTemplates">;
         title: string;
-        userId: string;
       },
       Id<"notes">
     >;
@@ -16942,26 +16888,6 @@ export declare const api: {
     >;
   };
   pprPro: {
-    createSubscription: FunctionReference<
-      "mutation",
-      "public",
-      {
-        currentPeriodEnd: number;
-        currentPeriodStart: number;
-        plan: "monthly" | "yearly";
-        status?: "active" | "trialing";
-        stripeCustomerId: string;
-        stripeSubscriptionId: string;
-        userId: string;
-      },
-      any
-    >;
-    expireSubscription: FunctionReference<
-      "mutation",
-      "public",
-      { stripeSubscriptionId: string },
-      any
-    >;
     getByStripeSubscriptionId: FunctionReference<
       "query",
       "public",
@@ -16986,30 +16912,6 @@ export declare const api: {
       "public",
       { userId: string },
       boolean
-    >;
-    seedPlans: FunctionReference<"mutation", "public", {}, any>;
-    updatePlanStripeIds: FunctionReference<
-      "mutation",
-      "public",
-      {
-        interval: "month" | "year";
-        stripePriceId?: string;
-        stripeProductId?: string;
-      },
-      any
-    >;
-    updateSubscriptionStatus: FunctionReference<
-      "mutation",
-      "public",
-      {
-        cancelAtPeriodEnd?: boolean;
-        currentPeriodEnd?: number;
-        currentPeriodStart?: number;
-        plan?: "monthly" | "yearly";
-        status: "active" | "cancelled" | "past_due" | "expired" | "trialing";
-        stripeSubscriptionId: string;
-      },
-      any
     >;
   };
   presetPacks: {
@@ -18424,6 +18326,91 @@ export declare const api: {
       { success: boolean; updatedPattern: any }
     >;
   };
+  serverActions: {
+    serverCreateBundlePurchase: FunctionReference<
+      "action",
+      "public",
+      {
+        amount: number;
+        bundleId: Id<"bundles">;
+        currency?: string;
+        paymentMethod?: string;
+        transactionId?: string;
+        userId: string;
+      },
+      any
+    >;
+    serverCreateCourseEnrollment: FunctionReference<
+      "action",
+      "public",
+      {
+        amount: number;
+        courseId: Id<"courses">;
+        currency?: string;
+        paymentMethod?: string;
+        transactionId?: string;
+        userId: string;
+      },
+      any
+    >;
+    serverCreateDigitalProductPurchase: FunctionReference<
+      "action",
+      "public",
+      {
+        amount: number;
+        currency?: string;
+        paymentMethod?: string;
+        productId: Id<"digitalProducts">;
+        transactionId?: string;
+        userId: string;
+      },
+      any
+    >;
+    serverCreateSubscription: FunctionReference<
+      "action",
+      "public",
+      {
+        currentPeriodEnd: number;
+        currentPeriodStart: number;
+        plan: "monthly" | "yearly";
+        status?: "active" | "trialing";
+        stripeCustomerId: string;
+        stripeSubscriptionId: string;
+        userId: string;
+      },
+      any
+    >;
+    serverExpireSubscription: FunctionReference<
+      "action",
+      "public",
+      { stripeSubscriptionId: string },
+      any
+    >;
+    serverSeedPlans: FunctionReference<"action", "public", {}, any>;
+    serverUpdatePlanStripeIds: FunctionReference<
+      "action",
+      "public",
+      {
+        interval: "month" | "year";
+        stripePriceId?: string;
+        stripeProductId?: string;
+      },
+      any
+    >;
+    serverUpdateSubscriptionStatus: FunctionReference<
+      "action",
+      "public",
+      {
+        cancelAtPeriodEnd?: boolean;
+        currentPeriodEnd?: number;
+        currentPeriodStart?: number;
+        plan?: "monthly" | "yearly";
+        status: "active" | "cancelled" | "past_due" | "expired" | "trialing";
+        stripeSubscriptionId: string;
+      },
+      any
+    >;
+  };
   serviceOrders: {
     approveDelivery: FunctionReference<
       "mutation",
@@ -18437,7 +18424,6 @@ export declare const api: {
       {
         basePrice: number;
         creatorId: string;
-        customerId: string;
         customerNotes?: string;
         isRush?: boolean;
         productId: Id<"digitalProducts">;
@@ -18530,11 +18516,7 @@ export declare const api: {
     markMessagesRead: FunctionReference<
       "mutation",
       "public",
-      {
-        orderId: Id<"serviceOrders">;
-        userId: string;
-        userType: "customer" | "creator";
-      },
+      { orderId: Id<"serviceOrders">; userType: "customer" | "creator" },
       any
     >;
     requestRevision: FunctionReference<
@@ -18556,7 +18538,6 @@ export declare const api: {
         }>;
         content: string;
         orderId: Id<"serviceOrders">;
-        senderId: string;
         senderType: "customer" | "creator";
       },
       any
@@ -18856,6 +18837,12 @@ export declare const api: {
       { storageIds: Array<Id<"_storage">> },
       Array<string | null>
     >;
+    getPublicSocialAccounts: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<any>
+    >;
     getScheduledPosts: FunctionReference<
       "query",
       "public",
@@ -19154,19 +19141,19 @@ export declare const api: {
     createStore: FunctionReference<
       "mutation",
       "public",
-      { name: string; slug?: string; userId: string },
+      { name: string; slug?: string },
       Id<"stores">
     >;
     createStoreFromProfile: FunctionReference<
       "mutation",
       "public",
-      { name?: string; userId: string },
+      { name?: string },
       { storeId: Id<"stores">; storeName: string; storeSlug: string }
     >;
     deleteStore: FunctionReference<
       "mutation",
       "public",
-      { id: Id<"stores">; userId: string },
+      { id: Id<"stores"> },
       null
     >;
     getAllStores: FunctionReference<
@@ -19664,7 +19651,6 @@ export declare const api: {
         notificationEmail?: string;
         sendDigestInsteadOfInstant?: boolean;
         storeId: Id<"stores">;
-        userId: string;
       },
       { message: string; success: boolean }
     >;
@@ -19676,7 +19662,6 @@ export declare const api: {
         fromName?: string;
         replyToEmail?: string;
         storeId: Id<"stores">;
-        userId: string;
       },
       { message: string; success: boolean }
     >;
@@ -19697,14 +19682,13 @@ export declare const api: {
           slackWebhookUrl?: string;
         };
         storeId: Id<"stores">;
-        userId: string;
       },
       { message: string; success: boolean }
     >;
     updateStore: FunctionReference<
       "mutation",
       "public",
-      { id: Id<"stores">; name?: string; slug?: string; userId: string },
+      { id: Id<"stores">; name?: string; slug?: string },
       {
         _creationTime: number;
         _id: Id<"stores">;
@@ -19809,7 +19793,6 @@ export declare const api: {
           url: string;
         }>;
         storeId: Id<"stores">;
-        userId: string;
       },
       {
         _creationTime: number;
@@ -22458,6 +22441,14 @@ export declare const internal: {
       any
     >;
   };
+  bundles: {
+    recordBundlePurchase: FunctionReference<
+      "mutation",
+      "internal",
+      { amount: number; bundleId: Id<"bundles"> },
+      any
+    >;
+  };
   changelog: {
     getEntriesByIds: FunctionReference<
       "query",
@@ -22614,6 +22605,24 @@ export declare const internal: {
         discordRoleId?: string;
         productId: Id<"digitalProducts">;
       } | null
+    >;
+    internalBookCoachingSession: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        customFieldResponses?: any;
+        notes?: string;
+        productId: Id<"digitalProducts">;
+        scheduledDate: number;
+        startTime: string;
+        studentId: string;
+      },
+      {
+        error?: string;
+        requiresDiscordAuth?: boolean;
+        sessionId?: Id<"coachingSessions">;
+        success: boolean;
+      }
     >;
     updateSessionDiscordInfo: FunctionReference<
       "mutation",
@@ -25289,6 +25298,47 @@ export declare const internal: {
       emailDripWorkflow: FunctionReference<"mutation", "internal", any, any>;
     };
   };
+  library: {
+    createBundlePurchase: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        amount: number;
+        bundleId: Id<"bundles">;
+        currency?: string;
+        paymentMethod?: string;
+        transactionId?: string;
+        userId: string;
+      },
+      Id<"purchases">
+    >;
+    createCourseEnrollment: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        amount: number;
+        courseId: Id<"courses">;
+        currency?: string;
+        paymentMethod?: string;
+        transactionId?: string;
+        userId: string;
+      },
+      Id<"purchases">
+    >;
+    createDigitalProductPurchase: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        amount: number;
+        currency?: string;
+        paymentMethod?: string;
+        productId: Id<"digitalProducts">;
+        transactionId?: string;
+        userId: string;
+      },
+      Id<"purchases">
+    >;
+  };
   liveViewers: {
     cleanupExpiredViewers: FunctionReference<"mutation", "internal", {}, any>;
   };
@@ -27940,11 +27990,55 @@ export declare const internal: {
     >;
   };
   pprPro: {
+    createSubscription: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        currentPeriodEnd: number;
+        currentPeriodStart: number;
+        plan: "monthly" | "yearly";
+        status?: "active" | "trialing";
+        stripeCustomerId: string;
+        stripeSubscriptionId: string;
+        userId: string;
+      },
+      any
+    >;
+    expireSubscription: FunctionReference<
+      "mutation",
+      "internal",
+      { stripeSubscriptionId: string },
+      any
+    >;
     isPprProMemberInternal: FunctionReference<
       "query",
       "internal",
       { userId: string },
       boolean
+    >;
+    seedPlans: FunctionReference<"mutation", "internal", {}, any>;
+    updatePlanStripeIds: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        interval: "month" | "year";
+        stripePriceId?: string;
+        stripeProductId?: string;
+      },
+      any
+    >;
+    updateSubscriptionStatus: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        cancelAtPeriodEnd?: boolean;
+        currentPeriodEnd?: number;
+        currentPeriodStart?: number;
+        plan?: "monthly" | "yearly";
+        status: "active" | "cancelled" | "past_due" | "expired" | "trialing";
+        stripeSubscriptionId: string;
+      },
+      any
     >;
   };
   rag: {
@@ -28221,6 +28315,34 @@ export declare const internal: {
       "internal",
       {},
       { processed: number; updated: number }
+    >;
+  };
+  serviceOrders: {
+    internalCreateServiceOrder: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        basePrice: number;
+        creatorId: string;
+        customerId: string;
+        customerNotes?: string;
+        isRush?: boolean;
+        productId: Id<"digitalProducts">;
+        rushFee?: number;
+        selectedTier: {
+          id: string;
+          name: string;
+          price: number;
+          revisions: number;
+          stemCount: string;
+          turnaroundDays: number;
+        };
+        serviceType: "mixing" | "mastering" | "mix-and-master" | "stem-mixing";
+        storeId: string;
+        totalPrice: number;
+        transactionId?: string;
+      },
+      any
     >;
   };
   socialDM: {

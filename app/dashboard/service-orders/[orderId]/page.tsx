@@ -103,7 +103,6 @@ export default function CreatorOrderDetailPage({ params }: OrderDetailPageProps)
     if (order && user?.id && (order.unreadByCreator ?? 0) > 0) {
       markMessagesRead({
         orderId: orderId as Id<"serviceOrders">,
-        userId: user.id,
         userType: "creator",
       });
     }
@@ -168,7 +167,6 @@ export default function CreatorOrderDetailPage({ params }: OrderDetailPageProps)
     try {
       await sendMessage({
         orderId: orderId as Id<"serviceOrders">,
-        senderId: user.id,
         senderType: "creator",
         content: messageText,
       });

@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
               status: "creating",
             });
 
-            const { fetchMutation: fetchMutationPprPro } = await import("convex/nextjs");
+            const { fetchAction: fetchActionPprPro } = await import("convex/nextjs");
             const { api: apiPprPro } = await import("@/convex/_generated/api");
 
             const subscriptionResponse = await stripe.subscriptions.retrieve(
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
             const subscription = subscriptionResponse as any;
 
             try {
-              await fetchMutationPprPro(apiPprPro.pprPro.createSubscription, {
+              await fetchActionPprPro(apiPprPro.serverActions.serverCreateSubscription, {
                 userId,
                 plan: plan as "monthly" | "yearly",
                 stripeSubscriptionId: subscription.id,
@@ -341,12 +341,12 @@ export async function POST(request: NextRequest) {
               currency: currency || "USD",
             });
 
-            const { fetchMutation: fetchMutationEnroll } = await import("convex/nextjs");
+            const { fetchAction: fetchActionEnroll } = await import("convex/nextjs");
             const { api: apiEnroll } = await import("@/convex/_generated/api");
 
             try {
-              const purchaseId = await fetchMutationEnroll(
-                apiEnroll.library.createCourseEnrollment,
+              const purchaseId = await fetchActionEnroll(
+                apiEnroll.serverActions.serverCreateCourseEnrollment,
                 {
                   userId,
                   courseId: courseId as any,
@@ -395,12 +395,12 @@ export async function POST(request: NextRequest) {
               currency: currency || "USD",
             });
 
-            const { fetchMutation: fetchMutationProduct } = await import("convex/nextjs");
+            const { fetchAction: fetchActionProduct } = await import("convex/nextjs");
             const { api: apiProduct } = await import("@/convex/_generated/api");
 
             try {
-              const purchaseId = await fetchMutationProduct(
-                apiProduct.library.createDigitalProductPurchase,
+              const purchaseId = await fetchActionProduct(
+                apiProduct.serverActions.serverCreateDigitalProductPurchase,
                 {
                   userId,
                   productId: productId as any,
@@ -449,11 +449,11 @@ export async function POST(request: NextRequest) {
               currency: currency || "USD",
             });
 
-            const { fetchMutation: fetchMutationBundle } = await import("convex/nextjs");
+            const { fetchAction: fetchActionBundle } = await import("convex/nextjs");
             const { api: apiBundle } = await import("@/convex/_generated/api");
 
             try {
-              const purchaseId = await fetchMutationBundle(apiBundle.library.createBundlePurchase, {
+              const purchaseId = await fetchActionBundle(apiBundle.serverActions.serverCreateBundlePurchase, {
                 userId,
                 bundleId: bundleId as any,
                 amount: parseInt(amount),
@@ -739,15 +739,16 @@ export async function POST(request: NextRequest) {
             });
 
             const { fetchMutation: fetchMutationService, fetchQuery: fetchQueryService } = await import("convex/nextjs");
-            const { api: apiService } = await import("@/convex/_generated/api");
+            const { api: apiService, internal: internalService } = await import("@/convex/_generated/api");
 
             try {
               // Parse the selected tier from JSON string
               const tierData = JSON.parse(selectedTier);
 
-              // Create the service order
+              // Create the service order (uses internal mutation since webhook has no user auth context)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const orderId = await fetchMutationService(
-                apiService.serviceOrders.createServiceOrder,
+                internalService.serviceOrders.internalCreateServiceOrder as any,
                 {
                   customerId: userId,
                   creatorId,
@@ -841,12 +842,13 @@ export async function POST(request: NextRequest) {
             });
 
             const { fetchMutation: fetchMutationCoaching, fetchQuery: fetchQueryCoaching } = await import("convex/nextjs");
-            const { api: apiCoaching } = await import("@/convex/_generated/api");
+            const { api: apiCoaching, internal: internalCoaching } = await import("@/convex/_generated/api");
 
             try {
-              // Book the coaching session
+              // Book the coaching session (uses internal mutation since webhook has no user auth context)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const result = await fetchMutationCoaching(
-                apiCoaching.coachingProducts.bookCoachingSession,
+                internalCoaching.coachingProducts.internalBookCoachingSession as any,
                 {
                   productId: productId as any,
                   studentId: userId,
@@ -926,13 +928,13 @@ export async function POST(request: NextRequest) {
               currency: currency || "USD",
             });
 
-            const { fetchMutation: fetchMutationTip } = await import("convex/nextjs");
+            const { fetchAction: fetchActionTip } = await import("convex/nextjs");
             const { api: apiTip } = await import("@/convex/_generated/api");
 
             try {
-              // Create the tip purchase record using digital product purchase mutation
-              const purchaseId = await fetchMutationTip(
-                apiTip.library.createDigitalProductPurchase,
+              // Create the tip purchase record using digital product purchase action
+              const purchaseId = await fetchActionTip(
+                apiTip.serverActions.serverCreateDigitalProductPurchase,
                 {
                   userId,
                   productId: tipJarId as any,
@@ -981,13 +983,13 @@ export async function POST(request: NextRequest) {
           status: updatedSubscription.status,
         });
 
-        const { fetchMutation: fetchMutationUpdate } = await import("convex/nextjs");
+        const { fetchMutation: fetchMutationUpdate, fetchAction: fetchActionUpdate } = await import("convex/nextjs");
         const { api: apiUpdate } = await import("@/convex/_generated/api");
 
         // Check if this is a PPR Pro subscription
         if (updatedSubscription.metadata?.productType === "ppr_pro") {
           const planInterval = updatedSubscription.items?.data?.[0]?.price?.recurring?.interval;
-          await fetchMutationUpdate(apiUpdate.pprPro.updateSubscriptionStatus, {
+          await fetchActionUpdate(apiUpdate.serverActions.serverUpdateSubscriptionStatus, {
             stripeSubscriptionId: updatedSubscription.id,
             status: updatedSubscription.status === "canceled"
               ? "cancelled" as const
@@ -1032,12 +1034,12 @@ export async function POST(request: NextRequest) {
           status: "cancelled",
         });
 
-        const { fetchMutation: fetchMutationDelete } = await import("convex/nextjs");
+        const { fetchMutation: fetchMutationDelete, fetchAction: fetchActionDelete } = await import("convex/nextjs");
         const { api: apiDelete } = await import("@/convex/_generated/api");
 
         // Check if this is a PPR Pro subscription
         if (deletedSubscription.metadata?.productType === "ppr_pro") {
-          await fetchMutationDelete(apiDelete.pprPro.expireSubscription, {
+          await fetchActionDelete(apiDelete.serverActions.serverExpireSubscription, {
             stripeSubscriptionId: deletedSubscription.id,
           });
           serverLogger.info("PPR Pro", "Subscription expired/cancelled");
@@ -1111,10 +1113,10 @@ export async function POST(request: NextRequest) {
           try {
             const failedSub = await stripe.subscriptions.retrieve(failedInvoice.subscription);
             if (failedSub.metadata?.productType === "ppr_pro") {
-              const { fetchMutation: fetchMutationFailed } = await import("convex/nextjs");
+              const { fetchAction: fetchActionFailed } = await import("convex/nextjs");
               const { api: apiFailed } = await import("@/convex/_generated/api");
 
-              await fetchMutationFailed(apiFailed.pprPro.updateSubscriptionStatus, {
+              await fetchActionFailed(apiFailed.serverActions.serverUpdateSubscriptionStatus, {
                 stripeSubscriptionId: failedInvoice.subscription,
                 status: "past_due",
               });

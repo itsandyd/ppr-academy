@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { requireAuth } from "./lib/auth";
 
 /**
  * COURSE PROGRESS TRACKING
@@ -228,7 +229,6 @@ export const calculateCourseProgressInternal = internalQuery({
  */
 export const markChapterComplete = mutation({
   args: {
-    userId: v.string(),
     courseId: v.id("courses"),
     chapterId: v.string(),
     moduleId: v.optional(v.string()),
@@ -241,11 +241,14 @@ export const markChapterComplete = mutation({
     completionPercentage: number;
     certificateIssued: boolean;
   }> => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
     // Check if progress record exists
     const existingProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_user_chapter", (q) =>
-        q.eq("userId", args.userId).eq("chapterId", args.chapterId)
+        q.eq("userId", userId).eq("chapterId", args.chapterId)
       )
       .unique();
 
@@ -266,7 +269,7 @@ export const markChapterComplete = mutation({
     } else {
       // Create new progress record
       progressId = await ctx.db.insert("userProgress", {
-        userId: args.userId,
+        userId,
         courseId: args.courseId,
         moduleId: args.moduleId,
         lessonId: args.lessonId,
@@ -280,7 +283,7 @@ export const markChapterComplete = mutation({
 
     // Calculate current progress
     const progress = await ctx.runQuery(internal.courseProgress.calculateCourseProgressInternal, {
-      userId: args.userId,
+      userId,
       courseId: args.courseId,
     });
 
@@ -290,7 +293,7 @@ export const markChapterComplete = mutation({
     if (progress.completionPercentage === 100 && !wasAlreadyComplete) {
       // Schedule certificate issuance
       await ctx.scheduler.runAfter(0, internal.courseProgress.checkAndIssueCertificate, {
-        userId: args.userId,
+        userId,
         courseId: args.courseId,
         totalChapters: progress.totalChapters,
         completedChapters: progress.completedChapters,
@@ -301,13 +304,13 @@ export const markChapterComplete = mutation({
       // Trigger admin workflows for any_course_complete
       const user = await ctx.db
         .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
         .unique();
       const course = await ctx.db.get(args.courseId);
 
       if (user?.email && course) {
         await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerAdminCourseCompleteWorkflows, {
-          userId: args.userId,
+          userId,
           userEmail: user.email,
           userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
           courseId: args.courseId,
@@ -323,19 +326,19 @@ export const markChapterComplete = mutation({
       const allCompletedLessons = await ctx.db
         .query("userProgress")
         .withIndex("by_user_completed", (q: any) =>
-          q.eq("userId", args.userId).eq("isCompleted", true)
+          q.eq("userId", userId).eq("isCompleted", true)
         )
         .take(10000);
 
       await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerLessonsMilestone, {
-        userId: args.userId,
+        userId,
         lessonCount: allCompletedLessons.length,
       });
 
       // Trigger share progress nudge at key progress milestones
       if ([25, 50, 75].includes(progress.completionPercentage)) {
         await ctx.scheduler.runAfter(0, internal.conversionNudges.triggerShareProgress, {
-          userId: args.userId,
+          userId,
           courseId: args.courseId,
           progressPercentage: progress.completionPercentage,
         });
@@ -356,16 +359,18 @@ export const markChapterComplete = mutation({
  */
 export const updateChapterTimeSpent = mutation({
   args: {
-    userId: v.string(),
     courseId: v.id("courses"),
     chapterId: v.string(),
     timeSpent: v.number(),
   },
   handler: async (ctx, args) => {
+    const identity = await requireAuth(ctx);
+    const userId = identity.subject;
+
     const existingProgress = await ctx.db
       .query("userProgress")
       .withIndex("by_user_chapter", (q) =>
-        q.eq("userId", args.userId).eq("chapterId", args.chapterId)
+        q.eq("userId", userId).eq("chapterId", args.chapterId)
       )
       .unique();
 
@@ -378,7 +383,7 @@ export const updateChapterTimeSpent = mutation({
       });
     } else {
       await ctx.db.insert("userProgress", {
-        userId: args.userId,
+        userId,
         courseId: args.courseId,
         chapterId: args.chapterId,
         timeSpent: args.timeSpent,

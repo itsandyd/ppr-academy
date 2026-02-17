@@ -91,7 +91,7 @@ export function ReferralCard() {
     if (!user?.id) return;
 
     try {
-      const result = await createReferralCode({ userId: user.id });
+      const result = await createReferralCode({});
       if (result.success) {
         setReferralCode(result.code);
         toast.success("Referral code generated!");

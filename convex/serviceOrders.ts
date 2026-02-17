@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { requireAuth } from "./lib/auth";
 
@@ -340,6 +340,73 @@ export const createServiceOrder = mutation({
     });
 
     // Create system message
+    await ctx.db.insert("serviceOrderMessages", {
+      orderId,
+      senderId: "system",
+      senderType: "creator",
+      content: `Order #${orderNumber} created. Waiting for customer to upload files.`,
+      isSystemMessage: true,
+      createdAt: now,
+    });
+
+    return orderId;
+  },
+});
+
+// Internal version for server-side callers (e.g. Stripe webhooks) that don't have user auth context
+export const internalCreateServiceOrder = internalMutation({
+  args: {
+    customerId: v.string(),
+    creatorId: v.string(),
+    productId: v.id("digitalProducts"),
+    storeId: v.string(),
+    serviceType: v.union(
+      v.literal("mixing"),
+      v.literal("mastering"),
+      v.literal("mix-and-master"),
+      v.literal("stem-mixing")
+    ),
+    selectedTier: v.object({
+      id: v.string(),
+      name: v.string(),
+      stemCount: v.string(),
+      price: v.number(),
+      turnaroundDays: v.number(),
+      revisions: v.number(),
+    }),
+    basePrice: v.number(),
+    rushFee: v.optional(v.number()),
+    totalPrice: v.number(),
+    isRush: v.optional(v.boolean()),
+    customerNotes: v.optional(v.string()),
+    transactionId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const orderNumber = generateOrderNumber();
+
+    const dueDate = now + args.selectedTier.turnaroundDays * 24 * 60 * 60 * 1000;
+
+    const orderId = await ctx.db.insert("serviceOrders", {
+      customerId: args.customerId,
+      creatorId: args.creatorId,
+      productId: args.productId,
+      storeId: args.storeId,
+      orderNumber,
+      serviceType: args.serviceType,
+      selectedTier: args.selectedTier,
+      basePrice: args.basePrice,
+      rushFee: args.rushFee,
+      totalPrice: args.totalPrice,
+      isRush: args.isRush,
+      status: "pending_upload",
+      customerNotes: args.customerNotes,
+      revisionsUsed: 0,
+      revisionsAllowed: args.selectedTier.revisions,
+      paidAt: now,
+      dueDate,
+    });
+
     await ctx.db.insert("serviceOrderMessages", {
       orderId,
       senderId: "system",

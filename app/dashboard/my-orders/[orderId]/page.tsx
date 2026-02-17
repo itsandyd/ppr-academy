@@ -113,7 +113,6 @@ export default function CustomerOrderDetailPage({ params }: OrderDetailPageProps
     if (order && user?.id && (order.unreadByCustomer ?? 0) > 0) {
       markMessagesRead({
         orderId: orderId as Id<"serviceOrders">,
-        userId: user.id,
         userType: "customer",
       });
     }
@@ -208,7 +207,6 @@ export default function CustomerOrderDetailPage({ params }: OrderDetailPageProps
     try {
       await sendMessage({
         orderId: orderId as Id<"serviceOrders">,
-        senderId: user.id,
         senderType: "customer",
         content: messageText,
       });
