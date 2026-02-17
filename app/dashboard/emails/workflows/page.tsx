@@ -986,6 +986,7 @@ export default function WorkflowBuilderPage() {
   const userProducts = useQuery(api.digitalProducts.getProductsByStore, store?._id ? { storeId: store._id } : "skip");
   const membershipTiers = useQuery(api.memberships.getMembershipTiersByStore, storeId ? { storeId } : "skip");
   const pprProPlans = useQuery(api.pprPro.getPlans, {});
+  const subscriptionPlans = useQuery(api.subscriptions.getSubscriptionPlans, store?._id ? { storeId: store._id } : "skip");
 
   // Get contact stats for total count
   const contactStats = useQuery(
@@ -1293,7 +1294,16 @@ export default function WorkflowBuilderPage() {
       let effectiveCustomPrompt = sequenceCustomPrompt || "";
       if (sequenceContextType === "membership" && sequenceMembershipTierId) {
         let tierInfo = "";
-        if (sequenceMembershipTierId.startsWith("pprpro:")) {
+        if (sequenceMembershipTierId.startsWith("subplan:")) {
+          const planId = sequenceMembershipTierId.replace("subplan:", "");
+          const plan = subscriptionPlans?.find((p: any) => p._id === planId);
+          if (plan) {
+            const features = plan.features?.length ? `\n- Features: ${plan.features.join(", ")}` : "";
+            const courseInfo = plan.hasAllCourses ? "\n- Includes access to ALL courses" : plan.courseAccess?.length ? `\n- Includes ${plan.courseAccess.length} specific courses` : "";
+            const productInfo = plan.hasAllProducts ? "\n- Includes access to ALL products" : plan.digitalProductAccess?.length ? `\n- Includes ${plan.digitalProductAccess.length} specific products` : "";
+            tierInfo = `\nMEMBERSHIP DETAILS:\n- Membership Name: ${plan.name}\n- Description: ${plan.description || "Premium membership"}\n- Monthly Price: $${(plan.monthlyPrice / 100).toFixed(0)}/month\n- Yearly Price: $${(plan.yearlyPrice / 100).toFixed(0)}/year\n- This is a recurring subscription membership\n- Cancel anytime, no questions asked${features}${courseInfo}${productInfo}`;
+          }
+        } else if (sequenceMembershipTierId.startsWith("pprpro:")) {
           const planId = sequenceMembershipTierId.replace("pprpro:", "");
           const plan = pprProPlans?.find((p: any) => p._id === planId);
           if (plan) {
@@ -3748,8 +3758,19 @@ export default function WorkflowBuilderPage() {
                     )}
 
                     {sequenceContextType === 'membership' && (() => {
-                      // Combine PPR Pro plans and store membership tiers into one list
-                      const allMemberships: Array<{ id: string; name: string; priceLabel: string; type: 'pprPro' | 'storeTier'; raw: any }> = [];
+                      // Combine all membership/subscription sources into one list
+                      const allMemberships: Array<{ id: string; name: string; priceLabel: string; type: 'pprPro' | 'storeTier' | 'subPlan'; raw: any }> = [];
+                      if (subscriptionPlans) {
+                        for (const plan of subscriptionPlans) {
+                          allMemberships.push({
+                            id: `subplan:${plan._id}`,
+                            name: plan.name,
+                            priceLabel: `$${(plan.monthlyPrice / 100).toFixed(0)}/mo`,
+                            type: 'subPlan',
+                            raw: plan,
+                          });
+                        }
+                      }
                       if (pprProPlans) {
                         for (const plan of pprProPlans) {
                           allMemberships.push({
