@@ -677,7 +677,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_scheduledFor", ["scheduledFor"])
     .index("by_workflowId_status", ["workflowId", "status"])
-    .index("by_status_scheduledFor", ["status", "scheduledFor"]),
+    .index("by_status_scheduledFor", ["status", "scheduledFor"])
+    .index("by_customerEmail", ["customerEmail"]),
 
   // Workflow Node A/B Tests (for testing email variants within workflows)
   workflowNodeABTests: defineTable({

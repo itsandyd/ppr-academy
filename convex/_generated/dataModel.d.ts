@@ -12642,6 +12642,7 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_contactId: ["contactId", "_creationTime"];
+      by_customerEmail: ["customerEmail", "_creationTime"];
       by_scheduledFor: ["scheduledFor", "_creationTime"];
       by_status: ["status", "_creationTime"];
       by_status_scheduledFor: ["status", "scheduledFor", "_creationTime"];

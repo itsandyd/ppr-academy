@@ -15,7 +15,7 @@ export const unsubscribeByEmail = mutation({
 
     const existingPref = await ctx.db
       .query("resendPreferences")
-      .filter((q) => q.eq(q.field("userId"), email))
+      .withIndex("by_user", (q) => q.eq("userId", email))
       .first();
 
     if (existingPref) {
@@ -67,15 +67,15 @@ export const unsubscribeByEmail = mutation({
     // Cancel any active workflow executions for this email
     const activeExecutions = await ctx.db
       .query("workflowExecutions")
+      .withIndex("by_customerEmail", (q) => q.eq("customerEmail", email))
       .filter((q) =>
         q.and(
-          q.eq(q.field("customerEmail"), email),
           q.neq(q.field("status"), "completed"),
           q.neq(q.field("status"), "failed"),
           q.neq(q.field("status"), "cancelled")
         )
       )
-      .take(5000);
+      .take(100);
 
     for (const execution of activeExecutions) {
       await ctx.db.patch(execution._id, {
@@ -87,13 +87,9 @@ export const unsubscribeByEmail = mutation({
     // Cancel any active drip campaign enrollments for this email
     const activeEnrollments = await ctx.db
       .query("dripCampaignEnrollments")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("email"), email),
-          q.eq(q.field("status"), "active")
-        )
-      )
-      .take(5000);
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .take(100);
 
     for (const enrollment of activeEnrollments) {
       await ctx.db.patch(enrollment._id, {
@@ -118,7 +114,7 @@ export const checkSuppression = query({
 
     const pref = await ctx.db
       .query("resendPreferences")
-      .filter((q) => q.eq(q.field("userId"), email))
+      .withIndex("by_user", (q) => q.eq("userId", email))
       .first();
 
     if (pref?.isUnsubscribed) {
@@ -127,10 +123,8 @@ export const checkSuppression = query({
 
     const recentBounce = await ctx.db
       .query("resendLogs")
-      .filter((q) =>
-        q.and(q.eq(q.field("recipientEmail"), email), q.eq(q.field("status"), "bounced"))
-      )
-      .order("desc")
+      .withIndex("by_recipient", (q) => q.eq("recipientEmail", email))
+      .filter((q) => q.eq(q.field("status"), "bounced"))
       .first();
 
     if (recentBounce) {
@@ -139,10 +133,8 @@ export const checkSuppression = query({
 
     const recentComplaint = await ctx.db
       .query("resendLogs")
-      .filter((q) =>
-        q.and(q.eq(q.field("recipientEmail"), email), q.eq(q.field("status"), "complained"))
-      )
-      .order("desc")
+      .withIndex("by_recipient", (q) => q.eq("recipientEmail", email))
+      .filter((q) => q.eq(q.field("status"), "complained"))
       .first();
 
     if (recentComplaint) {
@@ -287,7 +279,7 @@ export const markBounced = internalMutation({
     if (args.bounceType === "hard") {
       const existingPref = await ctx.db
         .query("resendPreferences")
-        .filter((q) => q.eq(q.field("userId"), email))
+        .withIndex("by_user", (q) => q.eq("userId", email))
         .first();
 
       if (existingPref) {
@@ -357,7 +349,7 @@ export const bulkSuppressBounced = mutation({
 
       const existingPref = await ctx.db
         .query("resendPreferences")
-        .filter((q) => q.eq(q.field("userId"), email))
+        .withIndex("by_user", (q) => q.eq("userId", email))
         .first();
 
       if (existingPref) {
@@ -410,7 +402,7 @@ export const markComplained = internalMutation({
 
     const existingPref = await ctx.db
       .query("resendPreferences")
-      .filter((q) => q.eq(q.field("userId"), email))
+      .withIndex("by_user", (q) => q.eq("userId", email))
       .first();
 
     if (existingPref) {
