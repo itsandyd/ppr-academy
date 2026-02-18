@@ -24075,7 +24075,7 @@ export declare const internal: {
     claimBatchForStore: FunctionReference<
       "mutation",
       "internal",
-      { limit: number; storeId: string },
+      { emailIds: Array<Id<"emailSendQueue">> },
       Array<any>
     >;
     debugSentEmailContent: FunctionReference<
@@ -24131,6 +24131,12 @@ export declare const internal: {
       "internal",
       {},
       Array<string>
+    >;
+    getQueuedEmailIds: FunctionReference<
+      "query",
+      "internal",
+      { limit: number; storeId: string },
+      Array<Id<"emailSendQueue">>
     >;
     getQueueStats: FunctionReference<"query", "internal", {}, any>;
     markEmailsFailed: FunctionReference<

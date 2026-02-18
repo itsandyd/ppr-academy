@@ -52,12 +52,19 @@ export const processEmailSendQueue = internalAction({
       headers?: any;
     }> = [];
 
-    // Claim from each store in round-robin
+    // Claim from each store in round-robin (two-step: query IDs, then claim by ID)
+    // Splitting into query + mutation avoids OCC conflicts with enqueueEmail,
+    // because the query doesn't take a read lock on the index range.
     for (const storeId of storeIds) {
       try {
-        const claimed = await ctx.runMutation(internal.emailSendQueue.claimBatchForStore, {
+        const emailIds = await ctx.runQuery(internal.emailSendQueue.getQueuedEmailIds, {
           storeId,
           limit: EMAILS_PER_STORE,
+        });
+        if (emailIds.length === 0) continue;
+
+        const claimed = await ctx.runMutation(internal.emailSendQueue.claimBatchForStore, {
+          emailIds,
         });
         allClaimed.push(...claimed);
       } catch (error) {

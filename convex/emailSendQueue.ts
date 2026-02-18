@@ -36,7 +36,7 @@ export const enqueueEmail = internalMutation({
       // Check resendPreferences (global unsubscribe)
       const pref = await ctx.db
         .query("resendPreferences")
-        .filter((q) => q.eq(q.field("userId"), emailLower))
+        .withIndex("by_user", (q) => q.eq("userId", emailLower))
         .first();
       if (pref?.isUnsubscribed) {
         // Return a dummy ID — the email will not be sent.
@@ -155,7 +155,7 @@ export const enqueueEmailBatch = internalMutation({
       // Check resendPreferences
       const pref = await ctx.db
         .query("resendPreferences")
-        .filter((q) => q.eq(q.field("userId"), emailAddr))
+        .withIndex("by_user", (q) => q.eq("userId", emailAddr))
         .first();
       if (pref?.isUnsubscribed) {
         suppressedSet.add(emailAddr);
@@ -251,15 +251,15 @@ export const getActiveStoreIds = internalQuery({
 });
 
 /**
- * Claim a batch of queued emails for a specific store.
- * Marks them as "sending" to prevent double-processing.
+ * Get IDs of queued emails for a specific store (read-only, no OCC conflicts).
+ * Used by the action to find candidates before claiming them.
  */
-export const claimBatchForStore = internalMutation({
+export const getQueuedEmailIds = internalQuery({
   args: {
     storeId: v.string(),
     limit: v.number(),
   },
-  returns: v.array(v.any()),
+  returns: v.array(v.id("emailSendQueue")),
   handler: async (ctx, args) => {
     const emails = await ctx.db
       .query("emailSendQueue")
@@ -268,11 +268,26 @@ export const claimBatchForStore = internalMutation({
       )
       .take(args.limit);
 
-    // Defense-in-depth: re-check suppression at claim time.
-    // The enqueue step already blocks unsubscribed recipients, but a user
-    // may have unsubscribed between enqueue and processing (race window).
+    return emails.map((e) => e._id);
+  },
+});
+
+/**
+ * Claim a batch of queued emails by their IDs.
+ * Only patches specific documents (by ID), avoiding index-range conflicts
+ * with enqueueEmail which inserts new documents.
+ */
+export const claimBatchForStore = internalMutation({
+  args: {
+    emailIds: v.array(v.id("emailSendQueue")),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
     const claimed = [];
-    for (const email of emails) {
+    for (const id of args.emailIds) {
+      const email = await ctx.db.get(id);
+      if (!email || email.status !== "queued") continue;
+
       // Transactional emails (receipts, password resets) bypass suppression per CAN-SPAM
       if (email.source !== "transactional") {
         const emailLower = email.toEmail.toLowerCase().trim();
@@ -280,7 +295,7 @@ export const claimBatchForStore = internalMutation({
         // Check resendPreferences (global unsubscribe)
         const pref = await ctx.db
           .query("resendPreferences")
-          .filter((q) => q.eq(q.field("userId"), emailLower))
+          .withIndex("by_user", (q) => q.eq("userId", emailLower))
           .first();
         if (pref?.isUnsubscribed) {
           await ctx.db.patch(email._id, {
