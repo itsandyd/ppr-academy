@@ -1887,23 +1887,15 @@ export const getChaptersForLeadMagnet = internalQuery({
         let moduleTitle: string | undefined;
 
         if (chapter.lessonId) {
-          // Try to get lesson info
-          const lesson = await ctx.db
-            .query("courseLessons")
-            .filter((q) => q.eq(q.field("_id"), chapter.lessonId as any))
-            .first();
+          const lesson = await ctx.db.get(chapter.lessonId as any) as any;
 
           if (lesson) {
             lessonTitle = lesson.title;
 
-            // Try to get module info from lesson
             if (lesson.moduleId) {
-              const module = await ctx.db
-                .query("courseModules")
-                .filter((q) => q.eq(q.field("_id"), lesson.moduleId as any))
-                .first();
-              if (module) {
-                moduleTitle = module.title;
+              const mod = await ctx.db.get(lesson.moduleId as any) as any;
+              if (mod) {
+                moduleTitle = mod.title;
               }
             }
           }
@@ -1945,18 +1937,12 @@ export const getCourseChaptersEnriched = query({
         let moduleTitle: string | undefined;
 
         if (chapter.lessonId) {
-          const lesson = await ctx.db
-            .query("courseLessons")
-            .filter((q: any) => q.eq(q.field("_id"), chapter.lessonId as any))
-            .first();
+          const lesson = await ctx.db.get(chapter.lessonId as any) as any;
 
           if (lesson) {
             lessonTitle = lesson.title;
             if (lesson.moduleId) {
-              const mod = await ctx.db
-                .query("courseModules")
-                .filter((q: any) => q.eq(q.field("_id"), lesson.moduleId as any))
-                .first();
+              const mod = await ctx.db.get(lesson.moduleId as any) as any;
               if (mod) {
                 moduleTitle = mod.title;
               }
