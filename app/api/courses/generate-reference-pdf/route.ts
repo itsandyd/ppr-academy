@@ -192,16 +192,25 @@ Generate a focused, scannable reference guide with 3-6 sections. Prioritize prac
     }),
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
+    throw new Error(`OpenAI API error (${response.status}): ${responseText.substring(0, 500)}`);
   }
 
-  const data = (await response.json()) as {
-    choices: Array<{ message?: { content?: string } }>;
-  };
+  let data: { choices: Array<{ message?: { content?: string } }> };
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error(`OpenAI returned invalid JSON (${response.status}): ${responseText.substring(0, 200)}`);
+  }
 
-  return data.choices[0]?.message?.content || "";
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("OpenAI returned empty content");
+  }
+
+  return content;
 }
 
 // =============================================================================
