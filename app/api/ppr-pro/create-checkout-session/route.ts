@@ -70,9 +70,10 @@ export async function POST(request: NextRequest) {
     if (needsNewPrice) {
       // Create Stripe product if needed
       if (!stripeProductId) {
+        const productName = dbPlan.name.replace(/ (Monthly|Yearly)$/, "") || "Pro";
         const product = await stripe.products.create({
-          name: "PPR Pro",
-          description: "Unlimited access to all courses on PPR Academy",
+          name: productName,
+          description: `Unlimited access to all courses - ${productName} membership`,
           metadata: {
             productType: "ppr_pro",
           },

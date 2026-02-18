@@ -28,6 +28,9 @@ export default function SettingsPage() {
     api.pprPro.getSubscription,
     user?.id ? { userId: user.id } : "skip"
   );
+  const pprProMonthlyPlan = useQuery(api.pprPro.getPlanByInterval, { interval: "month" });
+  const pprProPlanName = pprProMonthlyPlan?.name?.replace(/ Monthly$/, "") || "Pro";
+  const pprProMonthlyPrice = pprProMonthlyPlan ? `$${(pprProMonthlyPlan.price / 100).toFixed(0)}/month` : "";
 
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
@@ -345,7 +348,7 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between rounded-lg border p-4">
                       <div>
                         <p className="font-semibold text-lg">
-                          PPR Pro {pprProSubscription?.plan === "yearly" ? "Yearly" : "Monthly"}
+                          {pprProPlanName} {pprProSubscription?.plan === "yearly" ? "Yearly" : "Monthly"}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {pprProSubscription?.status === "trialing" ? (
@@ -394,7 +397,7 @@ export default function SettingsPage() {
                   <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
                     <p className="font-semibold text-red-700 dark:text-red-400">Payment Past Due</p>
                     <p className="text-sm text-red-600 dark:text-red-400/80">
-                      Your PPR Pro payment failed. Please update your payment method to continue access.
+                      Your {pprProPlanName} payment failed. Please update your payment method to continue access.
                     </p>
                     <Button
                       className="mt-3"
@@ -427,7 +430,7 @@ export default function SettingsPage() {
                     <div>
                       <p className="font-semibold">Not subscribed</p>
                       <p className="text-sm text-muted-foreground">
-                        Get unlimited access to all courses for $12/month
+                        Get unlimited access to all courses{pprProMonthlyPrice ? ` for ${pprProMonthlyPrice}` : ""}
                       </p>
                     </div>
                     <Button asChild>

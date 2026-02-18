@@ -42,8 +42,12 @@ export const getPlanByInterval = query({
  * Seed default PPR Pro plans (call once from admin or on first checkout)
  */
 export const seedPlans = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    baseName: v.optional(v.string()),
+    monthlyPriceCents: v.optional(v.number()),
+    yearlyPriceCents: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
     // Check if plans already exist
     const existing = await ctx.db
       .query("pprProPlans")
@@ -54,17 +58,21 @@ export const seedPlans = internalMutation({
       return { seeded: false, message: "Plans already exist", plans: existing };
     }
 
+    const baseName = args.baseName || "Pro";
+    const monthlyPrice = args.monthlyPriceCents || 1200;
+    const yearlyPrice = args.yearlyPriceCents || 10800;
+
     const monthlyId = await ctx.db.insert("pprProPlans", {
-      name: "PPR Pro Monthly",
+      name: `${baseName} Monthly`,
       interval: "month",
-      price: 1200, // $12
+      price: monthlyPrice,
       isActive: true,
     });
 
     const yearlyId = await ctx.db.insert("pprProPlans", {
-      name: "PPR Pro Yearly",
+      name: `${baseName} Yearly`,
       interval: "year",
-      price: 10800, // $108
+      price: yearlyPrice,
       isActive: true,
     });
 

@@ -28016,7 +28016,16 @@ export declare const internal: {
       { userId: string },
       boolean
     >;
-    seedPlans: FunctionReference<"mutation", "internal", {}, any>;
+    seedPlans: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        baseName?: string;
+        monthlyPriceCents?: number;
+        yearlyPriceCents?: number;
+      },
+      any
+    >;
     updatePlanStripeIds: FunctionReference<
       "mutation",
       "internal",

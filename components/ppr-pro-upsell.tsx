@@ -25,12 +25,17 @@ export function PprProUpsell({ variant = "banner", courseCount, className }: Ppr
     user?.id ? { userId: user.id } : "skip"
   );
 
+  const monthlyPlan = useQuery(api.pprPro.getPlanByInterval, { interval: "month" });
+
   // Don't show upsell if already a Pro member
   const isProMember =
     pprProSubscription?.status === "active" ||
     pprProSubscription?.status === "trialing";
 
   if (isProMember) return null;
+
+  const planName = monthlyPlan?.name?.replace(/ Monthly$/, "") || "Pro";
+  const monthlyPrice = monthlyPlan ? `$${(monthlyPlan.price / 100).toFixed(0)}/month` : "$12/month";
 
   const handleCheckout = async () => {
     if (!isSignedIn) {
@@ -65,7 +70,7 @@ export function PprProUpsell({ variant = "banner", courseCount, className }: Ppr
         <Crown className="h-5 w-5 shrink-0 text-primary" />
         <p className="text-sm text-muted-foreground">
           Or get this {courseCount ? `+ ${courseCount} more courses` : "+ all courses"} for{" "}
-          <span className="font-semibold text-foreground">$12/month</span> with PPR Pro
+          <span className="font-semibold text-foreground">{monthlyPrice}</span> with {planName}
         </p>
         <Button size="sm" variant="outline" className="ml-auto shrink-0" asChild>
           <Link href="/pricing">
@@ -81,16 +86,16 @@ export function PprProUpsell({ variant = "banner", courseCount, className }: Ppr
       <div className={cn("rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6", className)}>
         <div className="flex items-center gap-2">
           <Crown className="h-6 w-6 text-primary" />
-          <h3 className="text-lg font-semibold">Unlock Everything with PPR Pro</h3>
+          <h3 className="text-lg font-semibold">Unlock Everything with {planName}</h3>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Get unlimited access to every course on PPR Academy for just $12/month.
+          Get unlimited access to every course for just {monthlyPrice}.
           {courseCount ? ` That's ${courseCount}+ courses and counting.` : " New courses added monthly."}
         </p>
         <div className="mt-4 flex items-center gap-3">
           <Button onClick={handleCheckout} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Go Pro — $12/month
+            Go {planName} — {monthlyPrice}
           </Button>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/pricing">
@@ -114,7 +119,7 @@ export function PprProUpsell({ variant = "banner", courseCount, className }: Ppr
               Want access to all courses?
             </p>
             <p className="text-xs text-muted-foreground">
-              Upgrade to PPR Pro for $12/month
+              Upgrade to {planName} for {monthlyPrice}
             </p>
           </div>
         </div>
