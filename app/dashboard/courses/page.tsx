@@ -12,8 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Plus, Package } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ExportReferencePdfDialog } from '@/components/course/ExportReferencePdfDialog';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,9 +50,6 @@ export default function CoursesPage() {
   const updateCourse = useMutation(api.courses.updateCourse);
   const deleteCourse = useMutation(api.courses.deleteCourse);
 
-  // Export PDF dialog state
-  const [exportPdfCourse, setExportPdfCourse] = useState<{ id: string; title: string } | null>(null);
-
   const isLoading = !user || convexUser === undefined;
 
   if (isLoading) {
@@ -78,11 +74,6 @@ export default function CoursesPage() {
         console.error('Delete error:', error);
       }
     }
-  };
-
-  const handleExportPdf = (courseId: string) => {
-    const course = courses?.find((c: any) => c._id === courseId);
-    setExportPdfCourse({ id: courseId, title: course?.title || 'Course' });
   };
 
   const handleTogglePublish = async (courseId: string, currentState: boolean) => {
@@ -165,22 +156,12 @@ export default function CoursesPage() {
               onEdit={handleEditCourse}
               onDelete={handleDeleteCourse}
               onTogglePublish={handleTogglePublish}
-              onExportPdf={handleExportPdf}
               variant="default"
             />
           ))}
         </div>
       )}
 
-      {/* Export PDF Dialog */}
-      {exportPdfCourse && (
-        <ExportReferencePdfDialog
-          courseId={exportPdfCourse.id}
-          courseTitle={exportPdfCourse.title}
-          isOpen={!!exportPdfCourse}
-          onClose={() => setExportPdfCourse(null)}
-        />
-      )}
     </div>
   );
 }

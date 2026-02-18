@@ -3061,6 +3061,9 @@ export type DataModel = {
       paymentDescription?: string;
       pinnedAt?: number;
       price?: number;
+      referencePdfGeneratedAt?: number;
+      referencePdfStorageId?: string;
+      referencePdfUrl?: string;
       showGuarantee?: boolean;
       skillLevel?: string;
       slug?: string;
@@ -3117,6 +3120,9 @@ export type DataModel = {
       | "paymentDescription"
       | "pinnedAt"
       | "price"
+      | "referencePdfGeneratedAt"
+      | "referencePdfStorageId"
+      | "referencePdfUrl"
       | "showGuarantee"
       | "skillLevel"
       | "slug"

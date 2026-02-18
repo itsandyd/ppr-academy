@@ -39,6 +39,7 @@ import {
   UserCog,
   Crown,
   HeartPulse,
+  FileText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -194,6 +195,12 @@ const createCategories: SidebarCategory[] = [
         label: "AI Notes",
         icon: StickyNote,
         color: "text-amber-500",
+      },
+      {
+        href: "/dashboard/reference-guides?mode=create",
+        label: "Reference Guides",
+        icon: FileText,
+        color: "text-rose-500",
       },
     ],
   },

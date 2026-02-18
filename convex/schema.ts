@@ -268,6 +268,11 @@ export default defineSchema({
       )
     ),
 
+    // Reference Guide PDF (AI-generated from course content)
+    referencePdfStorageId: v.optional(v.string()),
+    referencePdfUrl: v.optional(v.string()),
+    referencePdfGeneratedAt: v.optional(v.number()),
+
     // Pinned product - appears first in storefront
     isPinned: v.optional(v.boolean()),
     pinnedAt: v.optional(v.number()), // Timestamp for ordering multiple pinned products

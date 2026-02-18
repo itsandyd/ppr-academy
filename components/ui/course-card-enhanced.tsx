@@ -30,7 +30,6 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  FileDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +64,6 @@ interface CourseCardProps {
   onEdit?: (courseId: string) => void; // NEW: Edit callback
   onDelete?: (courseId: string) => void; // NEW: Delete callback
   onTogglePublish?: (courseId: string, currentState: boolean) => void; // NEW: Publish toggle
-  onExportPdf?: (courseId: string) => void; // Export as reference PDF
   variant?: "default" | "compact" | "featured";
   className?: string;
 }
@@ -91,7 +89,6 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
   onEdit,
   onDelete,
   onTogglePublish,
-  onExportPdf,
   variant = "default",
   className,
 }) => {
@@ -263,10 +260,6 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
                           Publish
                         </>
                       )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onExportPdf?.(id)}>
-                      <FileDown className="w-4 h-4 mr-2" />
-                      Export Reference PDF
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onDelete?.(id)} className="text-destructive">
@@ -466,10 +459,6 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
                       Publish
                     </>
                   )}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExportPdf?.(id)}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Export Reference PDF
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete?.(id)} className="text-destructive">

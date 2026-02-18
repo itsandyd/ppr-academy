@@ -7511,6 +7511,12 @@ export declare const api: {
       },
       { error?: string; success: boolean }
     >;
+    updateReferencePdfInfo: FunctionReference<
+      "mutation",
+      "public",
+      { courseId: Id<"courses">; pdfStorageId: string; pdfUrl: string },
+      any
+    >;
   };
   creatorPlans: {
     adminGetStoreByUserId: FunctionReference<

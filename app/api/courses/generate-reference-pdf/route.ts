@@ -350,7 +350,15 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to get PDF URL from storage");
     }
 
-    // ─── Step 7: Return response ───
+    // ─── Step 7: Persist PDF info on course record ───
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await fetchMutation(api.courses.updateReferencePdfInfo as any, {
+      courseId,
+      pdfStorageId: storageId,
+      pdfUrl,
+    });
+
+    // ─── Step 8: Return response ───
     return NextResponse.json({
       success: true,
       pdfUrl,
