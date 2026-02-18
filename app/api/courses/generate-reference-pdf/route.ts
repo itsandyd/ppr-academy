@@ -352,7 +352,7 @@ export async function POST(request: NextRequest) {
 
     // ─── Step 7: Persist PDF info on course record ───
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await fetchMutation(api.courses.updateReferencePdfInfo as any, {
+    await fetchMutation(api.referenceGuides.updateReferencePdfInfo as any, {
       courseId,
       pdfStorageId: storageId,
       pdfUrl,

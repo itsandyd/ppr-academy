@@ -7511,12 +7511,6 @@ export declare const api: {
       },
       { error?: string; success: boolean }
     >;
-    updateReferencePdfInfo: FunctionReference<
-      "mutation",
-      "public",
-      { courseId: Id<"courses">; pdfStorageId: string; pdfUrl: string },
-      any
-    >;
   };
   creatorPlans: {
     adminGetStoreByUserId: FunctionReference<
@@ -17565,6 +17559,14 @@ export declare const api: {
       "query",
       "public",
       { userId: string },
+      any
+    >;
+  };
+  referenceGuides: {
+    updateReferencePdfInfo: FunctionReference<
+      "mutation",
+      "public",
+      { courseId: Id<"courses">; pdfStorageId: string; pdfUrl: string },
       any
     >;
   };
