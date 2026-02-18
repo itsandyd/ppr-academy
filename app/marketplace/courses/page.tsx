@@ -297,7 +297,7 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span className="font-bold text-chart-1">
-                  {course.price === 0 ? "Free" : `$${(course.price / 100).toFixed(2)}`}
+                  {course.price === 0 ? "Free" : `$${course.price}`}
                 </span>
               </div>
             </CardContent>
@@ -344,7 +344,7 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
           </div>
           <div className="flex items-center justify-between">
             <span className="text-lg font-bold text-chart-1">
-              {course.price === 0 ? "Free" : `$${(course.price / 100).toFixed(2)}`}
+              {course.price === 0 ? "Free" : `$${course.price}`}
             </span>
             {course.enrollmentCount > 0 && (
               <span className="text-xs text-muted-foreground">
