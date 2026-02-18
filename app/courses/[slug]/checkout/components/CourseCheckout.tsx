@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { PprProUpsell } from "@/components/ppr-pro-upsell";
 
 interface Course {
   _id: string;
@@ -364,10 +363,6 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
               )}
             </Button>
 
-            {/* PPR Pro Upsell */}
-            {course.price && course.price > 0 && (
-              <PprProUpsell variant="inline" className="mt-4" />
-            )}
           </div>
 
           {/* Order Summary */}
