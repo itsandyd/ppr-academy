@@ -6,13 +6,13 @@ import { generateCheatSheetPDF, type Outline, type OutlineSection } from "@/lib/
 export const maxDuration = 120; // Multiple LLM calls + PDF generation + upload
 
 // =============================================================================
-// CLAUDE API CONFIG
+// LLM CONFIG
 // =============================================================================
 
 const MODEL_MAP: Record<string, string> = {
-  "claude-3.5-haiku": "anthropic/claude-3.5-haiku",
-  "claude-4.5-sonnet": "anthropic/claude-sonnet-4.5",
-  "claude-4-sonnet": "anthropic/claude-sonnet-4",
+  "gpt-4o-mini": "gpt-4o-mini",
+  "gpt-4o": "gpt-4o",
+  "gpt-4.1-mini": "gpt-4.1-mini",
 };
 
 const VALID_SECTION_TYPES = [
@@ -30,6 +30,8 @@ const VALID_SECTION_TYPES = [
 // =============================================================================
 
 const SYSTEM_PROMPT = `You are an expert educational content transformer for PPR Academy, a music production learning platform. Your job is to take raw course chapter content and transform it into a structured reference guide optimized for a professionally branded PDF document.
+
+IMPORTANT: You MUST respond with valid JSON only. No markdown, no explanation, just pure JSON.
 
 CONTENT TRANSFORMATION RULES:
 - Distill verbose lesson content into concise, scannable bullet points
@@ -146,22 +148,22 @@ function validateSections(raw: any): OutlineSection[] {
 }
 
 // =============================================================================
-// OPENROUTER LLM CALL
+// OPENAI LLM CALL
 // =============================================================================
 
-async function callClaude(
+async function callLLM(
   courseTitle: string,
   moduleName: string,
   chapterCount: number,
   chaptersContent: string,
-  modelId: string = "claude-3.5-haiku"
+  modelId: string = "gpt-4o-mini"
 ): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY not configured");
+    throw new Error("OPENAI_API_KEY not configured");
   }
 
-  const openRouterModel = MODEL_MAP[modelId] || MODEL_MAP["claude-3.5-haiku"];
+  const model = MODEL_MAP[modelId] || MODEL_MAP["gpt-4o-mini"];
 
   const userPrompt = `Course: "${courseTitle}"
 Module: "${moduleName}"
@@ -172,16 +174,14 @@ ${chaptersContent}
 
 Generate a focused, scannable reference guide with 3-6 sections. Prioritize practical, actionable content that a music producer would keep open while working. Preserve all specific technical details, values, and settings.`;
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://ppr.academy",
-      "X-Title": "PPR Academy PDF Generator",
     },
     body: JSON.stringify({
-      model: openRouterModel,
+      model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
@@ -194,7 +194,7 @@ Generate a focused, scannable reference guide with 3-6 sections. Prioritize prac
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+    throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
   }
 
   const data = (await response.json()) as {
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, modelId = "claude-3.5-haiku" } = body;
+    const { courseId, modelId = "gpt-4o-mini" } = body;
 
     if (!courseId) {
       return NextResponse.json({ error: "courseId is required" }, { status: 400 });
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const llmResponse = await callClaude(
+        const llmResponse = await callLLM(
           (courseInfo as any).title,
           moduleName,
           sorted.length,
@@ -307,9 +307,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (allSections.length === 0) {
+      const detail = warnings.length > 0 ? `: ${warnings[0]}` : "";
       return NextResponse.json(
         {
-          error: "Failed to generate content for any module",
+          error: `Failed to generate content for any module${detail}`,
           warnings,
         },
         { status: 500 }
