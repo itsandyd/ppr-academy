@@ -174,6 +174,8 @@ ${chaptersContent}
 
 Generate a focused, scannable reference guide with 3-6 sections. Prioritize practical, actionable content that a music producer would keep open while working. Preserve all specific technical details, values, and settings.`;
 
+  console.log(`[RefPDF] Calling OpenAI model=${model} module="${moduleName}" chapters=${chapterCount} promptLen=${userPrompt.length}`);
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -194,6 +196,8 @@ Generate a focused, scannable reference guide with 3-6 sections. Prioritize prac
 
   const responseText = await response.text();
 
+  console.log(`[RefPDF] OpenAI response status=${response.status} bodyLen=${responseText.length} bodyPreview=${responseText.substring(0, 200)}`);
+
   if (!response.ok) {
     throw new Error(`OpenAI API error (${response.status}): ${responseText.substring(0, 500)}`);
   }
@@ -210,6 +214,7 @@ Generate a focused, scannable reference guide with 3-6 sections. Prioritize prac
     throw new Error("OpenAI returned empty content");
   }
 
+  console.log(`[RefPDF] LLM content length=${content.length}`);
   return content;
 }
 
@@ -230,6 +235,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { courseId, modelId = "gpt-4o-mini" } = body;
+
+    console.log(`[RefPDF] Starting generation courseId=${courseId} modelId=${modelId}`);
+    console.log(`[RefPDF] OPENAI_API_KEY set=${!!process.env.OPENAI_API_KEY} keyPrefix=${process.env.OPENAI_API_KEY?.substring(0, 10)}...`);
 
     if (!courseId) {
       return NextResponse.json({ error: "courseId is required" }, { status: 400 });
@@ -258,6 +266,8 @@ export async function POST(request: NextRequest) {
 
     const courseInfo = (courseWithInstructor as any).course;
 
+    console.log(`[RefPDF] Course: "${(courseInfo as any).title}" chapters=${chapters?.length ?? 0}`);
+
     if (!chapters || chapters.length === 0) {
       return NextResponse.json({ error: "Course has no chapters" }, { status: 400 });
     }
@@ -269,6 +279,8 @@ export async function POST(request: NextRequest) {
       if (!moduleGroups.has(key)) moduleGroups.set(key, []);
       moduleGroups.get(key)!.push(ch);
     }
+
+    console.log(`[RefPDF] Grouped into ${moduleGroups.size} modules: ${[...moduleGroups.keys()].join(", ")}`);
 
     // ─── Step 3: Call Claude for each module (sequentially) ───
     const allSections: OutlineSection[] = [];
