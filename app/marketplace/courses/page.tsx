@@ -267,9 +267,9 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
         <Card className="overflow-hidden transition-all hover:shadow-lg">
           <div className="flex">
             <div className="relative h-32 w-48 flex-shrink-0">
-              {course.imageUrl ? (
+              {(course.thumbnail || course.imageUrl) ? (
                 <img
-                  src={course.imageUrl}
+                  src={course.thumbnail || course.imageUrl}
                   alt={course.title}
                   className="h-full w-full object-cover"
                 />
@@ -311,9 +311,9 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
     <Link href={`/courses/${course.slug}`}>
       <Card className="group overflow-hidden transition-all hover:shadow-lg">
         <div className="relative aspect-video">
-          {course.imageUrl ? (
+          {(course.thumbnail || course.imageUrl) ? (
             <img
-              src={course.imageUrl}
+              src={course.thumbnail || course.imageUrl}
               alt={course.title}
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
