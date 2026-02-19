@@ -5677,6 +5677,11 @@ export default defineSchema({
     courseTitle: v.string(),
     selectedChapterIds: v.array(v.string()), // IDs of chapters used as source
 
+    // Module-level fields (for pack-generated sheets)
+    moduleTitle: v.optional(v.string()),
+    moduleId: v.optional(v.id("courseModules")),
+    packId: v.optional(v.id("cheatSheetPacks")),
+
     // Editable outline structure (AI-generated, then user-refined)
     outline: v.object({
       title: v.string(),
@@ -5731,7 +5736,33 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_courseId", ["courseId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_packId", ["packId"]),
+
+  // Cheat Sheet Packs — one pack per course, contains multiple per-module cheat sheets
+  cheatSheetPacks: defineTable({
+    courseId: v.id("courses"),
+    courseTitle: v.string(),
+    userId: v.string(), // Clerk ID
+    cheatSheetIds: v.array(v.id("cheatSheets")),
+    status: v.union(
+      v.literal("generating"),
+      v.literal("partial"),
+      v.literal("complete")
+    ),
+    totalModules: v.number(),
+    completedModules: v.number(),
+    failedModules: v.array(v.string()),
+    modelId: v.optional(v.string()),
+    // Product integration
+    digitalProductId: v.optional(v.id("digitalProducts")),
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_courseId", ["courseId"])
+    .index("by_userId", ["userId"])
+    .index("by_digitalProductId", ["digitalProductId"]),
 
   // =============================================================================
   // AI Course Builder - Batch course generation queue and outlines

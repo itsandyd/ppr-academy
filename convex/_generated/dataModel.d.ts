@@ -2218,6 +2218,48 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  cheatSheetPacks: {
+    document: {
+      cheatSheetIds: Array<Id<"cheatSheets">>;
+      completedModules: number;
+      courseId: Id<"courses">;
+      courseTitle: string;
+      createdAt: number;
+      digitalProductId?: Id<"digitalProducts">;
+      failedModules: Array<string>;
+      modelId?: string;
+      status: "generating" | "partial" | "complete";
+      totalModules: number;
+      updatedAt: number;
+      userId: string;
+      _id: Id<"cheatSheetPacks">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "cheatSheetIds"
+      | "completedModules"
+      | "courseId"
+      | "courseTitle"
+      | "createdAt"
+      | "digitalProductId"
+      | "failedModules"
+      | "modelId"
+      | "status"
+      | "totalModules"
+      | "updatedAt"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_courseId: ["courseId", "_creationTime"];
+      by_digitalProductId: ["digitalProductId", "_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   cheatSheets: {
     document: {
       aiModel?: string;
@@ -2226,6 +2268,8 @@ export type DataModel = {
       createdAt: number;
       digitalProductId?: Id<"digitalProducts">;
       generatedAt?: number;
+      moduleId?: Id<"courseModules">;
+      moduleTitle?: string;
       outline: {
         footer?: string;
         sections: Array<{
@@ -2248,6 +2292,7 @@ export type DataModel = {
         subtitle?: string;
         title: string;
       };
+      packId?: Id<"cheatSheetPacks">;
       pdfGeneratedAt?: number;
       pdfStorageId?: Id<"_storage">;
       pdfUrl?: string;
@@ -2267,11 +2312,14 @@ export type DataModel = {
       | "createdAt"
       | "digitalProductId"
       | "generatedAt"
+      | "moduleId"
+      | "moduleTitle"
       | "outline"
       | "outline.footer"
       | "outline.sections"
       | "outline.subtitle"
       | "outline.title"
+      | "packId"
       | "pdfGeneratedAt"
       | "pdfStorageId"
       | "pdfUrl"
@@ -2283,6 +2331,7 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_courseId: ["courseId", "_creationTime"];
+      by_packId: ["packId", "_creationTime"];
       by_status: ["status", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
     };

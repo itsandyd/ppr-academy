@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Plus, Package } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ExportReferencePdfDialog } from '@/components/course/ExportReferencePdfDialog';
+import { CheatSheetPackDialog } from '@/components/course/CheatSheetPackDialog';
 import { useEffect, useState } from 'react';
 
 export const dynamic = 'force-dynamic';
@@ -172,9 +172,9 @@ export default function CoursesPage() {
         </div>
       )}
 
-      {/* Export Reference PDF Dialog */}
+      {/* Cheat Sheet Pack Dialog */}
       {exportPdfCourse && (
-        <ExportReferencePdfDialog
+        <CheatSheetPackDialog
           courseId={exportPdfCourse.id}
           courseTitle={exportPdfCourse.title}
           isOpen={!!exportPdfCourse}

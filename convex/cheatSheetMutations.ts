@@ -177,6 +177,42 @@ export const publishAsLeadMagnet = mutation({
   },
 });
 
+export const createCheatSheetForPack = mutation({
+  args: {
+    packId: v.id("cheatSheetPacks"),
+    courseId: v.id("courses"),
+    courseTitle: v.string(),
+    moduleTitle: v.string(),
+    moduleId: v.optional(v.id("courseModules")),
+    outline: outlineValidator,
+    userId: v.string(),
+    pdfStorageId: v.id("_storage"),
+    pdfUrl: v.string(),
+    aiModel: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db.insert("cheatSheets", {
+      userId: args.userId,
+      courseId: args.courseId,
+      courseTitle: args.courseTitle,
+      selectedChapterIds: [], // Pack sheets don't use chapter selection
+      moduleTitle: args.moduleTitle,
+      moduleId: args.moduleId,
+      packId: args.packId,
+      outline: args.outline,
+      aiModel: args.aiModel,
+      generatedAt: now,
+      pdfStorageId: args.pdfStorageId,
+      pdfUrl: args.pdfUrl,
+      pdfGeneratedAt: now,
+      status: "generated",
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
 export const deleteCheatSheet = mutation({
   args: { cheatSheetId: v.id("cheatSheets") },
   handler: async (ctx, args) => {

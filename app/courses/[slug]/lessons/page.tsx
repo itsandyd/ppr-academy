@@ -31,6 +31,7 @@ import {
   Play,
   Lock,
 } from "lucide-react";
+import { CourseCheatSheets } from "@/components/course/CourseCheatSheets";
 
 export default async function LessonsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { userId: clerkId } = await auth();
@@ -301,6 +302,13 @@ export default async function LessonsPage({ params }: { params: Promise<{ slug: 
             </Button>
           </div>
         </div>
+
+        {/* Cheat Sheet Pack (for enrolled students) */}
+        {enrollment && (
+          <div className="mb-8">
+            <CourseCheatSheets courseId={courseData._id} />
+          </div>
+        )}
 
         <div className="space-y-12">
           {course.modules.map((module: any, moduleIndex: number) => (

@@ -5398,6 +5398,44 @@ export declare const api: {
     >;
   };
   cheatSheetMutations: {
+    createCheatSheetForPack: FunctionReference<
+      "mutation",
+      "public",
+      {
+        aiModel?: string;
+        courseId: Id<"courses">;
+        courseTitle: string;
+        moduleId?: Id<"courseModules">;
+        moduleTitle: string;
+        outline: {
+          footer?: string;
+          sections: Array<{
+            heading: string;
+            items: Array<{
+              isTip?: boolean;
+              isWarning?: boolean;
+              subItems?: Array<string>;
+              text: string;
+            }>;
+            type:
+              | "key_takeaways"
+              | "quick_reference"
+              | "step_by_step"
+              | "tips"
+              | "comparison"
+              | "glossary"
+              | "custom";
+          }>;
+          subtitle?: string;
+          title: string;
+        };
+        packId: Id<"cheatSheetPacks">;
+        pdfStorageId: Id<"_storage">;
+        pdfUrl: string;
+        userId: string;
+      },
+      any
+    >;
     deleteCheatSheet: FunctionReference<
       "mutation",
       "public",
@@ -5500,6 +5538,93 @@ export declare const api: {
         cheatSheetId: Id<"cheatSheets">;
         pdfStorageId: Id<"_storage">;
         pdfUrl: string;
+      },
+      any
+    >;
+  };
+  cheatSheetPacks: {
+    addSheetToPack: FunctionReference<
+      "mutation",
+      "public",
+      { cheatSheetId: Id<"cheatSheets">; packId: Id<"cheatSheetPacks"> },
+      any
+    >;
+    completePackGeneration: FunctionReference<
+      "mutation",
+      "public",
+      { packId: Id<"cheatSheetPacks"> },
+      any
+    >;
+    createPack: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseId: Id<"courses">;
+        courseTitle: string;
+        modelId?: string;
+        totalModules: number;
+        userId: string;
+      },
+      any
+    >;
+    deletePack: FunctionReference<
+      "mutation",
+      "public",
+      { packId: Id<"cheatSheetPacks"> },
+      any
+    >;
+    getPackByCourse: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses"> },
+      any
+    >;
+    getPacksByUser: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      any
+    >;
+    getPacksForEnrolledCourse: FunctionReference<
+      "query",
+      "public",
+      { courseId: Id<"courses"> },
+      any
+    >;
+    getPackWithSheets: FunctionReference<
+      "query",
+      "public",
+      { packId: Id<"cheatSheetPacks"> },
+      any
+    >;
+    linkPackToProduct: FunctionReference<
+      "mutation",
+      "public",
+      {
+        digitalProductId: Id<"digitalProducts">;
+        packId: Id<"cheatSheetPacks">;
+      },
+      any
+    >;
+    markPackFailed: FunctionReference<
+      "mutation",
+      "public",
+      { moduleName: string; packId: Id<"cheatSheetPacks"> },
+      any
+    >;
+    publishPackAsProduct: FunctionReference<
+      "mutation",
+      "public",
+      {
+        description?: string;
+        followGateEnabled?: boolean;
+        includeSheetIds?: Array<Id<"cheatSheets">>;
+        packId: Id<"cheatSheetPacks">;
+        price: number;
+        storeId: string;
+        thumbnailUrl?: string;
+        title?: string;
+        userId: string;
       },
       any
     >;

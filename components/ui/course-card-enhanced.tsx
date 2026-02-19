@@ -31,6 +31,7 @@ import {
   Eye,
   EyeOff,
   FileDown,
+  FileStack,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -265,8 +266,8 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onExportPdf?.(id)}>
-                      <FileDown className="w-4 h-4 mr-2" />
-                      Export Reference PDF
+                      <FileStack className="w-4 h-4 mr-2" />
+                      Generate Cheat Sheet Pack
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onDelete?.(id)} className="text-destructive">
@@ -468,8 +469,8 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onExportPdf?.(id)}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Export Reference PDF
+                  <FileStack className="w-4 h-4 mr-2" />
+                  Generate Cheat Sheet Pack
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete?.(id)} className="text-destructive">
