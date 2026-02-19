@@ -136,76 +136,70 @@ function cleanJsonResponse(content: string): string {
 }
 
 /**
- * Attempt to repair truncated JSON by closing open brackets/braces.
- * Works when the LLM response was cut off mid-output by max_tokens.
+ * Repair malformed JSON by fixing bracket/brace mismatches.
+ * The LLM sometimes generates `}` where `]` should be (or vice versa).
+ * This walks the string with a stack and swaps mismatched closers.
  */
-function repairTruncatedJson(content: string): string {
-  let cleaned = cleanJsonResponse(content);
-
-  // Try parsing as-is first
-  try {
-    JSON.parse(cleaned);
-    return cleaned;
-  } catch {
-    // Continue to repair
-  }
-
-  // Trim to last complete item — find last complete object in an array
-  // by looking for the last `}` that's followed by valid continuation
-  const lastCompleteItem = cleaned.lastIndexOf("}");
-  if (lastCompleteItem === -1) throw new Error("No repairable JSON found");
-
-  let trimmed = cleaned.substring(0, lastCompleteItem + 1);
-
-  // Count unclosed brackets and braces
-  let openBraces = 0;
-  let openBrackets = 0;
+function repairJsonBrackets(content: string): string {
+  const cleaned = cleanJsonResponse(content);
+  const stack: string[] = []; // tracks opening chars: '{' or '['
+  const chars = [...cleaned];
   let inString = false;
   let escaped = false;
 
-  for (const ch of trimmed) {
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+
     if (escaped) { escaped = false; continue; }
     if (ch === "\\") { escaped = true; continue; }
     if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
-    if (ch === "{") openBraces++;
-    if (ch === "}") openBraces--;
-    if (ch === "[") openBrackets++;
-    if (ch === "]") openBrackets--;
+
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+    } else if (ch === "}" || ch === "]") {
+      const expected = stack[stack.length - 1];
+      if (!expected) continue; // extra closer, ignore
+
+      const correctCloser = expected === "{" ? "}" : "]";
+      if (ch !== correctCloser) {
+        // Mismatch: swap to the correct closer
+        chars[i] = correctCloser;
+      }
+      stack.pop();
+    }
   }
 
-  // Remove any trailing comma before we close
-  trimmed = trimmed.replace(/,\s*$/, "");
+  // Close any remaining unclosed structures
+  let result = chars.join("");
+  result = result.replace(/,\s*$/, "");
+  while (stack.length > 0) {
+    const opener = stack.pop();
+    result += opener === "{" ? "}" : "]";
+  }
 
-  // Close unclosed structures
-  for (let i = 0; i < openBrackets; i++) trimmed += "]";
-  for (let i = 0; i < openBraces; i++) trimmed += "}";
-
-  // Final trailing comma cleanup
-  trimmed = trimmed.replace(/,\s*([\]}])/g, "$1");
-
-  return trimmed;
+  return result;
 }
 
 function safeParseJson<T>(content: string): T {
+  // Strategy 1: clean and parse directly
   try {
     const cleaned = cleanJsonResponse(content);
     return JSON.parse(cleaned) as T;
-  } catch (firstError) {
-    // Attempt truncation repair
-    console.warn(
-      `[CheatPack] Initial JSON parse failed, attempting truncation repair...`
+  } catch {
+    // Continue to repair
+  }
+
+  // Strategy 2: fix bracket/brace mismatches
+  try {
+    const repaired = repairJsonBrackets(content);
+    console.warn(`[CheatPack] JSON repaired via bracket fix`);
+    return JSON.parse(repaired) as T;
+  } catch (repairError) {
+    const preview = content.substring(content.length - 200);
+    throw new Error(
+      `JSON parse failed (last 200 chars: ...${preview}): ${repairError instanceof Error ? repairError.message : repairError}`
     );
-    try {
-      const repaired = repairTruncatedJson(content);
-      return JSON.parse(repaired) as T;
-    } catch {
-      // Re-throw original error with context
-      const preview = content.substring(content.length - 200);
-      throw new Error(
-        `JSON parse failed (last 200 chars: ...${preview}): ${firstError instanceof Error ? firstError.message : firstError}`
-      );
-    }
   }
 }
 
