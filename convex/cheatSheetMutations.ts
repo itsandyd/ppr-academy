@@ -165,7 +165,6 @@ export const publishAsLeadMagnet = mutation({
       downloadUrl: cheatSheet.pdfUrl,
       isPublished: true,
       followGateEnabled: true,
-      createdAt: Date.now(),
     } as any);
 
     // Update cheat sheet with product link

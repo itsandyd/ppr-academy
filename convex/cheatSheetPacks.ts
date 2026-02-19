@@ -167,7 +167,6 @@ export const publishPackAsProduct = mutation({
       imageUrl: args.thumbnailUrl,
       isPublished: true,
       followGateEnabled: args.followGateEnabled ?? false,
-      createdAt: Date.now(),
     } as any);
 
     // Link product back to pack
