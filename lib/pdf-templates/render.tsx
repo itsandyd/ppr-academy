@@ -12,6 +12,8 @@ export interface Outline {
   subtitle?: string;
   sections: OutlineSection[];
   footer?: string;
+  showTOC?: boolean;
+  badgeText?: string;
 }
 
 export type { OutlineSection };
@@ -29,6 +31,8 @@ export async function renderReferenceGuidePDF(
       subtitle={outline.subtitle}
       sections={outline.sections}
       footer={outline.footer || "PPR Academy — ppr.academy"}
+      showTOC={outline.showTOC}
+      badgeText={outline.badgeText}
     />
   );
   return Buffer.from(buffer);

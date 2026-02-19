@@ -49,9 +49,10 @@ const TYPE_LABELS: Record<string, string> = {
 interface CoverPageProps {
   title: string;
   subtitle?: string;
+  badgeText?: string;
 }
 
-export const CoverPage: React.FC<CoverPageProps> = ({ title, subtitle }) => (
+export const CoverPage: React.FC<CoverPageProps> = ({ title, subtitle, badgeText = "REFERENCE GUIDE" }) => (
   <View>
     {/* Decorative gradient header */}
     <Svg viewBox="0 0 595 380" style={{ width: "100%", height: 380 }}>
@@ -83,7 +84,7 @@ export const CoverPage: React.FC<CoverPageProps> = ({ title, subtitle }) => (
       <Text style={styles.coverTitle}>{title}</Text>
       {subtitle && <Text style={styles.coverSubtitle}>{subtitle}</Text>}
       <View style={styles.coverBadge}>
-        <Text style={styles.coverBadgeText}>REFERENCE GUIDE</Text>
+        <Text style={styles.coverBadgeText}>{badgeText}</Text>
       </View>
     </View>
 

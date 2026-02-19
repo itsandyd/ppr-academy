@@ -22,6 +22,8 @@ export interface ReferenceGuideProps {
   subtitle?: string;
   sections: OutlineSection[];
   footer?: string;
+  showTOC?: boolean;
+  badgeText?: string;
 }
 
 // =============================================================================
@@ -33,23 +35,27 @@ const ReferenceGuidePDF: React.FC<ReferenceGuideProps> = ({
   subtitle,
   sections,
   footer = "PPR Academy — ppr.academy",
+  showTOC = true,
+  badgeText,
 }) => (
   <Document
     title={title}
     author="PPR Academy"
-    subject="Course Reference Guide"
+    subject={badgeText === "CHEAT SHEET" ? "Module Cheat Sheet" : "Course Reference Guide"}
     creator="PPR Academy — ppr.academy"
   >
     {/* Cover Page */}
     <Page size="A4" style={styles.coverPage}>
-      <CoverPage title={title} subtitle={subtitle} />
+      <CoverPage title={title} subtitle={subtitle} badgeText={badgeText} />
     </Page>
 
-    {/* Table of Contents */}
-    <Page size="A4" style={styles.page}>
-      <TableOfContents sections={sections} />
-      <PageFooter text={footer} />
-    </Page>
+    {/* Table of Contents (skipped for cheat sheets) */}
+    {showTOC && (
+      <Page size="A4" style={styles.page}>
+        <TableOfContents sections={sections} />
+        <PageFooter text={footer} />
+      </Page>
+    )}
 
     {/* Content Pages */}
     <Page size="A4" style={styles.contentPage} wrap>

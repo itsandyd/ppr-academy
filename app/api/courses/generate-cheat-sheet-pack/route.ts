@@ -391,6 +391,8 @@ export async function POST(request: NextRequest) {
           subtitle: `${courseTitle} — Module Cheat Sheet`,
           sections: enforced,
           footer: "PPR Academy — ppr.academy",
+          showTOC: false,
+          badgeText: "CHEAT SHEET" as const,
         };
 
         // Generate PDF
