@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import { generateCheatSheetPDF, type Outline, type OutlineSection } from "@/lib/pdf-generator";
 
-export const maxDuration = 120; // Multiple LLM calls + PDF generation + upload
+export const maxDuration = 300; // Multiple LLM calls + PDF generation + upload
 
 // =============================================================================
 // LLM CONFIG
