@@ -7283,6 +7283,9 @@ export declare const api: {
         isPublished?: boolean;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;

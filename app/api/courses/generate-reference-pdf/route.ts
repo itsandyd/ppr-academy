@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
-import { generateCheatSheetPDF, type Outline, type OutlineSection } from "@/lib/pdf-generator";
+import { renderReferenceGuidePDF, type Outline, type OutlineSection } from "@/lib/pdf-templates/render";
 
 export const maxDuration = 300; // Multiple LLM calls + PDF generation + upload
 
 // =============================================================================
-// LLM CONFIG
+// LLM CONFIG (Claude via OpenRouter)
 // =============================================================================
 
 const MODEL_MAP: Record<string, string> = {
-  "gpt-4o-mini": "gpt-4o-mini",
-  "gpt-4o": "gpt-4o",
-  "gpt-4.1-mini": "gpt-4.1-mini",
+  "claude-3.5-haiku": "anthropic/claude-3.5-haiku",
+  "claude-4-sonnet": "anthropic/claude-sonnet-4",
+  "claude-4.5-sonnet": "anthropic/claude-sonnet-4.5",
 };
+
+const DEFAULT_MODEL = "claude-3.5-haiku";
 
 const VALID_SECTION_TYPES = [
   "key_takeaways",
@@ -148,22 +150,22 @@ function validateSections(raw: any): OutlineSection[] {
 }
 
 // =============================================================================
-// OPENAI LLM CALL
+// CLAUDE LLM CALL (via OpenRouter)
 // =============================================================================
 
-async function callLLM(
+async function callClaude(
   courseTitle: string,
   moduleName: string,
   chapterCount: number,
   chaptersContent: string,
-  modelId: string = "gpt-4o-mini"
+  modelId: string = DEFAULT_MODEL
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY not configured");
+    throw new Error("OPENROUTER_API_KEY not configured");
   }
 
-  const model = MODEL_MAP[modelId] || MODEL_MAP["gpt-4o-mini"];
+  const model = MODEL_MAP[modelId] || MODEL_MAP[DEFAULT_MODEL];
 
   const userPrompt = `Course: "${courseTitle}"
 Module: "${moduleName}"
@@ -174,13 +176,15 @@ ${chaptersContent}
 
 Generate a focused, scannable reference guide with 3-6 sections. Prioritize practical, actionable content that a music producer would keep open while working. Preserve all specific technical details, values, and settings.`;
 
-  console.log(`[RefPDF] Calling OpenAI model=${model} module="${moduleName}" chapters=${chapterCount} promptLen=${userPrompt.length}`);
+  console.log(`[RefPDF] Calling Claude model=${model} module="${moduleName}" chapters=${chapterCount} promptLen=${userPrompt.length}`);
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      "HTTP-Referer": "https://ppr.academy",
+      "X-Title": "PPR Academy",
     },
     body: JSON.stringify({
       model,
@@ -196,22 +200,22 @@ Generate a focused, scannable reference guide with 3-6 sections. Prioritize prac
 
   const responseText = await response.text();
 
-  console.log(`[RefPDF] OpenAI response status=${response.status} bodyLen=${responseText.length} bodyPreview=${responseText.substring(0, 200)}`);
+  console.log(`[RefPDF] OpenRouter response status=${response.status} bodyLen=${responseText.length} bodyPreview=${responseText.substring(0, 200)}`);
 
   if (!response.ok) {
-    throw new Error(`OpenAI API error (${response.status}): ${responseText.substring(0, 500)}`);
+    throw new Error(`OpenRouter API error (${response.status}): ${responseText.substring(0, 500)}`);
   }
 
   let data: { choices: Array<{ message?: { content?: string } }> };
   try {
     data = JSON.parse(responseText);
   } catch {
-    throw new Error(`OpenAI returned invalid JSON (${response.status}): ${responseText.substring(0, 200)}`);
+    throw new Error(`OpenRouter returned invalid JSON (${response.status}): ${responseText.substring(0, 200)}`);
   }
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error("OpenAI returned empty content");
+    throw new Error("Claude returned empty content");
   }
 
   console.log(`[RefPDF] LLM content length=${content.length}`);
@@ -234,10 +238,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, modelId = "gpt-4o-mini" } = body;
+    const { courseId, modelId = DEFAULT_MODEL } = body;
 
     console.log(`[RefPDF] Starting generation courseId=${courseId} modelId=${modelId}`);
-    console.log(`[RefPDF] OPENAI_API_KEY set=${!!process.env.OPENAI_API_KEY} keyPrefix=${process.env.OPENAI_API_KEY?.substring(0, 10)}...`);
+    console.log(`[RefPDF] OPENROUTER_API_KEY set=${!!process.env.OPENROUTER_API_KEY}`);
 
     if (!courseId) {
       return NextResponse.json({ error: "courseId is required" }, { status: 400 });
@@ -309,7 +313,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const llmResponse = await callLLM(
+        const llmResponse = await callClaude(
           (courseInfo as any).title,
           moduleName,
           sorted.length,
@@ -346,8 +350,8 @@ export async function POST(request: NextRequest) {
       footer: "PPR Academy — ppr.academy",
     };
 
-    // ─── Step 5: Generate PDF ───
-    const pdfBytes = await generateCheatSheetPDF(outline);
+    // ─── Step 5: Generate PDF (React PDF) ───
+    const pdfBytes = await renderReferenceGuidePDF(outline);
 
     // ─── Step 6: Upload to Convex storage ───
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
