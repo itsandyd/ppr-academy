@@ -360,6 +360,10 @@ export const getCoursesByUser = query({
       spotify: v.optional(v.string()),
     })),
     followGateMessage: v.optional(v.string()),
+    // Reference Guide PDF fields
+    referencePdfStorageId: v.optional(v.string()),
+    referencePdfUrl: v.optional(v.string()),
+    referencePdfGeneratedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
