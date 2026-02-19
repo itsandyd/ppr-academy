@@ -135,9 +135,78 @@ function cleanJsonResponse(content: string): string {
   return cleaned;
 }
 
+/**
+ * Attempt to repair truncated JSON by closing open brackets/braces.
+ * Works when the LLM response was cut off mid-output by max_tokens.
+ */
+function repairTruncatedJson(content: string): string {
+  let cleaned = cleanJsonResponse(content);
+
+  // Try parsing as-is first
+  try {
+    JSON.parse(cleaned);
+    return cleaned;
+  } catch {
+    // Continue to repair
+  }
+
+  // Trim to last complete item — find last complete object in an array
+  // by looking for the last `}` that's followed by valid continuation
+  const lastCompleteItem = cleaned.lastIndexOf("}");
+  if (lastCompleteItem === -1) throw new Error("No repairable JSON found");
+
+  let trimmed = cleaned.substring(0, lastCompleteItem + 1);
+
+  // Count unclosed brackets and braces
+  let openBraces = 0;
+  let openBrackets = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (const ch of trimmed) {
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") openBraces++;
+    if (ch === "}") openBraces--;
+    if (ch === "[") openBrackets++;
+    if (ch === "]") openBrackets--;
+  }
+
+  // Remove any trailing comma before we close
+  trimmed = trimmed.replace(/,\s*$/, "");
+
+  // Close unclosed structures
+  for (let i = 0; i < openBrackets; i++) trimmed += "]";
+  for (let i = 0; i < openBraces; i++) trimmed += "}";
+
+  // Final trailing comma cleanup
+  trimmed = trimmed.replace(/,\s*([\]}])/g, "$1");
+
+  return trimmed;
+}
+
 function safeParseJson<T>(content: string): T {
-  const cleaned = cleanJsonResponse(content);
-  return JSON.parse(cleaned) as T;
+  try {
+    const cleaned = cleanJsonResponse(content);
+    return JSON.parse(cleaned) as T;
+  } catch (firstError) {
+    // Attempt truncation repair
+    console.warn(
+      `[CheatPack] Initial JSON parse failed, attempting truncation repair...`
+    );
+    try {
+      const repaired = repairTruncatedJson(content);
+      return JSON.parse(repaired) as T;
+    } catch {
+      // Re-throw original error with context
+      const preview = content.substring(content.length - 200);
+      throw new Error(
+        `JSON parse failed (last 200 chars: ...${preview}): ${firstError instanceof Error ? firstError.message : firstError}`
+      );
+    }
+  }
 }
 
 function validateSections(raw: { sections?: unknown[] }): OutlineSection[] {
@@ -203,7 +272,7 @@ MAXIMUM 4 sections, ~22 items total. Every item must pass the mid-session test.`
         { role: "user", content: userPrompt },
       ],
       temperature: 0.3,
-      max_tokens: 4000,
+      max_tokens: 8000,
       response_format: { type: "json_object" },
     }),
   });
@@ -216,7 +285,12 @@ MAXIMUM 4 sections, ~22 items total. Every item must pass the mid-session test.`
     );
   }
 
-  let data: { choices: Array<{ message?: { content?: string } }> };
+  let data: {
+    choices: Array<{
+      message?: { content?: string };
+      finish_reason?: string;
+    }>;
+  };
   try {
     data = JSON.parse(responseText);
   } catch {
@@ -228,6 +302,13 @@ MAXIMUM 4 sections, ~22 items total. Every item must pass the mid-session test.`
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("Claude returned empty content");
+  }
+
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === "length") {
+    console.warn(
+      `[CheatPack] Response truncated for module "${moduleName}" — finish_reason=length, will attempt repair`
+    );
   }
 
   return content;
