@@ -34,15 +34,15 @@ const ReferenceGuidePDF: React.FC<ReferenceGuideProps> = ({
   title,
   subtitle,
   sections,
-  footer = "PPR Academy — ppr.academy",
+  footer = "PausePlayRepeat",
   showTOC = true,
   badgeText,
 }) => (
   <Document
     title={title}
-    author="PPR Academy"
+    author="PausePlayRepeat"
     subject={badgeText === "CHEAT SHEET" ? "Module Cheat Sheet" : "Course Reference Guide"}
-    creator="PPR Academy — ppr.academy"
+    creator="PausePlayRepeat"
   >
     {/* Cover Page */}
     <Page size="A4" style={styles.coverPage}>

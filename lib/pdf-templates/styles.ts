@@ -1,7 +1,7 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
 // =============================================================================
-// PPR Academy Brand System
+// PausePlayRepeat Brand System
 // =============================================================================
 
 export const BRAND = {

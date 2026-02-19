@@ -392,7 +392,7 @@ export async function POST(request: NextRequest) {
           title: moduleName,
           subtitle: `${courseTitle} — Module Cheat Sheet`,
           sections: enforced,
-          footer: "PPR Academy — ppr.academy",
+          footer: "PausePlayRepeat",
           showTOC: false,
           badgeText: "CHEAT SHEET" as const,
         };

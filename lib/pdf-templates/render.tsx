@@ -30,7 +30,7 @@ export async function renderReferenceGuidePDF(
       title={outline.title}
       subtitle={outline.subtitle}
       sections={outline.sections}
-      footer={outline.footer || "PPR Academy — ppr.academy"}
+      footer={outline.footer || "PausePlayRepeat"}
       showTOC={outline.showTOC}
       badgeText={outline.badgeText}
     />

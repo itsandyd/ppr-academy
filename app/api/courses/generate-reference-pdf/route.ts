@@ -347,7 +347,7 @@ export async function POST(request: NextRequest) {
       title: `${(courseInfo as any).title} — Reference Guide`,
       subtitle: `Complete reference covering ${chapters.length} chapters across ${moduleGroups.size} module${moduleGroups.size === 1 ? "" : "s"}`,
       sections: allSections,
-      footer: "PPR Academy — ppr.academy",
+      footer: "PausePlayRepeat",
     };
 
     // ─── Step 5: Generate PDF (React PDF) ───
