@@ -5408,6 +5408,7 @@ export declare const api: {
         moduleId?: Id<"courseModules">;
         moduleTitle: string;
         outline: {
+          badgeText?: string;
           footer?: string;
           sections: Array<{
             heading: string;
@@ -5426,6 +5427,7 @@ export declare const api: {
               | "glossary"
               | "custom";
           }>;
+          showTOC?: boolean;
           subtitle?: string;
           title: string;
         };
@@ -5475,6 +5477,7 @@ export declare const api: {
         courseId: Id<"courses">;
         courseTitle: string;
         outline: {
+          badgeText?: string;
           footer?: string;
           sections: Array<{
             heading: string;
@@ -5493,6 +5496,7 @@ export declare const api: {
               | "glossary"
               | "custom";
           }>;
+          showTOC?: boolean;
           subtitle?: string;
           title: string;
         };
@@ -5507,6 +5511,7 @@ export declare const api: {
       {
         cheatSheetId: Id<"cheatSheets">;
         outline: {
+          badgeText?: string;
           footer?: string;
           sections: Array<{
             heading: string;
@@ -5525,6 +5530,7 @@ export declare const api: {
               | "glossary"
               | "custom";
           }>;
+          showTOC?: boolean;
           subtitle?: string;
           title: string;
         };
@@ -7129,6 +7135,9 @@ export declare const api: {
         modules?: any;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;
@@ -7219,6 +7228,9 @@ export declare const api: {
         }>;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;
@@ -7264,6 +7276,9 @@ export declare const api: {
         isPublished?: boolean;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;
@@ -7312,6 +7327,9 @@ export declare const api: {
         isPublished?: boolean;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;
@@ -7360,6 +7378,9 @@ export declare const api: {
         isPublished?: boolean;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;
@@ -7481,6 +7502,9 @@ export declare const api: {
         isPublished?: boolean;
         paymentDescription?: string;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;
@@ -7578,6 +7602,9 @@ export declare const api: {
         paymentDescription?: string;
         pinnedAt?: number;
         price?: number;
+        referencePdfGeneratedAt?: number;
+        referencePdfStorageId?: string;
+        referencePdfUrl?: string;
         showGuarantee?: boolean;
         skillLevel?: string;
         slug?: string;

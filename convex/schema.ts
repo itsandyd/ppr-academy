@@ -5709,6 +5709,8 @@ export default defineSchema({
         })
       ),
       footer: v.optional(v.string()),
+      showTOC: v.optional(v.boolean()),
+      badgeText: v.optional(v.string()),
     }),
 
     // Generation metadata

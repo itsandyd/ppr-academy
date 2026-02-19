@@ -130,6 +130,8 @@ function cleanJsonResponse(content: string): string {
     }
     cleaned = cleaned.trim();
   }
+  // Remove trailing commas before ] or } (common LLM JSON error)
+  cleaned = cleaned.replace(/,\s*([\]}])/g, "$1");
   return cleaned;
 }
 

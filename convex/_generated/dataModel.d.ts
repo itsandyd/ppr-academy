@@ -2271,6 +2271,7 @@ export type DataModel = {
       moduleId?: Id<"courseModules">;
       moduleTitle?: string;
       outline: {
+        badgeText?: string;
         footer?: string;
         sections: Array<{
           heading: string;
@@ -2289,6 +2290,7 @@ export type DataModel = {
             | "glossary"
             | "custom";
         }>;
+        showTOC?: boolean;
         subtitle?: string;
         title: string;
       };
@@ -2315,8 +2317,10 @@ export type DataModel = {
       | "moduleId"
       | "moduleTitle"
       | "outline"
+      | "outline.badgeText"
       | "outline.footer"
       | "outline.sections"
+      | "outline.showTOC"
       | "outline.subtitle"
       | "outline.title"
       | "packId"

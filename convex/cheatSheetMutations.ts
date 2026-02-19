@@ -31,6 +31,8 @@ const outlineValidator = v.object({
     })
   ),
   footer: v.optional(v.string()),
+  showTOC: v.optional(v.boolean()),
+  badgeText: v.optional(v.string()),
 });
 
 // =============================================================================

@@ -64,6 +64,10 @@ export const getCourses = query({
       spotify: v.optional(v.string()),
     })),
     followGateMessage: v.optional(v.string()),
+    // Reference Guide PDF fields
+    referencePdfStorageId: v.optional(v.string()),
+    referencePdfUrl: v.optional(v.string()),
+    referencePdfGeneratedAt: v.optional(v.number()),
   })),
   handler: async (ctx) => {
     return await ctx.db.query("courses").take(200);
@@ -119,6 +123,10 @@ export const getCourseBySlug = query({
         spotify: v.optional(v.string()),
       })),
       followGateMessage: v.optional(v.string()),
+      // Reference Guide PDF fields
+      referencePdfStorageId: v.optional(v.string()),
+      referencePdfUrl: v.optional(v.string()),
+      referencePdfGeneratedAt: v.optional(v.number()),
       // Modules data
       modules: v.optional(v.any()),
     }),
@@ -422,6 +430,10 @@ export const getCoursesByStore = query({
       spotify: v.optional(v.string()),
     })),
     followGateMessage: v.optional(v.string()),
+    // Reference Guide PDF fields
+    referencePdfStorageId: v.optional(v.string()),
+    referencePdfUrl: v.optional(v.string()),
+    referencePdfGeneratedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     await requireStoreOwner(ctx, args.storeId);
@@ -481,6 +493,10 @@ export const getPublishedCoursesByStore = query({
       spotify: v.optional(v.string()),
     })),
     followGateMessage: v.optional(v.string()),
+    // Reference Guide PDF fields
+    referencePdfStorageId: v.optional(v.string()),
+    referencePdfUrl: v.optional(v.string()),
+    referencePdfGeneratedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     const courses = await ctx.db
@@ -541,6 +557,10 @@ export const getCoursesByInstructor = query({
       spotify: v.optional(v.string()),
     })),
     followGateMessage: v.optional(v.string()),
+    // Reference Guide PDF fields
+    referencePdfStorageId: v.optional(v.string()),
+    referencePdfUrl: v.optional(v.string()),
+    referencePdfGeneratedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -761,6 +781,10 @@ export const updateCourse = mutation({
       // Pinned product fields
       isPinned: v.optional(v.boolean()),
       pinnedAt: v.optional(v.number()),
+      // Reference Guide PDF fields
+      referencePdfStorageId: v.optional(v.string()),
+      referencePdfUrl: v.optional(v.string()),
+      referencePdfGeneratedAt: v.optional(v.number()),
     }),
     v.null()
   ),
@@ -1129,6 +1153,10 @@ export const getCourseForEdit = query({
       showGuarantee: v.optional(v.boolean()),
       acceptsPayPal: v.optional(v.boolean()),
       acceptsStripe: v.optional(v.boolean()),
+      // Reference Guide PDF fields
+      referencePdfStorageId: v.optional(v.string()),
+      referencePdfUrl: v.optional(v.string()),
+      referencePdfGeneratedAt: v.optional(v.number()),
       // Modules structure for editing
       modules: v.optional(v.array(v.object({
         title: v.string(),
