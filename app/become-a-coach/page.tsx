@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import BecomeCoachForm from "./become-coach-form";
 
 export const metadata = {
-  title: "Become a Coach | PPR Academy",
+  title: "Become a Coach | PausePlayRepeat",
   description: "Join our community of expert music production coaches and help students achieve their goals",
 };
 
@@ -26,7 +26,7 @@ export default async function BecomeCoachPage() {
             Become a Music Production Coach
           </h1>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Share your expertise, inspire the next generation of producers, and build your coaching business with PPR Academy.
+            Share your expertise, inspire the next generation of producers, and build your coaching business with PausePlayRepeat.
           </p>
         </div>
 

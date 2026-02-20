@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export async function generateMetadata({
   params,
@@ -62,7 +62,7 @@ export async function generateMetadata({
         title,
         description,
         url: tipUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: tipJar.imageUrl
           ? [
@@ -89,7 +89,7 @@ export async function generateMetadata({
     console.error("Error generating tip jar metadata:", error);
     return {
       title: "Support Creator",
-      description: "Support your favorite creators on PPR Academy",
+      description: "Support your favorite creators on PausePlayRepeat",
     };
   }
 }

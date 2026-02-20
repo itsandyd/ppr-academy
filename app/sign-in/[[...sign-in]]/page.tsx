@@ -51,7 +51,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               <div className="w-11 h-11 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
                 <Music className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-tight">PPR Academy</span>
+              <span className="text-xl font-bold tracking-tight">PausePlayRepeat</span>
             </a>
 
             {/* Main Content - Centered */}
@@ -128,7 +128,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 <div className="w-9 h-9 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center shadow-md">
                   <Music className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-lg font-bold">PPR Academy</span>
+                <span className="text-lg font-bold">PausePlayRepeat</span>
               </a>
               <a
                 href={isCreator ? "/sign-up?intent=creator" : "/sign-up"}
@@ -260,7 +260,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                           : 'Growing community'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        trust PPR Academy
+                        trust PausePlayRepeat
                       </p>
                     </div>
                   </div>

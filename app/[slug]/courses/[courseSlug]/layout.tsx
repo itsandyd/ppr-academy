@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export async function generateMetadata({
   params,
@@ -41,10 +41,10 @@ export async function generateMetadata({
     const priceText = price === 0 ? "Free" : `$${price}`;
     const categoryText = course.category || "Music Production";
     const skillLevel = course.skillLevel || "All Levels";
-    const title = `${course.title} by ${creatorName} | ${categoryText} Course | PPR Academy`;
+    const title = `${course.title} by ${creatorName} | ${categoryText} Course | PausePlayRepeat`;
     const description =
       course.description ||
-      `Learn ${course.title} from ${creatorName} (${priceText}). ${categoryText} course for ${skillLevel.toLowerCase()} on PPR Academy.`;
+      `Learn ${course.title} from ${creatorName} (${priceText}). ${categoryText} course for ${skillLevel.toLowerCase()} on PausePlayRepeat.`;
 
     return {
       title,
@@ -64,7 +64,7 @@ export async function generateMetadata({
         title,
         description,
         url: courseUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: course.imageUrl
           ? [
@@ -95,7 +95,7 @@ export async function generateMetadata({
     console.error("Error generating course metadata:", error);
     return {
       title: "Course",
-      description: "Discover amazing courses on PPR Academy",
+      description: "Discover amazing courses on PausePlayRepeat",
     };
   }
 }

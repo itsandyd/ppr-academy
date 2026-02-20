@@ -9,7 +9,7 @@ import {
   generateBreadcrumbStructuredData,
 } from "@/lib/seo/structured-data";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface BeatDetailPageProps {
   params: Promise<{

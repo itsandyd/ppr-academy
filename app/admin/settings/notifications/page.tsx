@@ -48,9 +48,9 @@ export default function NotificationsSettingsPage() {
     smtpPort: "587",
     smtpUser: "",
     smtpPassword: "",
-    fromEmail: "noreply@ppracademy.com",
-    fromName: "PPR Academy",
-    replyToEmail: "support@ppracademy.com",
+    fromEmail: "noreply@pauseplayrepeat.com",
+    fromName: "PausePlayRepeat",
+    replyToEmail: "support@pauseplayrepeat.com",
     // Notification Preferences
     enableEmailNotifications: true,
     enablePushNotifications: false,

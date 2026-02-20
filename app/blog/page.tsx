@@ -86,7 +86,7 @@ export default function BlogPage() {
             <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-lg">
               <BookOpen className="h-10 w-10" />
             </div>
-            <h1 className="mb-4 text-4xl font-bold md:text-6xl">PPR Academy Blog</h1>
+            <h1 className="mb-4 text-4xl font-bold md:text-6xl">PausePlayRepeat Blog</h1>
             <p className="mx-auto max-w-3xl text-xl text-white/90 md:text-2xl">
               Tutorials, tips, and insights to help you grow as a creator
             </p>

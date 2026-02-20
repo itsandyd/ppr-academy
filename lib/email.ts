@@ -21,9 +21,9 @@ function getEmailFooter(recipientEmail: string): string {
       <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 8px 0;">
         <a href="${unsubscribeUrl}" style="color: #6366f1; text-decoration: underline;">Unsubscribe</a>
         &nbsp;•&nbsp;
-        <a href="https://ppracademy.com" style="color: #6366f1; text-decoration: underline;">Website</a>
+        <a href="https://pauseplayrepeat.com" style="color: #6366f1; text-decoration: underline;">Website</a>
         &nbsp;•&nbsp;
-        <a href="mailto:support@ppracademy.com" style="color: #6366f1; text-decoration: underline;">Help</a>
+        <a href="mailto:support@pauseplayrepeat.com" style="color: #6366f1; text-decoration: underline;">Help</a>
       </p>
       <p style="font-size: 11px; color: #a0aec0; text-align: center; margin: 8px 0;">
         PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709
@@ -407,7 +407,7 @@ const getCourseEnrollmentEmailTemplate = (data: CourseEnrollmentEmailData) => `
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard?mode=learn"
          style="background: #10b981; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         🚀 Start Learning Now
       </a>
@@ -628,7 +628,7 @@ const getMembershipConfirmationEmailTemplate = (data: MembershipConfirmationEmai
     ` : ''}
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard?mode=learn"
          style="background: #8b5cf6; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         🚀 Access Your Benefits
       </a>
@@ -732,7 +732,7 @@ const getBeatPurchaseEmailTemplate = (data: BeatPurchaseEmailData) => `
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard?mode=learn"
          style="background: #06b6d4; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         📥 Download Your Files
       </a>
@@ -833,7 +833,7 @@ const getDigitalProductPurchaseEmailTemplate = (data: DigitalProductPurchaseEmai
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard?mode=learn"
          style="background: #22c55e; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         📥 Access Your Purchase
       </a>
@@ -932,7 +932,7 @@ const getBundlePurchaseEmailTemplate = (data: BundlePurchaseEmailData) => `
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard?mode=learn"
          style="background: #f59e0b; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         📥 Access Your Bundle
       </a>
@@ -1153,7 +1153,7 @@ const getCreditsPurchaseEmailTemplate = (data: CreditsPurchaseEmailData) => `
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard"
          style="background: #eab308; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         🚀 Start Using Your Credits
       </a>
@@ -1292,7 +1292,7 @@ const getMixingServiceEmailTemplate = (data: MixingServiceEmailData) => `
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard/my-orders"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard/my-orders"
          style="background: #7c3aed; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         📂 View Your Order
       </a>
@@ -1407,7 +1407,7 @@ const getPlaylistSubmissionEmailTemplate = (data: PlaylistSubmissionEmailData) =
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard"
          style="background: #1db954; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         📊 Track Your Submissions
       </a>
@@ -1627,7 +1627,7 @@ const getPprProWelcomeEmailTemplate = (data: PprProWelcomeEmailData) => {
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard?mode=learn"
          style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         Start Learning Now
       </a>
@@ -1713,7 +1713,7 @@ const getPprProCancelledEmailTemplate = (data: PprProCancelledEmailData) => {
     </p>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/pricing"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/pricing"
          style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         Resubscribe to ${name}
       </a>
@@ -1794,7 +1794,7 @@ const getPprProPaymentFailedEmailTemplate = (data: PprProPaymentFailedEmailData)
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard/settings"
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pauseplayrepeat.com'}/dashboard/settings"
          style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
         Update Payment Method
       </a>

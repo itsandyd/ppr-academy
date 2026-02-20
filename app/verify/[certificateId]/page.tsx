@@ -91,7 +91,7 @@ export default function VerifyCertificatePage() {
           </div>
           <CardTitle className="text-center text-2xl">Certificate Verified</CardTitle>
           <CardDescription className="text-center">
-            This is an authentic certificate issued by PPR Academy
+            This is an authentic certificate issued by PausePlayRepeat
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

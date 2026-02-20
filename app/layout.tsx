@@ -7,13 +7,13 @@ import { Analytics } from "@vercel/analytics/next";
 const inter = Inter({ subsets: ["latin"] });
 
 // Define the base URL for your application
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "PPR Academy - Music Production Courses, Samples & Digital Products",
-    template: "%s | PPR Academy",
+    default: "PausePlayRepeat - Music Production Courses, Samples & Digital Products",
+    template: "%s | PausePlayRepeat",
   },
   description: "Learn music production from industry experts. Access premium courses, sample packs, and digital products. Join the ultimate marketplace for music producers and creators.",
   keywords: [
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
     "sound design",
     "beat making",
   ],
-  authors: [{ name: "PPR Academy" }],
-  creator: "PPR Academy",
-  publisher: "PPR Academy",
+  authors: [{ name: "PausePlayRepeat" }],
+  creator: "PausePlayRepeat",
+  publisher: "PausePlayRepeat",
   robots: {
     index: true,
     follow: true,
@@ -46,24 +46,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: baseUrl,
-    siteName: "PPR Academy",
-    title: "PPR Academy - Music Production Courses, Samples & Digital Products",
+    siteName: "PausePlayRepeat",
+    title: "PausePlayRepeat - Music Production Courses, Samples & Digital Products",
     description: "Learn music production from industry experts. Access premium courses, sample packs, and digital products.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "PPR Academy - Music Production Education Platform",
+        alt: "PausePlayRepeat - Music Production Education Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PPR Academy - Music Production Courses, Samples & Digital Products",
+    title: "PausePlayRepeat - Music Production Courses, Samples & Digital Products",
     description: "Learn music production from industry experts. Access premium courses, sample packs, and digital products.",
     images: ["/og-image.png"],
-    creator: "@ppracademy",
+    creator: "@pauseplayrepeat",
   },
   alternates: {
     canonical: baseUrl,

@@ -100,7 +100,7 @@ function DesktopFrame({ children, slug }: { children: React.ReactNode; slug?: st
 
         <div className="flex flex-1 items-center justify-center">
           <div className="max-w-xs truncate rounded-md border border-border bg-background px-3 py-1 text-xs text-muted-foreground">
-            ppracademy.com/{slug || "your-store"}
+            pauseplayrepeat.com/{slug || "your-store"}
           </div>
         </div>
 

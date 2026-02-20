@@ -36,7 +36,7 @@ import { generateProductStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
 import { FollowGateWizard, FollowGateStep, FollowGatePlatform } from "@/components/follow-gates/FollowGateWizard";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface ProductPageProps {
   params: Promise<{

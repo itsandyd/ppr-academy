@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: store.userId });
 
     const title = `${store.name} - Creator Storefront`;
-    const description = store.description || store.bio || `Explore courses, digital products, and more from ${store.name} on PPR Academy`;
+    const description = store.description || store.bio || `Explore courses, digital products, and more from ${store.name} on PausePlayRepeat`;
     const storefrontUrl = `${baseUrl}/${slug}`;
 
     return {
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         title,
         description,
         url: storefrontUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: store.bannerImage || store.logoUrl
           ? [
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     console.error("Error generating storefront metadata:", error);
     return {
       title: "Creator Storefront",
-      description: "Discover amazing content from creators on PPR Academy",
+      description: "Discover amazing content from creators on PausePlayRepeat",
     };
   }
 }

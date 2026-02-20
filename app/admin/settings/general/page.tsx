@@ -31,10 +31,10 @@ export default function GeneralSettingsPage() {
   const { user } = useUser();
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState({
-    platformName: "PPR Academy",
+    platformName: "PausePlayRepeat",
     tagline: "Master music production with expert-led courses",
     description: "The ultimate platform for music producers to learn, create, and grow.",
-    supportEmail: "support@ppracademy.com",
+    supportEmail: "support@pauseplayrepeat.com",
     logoUrl: "",
     faviconUrl: "",
     primaryColor: "#7c3aed",
@@ -61,10 +61,10 @@ export default function GeneralSettingsPage() {
   useEffect(() => {
     if (existingSettings) {
       setSettings({
-        platformName: existingSettings.platformName || "PPR Academy",
+        platformName: existingSettings.platformName || "PausePlayRepeat",
         tagline: existingSettings.tagline || "Master music production with expert-led courses",
         description: existingSettings.description || "The ultimate platform for music producers to learn, create, and grow.",
-        supportEmail: existingSettings.supportEmail || "support@ppracademy.com",
+        supportEmail: existingSettings.supportEmail || "support@pauseplayrepeat.com",
         logoUrl: existingSettings.logoUrl || "",
         faviconUrl: existingSettings.faviconUrl || "",
         primaryColor: existingSettings.primaryColor || "#7c3aed",

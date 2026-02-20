@@ -54,7 +54,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Music className="w-7 h-7 text-white" />
                 </div>
-                <span className="text-2xl font-bold tracking-tight">PPR Academy</span>
+                <span className="text-2xl font-bold tracking-tight">PausePlayRepeat</span>
               </a>
 
               <h2 className="text-4xl xl:text-5xl font-bold mb-5 leading-[1.1] tracking-tight">
@@ -145,7 +145,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <div className="w-9 h-9 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center shadow-md">
                   <Music className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-lg font-bold">PPR Academy</span>
+                <span className="text-lg font-bold">PausePlayRepeat</span>
               </a>
               <a
                 href="/sign-in"
@@ -193,7 +193,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <p className="text-muted-foreground">
                   {isCreator
                     ? 'Share your expertise and earn'
-                    : 'Join PPR Academy and start learning'}
+                    : 'Join PausePlayRepeat and start learning'}
                 </p>
               </div>
 
@@ -205,7 +205,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
                 <p className="text-muted-foreground text-lg">
                   {isCreator
                     ? 'Share your expertise and earn'
-                    : 'Join PPR Academy and start learning'}
+                    : 'Join PausePlayRepeat and start learning'}
                 </p>
               </div>
 

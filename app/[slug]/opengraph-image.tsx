@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 // Image metadata
-export const alt = "PPR Academy Storefront";
+export const alt = "PausePlayRepeat Storefront";
 export const size = {
   width: 1200,
   height: 630,
@@ -70,7 +70,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               borderRadius: "12px",
             }}
           >
-            PPR Academy
+            PausePlayRepeat
           </div>
         </div>
       </div>

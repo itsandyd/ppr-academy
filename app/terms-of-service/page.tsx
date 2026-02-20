@@ -10,7 +10,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
           <p>
-            By accessing and using PPR Academy ("Service"), you accept and agree to be bound by 
+            By accessing and using PausePlayRepeat ("Service"), you accept and agree to be bound by 
             the terms and provision of this agreement. If you do not agree to abide by the above, 
             please do not use this service.
           </p>
@@ -19,7 +19,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">2. Service Description</h2>
           <p>
-            PPR Academy provides educational content, courses, and social media automation tools 
+            PausePlayRepeat provides educational content, courses, and social media automation tools 
             for content creators and music producers. Our services include:
           </p>
           <ul className="list-disc pl-6 space-y-2">
@@ -95,7 +95,7 @@ export default function TermsOfServicePage() {
             <h3 className="text-xl font-medium">Our Content</h3>
             <p>
               All course materials, platform features, and proprietary content are owned by 
-              PPR Academy and protected by intellectual property laws.
+              PausePlayRepeat and protected by intellectual property laws.
             </p>
 
             <h3 className="text-xl font-medium">User Content</h3>
@@ -130,7 +130,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">9. Limitation of Liability</h2>
           <p>
-            PPR Academy shall not be liable for any indirect, incidental, special, or consequential 
+            PausePlayRepeat shall not be liable for any indirect, incidental, special, or consequential 
             damages resulting from your use of the service, including but not limited to loss of 
             profits, data, or business opportunities.
           </p>
@@ -184,7 +184,7 @@ export default function TermsOfServicePage() {
           <h2 className="text-2xl font-semibold mb-4">13. Governing Law</h2>
           <p>
             These terms shall be interpreted and governed in accordance with the laws of the 
-            jurisdiction where PPR Academy operates.
+            jurisdiction where PausePlayRepeat operates.
           </p>
         </section>
 
@@ -195,7 +195,7 @@ export default function TermsOfServicePage() {
           </p>
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
             <p>Email: legal@pauseplayrepeat.com</p>
-            <p>Address: PPR Academy, LLC</p>
+            <p>Address: PausePlayRepeat, LLC</p>
           </div>
         </section>
 

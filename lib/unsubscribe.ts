@@ -60,7 +60,7 @@ export function verifyUnsubscribeToken(token: string): string | null {
  */
 export function generateUnsubscribeUrl(email: string, baseUrl?: string): string {
   const token = generateUnsubscribeToken(email);
-  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
   return `${base}/unsubscribe/${token}`;
 }
 

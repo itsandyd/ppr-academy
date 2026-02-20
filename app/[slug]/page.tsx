@@ -47,7 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 // Platform configuration for social links
 const socialPlatformConfig: Record<string, { icon: React.ReactNode; color: string; hoverColor: string; name: string }> = {

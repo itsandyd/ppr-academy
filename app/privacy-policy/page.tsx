@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
           <div className="space-y-4">
             <h3 className="text-xl font-medium">Personal Information</h3>
             <p>
-              When you use PPR Academy, we may collect personal information including:
+              When you use PausePlayRepeat, we may collect personal information including:
             </p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Name and email address</li>
@@ -131,7 +131,7 @@ export default function PrivacyPolicyPage() {
           </p>
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
             <p>Email: privacy@pauseplayrepeat.com</p>
-            <p>Address: PPR Academy, LLC</p>
+            <p>Address: PausePlayRepeat, LLC</p>
           </div>
         </section>
       </div>

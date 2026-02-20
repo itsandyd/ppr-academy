@@ -3,7 +3,7 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import Script from "next/script";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 // Helper to strip HTML for meta descriptions
 const stripHtml = (html: string): string => {
@@ -117,7 +117,7 @@ export async function generateMetadata({
         title: `${plugin.name}${plugin.author ? ` by ${plugin.author}` : ""} - Music Production Plugin`,
         description: metaDescription,
         url: pageUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "article",
         images: plugin.image
           ? [
@@ -147,7 +147,7 @@ export async function generateMetadata({
         "product:price:amount": String(plugin.price || 0),
         "product:price:currency": "USD",
         "product:availability": "in stock",
-        "product:brand": plugin.author || "PPR Academy",
+        "product:brand": plugin.author || "PausePlayRepeat",
         "product:category": plugin.typeName || "Audio Plugin",
         ...(plugin.tags && plugin.tags.length > 0 && {
           "article:tag": plugin.tags.join(", "),
@@ -169,7 +169,7 @@ export async function generateMetadata({
     console.error("Error generating plugin metadata:", error);
     return {
       title: "Music Production Plugin",
-      description: "Discover professional music production plugins at PPR Academy",
+      description: "Discover professional music production plugins at PausePlayRepeat",
     };
   }
 }

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export async function generateMetadata({
   params,
@@ -44,7 +44,7 @@ export async function generateMetadata({
     const bpmInfo = beat.bpm ? `${beat.bpm} BPM` : "";
     const genreInfo = beat.genre || "Hip Hop";
     const priceText = price === 0 ? "Free" : `$${(price / 100).toFixed(0)}`;
-    const title = `${beat.title} by ${creatorName} | ${bpmInfo} ${genreInfo} Beat | PPR Academy`;
+    const title = `${beat.title} by ${creatorName} | ${bpmInfo} ${genreInfo} Beat | PausePlayRepeat`;
     const description =
       beat.description ||
       `License "${beat.title}" ${genreInfo} beat by ${creatorName}${bpmInfo ? ` - ${bpmInfo}` : ""}. ${priceText}. Professional instrumental for your next hit.`;
@@ -70,7 +70,7 @@ export async function generateMetadata({
         title,
         description,
         url: beatUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "music.song",
         images: beat.imageUrl
           ? [
@@ -111,7 +111,7 @@ export async function generateMetadata({
     console.error("Error generating beat metadata:", error);
     return {
       title: "Beat",
-      description: "Discover amazing beats on PPR Academy",
+      description: "Discover amazing beats on PausePlayRepeat",
     };
   }
 }

@@ -93,7 +93,7 @@ export default function VerifyPage() {
 
           <div className="mt-4 text-center">
             <p className="text-xs text-muted-foreground">
-              All certificates issued by PPR Academy can be verified instantly
+              All certificates issued by PausePlayRepeat can be verified instantly
             </p>
           </div>
         </CardContent>

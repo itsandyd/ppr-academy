@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export async function generateMetadata({
   params,
@@ -45,10 +45,10 @@ export async function generateMetadata({
     const price = product.price || 0;
     const isFree = price === 0;
     const priceText = isFree ? "Free" : `$${(price / 100).toFixed(0)}`;
-    const title = `${product.title} by ${creatorName} | ${category} | PPR Academy`;
+    const title = `${product.title} by ${creatorName} | ${category} | PausePlayRepeat`;
     const description =
       product.description ||
-      `Get "${product.title}" (${priceText}) by ${creatorName}. ${category} for music production on PPR Academy.`;
+      `Get "${product.title}" (${priceText}) by ${creatorName}. ${category} for music production on PausePlayRepeat.`;
 
     return {
       title,
@@ -68,7 +68,7 @@ export async function generateMetadata({
         title,
         description,
         url: productUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: product.imageUrl
           ? [
@@ -100,7 +100,7 @@ export async function generateMetadata({
     console.error("Error generating product metadata:", error);
     return {
       title: "Digital Product",
-      description: "Discover amazing digital products on PPR Academy",
+      description: "Discover amazing digital products on PausePlayRepeat",
     };
   }
 }

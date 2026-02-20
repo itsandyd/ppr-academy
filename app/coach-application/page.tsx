@@ -43,7 +43,7 @@ export default async function CoachApplicationPage() {
               Coach Application
             </h1>
             <p className="text-lg text-slate-600 mb-8">
-              Tell us about your experience and why you'd be a great coach for the PPR Academy community.
+              Tell us about your experience and why you'd be a great coach for the PausePlayRepeat community.
             </p>
 
             <CoachApplicationForm user={user} />

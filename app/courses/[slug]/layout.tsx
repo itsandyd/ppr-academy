@@ -7,7 +7,7 @@ import {
   generateBreadcrumbStructuredData,
 } from "@/lib/seo/structured-data";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface CourseLayoutProps {
   children: React.ReactNode;
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: course.userId });
 
     const title = `${course.title} - Music Production Course`;
-    const description = course.description || `Learn ${course.title} with ${creator?.name || "expert instructors"} on PPR Academy`;
+    const description = course.description || `Learn ${course.title} with ${creator?.name || "expert instructors"} on PausePlayRepeat`;
     const courseUrl = `${baseUrl}/courses/${slug}`;
 
     return {
@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         title,
         description,
         url: courseUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: course.imageUrl
           ? [
@@ -90,7 +90,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     console.error("Error generating course metadata:", error);
     return {
       title: "Course",
-      description: "Music production course on PPR Academy",
+      description: "Music production course on PausePlayRepeat",
     };
   }
 }
@@ -110,9 +110,9 @@ export default async function CourseLayout({ children, params }: CourseLayoutPro
 
       courseStructuredData = generateCourseStructuredData({
         courseName: course.title,
-        description: course.description || `Learn ${course.title} on PPR Academy`,
+        description: course.description || `Learn ${course.title} on PausePlayRepeat`,
         instructor: {
-          name: creator?.name || "PPR Academy Instructor",
+          name: creator?.name || "PausePlayRepeat Instructor",
           url: creator ? `${baseUrl}/creators/${course.userId}` : undefined,
         },
         price: course.price || 0,

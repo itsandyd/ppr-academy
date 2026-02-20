@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import BlogPostPageClient from "./client";
 import { generateBlogPostingStructuredData, generateBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface BlogPostPageProps {
   params: Promise<{
@@ -20,17 +20,17 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
     if (!post) {
       return {
-        title: "Blog Post Not Found | PPR Academy",
+        title: "Blog Post Not Found | PausePlayRepeat",
         description: "This blog post could not be found.",
       };
     }
 
     const title = post.metaTitle || post.title;
-    const description = post.metaDescription || post.excerpt || `Read "${post.title}" on PPR Academy Blog`;
+    const description = post.metaDescription || post.excerpt || `Read "${post.title}" on PausePlayRepeat Blog`;
     const postUrl = `${baseUrl}/blog/${slug}`;
 
     return {
-      title: `${title} | PPR Academy Blog`,
+      title: `${title} | PausePlayRepeat Blog`,
       description,
       keywords: post.keywords || post.tags || [],
       authors: post.authorName ? [{ name: post.authorName }] : undefined,
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
         title,
         description,
         url: postUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "article",
         publishedTime: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
         modifiedTime: post.updatedAt ? new Date(post.updatedAt).toISOString() : undefined,
@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   } catch (error) {
     console.error("Error generating blog metadata:", error);
     return {
-      title: "Blog | PPR Academy",
+      title: "Blog | PausePlayRepeat",
       description: "Read our latest articles on music production, creative tips, and industry insights.",
     };
   }
@@ -92,7 +92,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         headline: post.title,
         description: post.excerpt || undefined,
         author: {
-          name: post.authorName || "PPR Academy",
+          name: post.authorName || "PausePlayRepeat",
           image: post.authorAvatar || undefined,
         },
         datePublished: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,

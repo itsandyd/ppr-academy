@@ -9,7 +9,7 @@ import { Loader2, Eye } from "lucide-react";
 import { notFound } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export default function PublicCoursePage() {
   const params = useParams();

@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { generateProductStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface MembershipPageProps {
   params: Promise<{

@@ -3,7 +3,7 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 function isConvexId(str: string): boolean {
   return /^[a-z0-9]{32}$/.test(str);
@@ -56,7 +56,7 @@ export async function generateMetadata({
     const coachingUrl = `${baseUrl}/${slug}/coaching/${productSlugOrId}`;
     const price = coachingProduct.price || 0;
     const priceText = price === 0 ? "Free" : `$${price}`;
-    const title = `${coachingProduct.title} with ${creatorName} | ${duration}-min Coaching | PPR Academy`;
+    const title = `${coachingProduct.title} with ${creatorName} | ${duration}-min Coaching | PausePlayRepeat`;
     const description =
       coachingProduct.description ||
       `Book a ${duration}-minute coaching session with ${creatorName} (${priceText}). Get personalized 1-on-1 guidance and mentorship.`;
@@ -81,7 +81,7 @@ export async function generateMetadata({
         title,
         description,
         url: coachingUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: coachingProduct.imageUrl
           ? [
@@ -113,7 +113,7 @@ export async function generateMetadata({
     console.error("Error generating coaching metadata:", error);
     return {
       title: "Coaching Session",
-      description: "Book a coaching session with experienced mentors on PPR Academy",
+      description: "Book a coaching session with experienced mentors on PausePlayRepeat",
     };
   }
 }

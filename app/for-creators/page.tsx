@@ -364,7 +364,7 @@ export default function ForCreatorsPage() {
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
               Everything you can sell on{" "}
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                PPR Academy
+                PausePlayRepeat
               </span>
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
@@ -571,7 +571,7 @@ export default function ForCreatorsPage() {
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
               Why creators choose{" "}
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                PPR Academy
+                PausePlayRepeat
               </span>
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
@@ -614,7 +614,7 @@ export default function ForCreatorsPage() {
             viewport={{ once: true }}
           >
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              Creators already earning on PPR Academy
+              Creators already earning on PausePlayRepeat
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
               Join music producers who are building their brands and income streams.

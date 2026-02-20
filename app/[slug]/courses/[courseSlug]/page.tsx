@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { generateCourseStructuredData } from "@/lib/seo/structured-data";
 import { StructuredData } from "@/lib/seo/structured-data-client";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface CoursePageProps {
   params: Promise<{
@@ -105,7 +105,7 @@ export default function CourseLandingPage({ params }: CoursePageProps) {
   const courseUrl = `${baseUrl}/${slug}/courses/${courseSlug}`;
   const structuredData = generateCourseStructuredData({
     courseName: course.title,
-    description: course.description || `Learn from ${displayName} on PPR Academy`,
+    description: course.description || `Learn from ${displayName} on PausePlayRepeat`,
     instructor: {
       name: displayName,
       url: `${baseUrl}/${slug}`,

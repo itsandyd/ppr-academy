@@ -12,6 +12,18 @@ import { HarmonicsFullLesson } from "./HarmonicsFullLesson";
 import { ExcalidrawEmailVideo } from "./ExcalidrawEmailVideo";
 import { ExcalidrawGamificationVideo } from "./ExcalidrawGamificationVideo";
 import { DynamicVideo } from "./DynamicVideo";
+import { PromoWhatIsPPR } from "./PromoWhatIsPPR";
+import { PromoAIMarketing } from "./PromoAIMarketing";
+import { PromoStorefront } from "./PromoStorefront";
+import { PromoCreatorToolkit } from "./PromoCreatorToolkit";
+import { PromoLearnerToCreator } from "./PromoLearnerToCreator";
+import { PromoMadeForProducers } from "./PromoMadeForProducers";
+import { PromoRebrandAnnouncement } from "./PromoRebrandAnnouncement";
+import { CampaignDay1 } from "./CampaignDay1";
+import { CampaignDay3 } from "./CampaignDay3";
+import { CampaignDay5 } from "./CampaignDay5";
+import { CampaignDay7 } from "./CampaignDay7";
+import { CampaignDay10 } from "./CampaignDay10";
 
 type DynamicVideoProps = {
   generatedCode: string;
@@ -132,6 +144,104 @@ export const RemotionRoot: React.FC = () => {
         id="ExcalidrawGamification"
         component={ExcalidrawGamificationVideo}
         durationInFrames={2010}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── PROMO VIDEOS: Creator-Facing Platform Promotion ─── */}
+      <Composition
+        id="PromoWhatIsPPR"
+        component={PromoWhatIsPPR}
+        durationInFrames={1020}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PromoAIMarketing"
+        component={PromoAIMarketing}
+        durationInFrames={840}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PromoStorefront"
+        component={PromoStorefront}
+        durationInFrames={840}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PromoCreatorToolkit"
+        component={PromoCreatorToolkit}
+        durationInFrames={990}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PromoLearnerToCreator"
+        component={PromoLearnerToCreator}
+        durationInFrames={840}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PromoMadeForProducers"
+        component={PromoMadeForProducers}
+        durationInFrames={1110}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PromoRebrandAnnouncement"
+        component={PromoRebrandAnnouncement}
+        durationInFrames={1380}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── AIDA CAMPAIGN: 10-Day Creator Recruitment Series ─── */}
+      <Composition
+        id="CampaignDay1"
+        component={CampaignDay1}
+        durationInFrames={900}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="CampaignDay3"
+        component={CampaignDay3}
+        durationInFrames={900}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="CampaignDay5"
+        component={CampaignDay5}
+        durationInFrames={900}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="CampaignDay7"
+        component={CampaignDay7}
+        durationInFrames={900}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="CampaignDay10"
+        component={CampaignDay10}
+        durationInFrames={900}
         fps={30}
         width={1080}
         height={1920}

@@ -1,12 +1,12 @@
 import { Metadata } from "next";
 import { generateBreadcrumbStructuredData } from "@/lib/seo/structured-data";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export const metadata: Metadata = {
-  title: "Courses | PPR Academy - Learn Music Production",
+  title: "Courses | PausePlayRepeat - Learn Music Production",
   description:
-    "Master music production with expert-led courses. Learn beat making, mixing, mastering, and more from industry professionals at PPR Academy.",
+    "Master music production with expert-led courses. Learn beat making, mixing, mastering, and more from industry professionals at PausePlayRepeat.",
   keywords: [
     "music production courses",
     "online music courses",
@@ -18,24 +18,24 @@ export const metadata: Metadata = {
     "producer courses",
   ],
   openGraph: {
-    title: "Courses | PPR Academy",
+    title: "Courses | PausePlayRepeat",
     description:
       "Master music production with expert-led courses. Learn from industry professionals.",
     url: `${baseUrl}/courses`,
-    siteName: "PPR Academy",
+    siteName: "PausePlayRepeat",
     type: "website",
     images: [
       {
         url: `${baseUrl}/og-courses.png`,
         width: 1200,
         height: 630,
-        alt: "PPR Academy Courses",
+        alt: "PausePlayRepeat Courses",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Courses | PPR Academy",
+    title: "Courses | PausePlayRepeat",
     description:
       "Master music production with expert-led courses. Learn from industry professionals.",
   },

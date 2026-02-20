@@ -199,7 +199,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
   }
 
   // Generate structured data for SEO
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
   const coachingUrl = `${baseUrl}/${storeSlug}/coaching/${productSlugOrId}`;
   const structuredData = generateServiceStructuredData({
     name: product.title,

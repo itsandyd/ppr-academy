@@ -85,7 +85,7 @@ export default function UnsubscribePage() {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">
-                You will no longer receive marketing emails from PPR Academy. Important
+                You will no longer receive marketing emails from PausePlayRepeat. Important
                 transactional emails (purchase confirmations, etc.) may still be sent.
               </p>
             </>
@@ -104,7 +104,7 @@ export default function UnsubscribePage() {
             <div className="border-t pt-4">
               <p className="mb-3 text-sm text-muted-foreground">Changed your mind?</p>
               <Button variant="outline" onClick={() => (window.location.href = "/")}>
-                Visit PPR Academy
+                Visit PausePlayRepeat
               </Button>
             </div>
           )}

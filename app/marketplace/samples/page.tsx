@@ -276,7 +276,7 @@ export default function SamplesMarketplacePage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chart-1 to-chart-2">
                 <Music className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold">PPR Academy</span>
+              <span className="text-lg font-bold">PausePlayRepeat</span>
             </Link>
 
             {/* Navigation Links */}

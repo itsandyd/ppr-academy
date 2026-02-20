@@ -185,7 +185,7 @@ export default function CopyrightDashboardPage() {
           <AlertTitle>Account Suspended</AlertTitle>
           <AlertDescription>
             Your account has been suspended due to repeated copyright violations. Your products are
-            hidden from the marketplace. Contact support@ppracademy.com for assistance.
+            hidden from the marketplace. Contact support@pauseplayrepeat.com for assistance.
           </AlertDescription>
         </Alert>
       )}
@@ -348,7 +348,7 @@ export default function CopyrightDashboardPage() {
             <Link href="/dmca">View DMCA Policy</Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <a href="mailto:support@ppracademy.com">Contact Support</a>
+            <a href="mailto:support@pauseplayrepeat.com">Contact Support</a>
           </Button>
         </div>
       </div>

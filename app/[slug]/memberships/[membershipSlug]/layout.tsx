@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 export async function generateMetadata({
   params,
@@ -43,7 +43,7 @@ export async function generateMetadata({
     const membershipUrl = `${baseUrl}/${slug}/memberships/${membershipSlug}`;
     const price = (membership as any).priceMonthly || membership.price || 0;
     const priceText = price === 0 ? "Free" : `$${price}/mo`;
-    const title = `${membership.title} by ${creatorName} | ${tierName} Membership | PPR Academy`;
+    const title = `${membership.title} by ${creatorName} | ${tierName} Membership | PausePlayRepeat`;
     const description =
       membership.description ||
       `Join ${creatorName}'s ${tierName} membership (${priceText}). Get exclusive content, early access, and direct community access.`;
@@ -67,7 +67,7 @@ export async function generateMetadata({
         title,
         description,
         url: membershipUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: membership.imageUrl
           ? [
@@ -99,7 +99,7 @@ export async function generateMetadata({
     console.error("Error generating membership metadata:", error);
     return {
       title: "Membership",
-      description: "Join exclusive memberships on PPR Academy",
+      description: "Join exclusive memberships on PausePlayRepeat",
     };
   }
 }

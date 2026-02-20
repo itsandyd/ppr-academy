@@ -2,9 +2,9 @@ import { Metadata } from "next";
 import { DMCAContent } from "./components/dmca-content";
 
 export const metadata: Metadata = {
-  title: "DMCA Policy | PPR Academy",
+  title: "DMCA Policy | PausePlayRepeat",
   description:
-    "Digital Millennium Copyright Act (DMCA) policy and takedown request process for PPR Academy.",
+    "Digital Millennium Copyright Act (DMCA) policy and takedown request process for PausePlayRepeat.",
 };
 
 export default function DMCAPage() {

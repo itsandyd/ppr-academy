@@ -9,7 +9,7 @@ export function sanitizeJson(obj: unknown): string {
 }
 
 // Base URL for the application
-const getBaseUrl = () => process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const getBaseUrl = () => process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 // Export type for structured data
 export type StructuredDataHtml = {
@@ -47,11 +47,11 @@ export function generateCourseStructuredData(props: CourseStructuredDataProps) {
     "description": props.description,
     "provider": {
       "@type": "Organization",
-      "name": "PPR Academy",
+      "name": "PausePlayRepeat",
       "url": baseUrl,
       "sameAs": [
-        "https://twitter.com/ppracademy",
-        "https://instagram.com/ppracademy"
+        "https://twitter.com/pauseplayrepeat",
+        "https://instagram.com/pauseplayrepeat"
       ]
     },
     "instructor": {
@@ -428,7 +428,7 @@ export function generateArticleStructuredData(props: ArticleStructuredDataProps)
     },
     "publisher": {
       "@type": "Organization",
-      "name": props.publisher?.name || "PPR Academy",
+      "name": props.publisher?.name || "PausePlayRepeat",
       "url": baseUrl,
       ...(props.publisher?.logo && {
         "logo": {
@@ -493,7 +493,7 @@ export function generateBlogPostingStructuredData(props: BlogPostingStructuredDa
     },
     "publisher": {
       "@type": "Organization",
-      "name": "PPR Academy",
+      "name": "PausePlayRepeat",
       "url": baseUrl,
       "logo": {
         "@type": "ImageObject",

@@ -15,11 +15,18 @@ const isProtectedRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   const hostname = req.headers.get('host') || '';
   const url = req.nextUrl;
-  
+
   // Check if Clerk is properly configured
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
     // During build time or when Clerk is not configured, allow all requests
     return NextResponse.next();
+  }
+
+  // 🌐 SEO: 301 redirect academy.pauseplayrepeat.com → pauseplayrepeat.com
+  if (hostname.includes('academy.pauseplayrepeat.com')) {
+    const redirectUrl = new URL(url.pathname, 'https://pauseplayrepeat.com');
+    redirectUrl.search = url.search;
+    return NextResponse.redirect(redirectUrl, 301);
   }
 
   // 🔄 UNIFIED DASHBOARD REDIRECTS
@@ -38,7 +45,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // 🌐 CUSTOM DOMAIN ROUTING
   // Check if this is a custom domain (not main platform domain)
-  const mainDomain = process.env.NEXT_PUBLIC_APP_URL?.replace('https://', '').replace('http://', '') || 'ppr-academy.com';
+  const mainDomain = process.env.NEXT_PUBLIC_APP_URL?.replace('https://', '').replace('http://', '') || 'pauseplayrepeat.com';
   const isCustomDomain = !hostname.includes('localhost') && 
                          !hostname.includes(mainDomain) && 
                          !hostname.includes('vercel.app') &&

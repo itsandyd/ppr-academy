@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 // Helper to strip HTML for meta descriptions
 const stripHtml = (html: string): string => {
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
     if (!rack) {
       return {
-        title: "Ableton Rack Not Found - PPR Academy",
+        title: "Ableton Rack Not Found - PausePlayRepeat",
         description: "The Ableton rack you're looking for could not be found.",
       };
     }
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       ? stripHtml(rack.description).substring(0, 155) + '...'
       : `${rack.title} - ${rackTypeLabel} for Ableton Live ${rack.abletonVersion || ''}. ${rack.price === 0 ? 'Free download' : `Available for ${formatPrice(rack.price)}`}.`;
     
-    const metaTitle = `${rack.title}${rack.creatorName ? ` by ${rack.creatorName}` : ''} - Ableton Rack | PPR Academy`;
+    const metaTitle = `${rack.title}${rack.creatorName ? ` by ${rack.creatorName}` : ''} - Ableton Rack | PausePlayRepeat`;
     
     const keywords = [
       rack.title,
@@ -96,7 +96,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         title: metaTitle,
         description: metaDescription,
         url: pageUrl,
-        siteName: "PPR Academy",
+        siteName: "PausePlayRepeat",
         type: "website",
         images: rack.chainImageUrl
           ? [
@@ -129,8 +129,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   } catch (error) {
     console.error("Error generating Ableton rack metadata:", error);
     return {
-      title: "Ableton Rack - PPR Academy",
-      description: "Discover professional Ableton Live racks at PPR Academy",
+      title: "Ableton Rack - PausePlayRepeat",
+      description: "Discover professional Ableton Live racks at PausePlayRepeat",
     };
   }
 }
