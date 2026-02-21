@@ -7,8 +7,17 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com"
 // Revalidate the sitemap every 24 hours
 export const revalidate = 86400; // 24 hours in seconds
 
+// Slugs that are known test/junk storefronts
+const BLOCKED_SLUGS = new Set(["this-is-my-store", "my-store"]);
+
+function isTestSlug(slug: string): boolean {
+  if (BLOCKED_SLUGS.has(slug)) return true;
+  // Matches "test", "test-1", "test-store", "testdawdwa", etc.
+  return /^test($|[-_\d])/i.test(slug);
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Static pages
+  // Static pages — only canonical URLs (no redirect aliases)
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -35,6 +44,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/pricing`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/marketplace/samples`,
       lastModified: new Date(),
       changeFrequency: "daily",
@@ -53,43 +68,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/library`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/for-creators`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/privacy-policy`,
+      url: `${baseUrl}/leaderboards`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/terms-of-service`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/terms-of-service`,
+      url: `${baseUrl}/privacy-policy`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.3,
@@ -99,12 +96,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/leaderboards`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 0.6,
     },
   ];
 
@@ -118,32 +109,46 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-    // Fetch all stores
+    // Fetch all stores, then filter to only those with real content
     const stores = await fetchQuery(api.stores.getAllStores, {});
-    const storefrontSitemapEntries: MetadataRoute.Sitemap = (stores || []).map((store: any) => ({
-      url: `${baseUrl}/${store.slug}`,
-      lastModified: new Date(store._creationTime),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    }));
-
-    // Fetch storefront products (digital products) - these go to /products/ path
+    const storefrontSitemapEntries: MetadataRoute.Sitemap = [];
     const storefrontProductEntries: MetadataRoute.Sitemap = [];
+
     for (const store of stores || []) {
+      // Skip test/junk slugs
+      if (isTestSlug(store.slug)) continue;
+
       try {
-        // Fetch digital products for this store
+        // Fetch published digital products for this store
         const storeProducts = await fetchQuery(api.digitalProducts.getProductsByStore, {
           storeId: store._id,
         });
+        const publishedProducts = (storeProducts || []).filter(
+          (p: any) => p.isPublished
+        );
 
-        for (const product of storeProducts || []) {
-          if (!product.isPublished) continue;
+        // Fetch published courses for this store
+        const storeCourses = await fetchQuery(api.courses.getPublishedCoursesByStore, {
+          storeId: store._id,
+        });
 
+        const totalContent = publishedProducts.length + (storeCourses || []).length;
+
+        // Only include the storefront page if it has at least 1 piece of content
+        if (totalContent === 0) continue;
+
+        storefrontSitemapEntries.push({
+          url: `${baseUrl}/${store.slug}`,
+          lastModified: new Date(store._creationTime),
+          changeFrequency: "weekly" as const,
+          priority: 0.7,
+        });
+
+        // Add product pages
+        for (const product of publishedProducts) {
           const productSlug = (product as any).slug || product._id;
-          let productPath = "products"; // Default path
+          let productPath = "products";
 
-          // Map product type/category to specialized path
-          // Note: productType can have runtime values not in the schema union type
           const productType = (product as any).productType as string | undefined;
           const productCategory = (product as any).productCategory?.toLowerCase() || "";
 
@@ -165,11 +170,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           });
         }
 
-        // Fetch courses for this store
-        const storeCourses = await fetchQuery(api.courses.getPublishedCoursesByStore, {
-          storeId: store._id,
-        });
-
+        // Add course pages
         for (const course of storeCourses || []) {
           const courseSlug = (course as any).slug || course._id;
           storefrontProductEntries.push({
@@ -202,13 +203,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    // Fetch all published plugins
+    // Fetch all published plugins — these are directory-style pages with
+    // name, description, author, category, pricing, and tags but no
+    // user reviews or long-form content, so use moderate priority.
     const plugins = await fetchQuery(api.plugins.getAllPublishedPlugins, {});
     const pluginSitemapEntries: MetadataRoute.Sitemap = (plugins || []).map((plugin: any) => ({
       url: `${baseUrl}/marketplace/plugins/${plugin.slug || plugin._id}`,
       lastModified: new Date(plugin.updatedAt || plugin._creationTime),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     }));
 
     // Combine all sitemap entries

@@ -12,6 +12,29 @@ const isProtectedRoute = createRouteMatcher([
   "/profile(.*)",
 ]);
 
+// 🔄 LEGACY KAJABI REDIRECTS (case-insensitive)
+// Old Kajabi course/page URLs → new Next.js equivalents (301 permanent)
+const KAJABI_REDIRECTS: Record<string, string> = {
+  '/drumprogramming': '/courses/rhythm-as-code-a-practical-system-for-writing-and-improving-musical-grooves',
+  '/guidetomixing': '/courses/the-ultimate-guide-to-mixing',
+  '/flstudioeffects': '/courses/ultimate-guide-to-fl-studio-instruments-and-sound-generators',
+  '/abletonaudioeffects': '/courses/ultimate-guide-to-ableton-live-audio-effects',
+  '/abletonfoundations': '/courses/ultimate-guide-to-ableton-live-audio-effects',
+  '/coaching': '/marketplace/coaching',
+  '/pro': '/pricing',
+  '/subscriptions': '/pricing',
+  '/pauseplayrepeat.com': '/',
+};
+
+// Common Kajabi URL patterns → best-guess fallback pages (301 permanent)
+const KAJABI_PATTERN_REDIRECTS: [RegExp, string][] = [
+  [/^\/offers\//i, '/courses'],
+  [/^\/products\//i, '/marketplace'],
+  [/^\/posts\//i, '/blog'],
+  [/^\/categories\//i, '/courses'],
+  [/^\/checkout\//i, '/courses'],
+];
+
 export default clerkMiddleware(async (auth, req) => {
   const hostname = req.headers.get('host') || '';
   const url = req.nextUrl;
@@ -27,6 +50,19 @@ export default clerkMiddleware(async (auth, req) => {
     const redirectUrl = new URL(url.pathname, 'https://pauseplayrepeat.com');
     redirectUrl.search = url.search;
     return NextResponse.redirect(redirectUrl, 301);
+  }
+
+  // 🔄 SEO: 301 redirect old Kajabi URLs → new equivalents (case-insensitive)
+  const pathLower = url.pathname.toLowerCase();
+  const kajabiDest = KAJABI_REDIRECTS[pathLower];
+  if (kajabiDest) {
+    return NextResponse.redirect(new URL(kajabiDest, req.url), 301);
+  }
+  // Catch common Kajabi URL patterns that may still be indexed
+  for (const [pattern, dest] of KAJABI_PATTERN_REDIRECTS) {
+    if (pattern.test(url.pathname)) {
+      return NextResponse.redirect(new URL(dest, req.url), 301);
+    }
   }
 
   // 🔄 UNIFIED DASHBOARD REDIRECTS
