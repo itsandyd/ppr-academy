@@ -3,6 +3,12 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { notFound } from "next/navigation";
 import { PresetPackDetailClient } from "./PresetPackDetailClient";
+import {
+  generateProductStructuredData,
+  generateBreadcrumbStructuredData,
+} from "@/lib/seo/structured-data";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface PresetPackDetailPageProps {
   params: Promise<{
@@ -52,6 +58,9 @@ export async function generateMetadata({
           `${pluginText} preset pack for ${priceText}. Download now.`,
         images: product.imageUrl ? [product.imageUrl] : [],
       },
+      alternates: {
+        canonical: `${baseUrl}/marketplace/preset-packs/${slug}`,
+      },
     };
   } catch {
     return {
@@ -78,8 +87,34 @@ export default async function PresetPackDetailPage({
     notFound();
   }
 
+  const presetUrl = `${baseUrl}/marketplace/preset-packs/${slug}`;
+  const brandName = product.store?.name || "PausePlayRepeat";
+
+  const productData = generateProductStructuredData({
+    name: product.title,
+    description: product.description || `Preset pack available on PausePlayRepeat`,
+    price: product.price || 0,
+    currency: "USD",
+    imageUrl: product.imageUrl || undefined,
+    url: presetUrl,
+    brand: brandName,
+    category: "Preset Pack",
+    availability: "InStock",
+  });
+
+  const breadcrumbData = generateBreadcrumbStructuredData({
+    items: [
+      { name: "Home", url: baseUrl },
+      { name: "Marketplace", url: `${baseUrl}/marketplace` },
+      { name: "Preset Packs", url: `${baseUrl}/marketplace/preset-packs` },
+      { name: product.title, url: presetUrl },
+    ],
+  });
+
   return (
     <div className="min-h-screen px-4 md:px-0">
+      <script type="application/ld+json" dangerouslySetInnerHTML={productData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbData} />
       <PresetPackDetailClient
         productId={product._id}
         slug={product.slug || slug}

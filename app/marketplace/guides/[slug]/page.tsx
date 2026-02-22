@@ -4,6 +4,12 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { notFound } from "next/navigation";
 import { GuideDetailClient } from "./GuideDetailClient";
+import {
+  generateProductStructuredData,
+  generateBreadcrumbStructuredData,
+} from "@/lib/seo/structured-data";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface GuideDetailPageProps {
   params: Promise<{
@@ -72,6 +78,9 @@ export async function generateMetadata({ params }: GuideDetailPageProps): Promis
         description: product.description || `${categoryText} guide for ${priceText}. Download now.`,
         images: product.imageUrl ? [product.imageUrl] : [],
       },
+      alternates: {
+        canonical: `${baseUrl}/marketplace/guides/${slug}`,
+      },
     };
   } catch {
     return {
@@ -99,8 +108,34 @@ export default async function GuideDetailPage({ params }: GuideDetailPageProps) 
     }
   } catch {}
 
+  const guideUrl = `${baseUrl}/marketplace/guides/${slug}`;
+  const brandName = store?.name || "PausePlayRepeat";
+
+  const productData = generateProductStructuredData({
+    name: product.title,
+    description: product.description || `Music production guide available on PausePlayRepeat`,
+    price: product.price ? product.price / 100 : 0,
+    currency: "USD",
+    imageUrl: product.imageUrl || undefined,
+    url: guideUrl,
+    brand: brandName,
+    category: "Music Production Guide",
+    availability: "InStock",
+  });
+
+  const breadcrumbData = generateBreadcrumbStructuredData({
+    items: [
+      { name: "Home", url: baseUrl },
+      { name: "Marketplace", url: `${baseUrl}/marketplace` },
+      { name: "Guides", url: `${baseUrl}/marketplace/guides` },
+      { name: product.title, url: guideUrl },
+    ],
+  });
+
   return (
     <div className="min-h-screen px-4 md:px-0">
+      <script type="application/ld+json" dangerouslySetInnerHTML={productData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbData} />
       <GuideDetailClient
         productId={product._id}
         slug={product.slug || slug}

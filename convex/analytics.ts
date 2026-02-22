@@ -1081,7 +1081,7 @@ export const getCreatorVideoAnalytics = query({
     for (const course of courses) {
       const chapters = await ctx.db
         .query("courseChapters")
-        .filter((q) => q.eq(q.field("courseId"), course._id))
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id as string))
         .take(10);
 
       chapters.forEach((chapter, index) => {

@@ -209,7 +209,7 @@ Verify each claim and respond with JSON:
           status: normalizedStatus,
           confidence: typeof claim.confidence === "number" ? Math.max(0, Math.min(1, claim.confidence)) : 0.5,
           supportingSources: normalizedSources,
-          conflictingInfo: claim.conflictingInfo,
+          conflictingInfo: claim.conflictingInfo ?? undefined,
         };
       });
 

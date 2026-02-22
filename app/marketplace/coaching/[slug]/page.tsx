@@ -4,6 +4,12 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { notFound } from "next/navigation";
 import { CoachingDetailClient } from "./CoachingDetailClient";
+import {
+  generateServiceStructuredData,
+  generateBreadcrumbStructuredData,
+} from "@/lib/seo/structured-data";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
 
 interface CoachingDetailPageProps {
   params: Promise<{
@@ -65,6 +71,9 @@ export async function generateMetadata({ params }: CoachingDetailPageProps): Pro
           `${durationText} coaching session for ${priceText}. Get personalized feedback.`,
         images: product.imageUrl ? [product.imageUrl] : [],
       },
+      alternates: {
+        canonical: `${baseUrl}/marketplace/coaching/${slug}`,
+      },
     };
   } catch {
     return {
@@ -90,8 +99,34 @@ export default async function CoachingDetailPage({ params }: CoachingDetailPageP
     });
   } catch {}
 
+  const coachingUrl = `${baseUrl}/marketplace/coaching/${slug}`;
+  const providerName = store?.name || "PausePlayRepeat";
+
+  const serviceData = generateServiceStructuredData({
+    name: product.title,
+    description: product.description || `1-on-1 music production coaching session`,
+    provider: { name: providerName, url: store ? `${baseUrl}/${store.slug}` : baseUrl },
+    price: product.price ? product.price : undefined,
+    currency: "USD",
+    duration: product.duration || 60,
+    imageUrl: product.imageUrl || undefined,
+    url: coachingUrl,
+    category: "Music Production Coaching",
+  });
+
+  const breadcrumbData = generateBreadcrumbStructuredData({
+    items: [
+      { name: "Home", url: baseUrl },
+      { name: "Marketplace", url: `${baseUrl}/marketplace` },
+      { name: "Coaching", url: `${baseUrl}/marketplace/coaching` },
+      { name: product.title, url: coachingUrl },
+    ],
+  });
+
   return (
     <div className="min-h-screen px-4 md:px-0">
+      <script type="application/ld+json" dangerouslySetInnerHTML={serviceData} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbData} />
       <CoachingDetailClient
         productId={product._id}
         slug={product.slug || slug}

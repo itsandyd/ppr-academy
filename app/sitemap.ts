@@ -68,6 +68,72 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/marketplace/beats`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/marketplace/courses`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/marketplace/preset-packs`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/marketplace/ableton-racks`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/marketplace/guides`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/marketplace/bundles`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/marketplace/memberships`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/marketplace/coaching`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/marketplace/mixing-services`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/marketplace/mixing-templates`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/marketplace/project-files`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
       url: `${baseUrl}/for-creators`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -203,9 +269,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    // Fetch all published plugins — these are directory-style pages with
-    // name, description, author, category, pricing, and tags but no
-    // user reviews or long-form content, so use moderate priority.
+    // Fetch all published plugins
     const plugins = await fetchQuery(api.plugins.getAllPublishedPlugins, {});
     const pluginSitemapEntries: MetadataRoute.Sitemap = (plugins || []).map((plugin: any) => ({
       url: `${baseUrl}/marketplace/plugins/${plugin.slug || plugin._id}`,
@@ -213,6 +277,99 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.5,
     }));
+
+    // Fetch marketplace-level entries for each product category
+    const marketplaceCategoryEntries: MetadataRoute.Sitemap = [];
+
+    // Preset packs
+    try {
+      const presetPacks = await fetchQuery(api.presetPacks.listPublished, {});
+      for (const pack of (presetPacks as any)?.presetPacks || presetPacks || []) {
+        if (pack.slug) {
+          marketplaceCategoryEntries.push({
+            url: `${baseUrl}/marketplace/preset-packs/${pack.slug}`,
+            lastModified: new Date(pack.updatedAt || pack._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.6,
+          });
+        }
+      }
+    } catch { /* skip if query fails */ }
+
+    // Bundles
+    try {
+      const bundles = await fetchQuery(api.bundles.getAllPublishedBundles, {});
+      for (const bundle of bundles || []) {
+        if ((bundle as any).slug) {
+          marketplaceCategoryEntries.push({
+            url: `${baseUrl}/marketplace/bundles/${(bundle as any).slug}`,
+            lastModified: new Date(bundle._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.6,
+          });
+        }
+      }
+    } catch { /* skip if query fails */ }
+
+    // Ableton racks
+    try {
+      const abletonRacks = await fetchQuery(api.abletonRacks.getPublishedAbletonRacks, {});
+      for (const rack of abletonRacks || []) {
+        if ((rack as any).slug) {
+          marketplaceCategoryEntries.push({
+            url: `${baseUrl}/marketplace/ableton-racks/${(rack as any).slug}`,
+            lastModified: new Date(rack._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.6,
+          });
+        }
+      }
+    } catch { /* skip if query fails */ }
+
+    // Mixing services
+    try {
+      const mixingServices = await fetchQuery(api.mixingServices.getPublishedMixingServices, {});
+      for (const service of mixingServices || []) {
+        if ((service as any).slug) {
+          marketplaceCategoryEntries.push({
+            url: `${baseUrl}/marketplace/mixing-services/${(service as any).slug}`,
+            lastModified: new Date(service._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.5,
+          });
+        }
+      }
+    } catch { /* skip if query fails */ }
+
+    // Mixing templates
+    try {
+      const mixingTemplates = await fetchQuery(api.mixingTemplates.getPublishedMixingTemplates, {});
+      for (const template of mixingTemplates || []) {
+        if ((template as any).slug) {
+          marketplaceCategoryEntries.push({
+            url: `${baseUrl}/marketplace/mixing-templates/${(template as any).slug}`,
+            lastModified: new Date(template._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.5,
+          });
+        }
+      }
+    } catch { /* skip if query fails */ }
+
+    // Project files
+    try {
+      const projectFiles = await fetchQuery(api.projectFiles.getPublishedProjectFiles, {});
+      for (const file of projectFiles || []) {
+        if ((file as any).slug) {
+          marketplaceCategoryEntries.push({
+            url: `${baseUrl}/marketplace/project-files/${(file as any).slug}`,
+            lastModified: new Date(file._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.5,
+          });
+        }
+      }
+    } catch { /* skip if query fails */ }
 
     // Combine all sitemap entries
     return [
@@ -223,6 +380,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...productSitemapEntries,
       ...blogSitemapEntries,
       ...pluginSitemapEntries,
+      ...marketplaceCategoryEntries,
     ];
   } catch (error) {
     console.error("Error generating sitemap:", error);
