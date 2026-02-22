@@ -1022,7 +1022,7 @@ export default function ProfilePage() {
                           ? "border-white scale-110 ring-2 ring-offset-2 ring-offset-background"
                           : "border-transparent hover:scale-105"
                       )}
-                      style={{ backgroundColor: preset.color, ringColor: preset.color }}
+                      style={{ backgroundColor: preset.color, '--tw-ring-color': preset.color } as React.CSSProperties}
                       onClick={() => handleInputChange("accentColor", preset.color)}
                       title={preset.label}
                     />
