@@ -17,6 +17,16 @@ const storeValidator = v.object({
   customDomain: v.optional(v.string()),
   domainStatus: v.optional(v.string()),
   bio: v.optional(v.string()),
+  tagline: v.optional(v.string()),
+  accentColor: v.optional(v.string()),
+  genreTags: v.optional(v.array(v.string())),
+  featuredProductId: v.optional(v.string()),
+  productSortOrder: v.optional(v.string()),
+  sectionVisibility: v.optional(v.object({
+    showBio: v.optional(v.boolean()),
+    showSocialLinks: v.optional(v.boolean()),
+    showStats: v.optional(v.boolean()),
+  })),
   socialLinks: v.optional(v.object({
     website: v.optional(v.string()),
     twitter: v.optional(v.string()),
@@ -475,6 +485,17 @@ export const updateStoreProfile = mutation({
     avatar: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
     bannerImage: v.optional(v.string()),
+    // Storefront customization
+    tagline: v.optional(v.string()),
+    accentColor: v.optional(v.string()),
+    genreTags: v.optional(v.array(v.string())),
+    featuredProductId: v.optional(v.string()),
+    productSortOrder: v.optional(v.string()),
+    sectionVisibility: v.optional(v.object({
+      showBio: v.optional(v.boolean()),
+      showSocialLinks: v.optional(v.boolean()),
+      showStats: v.optional(v.boolean()),
+    })),
     // Social links (legacy format - single link per platform)
     socialLinks: v.optional(
       v.object({

@@ -28,6 +28,12 @@ import {
   AlertTriangle,
   Banknote,
   Sparkles,
+  Palette,
+  Settings,
+  ImageIcon,
+  X,
+  Star,
+  SortAsc,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -235,7 +241,54 @@ export default function ProfilePage() {
     bio: "",
     avatar: "",
     isPublic: true,
+    // Branding fields
+    tagline: "",
+    accentColor: "",
+    bannerImage: "",
+    logoUrl: "",
   });
+
+  // Genre tags state
+  const [genreTags, setGenreTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
+
+  // Storefront settings state
+  const [featuredProductId, setFeaturedProductId] = useState("");
+  const [productSortOrder, setProductSortOrder] = useState("newest");
+  const [sectionVisibility, setSectionVisibility] = useState({
+    showBio: true,
+    showSocialLinks: true,
+    showStats: true,
+  });
+
+  // Predefined genre/specialty tags
+  const presetGenreTags = [
+    "Lo-Fi", "Trap", "Hip Hop", "House", "Techno", "Drum & Bass",
+    "Pop", "R&B", "EDM", "Sound Design", "Mixing", "Mastering",
+    "Music Theory", "Ableton", "FL Studio", "Logic Pro",
+  ];
+
+  // Accent color presets
+  const accentColorPresets = [
+    { color: "#06b6d4", label: "Cyan" },
+    { color: "#d946ef", label: "Fuchsia" },
+    { color: "#8b5cf6", label: "Purple" },
+    { color: "#f59e0b", label: "Amber" },
+    { color: "#10b981", label: "Emerald" },
+    { color: "#f43f5e", label: "Rose" },
+    { color: "#3b82f6", label: "Blue" },
+    { color: "#f97316", label: "Orange" },
+  ];
+
+  // Query published products for featured product selector
+  const publishedProducts = useQuery(
+    api.digitalProducts.getPublishedProductsByStore,
+    store ? { storeId: store._id } : "skip"
+  );
+  const publishedCourses = useQuery(
+    api.courses.getPublishedCoursesByStore,
+    store ? { storeId: store._id } : "skip"
+  );
 
   // AI bio generation state
   const [isGeneratingBio, setIsGeneratingBio] = useState(false);
@@ -291,6 +344,86 @@ export default function ProfilePage() {
     }
   };
 
+  // Banner image upload
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const { startUpload: startBannerUpload } = useUploadThing("imageUploader", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]?.url) {
+        setFormData((prev) => ({ ...prev, bannerImage: res[0].url }));
+        toast.success("Banner image uploaded!");
+      }
+      setIsUploadingBanner(false);
+    },
+    onUploadError: (error) => {
+      console.error("Banner upload error:", error);
+      toast.error("Failed to upload banner image");
+      setIsUploadingBanner(false);
+    },
+  });
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image must be less than 4MB");
+      return;
+    }
+    setIsUploadingBanner(true);
+    try {
+      await startBannerUpload([file]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploadingBanner(false);
+    }
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
+  };
+
+  // Logo upload
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const { startUpload: startLogoUpload } = useUploadThing("imageUploader", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]?.url) {
+        setFormData((prev) => ({ ...prev, logoUrl: res[0].url }));
+        toast.success("Logo uploaded!");
+      }
+      setIsUploadingLogo(false);
+    },
+    onUploadError: (error) => {
+      console.error("Logo upload error:", error);
+      toast.error("Failed to upload logo");
+      setIsUploadingLogo(false);
+    },
+  });
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image must be less than 4MB");
+      return;
+    }
+    setIsUploadingLogo(true);
+    try {
+      await startLogoUpload([file]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploadingLogo(false);
+    }
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
+
   // Social links state - array of { platform, url }
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -306,7 +439,31 @@ export default function ProfilePage() {
         bio: store.bio || "",
         avatar: store.avatar || "",
         isPublic: store.isPublic ?? true,
+        tagline: store.tagline || "",
+        accentColor: store.accentColor || "",
+        bannerImage: store.bannerImage || "",
+        logoUrl: store.logoUrl || "",
       });
+
+      // Load genre tags
+      if (store.genreTags) {
+        setGenreTags(store.genreTags);
+      }
+
+      // Load storefront settings
+      if (store.featuredProductId) {
+        setFeaturedProductId(store.featuredProductId);
+      }
+      if (store.productSortOrder) {
+        setProductSortOrder(store.productSortOrder);
+      }
+      if (store.sectionVisibility) {
+        setSectionVisibility({
+          showBio: store.sectionVisibility.showBio ?? true,
+          showSocialLinks: store.sectionVisibility.showSocialLinks ?? true,
+          showStats: store.sectionVisibility.showStats ?? true,
+        });
+      }
 
       // Load social links - prefer V2 format, fallback to legacy
       if (store.socialLinksV2 && store.socialLinksV2.length > 0) {
@@ -429,6 +586,16 @@ export default function ProfilePage() {
         avatar: formData.avatar || undefined,
         isPublic: formData.isPublic,
         socialLinksV2: socialLinksV2.length > 0 ? socialLinksV2 : undefined,
+        // Branding fields
+        tagline: formData.tagline || undefined,
+        accentColor: formData.accentColor || undefined,
+        bannerImage: formData.bannerImage || undefined,
+        logoUrl: formData.logoUrl || undefined,
+        genreTags: genreTags.length > 0 ? genreTags : undefined,
+        // Storefront settings
+        featuredProductId: (featuredProductId && featuredProductId !== "none") ? featuredProductId : undefined,
+        productSortOrder: productSortOrder || undefined,
+        sectionVisibility,
       });
       toast.success("Profile updated successfully!");
     } catch (error) {
@@ -470,23 +637,36 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="basic" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+        <TabsList className="grid w-full grid-cols-5 md:w-auto md:inline-flex">
           <TabsTrigger value="basic" className="gap-2">
             <User className="h-4 w-4" />
-            <span>Basic Info</span>
+            <span className="hidden sm:inline">Basic Info</span>
+            <span className="sm:hidden">Info</span>
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="gap-2">
+            <Palette className="h-4 w-4" />
+            <span className="hidden sm:inline">Branding</span>
+            <span className="sm:hidden">Brand</span>
           </TabsTrigger>
           <TabsTrigger value="social" className="gap-2">
             <LinkIcon className="h-4 w-4" />
-            <span>Social Links</span>
+            <span className="hidden sm:inline">Social Links</span>
+            <span className="sm:hidden">Social</span>
             {socialLinks.length > 0 && (
               <span className="ml-1 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                 {socialLinks.length}
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Settings</span>
+            <span className="sm:hidden">Set</span>
+          </TabsTrigger>
           <TabsTrigger value="revenue" className="gap-2">
             <DollarSign className="h-4 w-4" />
-            <span>Revenue</span>
+            <span className="hidden sm:inline">Revenue</span>
+            <span className="sm:hidden">Rev</span>
           </TabsTrigger>
         </TabsList>
 
@@ -621,6 +801,412 @@ export default function ProfilePage() {
                   checked={formData.isPublic}
                   onCheckedChange={(checked) => handleInputChange("isPublic", checked)}
                 />
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Save Changes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Branding Tab */}
+        <TabsContent value="branding">
+          <Card>
+            <CardHeader>
+              <CardTitle>Visual Branding</CardTitle>
+              <CardDescription>
+                Customize the look and feel of your public storefront
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Tagline */}
+              <div className="space-y-2">
+                <Label htmlFor="tagline">Tagline</Label>
+                <Input
+                  id="tagline"
+                  value={formData.tagline}
+                  onChange={(e) => handleInputChange("tagline", e.target.value)}
+                  placeholder="Lo-fi beats and mixing tutorials"
+                  maxLength={80}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A short one-liner that appears below your name ({formData.tagline.length}/80)
+                </p>
+              </div>
+
+              {/* Genre Tags */}
+              <div className="space-y-2">
+                <Label>Genre / Specialty Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {genreTags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="gap-1 cursor-pointer hover:bg-destructive/20"
+                      onClick={() => setGenreTags(genreTags.filter((t) => t !== tag))}
+                    >
+                      {tag}
+                      <X className="h-3 w-3" />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {presetGenreTags
+                    .filter((tag) => !genreTags.includes(tag))
+                    .map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-primary/10"
+                        onClick={() => setGenreTags([...genreTags, tag])}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        {tag}
+                      </Badge>
+                    ))}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    placeholder="Add custom tag..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && customTagInput.trim()) {
+                        e.preventDefault();
+                        if (!genreTags.includes(customTagInput.trim())) {
+                          setGenreTags([...genreTags, customTagInput.trim()]);
+                        }
+                        setCustomTagInput("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (customTagInput.trim() && !genreTags.includes(customTagInput.trim())) {
+                        setGenreTags([...genreTags, customTagInput.trim()]);
+                        setCustomTagInput("");
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              {/* Banner Image */}
+              <div className="space-y-2">
+                <Label>Banner Image</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Recommended: 1500 x 500 pixels. Displays as your storefront hero background.
+                </p>
+                {formData.bannerImage && (
+                  <div className="relative rounded-lg overflow-hidden border mb-2">
+                    <Image
+                      src={formData.bannerImage}
+                      alt="Banner preview"
+                      width={750}
+                      height={250}
+                      className="w-full h-32 object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7"
+                      onClick={() => setFormData((prev) => ({ ...prev, bannerImage: "" }))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={isUploadingBanner}
+                  className="gap-2"
+                >
+                  {isUploadingBanner ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" />
+                  )}
+                  {formData.bannerImage ? "Replace Banner" : "Upload Banner"}
+                </Button>
+              </div>
+
+              {/* Logo */}
+              <div className="space-y-2">
+                <Label>Logo (optional)</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  If not set, your avatar will be used instead.
+                </p>
+                <div className="flex items-center gap-4">
+                  {formData.logoUrl && (
+                    <div className="relative">
+                      <Image
+                        src={formData.logoUrl}
+                        alt="Logo"
+                        width={64}
+                        height={64}
+                        className="h-16 w-16 rounded-lg object-cover border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-5 w-5"
+                        onClick={() => setFormData((prev) => ({ ...prev, logoUrl: "" }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                    className="gap-2"
+                  >
+                    {isUploadingLogo ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
+                    {formData.logoUrl ? "Replace Logo" : "Upload Logo"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Accent Color */}
+              <div className="space-y-2">
+                <Label>Accent Color</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  This color tints your avatar glow, genre tags, and other accents on your storefront.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {accentColorPresets.map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      className={cn(
+                        "h-8 w-8 rounded-full border-2 transition-all",
+                        formData.accentColor === preset.color
+                          ? "border-white scale-110 ring-2 ring-offset-2 ring-offset-background"
+                          : "border-transparent hover:scale-105"
+                      )}
+                      style={{ backgroundColor: preset.color, ringColor: preset.color }}
+                      onClick={() => handleInputChange("accentColor", preset.color)}
+                      title={preset.label}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    className={cn(
+                      "h-8 w-8 rounded-full border-2 transition-all flex items-center justify-center bg-background",
+                      !formData.accentColor
+                        ? "border-white scale-110"
+                        : "border-muted-foreground/30 hover:scale-105"
+                    )}
+                    onClick={() => handleInputChange("accentColor", "")}
+                    title="Default (no custom color)"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={formData.accentColor || "#06b6d4"}
+                    onChange={(e) => handleInputChange("accentColor", e.target.value)}
+                    className="h-8 w-8 rounded cursor-pointer border-0"
+                  />
+                  <Input
+                    value={formData.accentColor}
+                    onChange={(e) => handleInputChange("accentColor", e.target.value)}
+                    placeholder="#06b6d4"
+                    className="w-32 font-mono text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Save Changes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Storefront Settings</CardTitle>
+              <CardDescription>
+                Configure how your storefront displays products and content
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Featured Product */}
+              <div className="space-y-2">
+                <Label>Featured Product</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Pin a product to the top of your storefront with a highlighted card.
+                </p>
+                <Select
+                  value={featuredProductId}
+                  onValueChange={setFeaturedProductId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product to feature..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No featured product</SelectItem>
+                    {publishedProducts?.map((product) => (
+                      <SelectItem key={product._id} value={product._id}>
+                        {product.title} {product.price > 0 ? `($${product.price})` : "(Free)"}
+                      </SelectItem>
+                    ))}
+                    {publishedCourses?.map((course) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.title} (Course)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {featuredProductId && featuredProductId !== "none" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFeaturedProductId("")}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Clear featured product
+                  </Button>
+                )}
+              </div>
+
+              {/* Product Sort Order */}
+              <div className="space-y-2">
+                <Label>Default Product Sort Order</Label>
+                <Select
+                  value={productSortOrder}
+                  onValueChange={setProductSortOrder}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    <SelectItem value="title">Title: A to Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Section Visibility */}
+              <div className="space-y-3">
+                <Label>Section Visibility</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Choose which sections appear on your storefront.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium">Bio Section</p>
+                      <p className="text-xs text-muted-foreground">Show your bio/description</p>
+                    </div>
+                    <Switch
+                      checked={sectionVisibility.showBio}
+                      onCheckedChange={(checked) =>
+                        setSectionVisibility((prev) => ({ ...prev, showBio: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium">Social Links</p>
+                      <p className="text-xs text-muted-foreground">Show your social media links</p>
+                    </div>
+                    <Switch
+                      checked={sectionVisibility.showSocialLinks}
+                      onCheckedChange={(checked) =>
+                        setSectionVisibility((prev) => ({ ...prev, showSocialLinks: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium">Stats</p>
+                      <p className="text-xs text-muted-foreground">Show products, students, and sales counts</p>
+                    </div>
+                    <Switch
+                      checked={sectionVisibility.showStats}
+                      onCheckedChange={(checked) =>
+                        setSectionVisibility((prev) => ({ ...prev, showStats: checked }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Link */}
+              <div className="rounded-lg border p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Preview your storefront</p>
+                    <p className="text-sm text-muted-foreground">
+                      Save changes first, then preview to see how it looks.
+                    </p>
+                  </div>
+                  <Link
+                    href={`/${store.slug}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-2"
+                  >
+                    <Button variant="outline" className="gap-2">
+                      <Eye className="h-4 w-4" />
+                      Preview
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
 
               <div className="flex justify-end pt-4">

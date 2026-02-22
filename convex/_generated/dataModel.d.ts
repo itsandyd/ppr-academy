@@ -10840,6 +10840,7 @@ export type DataModel = {
   };
   stores: {
     document: {
+      accentColor?: string;
       avatar?: string;
       bannerImage?: string;
       bio?: string;
@@ -10866,6 +10867,8 @@ export type DataModel = {
         lastTestedAt?: number;
         replyToEmail?: string;
       };
+      featuredProductId?: string;
+      genreTags?: Array<string>;
       isPublic?: boolean;
       isPublishedProfile?: boolean;
       lastStrikeAt?: number;
@@ -10885,6 +10888,12 @@ export type DataModel = {
         | "business"
         | "early_access";
       planStartedAt?: number;
+      productSortOrder?: string;
+      sectionVisibility?: {
+        showBio?: boolean;
+        showSocialLinks?: boolean;
+        showStats?: boolean;
+      };
       slug: string;
       socialLinks?: {
         appleMusic?: string;
@@ -10921,6 +10930,7 @@ export type DataModel = {
       suspendedAt?: number;
       suspensionEndsAt?: number;
       suspensionReason?: string;
+      tagline?: string;
       trialEndsAt?: number;
       userId: string;
       _id: Id<"stores">;
@@ -10929,6 +10939,7 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
+      | "accentColor"
       | "avatar"
       | "bannerImage"
       | "bio"
@@ -10953,6 +10964,8 @@ export type DataModel = {
       | "emailConfig.isConfigured"
       | "emailConfig.lastTestedAt"
       | "emailConfig.replyToEmail"
+      | "featuredProductId"
+      | "genreTags"
       | "isPublic"
       | "isPublishedProfile"
       | "lastStrikeAt"
@@ -10965,6 +10978,11 @@ export type DataModel = {
       | "notificationIntegrations.slackWebhookUrl"
       | "plan"
       | "planStartedAt"
+      | "productSortOrder"
+      | "sectionVisibility"
+      | "sectionVisibility.showBio"
+      | "sectionVisibility.showSocialLinks"
+      | "sectionVisibility.showStats"
       | "slug"
       | "socialLinks"
       | "socialLinks.appleMusic"
@@ -10989,6 +11007,7 @@ export type DataModel = {
       | "suspendedAt"
       | "suspensionEndsAt"
       | "suspensionReason"
+      | "tagline"
       | "trialEndsAt"
       | "userId";
     indexes: {

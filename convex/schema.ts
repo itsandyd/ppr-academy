@@ -392,6 +392,16 @@ export default defineSchema({
     customDomain: v.optional(v.string()), // Custom domain (e.g., beatsbymike.com)
     domainStatus: v.optional(v.string()), // pending, verified, active
     bio: v.optional(v.string()),
+    tagline: v.optional(v.string()), // One-line description ("Lo-fi beats and mixing tutorials")
+    accentColor: v.optional(v.string()), // Hex color for storefront theming (#06b6d4)
+    genreTags: v.optional(v.array(v.string())), // ["Lo-Fi", "Trap", "Sound Design"]
+    featuredProductId: v.optional(v.string()), // ID of pinned product for storefront
+    productSortOrder: v.optional(v.string()), // "newest" | "price-asc" | "price-desc" | "title"
+    sectionVisibility: v.optional(v.object({
+      showBio: v.optional(v.boolean()),
+      showSocialLinks: v.optional(v.boolean()),
+      showStats: v.optional(v.boolean()),
+    })),
     socialLinks: v.optional(
       v.object({
         website: v.optional(v.string()),

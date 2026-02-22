@@ -19326,6 +19326,7 @@ export declare const api: {
       Array<{
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19341,6 +19342,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19359,6 +19362,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19389,6 +19398,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       }>
@@ -19413,6 +19423,7 @@ export declare const api: {
       {
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19428,6 +19439,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19446,6 +19459,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19476,6 +19495,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       } | null
@@ -19487,6 +19507,7 @@ export declare const api: {
       {
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19502,6 +19523,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19520,6 +19543,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19550,6 +19579,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       } | null
@@ -19574,6 +19604,7 @@ export declare const api: {
       Array<{
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19589,6 +19620,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19607,6 +19640,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19637,6 +19676,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       }>
@@ -19648,6 +19688,7 @@ export declare const api: {
       {
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19663,6 +19704,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19681,6 +19724,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19711,6 +19760,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       } | null
@@ -19722,6 +19772,7 @@ export declare const api: {
       Array<{
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19737,6 +19788,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19755,6 +19808,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19785,6 +19844,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       }>
@@ -19855,6 +19915,7 @@ export declare const api: {
       {
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19870,6 +19931,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19888,6 +19951,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -19918,6 +19987,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       } | null
@@ -19926,14 +19996,23 @@ export declare const api: {
       "mutation",
       "public",
       {
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
         description?: string;
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
         name?: string;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         socialLinks?: {
           appleMusic?: string;
           bandcamp?: string;
@@ -19956,10 +20035,12 @@ export declare const api: {
           url: string;
         }>;
         storeId: Id<"stores">;
+        tagline?: string;
       },
       {
         _creationTime: number;
         _id: Id<"stores">;
+        accentColor?: string;
         avatar?: string;
         bannerImage?: string;
         bio?: string;
@@ -19975,6 +20056,8 @@ export declare const api: {
           lastTestedAt?: number;
           replyToEmail?: string;
         };
+        featuredProductId?: string;
+        genreTags?: Array<string>;
         isPublic?: boolean;
         isPublishedProfile?: boolean;
         logoUrl?: string;
@@ -19993,6 +20076,12 @@ export declare const api: {
           | "business"
           | "early_access";
         planStartedAt?: number;
+        productSortOrder?: string;
+        sectionVisibility?: {
+          showBio?: boolean;
+          showSocialLinks?: boolean;
+          showStats?: boolean;
+        };
         slug: string;
         socialLinks?: {
           appleMusic?: string;
@@ -20023,6 +20112,7 @@ export declare const api: {
           | "past_due"
           | "canceled"
           | "incomplete";
+        tagline?: string;
         trialEndsAt?: number;
         userId: string;
       } | null

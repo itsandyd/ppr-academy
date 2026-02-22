@@ -32,7 +32,7 @@ import {
 import { AnimatedFilterResults } from "@/components/ui/animated-filter-transitions";
 import { StorefrontStructuredDataWrapper } from "./components/StorefrontStructuredDataWrapper";
 import { ArtistShowcase } from "@/components/music/artist-showcase";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { useCreatorProfileViewTracking } from "@/hooks/useConversionTracking";
@@ -385,6 +385,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const defaultSortApplied = useRef(false);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug: slug });
@@ -445,6 +446,14 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   // Track creator profile view for conversion nudges
   useCreatorProfileViewTracking(store?.userId, store?._id);
+
+  // Apply store's default sort order on initial load
+  useEffect(() => {
+    if (store?.productSortOrder && !defaultSortApplied.current) {
+      setSortBy(store.productSortOrder);
+      defaultSortApplied.current = true;
+    }
+  }, [store?.productSortOrder]);
 
   // Combine all product types into unified list with BaseProduct shape
   const allProducts: BaseProduct[] = useMemo(
@@ -833,6 +842,11 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         socialLinks={store.socialLinks}
         socialLinksV2={store.socialLinksV2}
         userId={store.userId}
+        bannerImage={store.bannerImage}
+        tagline={store.tagline}
+        genreTags={store.genreTags}
+        accentColor={store.accentColor}
+        sectionVisibility={store.sectionVisibility}
       />
 
       {/* Main Content with Sidebar */}
@@ -926,6 +940,37 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               )}
             </div>
 
+            {/* Featured Product */}
+            {store.featuredProductId && (() => {
+              const featuredProduct = allProducts.find(
+                (p) => p._id === store.featuredProductId
+              );
+              if (!featuredProduct) return null;
+              return (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Star className="h-4 w-4" style={{ color: store.accentColor || "#f59e0b" }} />
+                    Featured
+                  </h3>
+                  <div
+                    className="rounded-xl border-2 p-1 transition-colors"
+                    style={{
+                      borderColor: store.accentColor
+                        ? `${store.accentColor}40`
+                        : "rgba(245, 158, 11, 0.25)",
+                    }}
+                  >
+                    <ProductGrid
+                      products={[featuredProduct]}
+                      onProductClick={handleProductClick}
+                      displayName={displayName}
+                      autoSelectCard={true}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Products Organized by Category */}
             {filteredProducts.length > 0 ? (
               <>
@@ -1004,6 +1049,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {store.sectionVisibility?.showStats !== false && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                     <span className="text-sm font-medium">Products</span>
@@ -1020,6 +1066,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     <Badge variant="secondary">{storeStats?.totalSales || 0}</Badge>
                   </div>
                 </div>
+                )}
 
                 {/* Creator Info */}
                 <div className="border-t border-border pt-4">
@@ -1042,15 +1089,28 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                       <p className="truncate text-xs text-muted-foreground">{store.name}</p>
                     </div>
                   </div>
-                  {(store.bio || store.description) && (
+                  {store.sectionVisibility?.showBio !== false && (store.bio || store.description) && (
                     <p className="line-clamp-3 text-sm text-muted-foreground">
                       {store.bio || store.description}
                     </p>
                   )}
+                  {store.genreTags && store.genreTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {store.genreTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Social Links in Sidebar */}
-                {((store.socialLinksV2 && store.socialLinksV2.length > 0) ||
+                {store.sectionVisibility?.showSocialLinks !== false &&
+                ((store.socialLinksV2 && store.socialLinksV2.length > 0) ||
                   store.socialLinks?.instagram ||
                   store.socialLinks?.twitter ||
                   store.socialLinks?.youtube ||

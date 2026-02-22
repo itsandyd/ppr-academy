@@ -41,6 +41,15 @@ interface StorefrontHeroProps {
   };
   socialLinksV2?: SocialLinkV2[];
   userId?: string; // Clerk ID for messaging
+  bannerImage?: string;
+  tagline?: string;
+  genreTags?: string[];
+  accentColor?: string;
+  sectionVisibility?: {
+    showBio?: boolean;
+    showSocialLinks?: boolean;
+    showStats?: boolean;
+  };
 }
 
 export function StorefrontHero({
@@ -53,18 +62,51 @@ export function StorefrontHero({
   socialLinks,
   socialLinksV2,
   userId,
+  bannerImage,
+  tagline,
+  genreTags,
+  accentColor,
+  sectionVisibility,
 }: StorefrontHeroProps) {
   // Prefer V2 format if available, otherwise use legacy
   const hasSocialsV2 = socialLinksV2 && socialLinksV2.length > 0;
   const hasSocials = hasSocialsV2 || (socialLinks && Object.values(socialLinks).some(Boolean));
 
+  // Section visibility defaults (show everything if not configured)
+  const showBio = sectionVisibility?.showBio !== false;
+  const showSocialLinks = sectionVisibility?.showSocialLinks !== false;
+  const showStats = sectionVisibility?.showStats !== false;
+
+  // Accent color for CSS custom properties
+  const accent = accentColor || "#06b6d4"; // Default cyan
+
   return (
-    <section className="relative overflow-hidden bg-black">
+    <section
+      className="relative overflow-hidden bg-black"
+      style={{ "--accent-color": accent } as React.CSSProperties}
+    >
       {/* Atmospheric Background */}
       <div className="absolute inset-0">
-        {/* Gradient mesh */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-fuchsia-900/20 via-transparent to-transparent" />
+        {bannerImage ? (
+          <>
+            {/* Banner image background */}
+            <Image
+              src={bannerImage}
+              alt=""
+              fill
+              className="object-cover"
+              priority
+            />
+            {/* Gradient overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
+          </>
+        ) : (
+          <>
+            {/* Default gradient mesh */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-fuchsia-900/20 via-transparent to-transparent" />
+          </>
+        )}
 
         {/* Grain texture overlay */}
         <div
@@ -100,7 +142,7 @@ export function StorefrontHero({
           />
           <defs>
             <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#06b6d4" />
+              <stop offset="0%" stopColor={accent} />
               <stop offset="50%" stopColor="#a855f7" />
               <stop offset="100%" stopColor="#ec4899" />
             </linearGradient>
@@ -120,7 +162,10 @@ export function StorefrontHero({
           >
             {/* Avatar with glow */}
             <div className="relative flex-shrink-0">
-              <div className="absolute -inset-1.5 bg-gradient-to-br from-cyan-500/50 to-fuchsia-500/50 rounded-full blur-lg opacity-60" />
+              <div
+                className="absolute -inset-1.5 rounded-full blur-lg opacity-60"
+                style={{ background: `linear-gradient(to bottom right, ${accent}80, #d946ef80)` }}
+              />
               <div className="relative h-14 w-14 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-full overflow-hidden ring-2 ring-white/10">
                 {avatarUrl ? (
                   <Image
@@ -158,8 +203,40 @@ export function StorefrontHero({
             {displayName}
           </motion.h1>
 
+          {/* Tagline */}
+          {tagline && (
+            <motion.p
+              className="text-sm sm:text-base lg:text-lg text-white/50 font-medium tracking-wide"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.8 }}
+            >
+              {tagline}
+            </motion.p>
+          )}
+
+          {/* Genre Tags */}
+          {genreTags && genreTags.length > 0 && (
+            <motion.div
+              className="flex flex-wrap gap-1.5 sm:gap-2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28, duration: 0.8 }}
+            >
+              {genreTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-white/90 border border-white/10"
+                  style={{ backgroundColor: `${accent}30` }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </motion.div>
+          )}
+
           {/* Bio */}
-          {bio && (
+          {showBio && bio && (
             <motion.p
               className="text-base sm:text-lg lg:text-xl text-white/60 max-w-2xl leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
@@ -171,7 +248,7 @@ export function StorefrontHero({
           )}
 
           {/* Stats row */}
-          <motion.div
+          {showStats && <motion.div
             className="flex items-center gap-2 sm:gap-3"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,7 +272,7 @@ export function StorefrontHero({
               gradient="from-amber-500 to-orange-600"
               delay={0.2}
             />
-          </motion.div>
+          </motion.div>}
 
           {/* Message button - separate row */}
           {userId && (
@@ -214,7 +291,7 @@ export function StorefrontHero({
           )}
 
           {/* Social links - pill style */}
-          {hasSocials && (
+          {showSocialLinks && hasSocials && (
             <motion.div
               className="flex flex-wrap gap-2 sm:gap-2.5"
               initial={{ opacity: 0 }}
