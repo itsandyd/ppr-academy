@@ -34,12 +34,25 @@ import {
   User,
   CreditCard,
   ChevronDown,
-  ChevronRight,
   Megaphone,
   UserCog,
   Crown,
   HeartPulse,
   FileText,
+  ShoppingCart,
+  Store,
+  Layout,
+  Shield,
+  GitBranch,
+  Workflow,
+  SquarePen,
+  Calendar,
+  FolderOpen,
+  Magnet,
+  Eye,
+  UserPlus,
+  Filter,
+  MailCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,9 +65,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -142,66 +157,54 @@ const learnLinks: SidebarLink[] = [
   },
 ];
 
-// Organized into collapsible categories for cleaner UX
+// Standalone dashboard link (not inside any collapsible category)
+const dashboardLink: SidebarLink = {
+  href: "/dashboard?mode=create",
+  label: "Dashboard",
+  icon: Home,
+  color: "text-purple-500",
+};
+
+// Organized into Kajabi-style collapsible categories (accordion: one open at a time)
 const createCategories: SidebarCategory[] = [
   {
-    id: "core",
-    label: "Core",
-    icon: Home,
-    defaultOpen: true,
+    id: "products",
+    label: "Products",
+    icon: Package,
+    defaultOpen: false,
     links: [
-      { href: "/dashboard?mode=create", label: "Dashboard", icon: Home, color: "text-purple-500" },
-      {
-        href: "/dashboard/products?mode=create",
-        label: "My Products",
-        icon: Package,
-        color: "text-blue-500",
-      },
-      {
-        href: "/dashboard/create",
-        label: "Create New",
-        icon: Plus,
-        color: "text-indigo-500",
-        highlight: true,
-      },
+      { href: "/dashboard/products?mode=create", label: "All Products", icon: Package, color: "text-blue-500" },
+      { href: "/dashboard/create", label: "Create New", icon: Plus, color: "text-indigo-500", highlight: true },
+      { href: "/dashboard/courses?mode=create", label: "Courses", icon: BookOpen, color: "text-green-500" },
+      { href: "/dashboard/coaching/sessions", label: "Coaching", icon: Video, color: "text-teal-500" },
+      { href: "/dashboard/memberships?mode=create", label: "Memberships", icon: Crown, color: "text-amber-500" },
+      { href: "/dashboard/notes?mode=create", label: "AI Notes", icon: StickyNote, color: "text-amber-500" },
+      { href: "/dashboard/reference-guides?mode=create", label: "Guides", icon: FileText, color: "text-rose-500" },
+      { href: "/dashboard/samples?mode=create", label: "Samples", icon: Music, color: "text-pink-500" },
+      { href: "/dashboard/downloads?mode=create", label: "Downloads", icon: Download, color: "text-orange-500" },
     ],
   },
   {
-    id: "content",
-    label: "Content",
-    icon: BookOpen,
-    defaultOpen: true,
+    id: "sales",
+    label: "Sales",
+    icon: DollarSign,
+    defaultOpen: false,
     links: [
-      {
-        href: "/dashboard/courses?mode=create",
-        label: "My Courses",
-        icon: BookOpen,
-        color: "text-green-500",
-      },
-      {
-        href: "/dashboard/coaching/sessions",
-        label: "Coaching",
-        icon: Video,
-        color: "text-teal-500",
-      },
-      {
-        href: "/dashboard/memberships?mode=create",
-        label: "Memberships",
-        icon: Crown,
-        color: "text-amber-500",
-      },
-      {
-        href: "/dashboard/notes?mode=create",
-        label: "AI Notes",
-        icon: StickyNote,
-        color: "text-amber-500",
-      },
-      {
-        href: "/dashboard/reference-guides?mode=create",
-        label: "Reference Guides",
-        icon: FileText,
-        color: "text-rose-500",
-      },
+      { href: "/dashboard/my-orders?mode=create", label: "Orders", icon: ShoppingCart, color: "text-green-500" },
+      { href: "/dashboard/service-orders?mode=create", label: "Services", icon: Handshake, color: "text-teal-500" },
+      { href: "/dashboard/pricing?mode=create", label: "Pricing", icon: CreditCard, color: "text-amber-500" },
+    ],
+  },
+  {
+    id: "storefront",
+    label: "Storefront",
+    icon: Store,
+    defaultOpen: false,
+    links: [
+      { href: "/dashboard/profile?mode=create", label: "Profile", icon: User, color: "text-indigo-500" },
+      { href: "/dashboard/landing-pages?mode=create", label: "Pages", icon: Layout, color: "text-blue-500" },
+      { href: "/dashboard/copyright?mode=create", label: "Copyright", icon: Shield, color: "text-red-500" },
+      { href: "/dashboard/certificates?mode=create", label: "Certificates", icon: Award, color: "text-yellow-500" },
     ],
   },
   {
@@ -210,96 +213,53 @@ const createCategories: SidebarCategory[] = [
     icon: Megaphone,
     defaultOpen: false,
     links: [
-      {
-        href: "/dashboard/social?mode=create",
-        label: "Social Media",
-        icon: Instagram,
-        color: "text-pink-500",
-      },
-      {
-        href: "/dashboard/emails?mode=create",
-        label: "Email Campaigns",
-        icon: Mail,
-        color: "text-cyan-500",
-      },
-      {
-        href: "/dashboard/emails/campaigns?mode=create",
-        label: "Campaign Analytics",
-        icon: BarChart3,
-        color: "text-cyan-500",
-      },
-      {
-        href: "/dashboard/emails/subscribers?mode=create",
-        label: "Subscribers",
-        icon: Users,
-        color: "text-cyan-500",
-      },
-      {
-        href: "/dashboard/emails/health?mode=create",
-        label: "List Health",
-        icon: HeartPulse,
-        color: "text-cyan-500",
-      },
+      { href: "/dashboard/marketing?mode=create", label: "Hub", icon: Megaphone, color: "text-purple-500" },
+      { href: "/dashboard/emails?mode=create", label: "Campaigns", icon: Mail, color: "text-cyan-500" },
+      { href: "/dashboard/emails/sequences?mode=create", label: "Sequences", icon: GitBranch, color: "text-cyan-500" },
+      { href: "/dashboard/emails/workflows?mode=create", label: "Workflows", icon: Workflow, color: "text-cyan-500" },
+      { href: "/dashboard/social?mode=create", label: "Social", icon: Instagram, color: "text-pink-500" },
+      { href: "/dashboard/social/create?mode=create", label: "Create Post", icon: SquarePen, color: "text-pink-500" },
+      { href: "/dashboard/social/automation?mode=create", label: "Automation", icon: Zap, color: "text-amber-500" },
+      { href: "/dashboard/social/library?mode=create", label: "Library", icon: FolderOpen, color: "text-pink-500" },
+      { href: "/dashboard/social/profiles?mode=create", label: "Profiles", icon: UserCog, color: "text-pink-500" },
+      { href: "/dashboard/lead-magnet-ideas?mode=create", label: "Lead Magnets", icon: Magnet, color: "text-orange-500" },
+      { href: "/dashboard/emails/leads?mode=create", label: "Lead Capture", icon: Target, color: "text-green-500" },
+      { href: "/dashboard/emails/setup?mode=create", label: "Email Setup", icon: Settings, color: "text-gray-500" },
+      { href: "/dashboard/emails/preview?mode=create", label: "Templates", icon: Eye, color: "text-cyan-500" },
     ],
   },
   {
-    id: "growth",
-    label: "Growth",
-    icon: TrendingUp,
+    id: "audience",
+    label: "Audience",
+    icon: Users,
     defaultOpen: false,
     links: [
-      {
-        href: "/dashboard/analytics?mode=create",
-        label: "Analytics",
-        icon: BarChart3,
-        color: "text-orange-500",
-      },
-      {
-        href: "/dashboard/students?mode=create",
-        label: "Students",
-        icon: Users,
-        color: "text-emerald-500",
-      },
-      {
-        href: "/dashboard/affiliates?mode=create",
-        label: "Affiliates",
-        icon: Handshake,
-        color: "text-rose-500",
-      },
+      { href: "/dashboard/students?mode=create", label: "Students", icon: Users, color: "text-emerald-500" },
+      { href: "/dashboard/emails/subscribers?mode=create", label: "Subscribers", icon: UserPlus, color: "text-cyan-500" },
+      { href: "/dashboard/emails/segments?mode=create", label: "Segments", icon: Filter, color: "text-blue-500" },
+      { href: "/dashboard/affiliates?mode=create", label: "Affiliates", icon: Handshake, color: "text-rose-500" },
+      { href: "/dashboard/messages?mode=create", label: "Messages", icon: MessageCircle, color: "text-blue-500" },
+      { href: "/dashboard/emails/health?mode=create", label: "List Health", icon: HeartPulse, color: "text-cyan-500" },
+      { href: "/dashboard/emails/deliverability?mode=create", label: "Deliverability", icon: MailCheck, color: "text-green-500" },
     ],
   },
   {
-    id: "account",
-    label: "Account",
-    icon: UserCog,
+    id: "analytics",
+    label: "Analytics",
+    icon: BarChart3,
     defaultOpen: false,
     links: [
-      {
-        href: "/dashboard/profile?mode=create",
-        label: "Profile",
-        icon: User,
-        color: "text-indigo-500",
-      },
-      {
-        href: "/dashboard/messages?mode=create",
-        label: "Messages",
-        icon: MessageCircle,
-        color: "text-blue-500",
-      },
-      {
-        href: "/dashboard/pricing?mode=create",
-        label: "Pricing & Plans",
-        icon: CreditCard,
-        color: "text-amber-500",
-      },
+      { href: "/dashboard/analytics?mode=create", label: "Overview", icon: BarChart3, color: "text-orange-500" },
+      { href: "/dashboard/emails/campaigns?mode=create", label: "Email Stats", icon: Mail, color: "text-cyan-500" },
+      { href: "/dashboard/emails/analytics?mode=create", label: "Email Detail", icon: TrendingUp, color: "text-cyan-500" },
     ],
   },
 ];
 
 // Flat list for backward compatibility (used in learn mode comparison)
-const createLinks: SidebarLink[] = createCategories.flatMap((cat) => cat.links);
+const createLinks: SidebarLink[] = [dashboardLink, ...createCategories.flatMap((cat) => cat.links)];
 
-const SIDEBAR_COLLAPSED_KEY = "ppr-sidebar-collapsed-categories";
+const SIDEBAR_OPEN_CATEGORY_KEY = "ppr-sidebar-open-category";
 
 export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) {
   const pathname = usePathname();
@@ -308,39 +268,60 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
   const links = mode === "learn" ? learnLinks : createLinks;
   const savePreference = useMutation(api.users.setDashboardPreference);
 
-  // Track which categories are open/closed
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
-    // Initialize with default values
-    const defaults: Record<string, boolean> = {};
-    createCategories.forEach((cat) => {
-      defaults[cat.id] = cat.defaultOpen;
-    });
-    return defaults;
-  });
+  // Accordion state: only one category open at a time
+  const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
 
-  // Load saved state from localStorage on mount
+  // Helper: find which category contains the active page
+  const findActiveCategoryId = (currentPath: string): string | null => {
+    const match = createCategories.find((cat) =>
+      cat.links.some((link) => {
+        const linkPath = link.href.split("?")[0];
+        return currentPath === linkPath || (currentPath.startsWith(linkPath + "/") && linkPath !== "/dashboard");
+      })
+    );
+    return match?.id ?? null;
+  };
+
+  // On mount: restore from localStorage or auto-detect from pathname
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setOpenCategories((prev) => ({ ...prev, ...parsed }));
+      const saved = localStorage.getItem(SIDEBAR_OPEN_CATEGORY_KEY);
+      if (saved && createCategories.some((cat) => cat.id === saved)) {
+        setOpenCategoryId(saved);
+        return;
       }
     } catch {
       // Ignore localStorage errors
     }
+    // Fallback: auto-expand category containing current active page
+    setOpenCategoryId(findActiveCategoryId(pathname));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save to localStorage when categories change
-  const toggleCategory = (categoryId: string) => {
-    setOpenCategories((prev) => {
-      const newState = { ...prev, [categoryId]: !prev[categoryId] };
+  // When pathname changes, auto-expand the category containing the active page
+  useEffect(() => {
+    const activeId = findActiveCategoryId(pathname);
+    if (activeId) {
+      setOpenCategoryId(activeId);
       try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(newState));
+        localStorage.setItem(SIDEBAR_OPEN_CATEGORY_KEY, activeId);
       } catch {
         // Ignore localStorage errors
       }
-      return newState;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  // Toggle: clicking an open category closes it; clicking a closed one opens it (closing others)
+  const toggleCategory = (categoryId: string) => {
+    setOpenCategoryId((prev) => {
+      const newId = prev === categoryId ? null : categoryId;
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_CATEGORY_KEY, newId || "");
+      } catch {
+        // Ignore localStorage errors
+      }
+      return newId;
     });
   };
 
@@ -431,16 +412,30 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
           </SidebarGroup>
         )}
 
-        {/* Main Navigation - Create Mode (collapsible categories) */}
+        {/* Main Navigation - Create Mode (Kajabi-style accordion categories) */}
         {mode === "create" && (
-          <div className="space-y-2">
+          <div className="space-y-1">
+            {/* Standalone Dashboard link (always visible, not collapsible) */}
+            <SidebarGroup className="py-0">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/dashboard"}>
+                    <Link href="/dashboard?mode=create" className="group relative">
+                      <Home className={cn("h-5 w-5", pathname === "/dashboard" ? "" : "text-purple-500")} />
+                      <span className="font-medium">Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+
+            {/* Collapsible categories (accordion: only one open at a time) */}
             {createCategories.map((category) => {
-              const isOpen = openCategories[category.id] ?? category.defaultOpen;
-              const hasActiveLink = category.links.some(
-                (link) =>
-                  pathname === link.href.split("?")[0] ||
-                  (link.href.includes("/dashboard?mode=") && pathname === "/dashboard")
-              );
+              const isOpen = openCategoryId === category.id;
+              const hasActiveLink = category.links.some((link) => {
+                const linkPath = link.href.split("?")[0];
+                return pathname === linkPath || (pathname.startsWith(linkPath + "/") && linkPath !== "/dashboard");
+              });
 
               return (
                 <Collapsible
@@ -452,57 +447,71 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
                     <CollapsibleTrigger asChild>
                       <button
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
+                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                           "hover:bg-accent/50",
+                          isOpen && "bg-accent/30",
                           hasActiveLink && !isOpen && "text-primary"
                         )}
                       >
-                        {isOpen ? (
-                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                        )}
-                        <category.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">{category.label}</span>
+                        <category.icon
+                          className={cn(
+                            "h-4 w-4",
+                            isOpen ? "text-primary" : "text-muted-foreground"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            isOpen ? "text-foreground" : "text-muted-foreground"
+                          )}
+                        >
+                          {category.label}
+                        </span>
                         {!isOpen && hasActiveLink && (
                           <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
                         )}
+                        <ChevronDown
+                          className={cn(
+                            "ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                            isOpen && "rotate-180",
+                            !isOpen && hasActiveLink && "hidden"
+                          )}
+                        />
                       </button>
                     </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarGroupContent className="mt-1">
-                        <SidebarMenu className="space-y-1">
+                    <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                      <SidebarGroupContent className="mt-1 pb-1">
+                        <SidebarMenuSub>
                           {category.links.map((link) => {
+                            const linkPath = link.href.split("?")[0];
                             const isActive =
-                              pathname === link.href.split("?")[0] ||
-                              (link.href.includes("/dashboard?mode=") &&
-                                pathname === "/dashboard");
+                              pathname === linkPath ||
+                              (pathname.startsWith(linkPath + "/") && linkPath !== "/dashboard");
 
                             return (
-                              <SidebarMenuItem key={link.href}>
-                                <SidebarMenuButton asChild isActive={isActive}>
+                              <SidebarMenuSubItem key={link.href}>
+                                <SidebarMenuSubButton asChild isActive={isActive}>
                                   <Link
                                     href={link.href}
                                     className={cn(
-                                      "group relative ml-5",
+                                      "group relative",
                                       link.highlight &&
                                         !isActive &&
-                                        "border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10"
+                                        "rounded-md border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10"
                                     )}
                                   >
                                     <link.icon
-                                      className={cn("h-4 w-4", isActive ? "" : link.color)}
+                                      className={cn("h-3.5 w-3.5", isActive ? "" : link.color)}
                                     />
-                                    <span className="text-sm font-medium">{link.label}</span>
+                                    <span>{link.label}</span>
                                     {link.highlight && !isActive && (
                                       <Sparkles className="ml-auto h-3 w-3 text-purple-500" />
                                     )}
                                   </Link>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
                             );
                           })}
-                        </SidebarMenu>
+                        </SidebarMenuSub>
                       </SidebarGroupContent>
                     </CollapsibleContent>
                   </SidebarGroup>
