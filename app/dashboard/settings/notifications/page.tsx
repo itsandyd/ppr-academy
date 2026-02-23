@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Bell, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import {
@@ -15,6 +18,13 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 
 export default function NotificationSettingsPage() {
+  const { user } = useUser();
+  const store = useQuery(
+    api.stores.getUserStore,
+    user?.id ? { userId: user.id } : "skip"
+  );
+  const isCreator = !!store;
+
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
 
@@ -71,24 +81,26 @@ export default function NotificationSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30">
-        <CardContent className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
-              <Bell className="h-5 w-5 text-purple-600" />
+      {isCreator && (
+        <Card className="border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950/30">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30">
+                <Bell className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold">Slack & Discord Integrations</h4>
+                <p className="text-sm text-muted-foreground">
+                  Connect your team chat for workflow notifications
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-semibold">Slack & Discord Integrations</h4>
-              <p className="text-sm text-muted-foreground">
-                Connect your team chat for workflow notifications
-              </p>
-            </div>
-          </div>
-          <Button asChild variant="outline">
-            <Link href="/dashboard/settings/integrations">Configure</Link>
-          </Button>
-        </CardContent>
-      </Card>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/settings/integrations">Configure</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

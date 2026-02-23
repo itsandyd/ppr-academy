@@ -8,11 +8,14 @@ import {
   Bell,
   CreditCard,
   Globe,
+  Package,
   Palette,
   Plug,
+  Rocket,
   Store,
   User,
   Lock,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -32,7 +35,7 @@ interface SettingsSection {
   cards: SettingsCard[];
 }
 
-const sections: SettingsSection[] = [
+const creatorSections: SettingsSection[] = [
   {
     title: "Payment Settings",
     cards: [
@@ -115,6 +118,43 @@ const sections: SettingsSection[] = [
   },
 ];
 
+const learnerSections: SettingsSection[] = [
+  {
+    title: "Account",
+    cards: [
+      {
+        title: "Account",
+        description: "Display name, email, and personal info",
+        href: "/dashboard/settings/account",
+        icon: User,
+        iconBg: "bg-sky-100 dark:bg-sky-900/20",
+        iconColor: "text-sky-600",
+      },
+      {
+        title: "Notifications",
+        description: "Email preferences and alert settings",
+        href: "/dashboard/settings/notifications",
+        icon: Bell,
+        iconBg: "bg-orange-100 dark:bg-orange-900/20",
+        iconColor: "text-orange-600",
+      },
+    ],
+  },
+  {
+    title: "Purchases",
+    cards: [
+      {
+        title: "My Orders",
+        description: "View your orders and track their status",
+        href: "/dashboard/my-orders",
+        icon: Package,
+        iconBg: "bg-violet-100 dark:bg-violet-900/20",
+        iconColor: "text-violet-600",
+      },
+    ],
+  },
+];
+
 export default function SettingsPage() {
   const { user } = useUser();
   const store = useQuery(
@@ -122,7 +162,9 @@ export default function SettingsPage() {
     user?.id ? { userId: user.id } : "skip"
   );
 
+  const isCreator = !!store;
   const currentPlan = store?.plan || "free";
+  const sections = isCreator ? creatorSections : learnerSections;
 
   const isPlanRestricted = (card: SettingsCard): boolean => {
     if (!card.requiresPlan) return false;
@@ -136,7 +178,9 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Manage your account, storefront, and payment preferences
+          {isCreator
+            ? "Manage your account, storefront, and payment preferences"
+            : "Manage your account and preferences"}
         </p>
       </div>
 
@@ -192,6 +236,38 @@ export default function SettingsPage() {
           </div>
         </div>
       ))}
+
+      {/* Become a Creator CTA for learners */}
+      {!isCreator && (
+        <div className="rounded-lg border border-dashed border-muted-foreground/25 p-6">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+                <Rocket className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">
+                  Want to sell your own courses, beats, or presets?
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Start your creator store for free and earn 90% revenue share
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard?mode=create"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium",
+                "bg-primary text-primary-foreground hover:bg-primary/90",
+                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              )}
+            >
+              Become a Creator
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
