@@ -13961,6 +13961,12 @@ export declare const api: {
       { courseId: Id<"courses">; userId: string },
       boolean
     >;
+    listRecentPurchases: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
     trackDownload: FunctionReference<
       "mutation",
       "public",

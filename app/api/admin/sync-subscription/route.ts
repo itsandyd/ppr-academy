@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
                 plan,
                 stripeSubscriptionId: sub.id,
                 stripeCustomerId: customer.id,
-                currentPeriodStart: sub.current_period_start * 1000,
-                currentPeriodEnd: sub.current_period_end * 1000,
+                currentPeriodStart: ((sub as any).current_period_start || Math.floor(Date.now() / 1000)) * 1000,
+                currentPeriodEnd: ((sub as any).current_period_end || Math.floor(Date.now() / 1000) + 30 * 86400) * 1000,
                 status: sub.status === "trialing" ? "trialing" : "active",
               });
 

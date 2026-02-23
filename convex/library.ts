@@ -656,6 +656,29 @@ export const trackDownload = mutation({
   },
 });
 
+// Admin: list recent purchases (for debugging)
+export const listRecentPurchases = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const purchases = await ctx.db
+      .query("purchases")
+      .order("desc")
+      .take(args.limit || 50);
+
+    return purchases.map((p) => ({
+      _id: p._id,
+      _creationTime: p._creationTime,
+      userId: p.userId,
+      productType: p.productType,
+      status: p.status,
+      amount: p.amount,
+      courseId: p.courseId,
+      productId: p.productId,
+      accessGranted: p.accessGranted,
+    }));
+  },
+});
+
 // Get course content with user progress
 export const getCourseWithProgress = query({
   args: {
