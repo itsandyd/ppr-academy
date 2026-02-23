@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -155,21 +157,43 @@ const learnerSections: SettingsSection[] = [
   },
 ];
 
+const MODE_STORAGE_KEY = "dashboard-mode";
+
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const store = useQuery(
     api.stores.getUserStore,
     user?.id ? { userId: user.id } : "skip"
   );
 
-  const isCreator = !!store;
+  // Read the current dashboard mode — same logic as layout.tsx
+  const [mode, setMode] = useState<"learn" | "create" | null>(null);
+
+  useEffect(() => {
+    const urlMode = searchParams.get("mode") as "learn" | "create" | null;
+    if (urlMode) {
+      setMode(urlMode);
+    } else {
+      const stored = localStorage.getItem(MODE_STORAGE_KEY);
+      setMode(stored === "create" ? "create" : "learn");
+    }
+  }, [searchParams]);
+
+  // A user is in creator-settings view if they're in create mode AND have a store.
+  // Pure learners (no store) always see learner settings regardless of mode.
+  const hasStore = !!store;
+  const showCreatorSettings = mode === "create" && hasStore;
   const currentPlan = store?.plan || "free";
-  const sections = isCreator ? creatorSections : learnerSections;
+  const sections = showCreatorSettings ? creatorSections : learnerSections;
 
   const isPlanRestricted = (card: SettingsCard): boolean => {
     if (!card.requiresPlan) return false;
     return !card.requiresPlan.includes(currentPlan);
   };
+
+  // Don't render until mode is resolved to prevent flash
+  if (mode === null) return null;
 
   return (
     <div className="container mx-auto max-w-5xl space-y-10 p-4 md:p-6">
@@ -178,7 +202,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-1 text-muted-foreground">
-          {isCreator
+          {showCreatorSettings
             ? "Manage your account, storefront, and payment preferences"
             : "Manage your account and preferences"}
         </p>
@@ -237,8 +261,8 @@ export default function SettingsPage() {
         </div>
       ))}
 
-      {/* Become a Creator CTA for learners */}
-      {!isCreator && (
+      {/* Become a Creator CTA — shown to learners who don't have a store */}
+      {!hasStore && (
         <div className="rounded-lg border border-dashed border-muted-foreground/25 p-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
