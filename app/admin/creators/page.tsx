@@ -98,10 +98,11 @@ export default function AdminCreatorsPage() {
 
   // Export creators to CSV
   const exportCreatorsToCSV = () => {
-    const headers = ["Rank", "Name", "Store", "Health Score", "Health Status", "Revenue", "Enrollments", "Courses", "Products", "Rating", "Onboarding %"];
+    const headers = ["Rank", "Name", "Email", "Store", "Health Score", "Health Status", "Revenue", "Enrollments", "Courses", "Products", "Rating", "Onboarding %"];
     const rows = leaderboard.map((creator) => [
       creator.rank,
       creator.userName,
+      creator.userEmail || "",
       creator.storeName || "No store",
       creator.healthScore,
       creator.healthStatus,
@@ -304,6 +305,9 @@ export default function AdminCreatorsPage() {
                               {creator.healthScore}
                             </Badge>
                           </div>
+                          {creator.userEmail && (
+                            <p className="text-xs text-muted-foreground truncate">{creator.userEmail}</p>
+                          )}
                           <p className="text-xs text-muted-foreground truncate">
                             {creator.storeName || "No store"} • {creator.courseCount} courses
                           </p>
@@ -361,6 +365,9 @@ export default function AdminCreatorsPage() {
                             {creator.healthScore}
                           </Badge>
                         </div>
+                        {creator.userEmail && (
+                          <p className="text-sm text-muted-foreground">{creator.userEmail}</p>
+                        )}
                         <p className="text-sm text-muted-foreground">
                           {creator.storeName || "No store"} • {creator.courseCount} courses •{" "}
                           {creator.productCount} products

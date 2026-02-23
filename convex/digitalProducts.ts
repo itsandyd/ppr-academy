@@ -660,7 +660,14 @@ export const getProductsByUser = query({
   handler: async (ctx, args) => {
     const identity = await requireAuth(ctx);
     if (identity.subject !== args.userId) {
-      throw new Error("Unauthorized: userId mismatch");
+      // Allow admins to view any user's products
+      const caller = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+        .first();
+      if (!caller?.admin) {
+        throw new Error("Unauthorized: userId mismatch");
+      }
     }
 
     const products = await ctx.db
