@@ -370,13 +370,26 @@ export const verifyCourseAccess = query({
       return { hasAccess: false };
     }
 
+    // Check for direct purchase
     const purchase = await ctx.db
       .query("purchases")
       .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
 
-    if (!purchase) {
+    // Check for PPR Pro membership (grants access to ALL courses)
+    const pprProSubscription = await ctx.db
+      .query("pprProSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "active"),
+          q.eq(q.field("status"), "trialing")
+        )
+      )
+      .first();
+
+    if (!purchase && !pprProSubscription) {
       return { hasAccess: false };
     }
 
@@ -397,7 +410,7 @@ export const verifyCourseAccess = query({
 
     return {
       hasAccess: true,
-      purchaseDate: purchase._creationTime,
+      purchaseDate: purchase?._creationTime || pprProSubscription?.createdAt,
       progress,
     };
   },
@@ -729,15 +742,29 @@ export const getCourseWithProgress = query({
       return null;
     }
 
-    // Verify access
-    const hasAccess = await ctx.db
+    // Verify access via purchase or PPR Pro membership
+    const hasPurchase = await ctx.db
       .query("purchases")
       .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
 
-    if (!hasAccess) {
-      return null;
+    if (!hasPurchase) {
+      // Check for PPR Pro membership
+      const pprProSub = await ctx.db
+        .query("pprProSubscriptions")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) =>
+          q.or(
+            q.eq(q.field("status"), "active"),
+            q.eq(q.field("status"), "trialing")
+          )
+        )
+        .first();
+
+      if (!pprProSub) {
+        return null;
+      }
     }
 
     // Get modules
