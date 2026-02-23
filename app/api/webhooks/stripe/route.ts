@@ -974,6 +974,45 @@ export async function POST(request: NextRequest) {
 
         break;
 
+      case "customer.subscription.created": {
+        // Safety net: create PPR Pro subscription if checkout.session.completed was missed
+        const createdSubscription = event.data.object as any;
+        serverLogger.payment("Subscription created", {
+          id: createdSubscription.id,
+          type: "subscription",
+          status: createdSubscription.status,
+          metadata: createdSubscription.metadata,
+        });
+
+        if (createdSubscription.metadata?.productType === "ppr_pro") {
+          const { userId, plan } = createdSubscription.metadata;
+          if (userId && plan) {
+            const { fetchAction: fetchActionCreated } = await import("convex/nextjs");
+            const { api: apiCreated } = await import("@/convex/_generated/api");
+
+            try {
+              await fetchActionCreated(apiCreated.serverActions.serverCreateSubscription, {
+                userId,
+                plan: plan as "monthly" | "yearly",
+                stripeSubscriptionId: createdSubscription.id,
+                stripeCustomerId: createdSubscription.customer as string,
+                currentPeriodStart: (createdSubscription.current_period_start || Math.floor(Date.now() / 1000)) * 1000,
+                currentPeriodEnd: (createdSubscription.current_period_end || Math.floor(Date.now() / 1000) + 30 * 86400) * 1000,
+                status: createdSubscription.status === "trialing" ? "trialing" : "active",
+              });
+              serverLogger.info("PPR Pro", "Subscription created via customer.subscription.created (safety net)");
+            } catch (error) {
+              serverLogger.error("Failed to create PPR Pro subscription from customer.subscription.created", error);
+              Sentry.captureException(error, {
+                tags: { component: "stripe-webhook", eventType: event.type, productType: "ppr_pro" },
+                extra: { userId, stripeEventId: event.id, subscriptionId: createdSubscription.id },
+              });
+            }
+          }
+        }
+        break;
+      }
+
       case "customer.subscription.updated":
         // Handle subscription status changes
         const updatedSubscription = event.data.object as any;
@@ -981,6 +1020,7 @@ export async function POST(request: NextRequest) {
           id: updatedSubscription.id,
           type: "subscription",
           status: updatedSubscription.status,
+          metadata: updatedSubscription.metadata,
         });
 
         const { fetchMutation: fetchMutationUpdate, fetchAction: fetchActionUpdate } = await import("convex/nextjs");
@@ -989,21 +1029,52 @@ export async function POST(request: NextRequest) {
         // Check if this is a PPR Pro subscription
         if (updatedSubscription.metadata?.productType === "ppr_pro") {
           const planInterval = updatedSubscription.items?.data?.[0]?.price?.recurring?.interval;
-          await fetchActionUpdate(apiUpdate.serverActions.serverUpdateSubscriptionStatus, {
-            stripeSubscriptionId: updatedSubscription.id,
-            status: updatedSubscription.status === "canceled"
-              ? "cancelled" as const
-              : updatedSubscription.status as "active" | "past_due" | "expired" | "trialing",
-            currentPeriodStart: updatedSubscription.current_period_start
-              ? updatedSubscription.current_period_start * 1000
-              : undefined,
-            currentPeriodEnd: updatedSubscription.current_period_end
-              ? updatedSubscription.current_period_end * 1000
-              : undefined,
-            cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end || false,
-            plan: planInterval === "year" ? "yearly" as const : "monthly" as const,
-          });
-          serverLogger.info("PPR Pro", "Subscription updated");
+          const pprProUserId = updatedSubscription.metadata?.userId;
+          const pprProPlan = updatedSubscription.metadata?.plan;
+
+          // First try to update existing subscription
+          try {
+            await fetchActionUpdate(apiUpdate.serverActions.serverUpdateSubscriptionStatus, {
+              stripeSubscriptionId: updatedSubscription.id,
+              status: updatedSubscription.status === "canceled"
+                ? "cancelled" as const
+                : updatedSubscription.status as "active" | "past_due" | "expired" | "trialing",
+              currentPeriodStart: updatedSubscription.current_period_start
+                ? updatedSubscription.current_period_start * 1000
+                : undefined,
+              currentPeriodEnd: updatedSubscription.current_period_end
+                ? updatedSubscription.current_period_end * 1000
+                : undefined,
+              cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end || false,
+              plan: planInterval === "year" ? "yearly" as const : "monthly" as const,
+            });
+            serverLogger.info("PPR Pro", "Subscription updated");
+          } catch (updateError) {
+            // If subscription doesn't exist yet (checkout.session.completed was missed), create it
+            if (pprProUserId && pprProPlan && updatedSubscription.status === "active") {
+              serverLogger.info("PPR Pro", "Subscription not found on update, creating as safety net");
+              try {
+                await fetchActionUpdate(apiUpdate.serverActions.serverCreateSubscription, {
+                  userId: pprProUserId,
+                  plan: pprProPlan as "monthly" | "yearly",
+                  stripeSubscriptionId: updatedSubscription.id,
+                  stripeCustomerId: updatedSubscription.customer as string,
+                  currentPeriodStart: (updatedSubscription.current_period_start || Math.floor(Date.now() / 1000)) * 1000,
+                  currentPeriodEnd: (updatedSubscription.current_period_end || Math.floor(Date.now() / 1000) + 30 * 86400) * 1000,
+                  status: "active",
+                });
+                serverLogger.info("PPR Pro", "Subscription created via safety net on update event");
+              } catch (createError) {
+                serverLogger.error("Failed to create PPR Pro subscription as safety net", createError);
+                Sentry.captureException(createError, {
+                  tags: { component: "stripe-webhook", eventType: event.type, productType: "ppr_pro" },
+                  extra: { userId: pprProUserId, subscriptionId: updatedSubscription.id },
+                });
+              }
+            } else {
+              serverLogger.error("Failed to update PPR Pro subscription", updateError);
+            }
+          }
         }
         // Check if this is a creator plan subscription
         else if (updatedSubscription.metadata?.storeId && updatedSubscription.metadata?.plan) {

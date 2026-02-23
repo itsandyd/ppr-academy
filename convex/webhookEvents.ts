@@ -55,6 +55,19 @@ export const recordWebhookEvent = mutation({
 });
 
 /**
+ * List recent webhook events (admin debugging)
+ */
+export const listRecentEvents = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("webhookEvents")
+      .order("desc")
+      .take(50);
+  },
+});
+
+/**
  * Cleanup old webhook events (older than 30 days).
  * Can be called by a cron job or manually.
  */

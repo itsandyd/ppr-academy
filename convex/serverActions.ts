@@ -124,6 +124,18 @@ export const serverSeedPlans = action({
   },
 });
 
+export const serverAdminActivateSubscription = action({
+  args: {
+    userId: v.string(),
+    plan: v.union(v.literal("monthly"), v.literal("yearly")),
+    stripeSubscriptionId: v.string(),
+    stripeCustomerId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.runMutation(internal.pprPro.adminActivateSubscription, args);
+  },
+});
+
 export const serverUpdatePlanStripeIds = action({
   args: {
     interval: v.union(v.literal("month"), v.literal("year")),

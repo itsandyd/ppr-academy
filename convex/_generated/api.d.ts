@@ -17068,6 +17068,7 @@ export declare const api: {
       { userId: string },
       boolean
     >;
+    listAllSubscriptions: FunctionReference<"query", "public", {}, any>;
   };
   presetPacks: {
     getBySlug: FunctionReference<"query", "public", { slug: string }, any>;
@@ -18490,6 +18491,17 @@ export declare const api: {
     >;
   };
   serverActions: {
+    serverAdminActivateSubscription: FunctionReference<
+      "action",
+      "public",
+      {
+        plan: "monthly" | "yearly";
+        stripeCustomerId: string;
+        stripeSubscriptionId: string;
+        userId: string;
+      },
+      any
+    >;
     serverCreateBundlePurchase: FunctionReference<
       "action",
       "public",
@@ -20943,6 +20955,12 @@ export declare const api: {
         youtube?: string;
       } | null
     >;
+    getUserByEmail: FunctionReference<
+      "query",
+      "public",
+      { email: string },
+      any
+    >;
     getUserById: FunctionReference<
       "query",
       "public",
@@ -21212,6 +21230,7 @@ export declare const api: {
       { stripeEventId: string },
       any
     >;
+    listRecentEvents: FunctionReference<"query", "public", {}, any>;
     recordWebhookEvent: FunctionReference<
       "mutation",
       "public",
@@ -28249,6 +28268,17 @@ export declare const internal: {
     >;
   };
   pprPro: {
+    adminActivateSubscription: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        plan: "monthly" | "yearly";
+        stripeCustomerId: string;
+        stripeSubscriptionId: string;
+        userId: string;
+      },
+      any
+    >;
     createSubscription: FunctionReference<
       "mutation",
       "internal",

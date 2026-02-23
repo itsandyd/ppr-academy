@@ -279,8 +279,7 @@ export const updateSubscriptionStatus = internalMutation({
       .first();
 
     if (!subscription) {
-      console.error("PPR Pro subscription not found:", args.stripeSubscriptionId);
-      return;
+      throw new Error(`PPR Pro subscription not found: ${args.stripeSubscriptionId}`);
     }
 
     const updates: Record<string, any> = {
@@ -327,6 +326,68 @@ export const expireSubscription = internalMutation({
     await ctx.db.patch(subscription._id, {
       status: "expired",
       cancelAtPeriodEnd: false,
+    });
+  },
+});
+
+// ===== ADMIN QUERIES =====
+
+/**
+ * List all PPR Pro subscriptions (admin use)
+ */
+export const listAllSubscriptions = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("pprProSubscriptions")
+      .order("desc")
+      .take(100);
+  },
+});
+
+/**
+ * Admin: manually activate a PPR Pro subscription for a user
+ */
+export const adminActivateSubscription = internalMutation({
+  args: {
+    userId: v.string(),
+    plan: v.union(v.literal("monthly"), v.literal("yearly")),
+    stripeSubscriptionId: v.string(),
+    stripeCustomerId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check for existing subscription
+    const existing = await ctx.db
+      .query("pprProSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    const now = Date.now();
+    const periodEnd = now + (args.plan === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000;
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        status: "active",
+        plan: args.plan,
+        stripeSubscriptionId: args.stripeSubscriptionId,
+        stripeCustomerId: args.stripeCustomerId,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        cancelAtPeriodEnd: false,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("pprProSubscriptions", {
+      userId: args.userId,
+      plan: args.plan,
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      stripeCustomerId: args.stripeCustomerId,
+      currentPeriodStart: now,
+      currentPeriodEnd: periodEnd,
+      status: "active",
+      cancelAtPeriodEnd: false,
+      createdAt: now,
     });
   },
 });

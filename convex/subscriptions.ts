@@ -394,7 +394,8 @@ export const updateSubscriptionStatus = mutation({
       .first();
 
     if (!subscription) {
-      throw new Error("Subscription not found");
+      console.warn("Subscription not found for stripeSubscriptionId:", args.stripeSubscriptionId);
+      return { success: false, error: "Subscription not found" };
     }
 
     await ctx.db.patch(subscription._id, {

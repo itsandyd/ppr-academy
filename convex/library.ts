@@ -172,6 +172,18 @@ export const getUserCourses = query({
     })
   ),
   handler: async (ctx, args) => {
+    // Check if user is a PPR Pro member (grants access to ALL published courses)
+    const pprProSubscription = await ctx.db
+      .query("pprProSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "active"),
+          q.eq(q.field("status"), "trialing")
+        )
+      )
+      .first();
+
     // Get course purchases for user
     const coursePurchases = await ctx.db
       .query("purchases")
@@ -182,17 +194,32 @@ export const getUserCourses = query({
       .take(5000);
 
     // Deduplicate courses by courseId (in case user has multiple purchases for same course)
-    const uniqueCourseIds = Array.from(
-      new Set(coursePurchases.filter((p) => p.courseId).map((p) => p.courseId!))
+    const purchasedCourseIds = new Set(
+      coursePurchases.filter((p) => p.courseId).map((p) => p.courseId!)
     );
+
+    // If PPR Pro member, include ALL published courses
+    let allCourseIds: Set<any> = new Set(purchasedCourseIds);
+    if (pprProSubscription) {
+      const allPublishedCourses = await ctx.db
+        .query("courses")
+        .withIndex("by_published", (q) => q.eq("isPublished", true))
+        .take(500);
+
+      for (const course of allPublishedCourses) {
+        if (!course.deletedAt) {
+          allCourseIds.add(course._id);
+        }
+      }
+    }
 
     // Get course details and progress for unique courses only
     const userCourses = await Promise.all(
-      uniqueCourseIds.map(async (courseId) => {
+      Array.from(allCourseIds).map(async (courseId) => {
         const course = await ctx.db.get(courseId);
-        if (!course) return null;
+        if (!course || (course as any).deletedAt) return null;
 
-        // Get the most recent purchase for this course
+        // Get the most recent purchase for this course (if any)
         const purchase = coursePurchases
           .filter((p) => p.courseId === courseId)
           .sort((a, b) => b._creationTime - a._creationTime)[0];
@@ -218,23 +245,23 @@ export const getUserCourses = query({
         // Get store details
         const store = await ctx.db
           .query("stores")
-          .filter((q) => q.eq(q.field("userId"), course.userId))
+          .filter((q) => q.eq(q.field("userId"), (course as any).userId))
           .first();
 
         return {
           _id: course._id,
           _creationTime: course._creationTime,
-          title: course.title,
-          description: course.description,
-          imageUrl: course.imageUrl,
-          slug: course.slug,
-          category: course.category,
-          subcategory: course.subcategory,
-          tags: course.tags,
-          skillLevel: course.skillLevel,
-          purchaseDate: purchase._creationTime,
+          title: (course as any).title,
+          description: (course as any).description,
+          imageUrl: (course as any).imageUrl,
+          slug: (course as any).slug,
+          category: (course as any).category,
+          subcategory: (course as any).subcategory,
+          tags: (course as any).tags,
+          skillLevel: (course as any).skillLevel,
+          purchaseDate: purchase?._creationTime || (pprProSubscription ? pprProSubscription.createdAt : Date.now()),
           progress,
-          lastAccessedAt: purchase.lastAccessedAt,
+          lastAccessedAt: purchase?.lastAccessedAt,
           storeName: store?.name,
           storeSlug: store?.slug,
         };

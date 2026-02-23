@@ -305,6 +305,17 @@ export const getUserByStripeAccountId = query({
   },
 });
 
+// Get user by email (admin debugging)
+export const getUserByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+  },
+});
+
 // Get all users (admin only - with authorization and pagination)
 export const getAllUsers = query({
   args: {

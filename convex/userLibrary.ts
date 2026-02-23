@@ -24,7 +24,17 @@ export const getUserEnrolledCourses = query({
     })
   ),
   handler: async (ctx, args) => {
-    // IMPROVED: Check both enrollments AND purchases for comprehensive access
+    // Check if user is a PPR Pro member (grants access to ALL published courses)
+    const pprProSubscription = await ctx.db
+      .query("pprProSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "active"),
+          q.eq(q.field("status"), "trialing")
+        )
+      )
+      .first();
 
     // Method 1: Get from enrollments table
     const enrollments = await ctx.db
@@ -42,16 +52,30 @@ export const getUserEnrolledCourses = query({
       .take(5000);
 
     // Combine both sources (purchases are authoritative)
-    const allCourseIds = new Set([
+    const enrolledCourseIds = new Set([
       ...enrollments.map((e) => e.courseId),
       ...coursePurchases.map((p) => p.courseId).filter(Boolean),
     ]);
 
+    // If PPR Pro member, also include ALL published courses
+    if (pprProSubscription) {
+      const allPublishedCourses = await ctx.db
+        .query("courses")
+        .withIndex("by_published", (q) => q.eq("isPublished", true))
+        .take(500);
+
+      for (const course of allPublishedCourses) {
+        if (!course.deletedAt) {
+          enrolledCourseIds.add(course._id);
+        }
+      }
+    }
+
     // Get course details for all accessible courses
     const coursesWithProgress = await Promise.all(
-      Array.from(allCourseIds).map(async (courseId) => {
+      Array.from(enrolledCourseIds).map(async (courseId) => {
         const course = (await ctx.db.get(courseId as any)) as any;
-        if (!course) return null;
+        if (!course || course.deletedAt) return null;
 
         // Get enrollment data (for progress)
         const enrollment = enrollments.find((e) => e.courseId === courseId);
@@ -90,8 +114,8 @@ export const getUserEnrolledCourses = query({
           skillLevel: course.skillLevel || undefined,
           slug: course.slug || undefined,
           userId: course.userId || "",
-          progress: calculatedProgress, // Use calculated progress
-          enrolledAt: enrollment?._creationTime || purchase?._creationTime,
+          progress: calculatedProgress,
+          enrolledAt: enrollment?._creationTime || purchase?._creationTime || (pprProSubscription ? pprProSubscription.createdAt : undefined),
           lastAccessedAt: purchase?.lastAccessedAt || enrollment?._creationTime,
         };
       })
