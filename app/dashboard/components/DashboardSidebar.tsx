@@ -192,7 +192,6 @@ const createCategories: SidebarCategory[] = [
     links: [
       { href: "/dashboard/my-orders?mode=create", label: "Orders", icon: ShoppingCart, color: "text-green-500" },
       { href: "/dashboard/service-orders?mode=create", label: "Services", icon: Handshake, color: "text-teal-500" },
-      { href: "/dashboard/pricing?mode=create", label: "Pricing", icon: CreditCard, color: "text-amber-500" },
     ],
   },
   {
