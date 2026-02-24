@@ -433,7 +433,78 @@ export default function CreatorsLetterPage() {
             <p className="text-lg font-medium text-foreground sm:text-xl">
               That&apos;s not lazy. That&apos;s leverage.
             </p>
+          </div>
 
+          {/* --- Divider --- */}
+          <hr className="my-14 border-border/40" />
+
+          {/* --- Section: How I actually built this --- */}
+          <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">
+            Here&apos;s how I actually built this.
+          </p>
+
+          <div className="space-y-6 text-base leading-[1.85] text-muted-foreground sm:text-lg sm:leading-[1.85]">
+            <p>
+              I didn&apos;t start with 100,000 followers. I started with zero.
+              No connections in the industry. No marketing degree. No budget.
+              Just a DAW and an internet connection.
+            </p>
+
+            <p>Here&apos;s what I did:</p>
+
+            <p>
+              I gave away everything I knew for free. Every mixing technique,
+              every reverb trick, every compression setting I&apos;d figured out
+              through years of trial and error. I posted it on Instagram,
+              YouTube, TikTok. Every single day.
+            </p>
+
+            <p>
+              That turned into followers. Followers turned into an email list.
+              The email list turned into trust. And trust turned into sales.
+            </p>
+
+            <p>
+              It took years. And honestly? Most of it was inefficient. I was
+              figuring it out as I went. Making content with no strategy,
+              posting at random times, not collecting emails for way too long.
+            </p>
+
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              That&apos;s exactly why I built the tools inside this platform the
+              way I did.
+            </p>
+
+            <p>
+              The content engine exists because I spent two years manually
+              coming up with posts every day and burning out. The email
+              sequences exist because I lost thousands of potential sales before
+              I set up automation. The social scheduling exists because I wasted
+              hours every week copying and pasting the same content across
+              platforms.
+            </p>
+
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              Every feature on PausePlayRepeat is a problem I personally ran
+              into and solved the hard way.
+            </p>
+
+            <p>You don&apos;t have to figure it out the hard way.</p>
+
+            <p>
+              When you sign up as a creator, you&apos;re not just getting a
+              storefront. You&apos;re getting the system I wish I had when I
+              started. And if you need help — with your content strategy, your
+              product pricing, your email sequences — you can literally just DM
+              me. I&apos;ll tell you what I&apos;d do. Because I&apos;ve already
+              done it.
+            </p>
+          </div>
+
+          {/* --- Divider --- */}
+          <hr className="my-14 border-border/40" />
+
+          <div className="space-y-6 text-base leading-[1.85] text-muted-foreground sm:text-lg sm:leading-[1.85]">
             <p>
               Because a storefront without an audience is just a page on the
               internet. And I don&apos;t want you to have a page on the internet.
