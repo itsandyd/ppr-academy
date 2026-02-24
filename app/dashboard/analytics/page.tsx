@@ -111,9 +111,9 @@ export default function AnalyticsPage() {
             <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${statsAll.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${(statsAll.totalRevenue / 100).toFixed(2)}</div>
             <p className="text-xs text-zinc-500">
-              ${stats30d.totalRevenue.toFixed(2)} last 30 days
+              ${(stats30d.totalRevenue / 100).toFixed(2)} last 30 days
             </p>
           </CardContent>
         </Card>
@@ -150,7 +150,7 @@ export default function AnalyticsPage() {
             <TrendingUp className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${statsAll.averageOrderValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${(statsAll.averageOrderValue / 100).toFixed(2)}</div>
             <p className="text-xs text-zinc-500">
               Across all purchases
             </p>
@@ -253,7 +253,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium text-green-600">
-                      +${purchase.amount.toFixed(2)}
+                      +${(purchase.amount / 100).toFixed(2)}
                     </p>
                     <p className="text-xs text-zinc-500">
                       {new Date(purchase._creationTime).toLocaleDateString()}
