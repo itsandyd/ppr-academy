@@ -124,6 +124,7 @@ export function StepReview() {
     for (let i = 0; i < images.length; i++) {
       const image = images[i];
       try {
+        if (!image.url) continue;
         const response = await fetch(image.url);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
