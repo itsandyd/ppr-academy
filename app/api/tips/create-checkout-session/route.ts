@@ -5,6 +5,7 @@ import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
       storeId: storeId as Id<"stores">,
     });
 
+    const utm = getUtmParamsFromRequest(request);
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const storeSlug = store?.slug || "";
 
@@ -92,6 +95,11 @@ export async function POST(request: NextRequest) {
         amount: Math.round(tipAmount * 100).toString(), // Amount in cents
         currency: "usd",
         message: message || "",
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
       line_items: [
         {

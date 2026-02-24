@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import * as Sentry from "@sentry/nextjs";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -39,6 +40,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const utm = getUtmParamsFromRequest(request);
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const platformFeeAmount = Math.round(bundlePrice * 0.1 * 100);
 
@@ -61,6 +64,11 @@ export async function POST(request: NextRequest) {
         currency: "usd",
         courseIds: JSON.stringify(courseIds || []),
         productIds: JSON.stringify(productIds || []),
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
     };
 

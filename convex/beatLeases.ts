@@ -46,6 +46,11 @@ export const createBeatLicensePurchase = internalMutation({
     transactionId: v.optional(v.string()),
     buyerEmail: v.string(),
     buyerName: v.optional(v.string()),
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
   },
   returns: v.object({
     purchaseId: v.id("purchases"),
@@ -127,6 +132,11 @@ export const createBeatLicensePurchase = internalMutation({
       accessGranted: true,
       downloadCount: 0,
       lastAccessedAt: Date.now(),
+      ...(args.utm_source && { utm_source: args.utm_source }),
+      ...(args.utm_medium && { utm_medium: args.utm_medium }),
+      ...(args.utm_campaign && { utm_campaign: args.utm_campaign }),
+      ...(args.utm_content && { utm_content: args.utm_content }),
+      ...(args.utm_term && { utm_term: args.utm_term }),
     });
 
     // Create beat license record

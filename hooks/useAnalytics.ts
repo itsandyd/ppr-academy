@@ -2,6 +2,7 @@ import { useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useRef } from "react";
+import { getUtmParams } from "@/lib/utm";
 
 interface AnalyticsEvent {
   eventType: // Existing events
@@ -100,6 +101,8 @@ export function useAnalytics() {
 
       const deviceInfo = getDeviceInfo();
 
+      const utmData = getUtmParams();
+
       trackEvent({
         userId: user.id,
         eventType: "page_view",
@@ -107,6 +110,11 @@ export function useAnalytics() {
           page: window.location.pathname,
           referrer: document.referrer,
           ...deviceInfo,
+          ...(utmData && {
+            utm_source: utmData.utm_source,
+            utm_medium: utmData.utm_medium,
+            utm_campaign: utmData.utm_campaign,
+          }),
         },
         sessionId: sessionId.current,
         userAgent: navigator.userAgent,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 // Check for Stripe key at module load
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
     if (!packageId || !customerEmail || !userId || priceUsd === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const utm = getUtmParamsFromRequest(request);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -96,6 +99,11 @@ export async function POST(request: NextRequest) {
         customerEmail,
         customerName: "", // Name will be extracted from session.customer_details if available
         priceUsd: priceUsd.toString(),
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
     });
 

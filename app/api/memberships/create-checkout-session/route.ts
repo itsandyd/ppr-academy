@@ -6,6 +6,7 @@ import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import * as Sentry from "@sentry/nextjs";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
     if (!tierId || !customerEmail || !customerName || !billingCycle) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const utm = getUtmParamsFromRequest(request);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const price = billingCycle === "yearly" ? (priceYearly || priceMonthly * 10) : priceMonthly;
@@ -149,6 +152,11 @@ export async function POST(request: NextRequest) {
         membershipName: tierName,
         customerEmail,
         customerName,
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
     };
 

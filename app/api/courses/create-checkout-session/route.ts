@@ -6,6 +6,7 @@ import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import * as Sentry from "@sentry/nextjs";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
     if (!coursePrice || coursePrice <= 0) {
       return NextResponse.json({ error: "Invalid price" }, { status: 400 });
     }
+
+    const utm = getUtmParamsFromRequest(request);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -128,6 +131,11 @@ export async function POST(request: NextRequest) {
         productType: "course",
         amount: (coursePrice * 100).toString(),
         currency: "usd",
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
     };
 

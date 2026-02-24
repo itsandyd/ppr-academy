@@ -29,6 +29,11 @@ export const serverCreateCourseEnrollment = action({
     currency: v.optional(v.string()),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.runMutation(internal.library.createCourseEnrollment, args);
@@ -43,6 +48,11 @@ export const serverCreateDigitalProductPurchase = action({
     currency: v.optional(v.string()),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.runMutation(
@@ -60,6 +70,11 @@ export const serverCreateBundlePurchase = action({
     currency: v.optional(v.string()),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.runMutation(internal.library.createBundlePurchase, args);

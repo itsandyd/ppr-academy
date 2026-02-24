@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { auth } from "@clerk/nextjs/server";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -85,6 +86,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User email not found" }, { status: 400 });
     }
 
+    const utm = getUtmParamsFromRequest(req);
+
     // Get or create Stripe customer
     let customer: Stripe.Customer;
     const existingCustomers = await stripe.customers.list({
@@ -140,6 +143,11 @@ export async function POST(req: NextRequest) {
         plan: plan,
         billingPeriod: billingPeriod,
         productType: "creator_plan",
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
       subscription_data: {
         metadata: {

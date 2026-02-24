@@ -5,6 +5,8 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { getUtmParamsFromCookies } from "@/lib/utm";
+import { cookies } from "next/headers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -36,6 +38,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    const cookieStore = await cookies();
+    const utm = getUtmParamsFromCookies(cookieStore);
 
     // Get plan details from Convex
     const plan = await fetchQuery(api.subscriptions.getSubscriptionPlanDetails, {
@@ -101,6 +106,11 @@ export async function POST(req: Request) {
         userId: userId,
         storeId: plan.storeId,
         billingCycle: billingCycle,
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
       subscription_data: {
         metadata: {

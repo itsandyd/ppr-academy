@@ -5,6 +5,7 @@ import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -91,6 +92,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Beat not found" }, { status: 404 });
     }
 
+    const utm = getUtmParamsFromRequest(request);
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const platformFeeAmount = Math.round(selectedTier.price * 0.1 * 100); // 10% platform fee in cents
 
@@ -113,6 +116,11 @@ export async function POST(request: NextRequest) {
         storeId,
         amount: (selectedTier.price * 100).toString(), // Amount in cents
         currency: "usd",
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
       line_items: [
         {

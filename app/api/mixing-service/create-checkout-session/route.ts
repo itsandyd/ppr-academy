@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -49,6 +50,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid tier selection" }, { status: 400 });
     }
 
+    const utm = getUtmParamsFromRequest(request);
+
     // Calculate total price
     const basePrice = selectedTier.price;
     const additionalRushFee = isRush && rushFee ? rushFee : 0;
@@ -87,6 +90,11 @@ export async function POST(request: NextRequest) {
         amount: (totalPrice * 100).toString(), // Amount in cents as string
         currency: "usd",
         customerNotes: customerNotes || "",
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
       line_items: [
         {

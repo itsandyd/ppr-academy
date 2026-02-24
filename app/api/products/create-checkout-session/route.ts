@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 import * as Sentry from "@sentry/nextjs";
+import { getUtmParamsFromRequest } from "@/lib/utm";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const utm = getUtmParamsFromRequest(request);
+
     // For digital products without a stored Stripe price, create a one-time price
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -68,6 +71,11 @@ export async function POST(request: NextRequest) {
         productType: "digitalProduct", // Key identifier for webhook handler
         amount: (productPrice * 100).toString(), // Amount in cents as string
         currency: "usd",
+        ...(utm?.utm_source && { utm_source: utm.utm_source }),
+        ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
+        ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
+        ...(utm?.utm_content && { utm_content: utm.utm_content }),
+        ...(utm?.utm_term && { utm_term: utm.utm_term }),
       },
     };
 

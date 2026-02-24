@@ -224,6 +224,11 @@ export const createCoachingPurchase = mutation({
     currency: v.optional(v.string()),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
   },
   returns: v.id("purchases"),
   handler: async (ctx, args) => {
@@ -265,6 +270,11 @@ export const createCoachingPurchase = mutation({
       accessGranted: true,
       downloadCount: 0,
       lastAccessedAt: Date.now(),
+      ...(args.utm_source && { utm_source: args.utm_source }),
+      ...(args.utm_medium && { utm_medium: args.utm_medium }),
+      ...(args.utm_campaign && { utm_campaign: args.utm_campaign }),
+      ...(args.utm_content && { utm_content: args.utm_content }),
+      ...(args.utm_term && { utm_term: args.utm_term }),
     });
 
     // Create customer record if needed

@@ -17272,6 +17272,11 @@ export declare const api: {
         productId: Id<"digitalProducts">;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       Id<"purchases">
     >;
@@ -18518,6 +18523,11 @@ export declare const api: {
         paymentMethod?: string;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       any
     >;
@@ -18531,6 +18541,11 @@ export declare const api: {
         paymentMethod?: string;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       any
     >;
@@ -18544,6 +18559,11 @@ export declare const api: {
         productId: Id<"digitalProducts">;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       any
     >;
@@ -22725,6 +22745,11 @@ export declare const internal: {
         tierType: "basic" | "premium" | "exclusive" | "unlimited";
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       { beatLicenseId: Id<"beatLicenses">; purchaseId: Id<"purchases"> }
     >;
@@ -25626,6 +25651,11 @@ export declare const internal: {
         paymentMethod?: string;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       Id<"purchases">
     >;
@@ -25639,6 +25669,11 @@ export declare const internal: {
         paymentMethod?: string;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       Id<"purchases">
     >;
@@ -25652,6 +25687,11 @@ export declare const internal: {
         productId: Id<"digitalProducts">;
         transactionId?: string;
         userId: string;
+        utm_campaign?: string;
+        utm_content?: string;
+        utm_medium?: string;
+        utm_source?: string;
+        utm_term?: string;
       },
       Id<"purchases">
     >;

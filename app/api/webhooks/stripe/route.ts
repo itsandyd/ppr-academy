@@ -166,6 +166,15 @@ export async function POST(request: NextRequest) {
           status: "completed",
         });
 
+        // Extract UTM data from session metadata (added by checkout endpoints)
+        const utmData = {
+          ...(session.metadata?.utm_source && { utm_source: session.metadata.utm_source }),
+          ...(session.metadata?.utm_medium && { utm_medium: session.metadata.utm_medium }),
+          ...(session.metadata?.utm_campaign && { utm_campaign: session.metadata.utm_campaign }),
+          ...(session.metadata?.utm_content && { utm_content: session.metadata.utm_content }),
+          ...(session.metadata?.utm_term && { utm_term: session.metadata.utm_term }),
+        };
+
         // Handle PPR Pro subscription checkouts
         if (session.mode === "subscription" && session.subscription && session.metadata?.productType === "ppr_pro") {
           const { userId, plan, customerEmail, customerName } = session.metadata || {};
@@ -354,6 +363,7 @@ export async function POST(request: NextRequest) {
                   currency: currency || "USD",
                   paymentMethod: "stripe",
                   transactionId: session.payment_intent as string,
+                  ...utmData,
                 }
               );
 
@@ -410,6 +420,7 @@ export async function POST(request: NextRequest) {
                   currency: currency || "USD",
                   paymentMethod: "stripe",
                   transactionId: session.payment_intent as string,
+                  ...utmData,
                 }
               );
 
@@ -464,6 +475,7 @@ export async function POST(request: NextRequest) {
                 currency: currency || "USD",
                 paymentMethod: "stripe",
                 transactionId: session.payment_intent as string,
+                ...utmData,
               });
 
               serverLogger.info("Bundle", "Purchase created successfully");
@@ -531,6 +543,7 @@ export async function POST(request: NextRequest) {
                   transactionId: session.payment_intent as string,
                   buyerEmail: session.customer_details?.email || customerEmail || "",
                   buyerName: session.customer_details?.name || customerName,
+                  ...utmData,
                 }
               );
 
@@ -893,6 +906,7 @@ export async function POST(request: NextRequest) {
                       currency: currency || "USD",
                       paymentMethod: "stripe",
                       transactionId: session.payment_intent as string,
+                      ...utmData,
                     }
                   );
                   serverLogger.info("Coaching", "Purchase record created");
@@ -958,6 +972,7 @@ export async function POST(request: NextRequest) {
                   currency: currency || "USD",
                   paymentMethod: "stripe",
                   transactionId: session.payment_intent as string,
+                  ...utmData,
                 }
               );
 

@@ -1822,6 +1822,12 @@ export default defineSchema({
     isPaidOut: v.optional(v.boolean()),
     payoutId: v.optional(v.string()),
     paidOutAt: v.optional(v.number()),
+    // UTM attribution
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    utm_content: v.optional(v.string()),
+    utm_term: v.optional(v.string()),
   })
     .index("by_userId", ["userId"])
     .index("by_customerId", ["customerId"])

@@ -8618,6 +8618,11 @@ export type DataModel = {
       storeId: string;
       transactionId?: string;
       userId: string;
+      utm_campaign?: string;
+      utm_content?: string;
+      utm_medium?: string;
+      utm_source?: string;
+      utm_term?: string;
       _id: Id<"purchases">;
       _creationTime: number;
     };
@@ -8644,7 +8649,12 @@ export type DataModel = {
       | "status"
       | "storeId"
       | "transactionId"
-      | "userId";
+      | "userId"
+      | "utm_campaign"
+      | "utm_content"
+      | "utm_medium"
+      | "utm_source"
+      | "utm_term";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];

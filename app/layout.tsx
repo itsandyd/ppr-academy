@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { BuildProviders } from "@/lib/build-providers";
 import { Analytics } from "@vercel/analytics/next";
+import { Suspense } from "react";
+import { UtmCapture } from "@/components/utm-capture";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -100,6 +102,9 @@ export default function RootLayout({
           Skip to main content
         </a>
         <BuildProviders>
+          <Suspense fallback={null}>
+            <UtmCapture />
+          </Suspense>
           <main id="main-content" className="min-h-screen">
             {children}
           </main>
