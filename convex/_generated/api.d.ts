@@ -1600,7 +1600,7 @@ export declare const api: {
       Id<"aiMessages"> | null
     >;
     searchConversations: FunctionReference<
-      "query",
+      "action",
       "public",
       {
         includeArchived?: boolean;
@@ -21571,6 +21571,26 @@ export declare const internal: {
   };
   aiAgents: {
     seedBuiltInAgents: FunctionReference<"mutation", "internal", {}, null>;
+  };
+  aiConversations: {
+    _getUserConversationsForSearch: FunctionReference<
+      "query",
+      "internal",
+      { includeArchived: boolean; userId: string },
+      any
+    >;
+    _searchConversationTitles: FunctionReference<
+      "query",
+      "internal",
+      { searchQuery: string; userId: string },
+      any
+    >;
+    _searchMessageContent: FunctionReference<
+      "query",
+      "internal",
+      { limit: number; searchQuery: string; userId: string },
+      any
+    >;
   };
   aiCourseBuilder: {
     processChapterExpansionInBackground: FunctionReference<

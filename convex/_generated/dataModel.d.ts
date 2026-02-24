@@ -533,7 +533,12 @@ export type DataModel = {
       by_userId_lastMessageAt: ["userId", "lastMessageAt", "_creationTime"];
       by_userId_starred: ["userId", "starred", "_creationTime"];
     };
-    searchIndexes: {};
+    searchIndexes: {
+      search_title: {
+        searchField: "title";
+        filterFields: "userId";
+      };
+    };
     vectorIndexes: {};
   };
   aiCourseOutlines: {
@@ -808,7 +813,12 @@ export type DataModel = {
       ];
       by_userId: ["userId", "_creationTime"];
     };
-    searchIndexes: {};
+    searchIndexes: {
+      search_content: {
+        searchField: "content";
+        filterFields: "conversationId" | "userId";
+      };
+    };
     vectorIndexes: {};
   };
   aiOutreachDrafts: {

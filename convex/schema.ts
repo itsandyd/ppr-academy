@@ -5246,7 +5246,11 @@ export default defineSchema({
     .index("by_userId_lastMessageAt", ["userId", "lastMessageAt"])
     .index("by_userId_archived", ["userId", "archived"])
     .index("by_userId_starred", ["userId", "starred"])
-    .index("by_userId_agentId", ["userId", "agentId"]),
+    .index("by_userId_agentId", ["userId", "agentId"])
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["userId"],
+    }),
 
   // AI Messages - stores individual messages within conversations
   aiMessages: defineTable({
@@ -5281,7 +5285,11 @@ export default defineSchema({
   })
     .index("by_conversationId", ["conversationId"])
     .index("by_conversationId_createdAt", ["conversationId", "createdAt"])
-    .index("by_userId", ["userId"]),
+    .index("by_userId", ["userId"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["userId", "conversationId"],
+    }),
 
   // AI Memories - stores long-term memories extracted from conversations
   aiMemories: defineTable({

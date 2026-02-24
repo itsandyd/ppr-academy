@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation, action, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 // ============================================================================
 // CONVERSATION QUERIES
@@ -527,11 +527,88 @@ export const deleteConversation = mutation({
 // SEARCH FUNCTIONALITY
 // ============================================================================
 
+// Internal helper: get user conversations for search (not reactive when called from action)
+export const _getUserConversationsForSearch = internalQuery({
+  args: {
+    userId: v.string(),
+    includeArchived: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const conversations = await ctx.db
+      .query("aiConversations")
+      .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(500);
+
+    if (args.includeArchived) return conversations;
+    return conversations.filter((c) => !c.archived);
+  },
+});
+
+// Internal helper: search conversation titles using Convex full-text search
+export const _searchConversationTitles = internalQuery({
+  args: {
+    userId: v.string(),
+    searchQuery: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const results = await ctx.db
+      .query("aiConversations")
+      .withSearchIndex("search_title", (q) =>
+        q.search("title", args.searchQuery).eq("userId", args.userId)
+      )
+      .take(50);
+    return results.map((r) => r._id);
+  },
+});
+
+// Internal helper: search messages using Convex full-text search
+export const _searchMessageContent = internalQuery({
+  args: {
+    userId: v.string(),
+    searchQuery: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const results = await ctx.db
+      .query("aiMessages")
+      .withSearchIndex("search_content", (q) =>
+        q.search("content", args.searchQuery).eq("userId", args.userId)
+      )
+      .take(args.limit);
+
+    // Group by conversationId, return first match per conversation
+    const seen = new Map<string, { conversationId: Id<"aiConversations">; preview: string }>();
+    for (const msg of results) {
+      const convId = msg.conversationId as string;
+      if (!seen.has(convId)) {
+        // Build a preview snippet around the match
+        const content = msg.content;
+        const lowerContent = content.toLowerCase();
+        const searchLower = args.searchQuery.toLowerCase();
+        const matchIndex = lowerContent.indexOf(searchLower);
+        let preview: string;
+        if (matchIndex >= 0) {
+          const start = Math.max(0, matchIndex - 30);
+          const end = Math.min(content.length, matchIndex + searchLower.length + 50);
+          preview = (start > 0 ? "..." : "") + content.substring(start, end) + (end < content.length ? "..." : "");
+        } else {
+          // Full-text search matched but exact substring didn't (stemming, etc.)
+          preview = content.substring(0, 80) + (content.length > 80 ? "..." : "");
+        }
+        seen.set(convId, { conversationId: msg.conversationId, preview });
+      }
+    }
+    return Array.from(seen.values());
+  },
+});
+
 /**
- * Search conversations by title, preview, and message content
- * Returns conversations that match the search query
+ * Search conversations by title, preview, and message content.
+ * Converted from query to action to avoid reactive re-evaluation on every document change.
+ * Uses Convex full-text search indexes + two-phase search with early exit.
  */
-export const searchConversations = query({
+export const searchConversations = action({
   args: {
     userId: v.string(),
     searchQuery: v.string(),
@@ -583,8 +660,8 @@ export const searchConversations = query({
       createdAt: v.number(),
       updatedAt: v.number(),
       // Search-specific fields
-      matchedMessageCount: v.number(), // Number of messages that matched
-      matchedMessagePreview: v.optional(v.string()), // Preview of first matching message
+      matchedMessageCount: v.number(),
+      matchedMessagePreview: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -595,95 +672,175 @@ export const searchConversations = query({
       return [];
     }
 
-    // Get all user's conversations
-    const conversations = await ctx.db
-      .query("aiConversations")
-      .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .take(500);
+    // Conversation shape returned by the internal query
+    type ConversationDoc = {
+      _id: Id<"aiConversations">;
+      _creationTime: number;
+      userId: string;
+      title: string;
+      preview?: string;
+      lastMessageAt: number;
+      messageCount: number;
+      conversationGoal?: {
+        originalIntent: string;
+        deliverableType?: string;
+        keyConstraints?: string[];
+        extractedAt: number;
+      };
+      preset?: string;
+      responseStyle?: string;
+      settings?: {
+        preset: string;
+        maxFacets: number;
+        chunksPerFacet: number;
+        similarityThreshold: number;
+        enableCritic: boolean;
+        enableCreativeMode: boolean;
+        enableWebResearch: boolean;
+        enableFactVerification: boolean;
+        autoSaveWebResearch: boolean;
+        qualityThreshold?: number;
+        maxRetries?: number;
+        webSearchMaxResults?: number;
+        responseStyle: string;
+        agenticMode?: boolean;
+      };
+      agentId?: Id<"aiAgents">;
+      agentSlug?: string;
+      agentName?: string;
+      archived?: boolean;
+      starred?: boolean;
+      createdAt: number;
+      updatedAt: number;
+    };
 
-    // Filter by archived status
-    const filteredConversations = args.includeArchived
-      ? conversations
-      : conversations.filter((c) => !c.archived);
+    // Fetch all user conversations (one read of ~500 docs, not reactive since this is an action)
+    const allConversations = await ctx.runQuery(
+      internal.aiConversations._getUserConversationsForSearch,
+      { userId: args.userId, includeArchived: args.includeArchived ?? false }
+    ) as ConversationDoc[];
 
-    // Search through each conversation's title, preview, and messages
-    const results: Array<{
-      conversation: (typeof filteredConversations)[0];
+    // Build a lookup map for quick access
+    const conversationMap = new Map<string, ConversationDoc>(
+      allConversations.map((c) => [c._id as string, c])
+    );
+
+    // ---- PHASE 1: Search titles, previews, and goals (cheap: only conversation docs) ----
+    // Use Convex full-text search for title matches
+    const titleMatchIds = await ctx.runQuery(
+      internal.aiConversations._searchConversationTitles,
+      { userId: args.userId, searchQuery: args.searchQuery }
+    ) as Id<"aiConversations">[];
+    const titleMatchSet = new Set(titleMatchIds.map((id) => id as string));
+
+    type ResultEntry = {
+      conversationId: string;
+      relevanceScore: number;
       matchedMessageCount: number;
       matchedMessagePreview?: string;
-      relevanceScore: number;
-    }> = [];
+    };
 
-    for (const conversation of filteredConversations) {
-      let matchedMessageCount = 0;
-      let matchedMessagePreview: string | undefined;
+    const resultsMap = new Map<string, ResultEntry>();
+
+    for (const conv of allConversations) {
+      const convId = conv._id as string;
       let relevanceScore = 0;
 
-      // Check title match (highest weight)
-      if (conversation.title.toLowerCase().includes(searchLower)) {
+      // Title match via full-text search index
+      if (titleMatchSet.has(convId)) {
         relevanceScore += 100;
       }
 
-      // Check preview match
-      if (conversation.preview?.toLowerCase().includes(searchLower)) {
+      // Also check substring match on title (catches things full-text might miss)
+      if (conv.title.toLowerCase().includes(searchLower)) {
+        relevanceScore = Math.max(relevanceScore, 100);
+      }
+
+      // Preview match (substring only, no index needed — just one string per conversation)
+      if (conv.preview?.toLowerCase().includes(searchLower)) {
         relevanceScore += 50;
       }
 
-      // Check conversation goal
-      if (conversation.conversationGoal?.originalIntent.toLowerCase().includes(searchLower)) {
+      // Conversation goal match
+      if (conv.conversationGoal?.originalIntent.toLowerCase().includes(searchLower)) {
         relevanceScore += 75;
       }
 
-      // Search through messages
-      const messages = await ctx.db
-        .query("aiMessages")
-        .withIndex("by_conversationId", (q) => q.eq("conversationId", conversation._id))
-        .take(500);
-
-      for (const message of messages) {
-        if (message.content.toLowerCase().includes(searchLower)) {
-          matchedMessageCount++;
-          relevanceScore += 10; // Each message match adds to relevance
-
-          // Capture the first matching message preview with context
-          if (!matchedMessagePreview) {
-            const lowerContent = message.content.toLowerCase();
-            const matchIndex = lowerContent.indexOf(searchLower);
-            const start = Math.max(0, matchIndex - 30);
-            const end = Math.min(message.content.length, matchIndex + searchLower.length + 50);
-            const preview = message.content.substring(start, end);
-            matchedMessagePreview =
-              (start > 0 ? "..." : "") + preview + (end < message.content.length ? "..." : "");
-          }
-        }
-      }
-
-      // Only include conversations with matches
       if (relevanceScore > 0) {
-        results.push({
-          conversation,
-          matchedMessageCount,
-          matchedMessagePreview,
+        resultsMap.set(convId, {
+          conversationId: convId,
           relevanceScore,
+          matchedMessageCount: 0,
         });
       }
     }
 
-    // Sort by relevance score (highest first), then by last message time
-    results.sort((a, b) => {
-      if (b.relevanceScore !== a.relevanceScore) {
-        return b.relevanceScore - a.relevanceScore;
-      }
-      return b.conversation.lastMessageAt - a.conversation.lastMessageAt;
-    });
+    // ---- Early exit: if we already have enough results from Phase 1, skip message search ----
+    const phase1Count = resultsMap.size;
 
-    // Return limited results
-    return results.slice(0, limit).map((r) => ({
-      ...r.conversation,
-      matchedMessageCount: r.matchedMessageCount,
-      matchedMessagePreview: r.matchedMessagePreview,
-    }));
+    // ---- PHASE 2: Search message content using full-text search index ----
+    // Only search messages if we need more results, and limit the search
+    if (phase1Count < limit) {
+      const messageMatches = await ctx.runQuery(
+        internal.aiConversations._searchMessageContent,
+        {
+          userId: args.userId,
+          searchQuery: args.searchQuery,
+          // Ask for more than we need since some may be for already-matched conversations
+          limit: Math.min(200, (limit - phase1Count) * 3),
+        }
+      ) as Array<{ conversationId: Id<"aiConversations">; preview: string }>;
+
+      for (const match of messageMatches) {
+        const convId = match.conversationId as string;
+        // Only include if this conversation belongs to the user (in our map)
+        if (!conversationMap.has(convId)) continue;
+
+        const existing = resultsMap.get(convId);
+        if (existing) {
+          // Already matched in Phase 1, add message match info
+          existing.matchedMessageCount += 1;
+          if (!existing.matchedMessagePreview) {
+            existing.matchedMessagePreview = match.preview;
+          }
+        } else {
+          // New match from message search
+          resultsMap.set(convId, {
+            conversationId: convId,
+            relevanceScore: 10,
+            matchedMessageCount: 1,
+            matchedMessagePreview: match.preview,
+          });
+        }
+
+        // Early exit once we have enough unique conversations
+        if (resultsMap.size >= limit) break;
+      }
+    }
+
+    // ---- Build and sort results ----
+    const sortedResults = Array.from(resultsMap.values())
+      .sort((a, b) => {
+        if (b.relevanceScore !== a.relevanceScore) {
+          return b.relevanceScore - a.relevanceScore;
+        }
+        const convA = conversationMap.get(a.conversationId);
+        const convB = conversationMap.get(b.conversationId);
+        return (convB?.lastMessageAt ?? 0) - (convA?.lastMessageAt ?? 0);
+      })
+      .slice(0, limit);
+
+    return sortedResults
+      .map((r) => {
+        const conv = conversationMap.get(r.conversationId);
+        if (!conv) return null;
+        return {
+          ...conv,
+          matchedMessageCount: r.matchedMessageCount,
+          matchedMessagePreview: r.matchedMessagePreview,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
   },
 });
 

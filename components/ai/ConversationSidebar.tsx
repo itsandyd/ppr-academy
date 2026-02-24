@@ -117,28 +117,57 @@ export default function ConversationSidebar({
   );
   const [generatingTitleFor, setGeneratingTitleFor] = useState<Id<"aiConversations"> | null>(null);
 
-  // Debounce search query to avoid excessive API calls
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  // Debounce search query (500ms to reduce action calls)
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
 
-  // Queries - use search query when searching, otherwise get all conversations
+  // Queries - always load conversations list (cheap reactive query)
   const conversations = useQuery(api.aiConversations.getUserConversations, {
     userId,
     limit: 100,
     includeArchived: false,
   });
 
-  // Search query - only run when there's a debounced search term
-  const searchResults = useQuery(
-    api.aiConversations.searchConversations,
-    debouncedSearchQuery.trim()
-      ? {
-          userId,
-          searchQuery: debouncedSearchQuery.trim(),
-          limit: 50,
-          includeArchived: false,
+  // Search action - non-reactive, only runs on demand
+  const searchConversationsAction = useAction(api.aiConversations.searchConversations);
+
+  // Trigger search when debounced query changes (min 3 chars)
+  useEffect(() => {
+    const trimmed = debouncedSearchQuery.trim();
+    if (!trimmed || trimmed.length < 3) {
+      setSearchResults(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+
+    searchConversationsAction({
+      userId,
+      searchQuery: trimmed,
+      limit: 50,
+      includeArchived: false,
+    })
+      .then((results) => {
+        if (!cancelled) {
+          setSearchResults(results as SearchResult[]);
+          setSearchLoading(false);
         }
-      : "skip"
-  ) as SearchResult[] | undefined;
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error("Search failed:", err);
+          setSearchResults(null);
+          setSearchLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearchQuery, userId, searchConversationsAction]);
 
   // Mutations
   const updateTitle = useMutation(api.aiConversations.updateConversationTitle);
@@ -151,15 +180,15 @@ export default function ConversationSidebar({
 
   // Use search results when searching, otherwise use filtered conversations
   const displayConversations = useMemo(() => {
-    if (debouncedSearchQuery.trim() && searchResults) {
+    if (debouncedSearchQuery.trim().length >= 3 && searchResults) {
       return searchResults;
     }
     return conversations || [];
   }, [debouncedSearchQuery, searchResults, conversations]);
 
-  // Check if we're currently searching
-  const isSearching = Boolean(debouncedSearchQuery.trim());
-  const isSearchLoading = isSearching && searchResults === undefined;
+  // Check if we're currently searching (min 3 chars)
+  const isSearching = debouncedSearchQuery.trim().length >= 3;
+  const isSearchLoading = isSearching && searchLoading;
 
   // Separate starred and regular conversations (only when not searching)
   const starredConversations = useMemo(() => {
@@ -215,6 +244,7 @@ export default function ConversationSidebar({
 
   const clearSearch = () => {
     setSearchQuery("");
+    setSearchResults(null);
   };
 
   const ConversationItem = ({
@@ -478,6 +508,12 @@ export default function ConversationSidebar({
           </div>
 
           {/* Search status */}
+          {searchQuery.trim().length > 0 && searchQuery.trim().length < 3 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Search className="h-3 w-3" />
+              <span>Type at least 3 characters to search</span>
+            </div>
+          )}
           {isSearching && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {isSearchLoading ? (
@@ -490,7 +526,7 @@ export default function ConversationSidebar({
                   <Search className="h-3 w-3" />
                   <span>
                     {displayConversations.length} result
-                    {displayConversations.length !== 1 ? "s" : ""} for "{debouncedSearchQuery}"
+                    {displayConversations.length !== 1 ? "s" : ""} for &quot;{debouncedSearchQuery}&quot;
                   </span>
                 </>
               )}
