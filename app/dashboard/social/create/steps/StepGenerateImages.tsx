@@ -103,12 +103,16 @@ export function StepGenerateImages() {
     setPromptError(null);
 
     try {
+      console.log('[handleGeneratePrompts] calling generateImagePrompts with script length:', state.data.combinedScript?.length, 'aspectRatio:', aspectRatio);
       const result = await generateImagePrompts({
         script: state.data.combinedScript || "",
         aspectRatio,
       });
+      console.log('[handleGeneratePrompts] raw result:', JSON.stringify(result).substring(0, 500));
+      console.log('[handleGeneratePrompts] result type:', typeof result, 'keys:', result ? Object.keys(result) : 'null/undefined');
 
       if (result.error) {
+        console.log('[handleGeneratePrompts] HIT result.error branch:', result.error);
         setPromptError(result.error);
         toast({
           title: "Image prompt generation failed",
@@ -119,6 +123,7 @@ export function StepGenerateImages() {
       }
 
       if (result.prompts && result.prompts.length > 0) {
+        console.log('[handleGeneratePrompts] HIT prompts branch, count:', result.prompts.length);
         const newImages: ImageData[] = result.prompts.map((p: { prompt: string; sentence: string }) => ({
           storageId: "" as any,
           url: "",
@@ -127,9 +132,12 @@ export function StepGenerateImages() {
           sentence: p.sentence,
           originalPrompt: p.prompt,
         }));
+        console.log('[handleGeneratePrompts] newImages created, count:', newImages.length, 'first:', JSON.stringify(newImages[0]).substring(0, 200));
         updateImages(newImages);
+        console.log('[handleGeneratePrompts] updateImages called, setting promptError to null');
         setPromptError(null);
       } else {
+        console.log('[handleGeneratePrompts] HIT empty/no prompts branch. result.prompts:', result.prompts, 'length:', result.prompts?.length);
         setPromptError("No image prompts were generated. Please try again.");
         toast({
           title: "No prompts generated",

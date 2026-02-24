@@ -5397,6 +5397,42 @@ export declare const api: {
       { message: string; success: boolean; title: string }
     >;
   };
+  chapterImageGeneration: {
+    generateAndInsertChapterImages: FunctionReference<
+      "action",
+      "public",
+      {
+        chapterId: Id<"courseChapters">;
+        forceRegenerate?: boolean;
+        style?: string;
+      },
+      {
+        chapterId: string;
+        error?: string;
+        imagesGenerated: number;
+        success: boolean;
+      }
+    >;
+    generateAndInsertCourseImages: FunctionReference<
+      "action",
+      "public",
+      { courseId: Id<"courses">; forceRegenerate?: boolean },
+      {
+        chaptersProcessed: number;
+        courseId: string;
+        results: Array<{
+          chapterId: string;
+          chapterTitle: string;
+          error?: string;
+          imagesGenerated: number;
+          success: boolean;
+        }>;
+        success: boolean;
+        totalChapters: number;
+        totalImagesGenerated: number;
+      }
+    >;
+  };
   cheatSheetMutations: {
     createCheatSheetForPack: FunctionReference<
       "mutation",
@@ -22787,6 +22823,31 @@ export declare const internal: {
       "internal",
       { clerkId: string },
       { admin: boolean } | null
+    >;
+  };
+  chapterImageGeneration: {
+    generateAndInsertChapterImagesInternal: FunctionReference<
+      "action",
+      "internal",
+      {
+        chapterId: Id<"courseChapters">;
+        forceRegenerate: boolean;
+        style?: string;
+      },
+      {
+        chapterId: string;
+        error?: string;
+        imagesGenerated: number;
+        success: boolean;
+      }
+    >;
+  };
+  chapterImageGenerationQueries: {
+    getCourseChaptersInternal: FunctionReference<
+      "query",
+      "internal",
+      { courseId: Id<"courses"> },
+      Array<{ _id: Id<"courseChapters">; description?: string; title: string }>
     >;
   };
   clerkSync: {

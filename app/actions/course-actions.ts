@@ -871,3 +871,69 @@ export async function cleanupLegacyAudioReferences() {
     return { success: false, error: "Failed to cleanup" };
   }
 }
+
+// ============================================================================
+// CHAPTER IMAGE GENERATION
+// ============================================================================
+
+export async function generateChapterImages(
+  chapterId: string,
+  options?: { forceRegenerate?: boolean }
+) {
+  try {
+    const user = await checkAuth();
+
+    const result = await convex.action(
+      api.chapterImageGeneration.generateAndInsertChapterImages,
+      {
+        chapterId: chapterId as Id<"courseChapters">,
+        forceRegenerate: options?.forceRegenerate,
+      }
+    );
+
+    if (result.success) {
+      revalidatePath("/courses/*");
+    }
+
+    return result;
+  } catch (error) {
+    return {
+      chapterId,
+      imagesGenerated: 0,
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to generate images",
+    };
+  }
+}
+
+export async function generateCourseImages(
+  courseId: string,
+  options?: { forceRegenerate?: boolean }
+) {
+  try {
+    const user = await checkAuth();
+
+    const result = await convex.action(
+      api.chapterImageGeneration.generateAndInsertCourseImages,
+      {
+        courseId: courseId as Id<"courses">,
+        forceRegenerate: options?.forceRegenerate,
+      }
+    );
+
+    if (result.success) {
+      revalidatePath("/courses/*");
+    }
+
+    return result;
+  } catch (error) {
+    return {
+      courseId,
+      totalChapters: 0,
+      chaptersProcessed: 0,
+      totalImagesGenerated: 0,
+      success: false,
+      results: [],
+    };
+  }
+}

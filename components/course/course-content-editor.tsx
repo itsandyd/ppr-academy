@@ -16,23 +16,25 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { 
-  Plus, 
-  GripVertical, 
-  BookOpen, 
-  Target, 
-  FileText, 
-  Edit, 
-  Trash2, 
-  Save, 
-  X, 
-  ChevronDown, 
+import {
+  Plus,
+  GripVertical,
+  BookOpen,
+  Target,
+  FileText,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  ChevronDown,
   ChevronRight,
   Play,
   Pause,
   Volume2,
   Loader2,
-  Video
+  Video,
+  ImageIcon,
+  Sparkles,
 } from "lucide-react";
 import {
   createChapter,
@@ -54,7 +56,9 @@ import {
   generateChapterAudio,
   getElevenLabsVoices,
   debugModuleStructure,
-  deleteRealCourseModule
+  deleteRealCourseModule,
+  generateChapterImages,
+  generateCourseImages,
 } from "@/app/actions/course-actions";
 
 // Sortable Module Item Component
@@ -347,15 +351,15 @@ function SortableLessonItem({
 }
 
 // Sortable Chapter Item Component
-function SortableChapterItem({ 
-  chapter, 
-  editingChapter, 
-  editForm, 
-  setEditForm, 
-  startEditingChapter, 
-  saveChapter, 
-  cancelEdit, 
-  handleDeleteChapter, 
+function SortableChapterItem({
+  chapter,
+  editingChapter,
+  editForm,
+  setEditForm,
+  startEditingChapter,
+  saveChapter,
+  cancelEdit,
+  handleDeleteChapter,
   isLoading,
   generatingAudio,
   audioPlaying,
@@ -363,7 +367,9 @@ function SortableChapterItem({
   generateAudio,
   availableVoices,
   selectedVoice,
-  setSelectedVoice
+  setSelectedVoice,
+  generatingImages,
+  onGenerateImages,
 }: {
   chapter: Chapter;
   editingChapter: Chapter | null;
@@ -381,6 +387,8 @@ function SortableChapterItem({
   availableVoices: any[];
   selectedVoice: string;
   setSelectedVoice: (voiceId: string) => void;
+  generatingImages: string | null;
+  onGenerateImages: (chapterId: string) => void;
 }) {
   const {
     attributes,
@@ -510,6 +518,36 @@ function SortableChapterItem({
                     </Button>
                   )}
                 </div>
+              </div>
+
+              {/* Image Generation Section */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  <Label className="text-sm font-medium">AI Illustrations</Label>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Auto-generate and insert illustrations into the chapter content based on the text.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onGenerateImages(chapter.id)}
+                  disabled={generatingImages === chapter.id || !editForm.description}
+                >
+                  {generatingImages === chapter.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating Images...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Illustrations
+                    </>
+                  )}
+                </Button>
               </div>
 
               <div className="flex items-center space-x-4">
@@ -680,6 +718,11 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   const [audioRefs, setAudioRefs] = useState<{ [key: string]: HTMLAudioElement | null }>({});
   const [availableVoices, setAvailableVoices] = useState<any[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>("9BWtsMINqrJLrRacOk9x"); // Aria voice
+
+  // Image generation state
+  const [generatingImages, setGeneratingImages] = useState<string | null>(null);
+  const [generatingCourseImages, setGeneratingCourseImages] = useState(false);
+  const [courseImageProgress, setCourseImageProgress] = useState<string | null>(null);
   
   const [newChapterForm, setNewChapterForm] = useState({
     title: "",
@@ -799,6 +842,67 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
     } finally {
 
       setGeneratingAudio(null);
+    }
+  };
+
+  // Image generation handlers
+  const handleGenerateChapterImages = async (chapterId: string) => {
+    setGeneratingImages(chapterId);
+    try {
+      const result = await generateChapterImages(chapterId);
+
+      if (result.success) {
+        toast({
+          title: "Illustrations Generated",
+          description: `${result.imagesGenerated} illustration${result.imagesGenerated !== 1 ? "s" : ""} added to chapter content.`,
+        });
+        router.refresh();
+      } else {
+        toast({
+          title: "Generation Issue",
+          description: result.error || "Could not generate illustrations",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate illustrations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingImages(null);
+    }
+  };
+
+  const handleGenerateCourseImages = async () => {
+    setGeneratingCourseImages(true);
+    setCourseImageProgress("Starting...");
+    try {
+      const result = await generateCourseImages(courseId);
+
+      if (result.success) {
+        toast({
+          title: "Course Illustrations Generated",
+          description: `${result.totalImagesGenerated} illustration${result.totalImagesGenerated !== 1 ? "s" : ""} added across ${result.chaptersProcessed} chapters.`,
+        });
+        router.refresh();
+      } else {
+        toast({
+          title: "Generation Issue",
+          description: "Some chapters may have failed. Check individual chapters.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate course illustrations.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingCourseImages(false);
+      setCourseImageProgress(null);
     }
   };
 
@@ -1887,6 +1991,8 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
                                         availableVoices={availableVoices}
                                         selectedVoice={selectedVoice}
                                         setSelectedVoice={setSelectedVoice}
+                                        generatingImages={generatingImages}
+                                        onGenerateImages={handleGenerateChapterImages}
                                       />
                                     ))}
                                   </SortableContext>
@@ -1915,7 +2021,45 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
             )}
           </div>
 
-          <div className="flex justify-end">
+          <Separator className="my-4" />
+
+          {/* Full-Course Image Generation */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Bulk Illustration Generation
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Generate AI illustrations for all chapters in this course that don&apos;t already have images.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {courseImageProgress && (
+                <span className="text-xs text-slate-500">{courseImageProgress}</span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateCourseImages}
+                disabled={generatingCourseImages}
+              >
+                {generatingCourseImages ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate All Illustrations
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-4">
             <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
               Close Editor
             </Button>
