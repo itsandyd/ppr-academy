@@ -6145,8 +6145,8 @@ export default defineSchema({
     images: v.optional(
       v.array(
         v.object({
-          storageId: v.id("_storage"),
-          url: v.string(),
+          storageId: v.optional(v.id("_storage")), // Optional: not set until image is generated
+          url: v.optional(v.string()), // Optional: not set until image is generated
           aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
           prompt: v.string(), // The prompt used to generate this image
           sentence: v.optional(v.string()), // The sentence/concept this image illustrates
@@ -6160,6 +6160,8 @@ export default defineSchema({
         })
       )
     ),
+    // Aspect ratio preference for image generation
+    imageAspectRatio: v.optional(v.union(v.literal("16:9"), v.literal("9:16"))),
 
     // Generated audio (ElevenLabs TTS)
     audioStorageId: v.optional(v.id("_storage")),

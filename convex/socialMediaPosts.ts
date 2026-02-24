@@ -187,8 +187,8 @@ export const updateSocialMediaPostImages = mutation({
     postId: v.id("socialMediaPosts"),
     images: v.array(
       v.object({
-        storageId: v.id("_storage"),
-        url: v.string(),
+        storageId: v.optional(v.id("_storage")),
+        url: v.optional(v.string()),
         aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
         prompt: v.string(),
         sentence: v.optional(v.string()),
@@ -201,13 +201,17 @@ export const updateSocialMediaPostImages = mutation({
         sourceStorageId: v.optional(v.id("_storage")),
       })
     ),
+    imageAspectRatio: v.optional(v.union(v.literal("16:9"), v.literal("9:16"))),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAuth(ctx);
+    const hasGeneratedImages = args.images.some((img) => img.storageId && img.url);
     await ctx.db.patch(args.postId, {
       images: args.images,
-      status: "images_generated",
+      ...(args.imageAspectRatio ? { imageAspectRatio: args.imageAspectRatio } : {}),
+      // Only advance status to images_generated if at least one image was generated
+      ...(hasGeneratedImages ? { status: "images_generated" as const } : {}),
       updatedAt: Date.now(),
     });
 
@@ -219,8 +223,8 @@ export const addImageToSocialMediaPost = mutation({
   args: {
     postId: v.id("socialMediaPosts"),
     image: v.object({
-      storageId: v.id("_storage"),
-      url: v.string(),
+      storageId: v.optional(v.id("_storage")),
+      url: v.optional(v.string()),
       aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
       prompt: v.string(),
       sentence: v.optional(v.string()),

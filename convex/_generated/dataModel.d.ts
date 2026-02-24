@@ -10677,6 +10677,7 @@ export type DataModel = {
       ctaTemplateId?: Id<"ctaTemplates">;
       ctaText?: string;
       generatedScriptId?: Id<"generatedScripts">;
+      imageAspectRatio?: "16:9" | "9:16";
       images?: Array<{
         aspectRatio: "16:9" | "9:16";
         embedding?: Array<number>;
@@ -10686,8 +10687,8 @@ export type DataModel = {
         sentence?: string;
         sourceImageUrl?: string;
         sourceStorageId?: Id<"_storage">;
-        storageId: Id<"_storage">;
-        url: string;
+        storageId?: Id<"_storage">;
+        url?: string;
       }>;
       instagramCaption?: string;
       instagramScript?: string;
@@ -10734,6 +10735,7 @@ export type DataModel = {
       | "ctaTemplateId"
       | "ctaText"
       | "generatedScriptId"
+      | "imageAspectRatio"
       | "images"
       | "instagramCaption"
       | "instagramScript"

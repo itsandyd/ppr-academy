@@ -9,8 +9,8 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
 export interface ImageData {
-  storageId: Id<"_storage">;
-  url: string;
+  storageId?: Id<"_storage">;
+  url?: string;
   aspectRatio: "16:9" | "9:16";
   prompt: string;
   sentence?: string;
@@ -197,6 +197,7 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
         ctaProductId: existingPost.ctaProductId,
         ctaCourseId: existingPost.ctaCourseId,
         images: existingPost.images,
+        imageAspectRatio: existingPost.imageAspectRatio,
         audioStorageId: existingPost.audioStorageId,
         audioUrl: existingPost.audioUrl,
         audioVoiceId: existingPost.audioVoiceId,
@@ -354,13 +355,21 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
         }
 
         if (state.data.images && state.data.images.length > 0) {
-          const validImages = state.data.images.filter((img) => img.storageId && img.url);
-          if (validImages.length > 0) {
-            await updateImagesMutation({
-              postId: currentPostId,
-              images: validImages,
-            });
-          }
+          await updateImagesMutation({
+            postId: currentPostId,
+            images: state.data.images.map((img) => ({
+              prompt: img.prompt,
+              aspectRatio: img.aspectRatio,
+              sentence: img.sentence,
+              originalPrompt: img.originalPrompt,
+              isPromptEdited: img.isPromptEdited,
+              sourceImageUrl: img.sourceImageUrl,
+              sourceStorageId: img.sourceStorageId,
+              ...(img.storageId ? { storageId: img.storageId } : {}),
+              ...(img.url ? { url: img.url } : {}),
+            })),
+            imageAspectRatio: state.data.imageAspectRatio,
+          });
         }
 
         if (state.data.audioStorageId && state.data.audioUrl) {

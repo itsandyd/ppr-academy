@@ -19148,8 +19148,8 @@ export declare const api: {
           sentence?: string;
           sourceImageUrl?: string;
           sourceStorageId?: Id<"_storage">;
-          storageId: Id<"_storage">;
-          url: string;
+          storageId?: Id<"_storage">;
+          url?: string;
         };
         postId: Id<"socialMediaPosts">;
       },
@@ -19314,6 +19314,7 @@ export declare const api: {
       "mutation",
       "public",
       {
+        imageAspectRatio?: "16:9" | "9:16";
         images: Array<{
           aspectRatio: "16:9" | "9:16";
           embedding?: Array<number>;
@@ -19323,8 +19324,8 @@ export declare const api: {
           sentence?: string;
           sourceImageUrl?: string;
           sourceStorageId?: Id<"_storage">;
-          storageId: Id<"_storage">;
-          url: string;
+          storageId?: Id<"_storage">;
+          url?: string;
         }>;
         postId: Id<"socialMediaPosts">;
       },

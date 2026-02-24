@@ -46,8 +46,9 @@ export function StepGenerateImages() {
   );
   const [images, setImages] = useState<ImageData[]>(state.data.images || []);
   const [isGenerating, setIsGeneratingLocal] = useState(false);
-  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [generatingIndices, setGeneratingIndices] = useState<Set<number>>(new Set());
   const [generatingAll, setGeneratingAll] = useState(false);
+  const [failedIndices, setFailedIndices] = useState<Set<number>>(new Set());
   const [hasInitialized, setHasInitialized] = useState(false);
   const [promptError, setPromptError] = useState<string | null>(null);
   const imagesRef = useRef<ImageData[]>(images);
@@ -103,16 +104,12 @@ export function StepGenerateImages() {
     setPromptError(null);
 
     try {
-      console.log('[handleGeneratePrompts] calling generateImagePrompts with script length:', state.data.combinedScript?.length, 'aspectRatio:', aspectRatio);
       const result = await generateImagePrompts({
         script: state.data.combinedScript || "",
         aspectRatio,
       });
-      console.log('[handleGeneratePrompts] raw result:', JSON.stringify(result).substring(0, 500));
-      console.log('[handleGeneratePrompts] result type:', typeof result, 'keys:', result ? Object.keys(result) : 'null/undefined');
 
       if (result.error) {
-        console.log('[handleGeneratePrompts] HIT result.error branch:', result.error);
         setPromptError(result.error);
         toast({
           title: "Image prompt generation failed",
@@ -123,21 +120,18 @@ export function StepGenerateImages() {
       }
 
       if (result.prompts && result.prompts.length > 0) {
-        console.log('[handleGeneratePrompts] HIT prompts branch, count:', result.prompts.length);
         const newImages: ImageData[] = result.prompts.map((p: { prompt: string; sentence: string }) => ({
-          storageId: "" as any,
-          url: "",
           aspectRatio,
           prompt: p.prompt,
           sentence: p.sentence,
           originalPrompt: p.prompt,
         }));
-        console.log('[handleGeneratePrompts] newImages created, count:', newImages.length, 'first:', JSON.stringify(newImages[0]).substring(0, 200));
         updateImages(newImages);
-        console.log('[handleGeneratePrompts] updateImages called, setting promptError to null');
+        updateData("images", { images: newImages, imageAspectRatio: aspectRatio });
+        // Auto-save prompts to database immediately so they survive reload
+        savePost().catch((err) => console.error("Auto-save prompts failed:", err));
         setPromptError(null);
       } else {
-        console.log('[handleGeneratePrompts] HIT empty/no prompts branch. result.prompts:', result.prompts, 'length:', result.prompts?.length);
         setPromptError("No image prompts were generated. Please try again.");
         toast({
           title: "No prompts generated",
@@ -266,9 +260,17 @@ export function StepGenerateImages() {
     const image = currentImages[index];
     if (!image?.prompt) return;
 
+    // Clear failed state for this index
+    setFailedIndices((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+
     if (!batchMode) {
-      setGeneratingIndex(index);
-      setGenerating(true);
+      // Set global lock when first image starts
+      if (generatingIndices.size === 0) setGenerating(true);
+      setGeneratingIndices((prev) => new Set([...prev, index]));
     }
 
     try {
@@ -276,14 +278,12 @@ export function StepGenerateImages() {
 
       // Check if we have a source image for image-to-image generation
       if (image.sourceImageUrl) {
-        // Use image-to-image with the uploaded source
         result = await generateFromUploadedImage({
           sourceImageUrl: image.sourceImageUrl,
           stylePrompt: image.prompt,
           aspectRatio,
         });
       } else {
-        // Use text-to-image generation
         result = await generateSocialImage({
           prompt: image.prompt,
           aspectRatio,
@@ -300,22 +300,29 @@ export function StepGenerateImages() {
         };
         updateImages(latestImages);
         updateData("images", { images: latestImages });
+      } else {
+        setFailedIndices((prev) => new Set([...prev, index]));
       }
     } catch (error) {
       console.error("Failed to generate image:", error);
+      setFailedIndices((prev) => new Set([...prev, index]));
     } finally {
       if (!batchMode) {
-        setGeneratingIndex(null);
-        setGenerating(false);
+        setGeneratingIndices((prev) => {
+          const next = new Set(prev);
+          next.delete(index);
+          // Clear global lock when last image finishes
+          if (next.size === 0) setGenerating(false);
+          return next;
+        });
       }
     }
   };
 
-  const [generatingIndices, setGeneratingIndices] = useState<Set<number>>(new Set());
-
   const handleGenerateAllImages = async () => {
     setGeneratingAll(true);
     setGenerating(true);
+    setFailedIndices(new Set());
 
     const currentImages = imagesRef.current;
     const indicesToGenerate = currentImages
@@ -324,14 +331,17 @@ export function StepGenerateImages() {
 
     setGeneratingIndices(new Set(indicesToGenerate));
 
-    const generateOne = async (index: number) => {
+    const BATCH_SIZE = 3;
+    let successCount = 0;
+    let failCount = 0;
+
+    const generateOne = async (index: number, retryCount = 0): Promise<boolean> => {
       const image = imagesRef.current[index];
-      if (!image?.prompt) return;
+      if (!image?.prompt) return false;
 
       try {
         let result;
 
-        // Check if we have a source image for image-to-image generation
         if (image.sourceImageUrl) {
           result = await generateFromUploadedImage({
             sourceImageUrl: image.sourceImageUrl,
@@ -355,9 +365,17 @@ export function StepGenerateImages() {
           };
           updateImages(latestImages);
           updateData("images", { images: latestImages });
+          return true;
         }
-      } catch (error) {
+        return false;
+      } catch (error: any) {
+        // Retry once on rate limit
+        if (error?.data?.code === "RATE_LIMITED" && retryCount < 1) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          return generateOne(index, retryCount + 1);
+        }
         console.error(`Failed to generate image ${index}:`, error);
+        return false;
       } finally {
         setGeneratingIndices((prev) => {
           const next = new Set(prev);
@@ -367,11 +385,44 @@ export function StepGenerateImages() {
       }
     };
 
-    await Promise.all(indicesToGenerate.map(generateOne));
+    // Process in batches of BATCH_SIZE to stay within rate limits
+    for (let i = 0; i < indicesToGenerate.length; i += BATCH_SIZE) {
+      const batch = indicesToGenerate.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(batch.map((idx) => generateOne(idx)));
+
+      results.forEach((result, batchIdx) => {
+        const imageIndex = batch[batchIdx];
+        if (result.status === "fulfilled" && result.value) {
+          successCount++;
+        } else {
+          failCount++;
+          setFailedIndices((prev) => new Set([...prev, imageIndex]));
+        }
+      });
+
+      // Delay between batches to avoid rate limits
+      if (i + BATCH_SIZE < indicesToGenerate.length) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
 
     setGeneratingIndices(new Set());
     setGeneratingAll(false);
     setGenerating(false);
+
+    // Summary toast
+    if (failCount > 0) {
+      toast({
+        title: "Image generation partially complete",
+        description: `Generated ${successCount}/${successCount + failCount} images. ${failCount} failed — click Retry on failed images.`,
+        variant: "destructive",
+      });
+    } else if (successCount > 0) {
+      toast({
+        title: "All images generated",
+        description: `Successfully generated ${successCount} images.`,
+      });
+    }
   };
 
   const handleRemoveImage = (index: number) => {
@@ -528,7 +579,7 @@ export function StepGenerateImages() {
                 disabled={isGenerating || !state.data.combinedScript}
                 className="gap-2 text-xs sm:text-sm"
               >
-                {isGenerating && generatingIndex === null ? (
+                {isGenerating && generatingIndices.size === 0 ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
                     Generating...
@@ -607,9 +658,24 @@ export function StepGenerateImages() {
                           <Image className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
-                      {(generatingIndex === index || generatingIndices.has(index)) && (
+                      {generatingIndices.has(index) && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                           <Loader2 className="h-8 w-8 animate-spin text-white" />
+                        </div>
+                      )}
+                      {failedIndices.has(index) && !generatingIndices.has(index) && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50">
+                          <AlertCircle className="h-8 w-8 text-red-400" />
+                          <p className="text-xs font-medium text-red-300">Generation failed</p>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleGenerateImage(index)}
+                            className="gap-1 text-xs"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            Retry
+                          </Button>
                         </div>
                       )}
                       {uploadingIndex === index && (
@@ -711,7 +777,7 @@ export function StepGenerateImages() {
                           size="sm"
                           variant={image.url ? "outline" : "default"}
                           onClick={() => handleGenerateImage(index)}
-                          disabled={generatingIndex !== null || generatingAll}
+                          disabled={generatingIndices.has(index) || generatingAll}
                           className="flex-1 gap-1"
                         >
                           {image.url ? (
