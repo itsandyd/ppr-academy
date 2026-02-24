@@ -379,6 +379,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "course" },
                 extra: { userId, courseId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -434,6 +436,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "digitalProduct" },
                 extra: { userId, productId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -485,6 +489,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "bundle" },
                 extra: { userId, bundleId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -567,6 +573,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "beatLease" },
                 extra: { userId, beatId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -640,6 +648,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "credit_package" },
                 extra: { userId, packageId, totalCredits, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -708,6 +718,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "playlist_submission" },
                 extra: { submitterId, playlistId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -814,6 +826,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "mixingService" },
                 extra: { userId, productId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -911,6 +925,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "coaching" },
                 extra: { userId, productId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }
@@ -968,6 +984,8 @@ export async function POST(request: NextRequest) {
                 tags: { component: "stripe-webhook", eventType: event.type, productType: "tip" },
                 extra: { userId, tipJarId, stripeEventId: event.id, stripeSessionId: session.id },
               });
+              // Re-throw so the outer handler records this as "failed" and allows retry
+              throw error;
             }
           }
         }

@@ -25243,6 +25243,19 @@ export declare const internal: {
         { actions: Array<string>; fixed: boolean; issues: Array<string> }
       >;
     };
+    grantMissingPurchases: {
+      grantMissingCoursePurchase: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          amount: number;
+          clerkId: string;
+          courseId: Id<"courses">;
+          transactionId?: string;
+        },
+        { message: string; purchaseId?: Id<"purchases">; success: boolean }
+      >;
+    };
   };
   generatedScripts: {
     createGeneratedScript: FunctionReference<
