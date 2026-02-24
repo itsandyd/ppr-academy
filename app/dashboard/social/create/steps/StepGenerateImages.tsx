@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   Image,
   ChevronRight,
@@ -33,10 +34,12 @@ import {
   X,
   RotateCcw,
   ImagePlus,
+  AlertCircle,
 } from "lucide-react";
 
 export function StepGenerateImages() {
   const { state, updateData, goToStep, savePost, setGenerating } = useSocialPost();
+  const { toast } = useToast();
 
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">(
     state.data.imageAspectRatio || "9:16"
@@ -46,6 +49,7 @@ export function StepGenerateImages() {
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
   const imagesRef = useRef<ImageData[]>(images);
 
   // @ts-ignore - Convex type inference depth issue
@@ -96,6 +100,7 @@ export function StepGenerateImages() {
 
     setIsGeneratingLocal(true);
     setGenerating(true);
+    setPromptError(null);
 
     try {
       const result = await generateImagePrompts({
@@ -103,8 +108,18 @@ export function StepGenerateImages() {
         aspectRatio,
       });
 
-      if (result && result.length > 0) {
-        const newImages: ImageData[] = result.map((p: { prompt: string; sentence: string }) => ({
+      if (result.error) {
+        setPromptError(result.error);
+        toast({
+          title: "Image prompt generation failed",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (result.prompts && result.prompts.length > 0) {
+        const newImages: ImageData[] = result.prompts.map((p: { prompt: string; sentence: string }) => ({
           storageId: "" as any,
           url: "",
           aspectRatio,
@@ -113,9 +128,23 @@ export function StepGenerateImages() {
           originalPrompt: p.prompt,
         }));
         updateImages(newImages);
+        setPromptError(null);
+      } else {
+        setPromptError("No image prompts were generated. Please try again.");
+        toast({
+          title: "No prompts generated",
+          description: "The AI model returned an empty response. Click Retry to try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Failed to generate image prompts:", error);
+      setPromptError("An unexpected error occurred. Please try again.");
+      toast({
+        title: "Generation failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsGeneratingLocal(false);
       setGenerating(false);
@@ -529,8 +558,27 @@ export function StepGenerateImages() {
         <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {images.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground sm:py-12">
-              <Image className="mx-auto mb-3 h-10 w-10 opacity-50 sm:mb-4 sm:h-12 sm:w-12" />
-              <p className="text-sm sm:text-base">Click "Generate Prompts" to create image ideas</p>
+              {promptError ? (
+                <>
+                  <AlertCircle className="mx-auto mb-3 h-10 w-10 text-destructive opacity-70 sm:mb-4 sm:h-12 sm:w-12" />
+                  <p className="mb-3 text-sm text-destructive sm:text-base">{promptError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGeneratePrompts}
+                    disabled={isGenerating || !state.data.combinedScript}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Retry
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Image className="mx-auto mb-3 h-10 w-10 opacity-50 sm:mb-4 sm:h-12 sm:w-12" />
+                  <p className="text-sm sm:text-base">Click "Generate Prompts" to create image ideas</p>
+                </>
+              )}
             </div>
           ) : (
             <ScrollArea className="h-[400px] sm:h-[500px]">

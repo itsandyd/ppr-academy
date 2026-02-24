@@ -11,7 +11,10 @@ import { AVAILABLE_MODELS, type ModelId } from "./types";
  */
 export function cleanJsonResponse(content: string): string {
   let cleaned = content.trim();
-  
+
+  // Strip any "thinking" block some models prepend (e.g. <think>...</think>)
+  cleaned = cleaned.replace(/^<think>[\s\S]*?<\/think>\s*/i, "").trim();
+
   // Remove markdown code blocks (```json ... ``` or ``` ... ```)
   if (cleaned.startsWith("```")) {
     // Find the end of the first line (which might have "json" or other language hint)
@@ -25,7 +28,7 @@ export function cleanJsonResponse(content: string): string {
     }
     cleaned = cleaned.trim();
   }
-  
+
   // Handle case where response starts with ```json on same line as content
   if (cleaned.startsWith("```json")) {
     cleaned = cleaned.replace(/^```json\s*/, "");
@@ -34,7 +37,18 @@ export function cleanJsonResponse(content: string): string {
     }
     cleaned = cleaned.trim();
   }
-  
+
+  // If still not starting with { or [, try to extract JSON object/array
+  if (!cleaned.startsWith("{") && !cleaned.startsWith("[")) {
+    const objMatch = cleaned.match(/(\{[\s\S]*\})/);
+    const arrMatch = cleaned.match(/(\[[\s\S]*\])/);
+    if (objMatch) {
+      cleaned = objMatch[1];
+    } else if (arrMatch) {
+      cleaned = arrMatch[1];
+    }
+  }
+
   return cleaned;
 }
 

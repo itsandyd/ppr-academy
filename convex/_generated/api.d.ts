@@ -15190,11 +15190,14 @@ export declare const api: {
         "action",
         "public",
         { aspectRatio?: "16:9" | "9:16"; numImages?: number; script: string },
-        Array<{
-          aspectRatio: "16:9" | "9:16";
-          prompt: string;
-          sentence: string;
-        }>
+        {
+          error?: string;
+          prompts: Array<{
+            aspectRatio: "16:9" | "9:16";
+            prompt: string;
+            sentence: string;
+          }>;
+        }
       >;
       generatePlatformScripts: FunctionReference<
         "action",

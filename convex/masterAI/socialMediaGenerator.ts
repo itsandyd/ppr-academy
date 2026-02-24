@@ -770,48 +770,94 @@ export const generateImagePrompts = action({
     numImages: v.optional(v.number()),
     aspectRatio: v.optional(v.union(v.literal("16:9"), v.literal("9:16"))),
   },
-  returns: v.array(
-    v.object({
-      sentence: v.string(),
-      prompt: v.string(),
-      aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
-    })
-  ),
+  returns: v.object({
+    prompts: v.array(
+      v.object({
+        sentence: v.string(),
+        prompt: v.string(),
+        aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
+      })
+    ),
+    error: v.optional(v.string()),
+  }),
   handler: async (ctx, args) => {
     const { script, aspectRatio = "9:16" } = args;
 
     const lineCount = script.split("\n").filter((line) => line.trim().length > 0).length;
 
-    // Calculate tokens needed: ~150 tokens per prompt (sentence + detailed prompt description)
-    const estimatedTokensNeeded = Math.max(4000, lineCount * 200);
+    // Doubled token budget — detailed Excalidraw prompts + JSON overhead need more room
+    const estimatedTokensNeeded = Math.max(8000, lineCount * 400);
 
-    const response = await callLLM({
-      model: DEFAULT_MODEL,
+    const callOpts = {
+      model: DEFAULT_MODEL as ModelId,
       messages: [
         {
-          role: "user",
-          content: `${IMAGE_PROMPT_GENERATOR}\n\nAspect ratio to use: ${aspectRatio}\n\nCreate an image prompt for EVERY line in this script:\n\n${script}`,
+          role: "system" as const,
+          content: IMAGE_PROMPT_GENERATOR,
+        },
+        {
+          role: "user" as const,
+          content: `Aspect ratio to use: ${aspectRatio}\n\nCreate an image prompt for EVERY line in this script:\n\n${script}`,
         },
       ],
       temperature: 0.7,
       maxTokens: estimatedTokensNeeded,
-      responseFormat: "json",
-    });
+      responseFormat: "json" as const,
+    };
 
-    const parsed = safeParseJson<{
-      imagePrompts: Array<{
-        sentence: string;
-        prompt: string;
-        aspectRatio: "16:9" | "9:16";
-      }>;
-    }>(response.content, { imagePrompts: [] });
+    // Attempt up to 2 tries
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const response = await callLLM(callOpts);
 
-    const prompts = parsed.imagePrompts.map((p) => ({
-      ...p,
-      aspectRatio: aspectRatio,
-    }));
+      console.log(`[generateImagePrompts] attempt=${attempt} finishReason=${response.finishReason} contentLen=${response.content?.length ?? 0}`);
+      console.log(`[generateImagePrompts] content preview:`, response.content?.substring(0, 500));
 
-    return prompts;
+      // Check for truncation
+      if (response.finishReason === "length") {
+        console.error(`[generateImagePrompts] Response TRUNCATED (attempt ${attempt}). Allocated: ${estimatedTokensNeeded}`);
+        if (attempt === 1) {
+          // Bump tokens and retry
+          callOpts.maxTokens = estimatedTokensNeeded * 2;
+          continue;
+        }
+        return {
+          prompts: [],
+          error: "Response was truncated by the AI model. Try a shorter script or try again.",
+        };
+      }
+
+      const parsed = safeParseJson<{
+        imagePrompts: Array<{
+          sentence: string;
+          prompt: string;
+          aspectRatio: "16:9" | "9:16";
+        }>;
+      }>(response.content, { imagePrompts: [] });
+
+      console.log(`[generateImagePrompts] parsed count: ${parsed.imagePrompts?.length ?? 0}`);
+
+      if (parsed.imagePrompts.length === 0) {
+        console.error(`[generateImagePrompts] PARSE FAILED (attempt ${attempt}) — raw content:`, response.content?.substring(0, 1000));
+        if (attempt === 1) {
+          console.log("[generateImagePrompts] Retrying...");
+          continue;
+        }
+        return {
+          prompts: [],
+          error: "Failed to parse image prompts from AI response. Please try again.",
+        };
+      }
+
+      const prompts = parsed.imagePrompts.map((p) => ({
+        ...p,
+        aspectRatio: aspectRatio,
+      }));
+
+      return { prompts, error: undefined };
+    }
+
+    // Should not reach here, but just in case
+    return { prompts: [], error: "Generation failed after retries." };
   },
 });
 
