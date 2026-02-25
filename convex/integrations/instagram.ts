@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { internalAction, action, query } from "../_generated/server";
 import { internal, api } from "../_generated/api";
+import { encryptToken, decryptToken, isEncrypted } from "../lib/encryption";
 
 /**
  * Handle Instagram OAuth callback
@@ -122,9 +123,12 @@ export const handleOAuthCallback = action({
         throw new Error("User ID is required to save integration");
       }
 
+      // Encrypt token before storing in database
+      const encryptedPageToken = encryptToken(pageAccessToken);
+
       // @ts-ignore - Deep type instantiation
       await ctx.runMutation(internal.integrations.internal.saveIntegration, {
-        token: pageAccessToken, // Page token derived from long-lived user token (NEVER EXPIRES)
+        token: encryptedPageToken,
         expiresAt,
         instagramId: (accountData as any)?.id,
         username: (accountData as any)?.username,
@@ -189,22 +193,27 @@ export const getUserPosts = action({
 
       // Get Instagram Business Account ID and access token
       let instagramId: string;
-      let accessToken: string;
+      let rawToken: string;
 
       if (integration.platformData?.instagramBusinessAccountId) {
         // New socialAccounts format
         instagramId = integration.platformData.instagramBusinessAccountId;
-        accessToken = integration.accessToken;
+        rawToken = integration.accessToken;
       } else {
         // Legacy integrations format
         instagramId = integration.instagramId;
-        accessToken = integration.token;
+        rawToken = integration.token;
       }
 
-      if (!instagramId || !accessToken) {
+      if (!instagramId || !rawToken) {
         console.error("❌ Missing Instagram ID or token");
         return { status: 400, data: { error: "Missing Instagram credentials" } };
       }
+
+      // Decrypt token if encrypted at rest
+      const accessToken = isEncrypted(rawToken)
+        ? decryptToken(rawToken)
+        : rawToken;
 
       // Fetch posts from Instagram Graph API using the Business Account ID
       // Note: For videos, media_url returns the video file. We need thumbnail_url for display.
@@ -257,9 +266,14 @@ export const refreshAccessToken = internalAction({
         return null;
       }
 
+      // Decrypt token before refreshing
+      const currentToken = isEncrypted(integration.token)
+        ? decryptToken(integration.token)
+        : integration.token;
+
       // Refresh token
       const response = await fetch(
-        `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${integration.token}`
+        `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${currentToken}`
       );
 
       const data = await response.json();
@@ -269,12 +283,12 @@ export const refreshAccessToken = internalAction({
         return null;
       }
 
-      // Update integration with new token and expiry
+      // Update integration with new encrypted token and expiry
       const newExpiresAt = Date.now() + (60 * 24 * 60 * 60 * 1000);
-      
+
       await ctx.runMutation(internal.integrations.internal.updateToken, {
         userId: args.userId,
-        token: (data as any)?.access_token,
+        token: encryptToken((data as any)?.access_token),
         expiresAt: newExpiresAt,
       });
 

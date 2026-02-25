@@ -353,6 +353,7 @@ export const resendImportedContactsTable = defineTable({
 // Lead Scoring System
 export const leadScoresTable = defineTable({
   userId: v.string(), // Clerk ID
+  storeId: v.optional(v.string()), // Store ID for creator-scoped scoring
 
   // Scoring
   score: v.number(), // Current score (0-1000+)
@@ -391,6 +392,9 @@ export const leadScoresTable = defineTable({
   updatedAt: v.number(),
 })
   .index("by_userId", ["userId"])
+  .index("by_storeId_userId", ["storeId", "userId"])
+  .index("by_storeId_score", ["storeId", "score"])
+  .index("by_storeId_grade", ["storeId", "grade"])
   .index("by_score", ["score"])
   .index("by_grade", ["grade"]);
 

@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { decryptToken, isEncrypted } from "./lib/encryption";
 
 // ============================================================================
 // SOCIAL MEDIA PUBLISHING ACTIONS
@@ -15,7 +16,9 @@ import { Id } from "./_generated/dataModel";
 async function publishToInstagram(post: any, account: any): Promise<{ success: boolean; postId?: string; postUrl?: string; error?: string }> {
   try {
     const { content, mediaUrls, platformOptions, postType } = post;
-    const { accessToken, platformData } = account;
+    const rawToken = account.accessToken;
+    const accessToken = isEncrypted(rawToken) ? decryptToken(rawToken) : rawToken;
+    const { platformData } = account;
 
     if (!platformData?.instagramBusinessAccountId) {
       throw new Error("Instagram Business Account ID not found");
@@ -168,7 +171,8 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
 async function publishToTwitter(post: any, account: any): Promise<{ success: boolean; postId?: string; postUrl?: string; error?: string }> {
   try {
     const { content, mediaUrls, platformOptions } = post;
-    const { accessToken } = account;
+    const rawToken = account.accessToken;
+    const accessToken = isEncrypted(rawToken) ? decryptToken(rawToken) : rawToken;
 
     // Upload media if present
     let mediaIds: string[] = [];
@@ -237,7 +241,8 @@ async function publishToFacebook(post: any, account: any): Promise<{ success: bo
     }
 
     const pageId = platformData.facebookPageId;
-    const pageToken = platformData.facebookPageAccessToken;
+    const rawPageToken = platformData.facebookPageAccessToken;
+    const pageToken = isEncrypted(rawPageToken) ? decryptToken(rawPageToken) : rawPageToken;
 
     // Determine post type
     let endpoint: string;
@@ -291,7 +296,8 @@ async function publishToFacebook(post: any, account: any): Promise<{ success: bo
 async function publishToTikTok(post: any, account: any): Promise<{ success: boolean; postId?: string; postUrl?: string; error?: string }> {
   try {
     const { content, mediaUrls } = post;
-    const { accessToken } = account;
+    const rawToken = account.accessToken;
+    const accessToken = isEncrypted(rawToken) ? decryptToken(rawToken) : rawToken;
 
     if (!mediaUrls || mediaUrls.length === 0) {
       throw new Error("TikTok requires video content");
@@ -356,7 +362,9 @@ async function publishToTikTok(post: any, account: any): Promise<{ success: bool
 async function publishToLinkedIn(post: any, account: any): Promise<{ success: boolean; postId?: string; postUrl?: string; error?: string }> {
   try {
     const { content, mediaUrls, platformOptions } = post;
-    const { accessToken, platformUserId } = account;
+    const rawToken = account.accessToken;
+    const accessToken = isEncrypted(rawToken) ? decryptToken(rawToken) : rawToken;
+    const { platformUserId } = account;
 
     const postData: any = {
       author: `urn:li:person:${platformUserId}`,
@@ -448,6 +456,11 @@ export const refreshOAuthToken = internalAction({
   returns: v.null(),
   handler: async (ctx, args) => {
     try {
+      // Decrypt refresh token if encrypted at rest
+      const refreshToken = isEncrypted(args.refreshToken)
+        ? decryptToken(args.refreshToken)
+        : args.refreshToken;
+
       let tokenData: any;
 
       switch (args.platform) {
@@ -463,7 +476,7 @@ export const refreshOAuthToken = internalAction({
               grant_type: 'fb_exchange_token',
               client_id: process.env.FACEBOOK_APP_ID,
               client_secret: process.env.FACEBOOK_APP_SECRET,
-              fb_exchange_token: args.refreshToken,
+              fb_exchange_token: refreshToken,
             }),
           });
 
@@ -483,7 +496,7 @@ export const refreshOAuthToken = internalAction({
             },
             body: new URLSearchParams({
               grant_type: 'refresh_token',
-              refresh_token: args.refreshToken,
+              refresh_token: refreshToken,
             }),
           });
 
@@ -502,7 +515,7 @@ export const refreshOAuthToken = internalAction({
             },
             body: new URLSearchParams({
               grant_type: 'refresh_token',
-              refresh_token: args.refreshToken,
+              refresh_token: refreshToken,
               client_id: process.env.LINKEDIN_CLIENT_ID!,
               client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
             }),
@@ -523,7 +536,7 @@ export const refreshOAuthToken = internalAction({
             },
             body: new URLSearchParams({
               grant_type: 'refresh_token',
-              refresh_token: args.refreshToken,
+              refresh_token: refreshToken,
               client_key: process.env.TIKTOK_CLIENT_KEY!,
               client_secret: process.env.TIKTOK_CLIENT_SECRET!,
             }),

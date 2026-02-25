@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal, api } from "../_generated/api";
 import OpenAI from "openai";
+import { decryptToken, isEncrypted } from "../lib/encryption";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
@@ -79,12 +80,17 @@ export const processWebhook = internalAction({
               continue;
             }
 
-            const pageAccessToken = account.platformData?.facebookPageAccessToken || account.accessToken;
+            const rawPageToken = account.platformData?.facebookPageAccessToken || account.accessToken;
 
-            if (!pageAccessToken) {
+            if (!rawPageToken) {
               console.error("❌ No Facebook page token found for:", pageId);
               continue;
             }
+
+            // Decrypt token if encrypted at rest
+            const pageAccessToken = isEncrypted(rawPageToken)
+              ? decryptToken(rawPageToken)
+              : rawPageToken;
 
             // Execute the automation
             await executeFacebookAutomation(ctx, {

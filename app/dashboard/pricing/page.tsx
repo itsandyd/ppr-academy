@@ -123,11 +123,11 @@ export default function PricingPage() {
       iconColor: "text-muted-foreground",
       features: [
         { text: "Up to 5 links", included: true },
-        { text: "1 product (free only)", included: true },
+        { text: "1 product (free or paid)", included: true },
         { text: "Basic analytics", included: true },
         { text: "Community support", included: true },
         { text: "Platform branding shown", included: true, highlight: "note" },
-        { text: "Sell paid products", included: false },
+        { text: "Sell paid products", included: true },
         { text: "Email campaigns", included: false },
         { text: "Social scheduling", included: false },
       ],

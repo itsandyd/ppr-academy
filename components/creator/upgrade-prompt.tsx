@@ -94,7 +94,7 @@ const FEATURE_INFO: Record<
   },
   paid_products: {
     title: "Sell Paid Products",
-    description: "Start charging for your products and courses. Free users can only create free products.",
+    description: "Unlock more products and advanced selling features. Upgrade for more product slots and email campaigns.",
     icon: <Package className="h-12 w-12" />,
   },
 };

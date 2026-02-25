@@ -2,10 +2,86 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { api } from '@/convex/_generated/api';
 import { fetchMutation } from 'convex/nextjs';
+import { encryptToken, decryptToken } from '@/lib/encryption';
+import {
+  OAUTH_SESSION_COOKIE,
+  OAUTH_SESSION_MAX_AGE,
+  PKCE_PLATFORMS,
+} from '@/lib/oauth-pkce';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+interface OAuthSession {
+  state: string;
+  storeId: string;
+  platform: string;
+  codeVerifier?: string;
+  createdAt: number;
+}
 
 /**
- * OAuth callback handler for social media platforms
- * Handles the redirect after user authorizes the app
+ * Read, decrypt, and validate the OAuth session cookie set by the authorize
+ * route. Returns null if missing, expired, or corrupt.
+ */
+function readOAuthSession(request: NextRequest): OAuthSession | null {
+  const raw = request.cookies.get(OAUTH_SESSION_COOKIE)?.value;
+  if (!raw) return null;
+
+  try {
+    const json = decryptToken(raw);
+    const session: OAuthSession = JSON.parse(json);
+
+    // Reject expired sessions (cookie maxAge should handle this, but
+    // belt-and-suspenders — enforce the same TTL server-side).
+    if (Date.now() - session.createdAt > OAUTH_SESSION_MAX_AGE * 1000) {
+      return null;
+    }
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Delete the session cookie from a response so it cannot be replayed.
+ */
+function clearOAuthSession(response: NextResponse): NextResponse {
+  response.cookies.delete({
+    name: OAUTH_SESSION_COOKIE,
+    path: '/api/social/oauth',
+  });
+  return response;
+}
+
+/**
+ * Build a redirect NextResponse that also clears the session cookie.
+ */
+function redirectAndClear(url: string): NextResponse {
+  const res = NextResponse.redirect(url);
+  return clearOAuthSession(res);
+}
+
+/**
+ * Build an HTML NextResponse (for popup flows) that also clears the session cookie.
+ */
+function htmlAndClear(html: string): NextResponse {
+  const res = new NextResponse(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html' },
+  });
+  return clearOAuthSession(res);
+}
+
+// ---------------------------------------------------------------------------
+// Main handler
+// ---------------------------------------------------------------------------
+
+/**
+ * OAuth callback handler for social media platforms.
+ * Handles the redirect after user authorizes the app.
  */
 export async function GET(
   request: NextRequest,
@@ -13,7 +89,7 @@ export async function GET(
 ) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/sign-in`
@@ -22,26 +98,52 @@ export async function GET(
 
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
-    const state = searchParams.get('state'); // Contains storeId
+    const stateParam = searchParams.get('state');
     const error = searchParams.get('error');
 
     // Await params (Next.js 15 requirement)
     const { platform } = await params;
 
+    // -----------------------------------------------------------------------
+    // Read and validate the OAuth session cookie (CSRF + PKCE)
+    // -----------------------------------------------------------------------
+    const session = readOAuthSession(request);
+
+    if (!session) {
+      // No valid session cookie — the OAuth flow wasn't initiated by us, or
+      // the cookie expired (>10 min). Cannot proceed safely.
+      console.error('OAuth callback: missing or invalid session cookie');
+      return redirectAndClear(
+        `${process.env.NEXT_PUBLIC_APP_URL}/home?social_error=session_expired`
+      );
+    }
+
+    // Validate state matches to prevent CSRF attacks
+    if (!stateParam || stateParam !== session.state) {
+      console.error('OAuth callback: state mismatch (possible CSRF)');
+      return redirectAndClear(
+        `${process.env.NEXT_PUBLIC_APP_URL}/store/${session.storeId}/social?social_error=state_mismatch`
+      );
+    }
+
+    // Use the storeId from the encrypted cookie, not the URL
+    const storeId = session.storeId;
+
     if (error) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${state}/social?social_error=${encodeURIComponent(error)}`
+      return redirectAndClear(
+        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=${encodeURIComponent(error)}`
       );
     }
 
-    if (!code || !state) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${state}/social?social_error=missing_params`
+    if (!code) {
+      return redirectAndClear(
+        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=missing_params`
       );
     }
-    const storeId = state;
 
+    // -----------------------------------------------------------------------
     // Exchange code for access token based on platform
+    // -----------------------------------------------------------------------
     let tokenData: any;
     let userData: any;
 
@@ -50,66 +152,84 @@ export async function GET(
         tokenData = await exchangeFacebookCode(code, platform, request.url);
         userData = await getInstagramBusinessData(tokenData.access_token);
         break;
-      
+
       case 'facebook':
         tokenData = await exchangeFacebookCode(code, platform, request.url);
         userData = await getFacebookUserData(tokenData.access_token);
         break;
-      
-      case 'twitter':
-        tokenData = await exchangeTwitterCode(code);
+
+      case 'twitter': {
+        // PKCE: use the stored code_verifier from the session
+        const codeVerifier = session.codeVerifier;
+        if (!codeVerifier) {
+          console.error('OAuth callback: missing code_verifier for Twitter PKCE');
+          return redirectAndClear(
+            `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=pkce_missing`
+          );
+        }
+        tokenData = await exchangeTwitterCode(code, codeVerifier);
         userData = await getTwitterUserData(tokenData.access_token);
         break;
-      
+      }
+
       case 'linkedin':
         tokenData = await exchangeLinkedInCode(code);
         userData = await getLinkedInUserData(tokenData.access_token);
         break;
-      
+
       case 'tiktok':
         tokenData = await exchangeTikTokCode(code);
         userData = await getTikTokUserData(tokenData.access_token);
         break;
-      
+
       default:
-        return NextResponse.redirect(
+        return redirectAndClear(
           `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=unsupported_platform`
         );
     }
 
-    // Check if multiple accounts were found and user needs to select one
+    // -----------------------------------------------------------------------
+    // Multi-account selection flow
+    // -----------------------------------------------------------------------
     if (userData.id === 'SELECT_ACCOUNT' && userData.platformData?.multipleAccounts) {
-      // Redirect to account selection page
       const accounts = userData.platformData.accounts;
       const accessToken = userData.platformData.accessToken;
-      
+
       const selectionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/${platform}/select-account?` +
         `storeId=${encodeURIComponent(storeId)}&` +
         `userId=${encodeURIComponent(userId)}&` +
         `accessToken=${encodeURIComponent(accessToken)}&` +
         `accounts=${encodeURIComponent(JSON.stringify(accounts))}`;
-      
-      // Check if this is a popup OAuth flow
-      const isPopupCheck = request.nextUrl.searchParams.get('display') === 'popup' || 
-                     request.headers.get('referer')?.includes('oauth_popup');
 
-      if (isPopupCheck) {
-        // For popup, redirect within the popup
-        return NextResponse.redirect(selectionUrl);
-      } else {
-        return NextResponse.redirect(selectionUrl);
-      }
+      return redirectAndClear(selectionUrl);
     }
 
-    // Store the connection in Convex (single account flow)
-    // For Instagram, use the Page Access Token (not User Access Token)
-    // Page tokens are needed for Instagram Graph API calls
+    // -----------------------------------------------------------------------
+    // Store the connection in Convex
+    // -----------------------------------------------------------------------
+    // For Instagram/Facebook, use the Page Access Token (not User Access Token)
     const accessTokenToStore = platform === 'instagram' && userData.platformData?.facebookPageAccessToken
       ? userData.platformData.facebookPageAccessToken
       : platform === 'facebook' && userData.platformData?.facebookPageAccessToken
         ? userData.platformData.facebookPageAccessToken
         : tokenData.access_token;
-    
+
+    // Encrypt tokens before storing in database
+    const encryptedAccessToken = encryptToken(accessTokenToStore);
+    const encryptedRefreshToken = tokenData.refresh_token
+      ? encryptToken(tokenData.refresh_token)
+      : undefined;
+
+    // Encrypt facebookPageAccessToken in platformData if present
+    const encryptedPlatformData = userData.platformData
+      ? {
+          ...userData.platformData,
+          ...(userData.platformData.facebookPageAccessToken && {
+            facebookPageAccessToken: encryptToken(userData.platformData.facebookPageAccessToken),
+          }),
+        }
+      : undefined;
+
     await fetchMutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
@@ -118,19 +238,20 @@ export async function GET(
       platformUsername: userData.username,
       platformDisplayName: userData.displayName,
       profileImageUrl: userData.profileImage,
-      accessToken: accessTokenToStore,
-      refreshToken: tokenData.refresh_token,
+      accessToken: encryptedAccessToken,
+      refreshToken: encryptedRefreshToken,
       tokenExpiresAt: tokenData.expires_in ? Date.now() + (tokenData.expires_in * 1000) : undefined,
       grantedScopes: tokenData.scope ? tokenData.scope.split(' ') : [],
-      platformData: userData.platformData,
+      platformData: encryptedPlatformData,
     });
 
-    // Check if this is a popup OAuth flow
-    const isPopup = request.nextUrl.searchParams.get('display') === 'popup' || 
+    // -----------------------------------------------------------------------
+    // Return success (popup HTML or redirect)
+    // -----------------------------------------------------------------------
+    const isPopup = request.nextUrl.searchParams.get('display') === 'popup' ||
                    request.headers.get('referer')?.includes('oauth_popup');
 
     if (isPopup) {
-      // Return HTML that closes popup and notifies parent
       const html = `
         <!DOCTYPE html>
         <html>
@@ -138,42 +259,40 @@ export async function GET(
           <body>
             <script>
               if (window.opener) {
-                window.opener.postMessage({ 
-                  type: 'oauth_success', 
+                window.opener.postMessage({
+                  type: 'oauth_success',
                   platform: '${platform}',
-                  storeId: '${storeId}' 
+                  storeId: '${storeId}'
                 }, '*');
               }
               window.close();
             </script>
             <div style="text-align: center; padding: 50px; font-family: sans-serif;">
-              <h2>✅ Connected Successfully!</h2>
+              <h2>Connected Successfully!</h2>
               <p>You can close this window.</p>
             </div>
           </body>
         </html>
       `;
-      
-      return new NextResponse(html, {
-        status: 200,
-        headers: { 'Content-Type': 'text/html' }
-      });
+
+      return htmlAndClear(html);
     } else {
-      // Traditional redirect for non-popup flow
-      return NextResponse.redirect(
+      return redirectAndClear(
         `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_success=${platform}`
       );
     }
   } catch (error: any) {
     console.error('OAuth callback error:', error.message);
-    const storeId = request.nextUrl.searchParams.get('state');
-    
-    // Check if this is a popup OAuth flow
-    const isPopup = request.nextUrl.searchParams.get('display') === 'popup' || 
+
+    // Try to extract storeId from the session cookie for error redirect
+    const session = readOAuthSession(request);
+    const storeId = session?.storeId;
+
+    const isPopup = request.nextUrl.searchParams.get('display') === 'popup' ||
                    request.headers.get('referer')?.includes('oauth_popup');
 
     if (isPopup) {
-      // Return HTML that closes popup and notifies parent of error
+      const safeError = String(error.message || 'unknown_error').replace(/'/g, "\\'");
       const html = `
         <!DOCTYPE html>
         <html>
@@ -181,30 +300,31 @@ export async function GET(
           <body>
             <script>
               if (window.opener) {
-                window.opener.postMessage({ 
-                  type: 'oauth_error', 
-                  error: '${error.message}',
-                  storeId: '${storeId}' 
+                window.opener.postMessage({
+                  type: 'oauth_error',
+                  error: '${safeError}',
+                  storeId: '${storeId || ''}'
                 }, '*');
               }
               window.close();
             </script>
             <div style="text-align: center; padding: 50px; font-family: sans-serif;">
-              <h2>❌ Connection Failed</h2>
+              <h2>Connection Failed</h2>
               <p>Please try again or contact support.</p>
             </div>
           </body>
         </html>
       `;
-      
-      return new NextResponse(html, {
-        status: 200,
-        headers: { 'Content-Type': 'text/html' }
-      });
+
+      return htmlAndClear(html);
     } else {
-      // Traditional redirect for non-popup flow
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=server_error`
+      if (storeId) {
+        return redirectAndClear(
+          `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=server_error`
+        );
+      }
+      return redirectAndClear(
+        `${process.env.NEXT_PUBLIC_APP_URL}/home?social_error=server_error`
       );
     }
   }
@@ -219,7 +339,7 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
   // Extract from the current request URL to ensure perfect matching
   const url = new URL(requestUrl);
   const redirectUri = `${url.origin}/api/social/oauth/${platform}/callback`;
-  
+
   // Step 1: Exchange authorization code for SHORT-LIVED token (~1-2 hours)
   const params = new URLSearchParams({
     client_id: process.env.FACEBOOK_APP_ID!,
@@ -246,8 +366,6 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
   const USE_SHORT_LIVED_FOR_TESTING = process.env.INSTAGRAM_USE_SHORT_LIVED_TOKEN === 'true';
 
   if (USE_SHORT_LIVED_FOR_TESTING) {
-
-
     // Skip long-lived token exchange - use short-lived token directly
   } else {
   // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
@@ -290,25 +408,23 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
       const userResponse = await fetch(
         `https://graph.facebook.com/v18.0/me?access_token=${tokenData.access_token}&fields=id,name,business`
       );
-      
+
       if (userResponse.ok) {
         const userData = await userResponse.json();
 
-        
         if (userData.business) {
           tokenData.client_business_id = userData.business.id;
-
         }
       }
     } catch (error) {
-
+      // Non-critical — continue without business context
     }
   }
 
   return tokenData;
 }
 
-async function exchangeTwitterCode(code: string) {
+async function exchangeTwitterCode(code: string, codeVerifier: string) {
   const response = await fetch('https://api.twitter.com/2/oauth2/token', {
     method: 'POST',
     headers: {
@@ -319,11 +435,13 @@ async function exchangeTwitterCode(code: string) {
       code,
       grant_type: 'authorization_code',
       redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/twitter/callback`,
-      code_verifier: 'challenge', // Should be stored in session
+      code_verifier: codeVerifier,
     }),
   });
 
   if (!response.ok) {
+    const errorBody = await response.text();
+    console.error('Twitter token exchange failed:', errorBody.substring(0, 200));
     throw new Error('Failed to exchange Twitter code');
   }
 
@@ -385,15 +503,11 @@ async function getInstagramBusinessData(accessToken: string) {
   );
   const meData = await meResponse.json();
 
-
   // Get user's Facebook Pages
   const pagesResponse = await fetch(
     `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
   );
   const pagesData = await pagesResponse.json();
-
-
-
 
   // Check for API errors
   if (pagesData.error) {
@@ -412,27 +526,19 @@ async function getInstagramBusinessData(accessToken: string) {
 
   // Find Instagram Business Accounts connected to these pages
   const instagramAccounts: any[] = [];
-  
-  for (const page of pagesData.data) {
-    // Check if this page has an Instagram Business Account
 
-    
+  for (const page of pagesData.data) {
     const igResponse = await fetch(
       `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${page.access_token}`
     );
     const igData = await igResponse.json();
-    
 
-    
     if (igData.instagram_business_account) {
       instagramAccounts.push({
         instagram: igData.instagram_business_account,
         page: page,
       });
     } else {
-      // Try alternative API approach for Instagram Business Account
-
-      
       try {
         // Try getting Instagram accounts directly from user
         const userIgResponse = await fetch(
@@ -440,20 +546,16 @@ async function getInstagramBusinessData(accessToken: string) {
         );
         const userIgData = await userIgResponse.json();
 
-        
         // Also try page-level Instagram endpoint
         const pageIgResponse = await fetch(
           `https://graph.facebook.com/v18.0/${page.id}/instagram_accounts?access_token=${page.access_token}`
         );
         const pageIgData = await pageIgResponse.json();
-
       } catch (altError) {
-
+        // Non-critical — continue
       }
     }
   }
-
-
 
   if (instagramAccounts.length === 0) {
     throw new Error(
@@ -463,9 +565,6 @@ async function getInstagramBusinessData(accessToken: string) {
 
   // If multiple accounts, return selection data instead of auto-selecting first one
   if (instagramAccounts.length > 1) {
-
-
-    
     // Return special marker to trigger account selection flow
     return {
       id: 'SELECT_ACCOUNT',
@@ -484,9 +583,9 @@ async function getInstagramBusinessData(accessToken: string) {
   const { instagram: instagramAccount, page: connectedPage } = instagramAccounts[0];
 
   return {
-    id: instagramAccount.id, // Instagram Business Account ID
-    username: instagramAccount.username, // Instagram username
-    displayName: instagramAccount.name || instagramAccount.username, // Instagram account name
+    id: instagramAccount.id,
+    username: instagramAccount.username,
+    displayName: instagramAccount.name || instagramAccount.username,
     profileImage: instagramAccount.profile_picture_url,
     platformData: {
       instagramBusinessAccountId: instagramAccount.id,
@@ -503,14 +602,11 @@ async function getFacebookUserData(accessToken: string) {
   );
   const meData = await meResponse.json();
 
-
   // Get user's Facebook Pages
   const pagesResponse = await fetch(
     `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture&access_token=${accessToken}`
   );
   const pagesData = await pagesResponse.json();
-
-
 
   // Check for API errors
   if (pagesData.error) {
@@ -527,13 +623,8 @@ async function getFacebookUserData(accessToken: string) {
     );
   }
 
-
-
   // If multiple pages, return selection data instead of auto-selecting first one
   if (pagesData.data.length > 1) {
-
-
-    
     // Return special marker to trigger account selection flow
     return {
       id: 'SELECT_ACCOUNT',
@@ -558,9 +649,9 @@ async function getFacebookUserData(accessToken: string) {
   }
 
   return {
-    id: page.id, // Facebook Page ID (not user ID)
-    username: page.name, // Facebook Page name
-    displayName: page.name, // Facebook Page display name
+    id: page.id,
+    username: page.name,
+    displayName: page.name,
     profileImage: profilePicture,
     platformData: {
       facebookPageId: page.id,
@@ -609,7 +700,7 @@ async function getLinkedInUserData(accessToken: string) {
     id: user.id,
     username: `${user.localizedFirstName} ${user.localizedLastName}`,
     displayName: `${user.localizedFirstName} ${user.localizedLastName}`,
-    profileImage: undefined, // Would need separate API call
+    profileImage: undefined,
     platformData: {},
   };
 }

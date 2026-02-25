@@ -284,7 +284,7 @@ export const createUniversalProduct = mutation({
     // Import plan limits inline (to avoid circular dependency)
     // Unified product limit: courses and digital products count together
     const PLAN_LIMITS: Record<string, { maxProducts: number; canChargeMoney: boolean }> = {
-      free: { maxProducts: 1, canChargeMoney: false }, // 1 total product to try platform
+      free: { maxProducts: 1, canChargeMoney: true }, // 1 paid product to try platform
       starter: { maxProducts: 15, canChargeMoney: true },
       creator: { maxProducts: 50, canChargeMoney: true },
       creator_pro: { maxProducts: -1, canChargeMoney: true }, // unlimited
@@ -295,11 +295,11 @@ export const createUniversalProduct = mutation({
     const plan = store.plan || "free";
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
 
-    // Check if free tier user is trying to create a paid product (admins bypass)
+    // Check if user's plan allows paid products (admins bypass)
     const price = args.price || 0;
     if (!isAdmin && price > 0 && !limits.canChargeMoney) {
       throw new Error(
-        "Free plan users can only create free products. Upgrade to Starter ($12/mo) to sell paid products."
+        "Your plan does not allow paid products. Please upgrade to sell paid products."
       );
     }
 
@@ -1387,7 +1387,7 @@ export const publishDraft = mutation({
       const isAdmin = storeUser?.admin === true;
 
       const PLAN_LIMITS: Record<string, { canChargeMoney: boolean }> = {
-        free: { canChargeMoney: false },
+        free: { canChargeMoney: true },
         starter: { canChargeMoney: true },
         creator: { canChargeMoney: true },
         creator_pro: { canChargeMoney: true },
@@ -1399,7 +1399,7 @@ export const publishDraft = mutation({
       const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
 
       if (!isAdmin && product.price > 0 && !limits.canChargeMoney) {
-        errors.push("Free plan users can only create free products. Upgrade to Starter ($12/mo) to sell paid products.");
+        errors.push("Your plan does not allow paid products. Please upgrade to sell paid products.");
       }
     }
 

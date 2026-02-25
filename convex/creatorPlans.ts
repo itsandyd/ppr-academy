@@ -26,7 +26,7 @@ export const PLAN_LIMITS = {
     canUseAdvancedAnalytics: false,
     canUseSocialScheduling: false,
     canUseFollowGates: false,
-    canChargeMoney: false, // Products must be free (price = $0)
+    canChargeMoney: true, // Free plan can sell 1 paid product
     maxEmailSends: 0,
     showPlatformBranding: true,
     canUseTeams: false,
@@ -123,7 +123,7 @@ export const PLAN_PRICING = {
     features: [
       "Custom link-in-bio page",
       "Up to 5 links",
-      "1 product (free only)",
+      "1 product (free or paid)",
       "Basic analytics",
       "Public creator profile",
     ],

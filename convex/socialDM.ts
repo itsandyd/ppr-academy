@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { decryptToken, isEncrypted } from "./lib/encryption";
 
 // ============================================================================
 // UNIFIED SOCIAL MEDIA DM SERVICE
@@ -283,12 +284,32 @@ export const sendDirectMessage = action({
       };
     }
 
-    // Route to correct platform
-    switch (account.platform) {
+    // Decrypt token if encrypted at rest
+    const decryptedAccount: SocialAccount = {
+      ...account,
+      accessToken: isEncrypted(account.accessToken)
+        ? decryptToken(account.accessToken)
+        : account.accessToken,
+      platformData: account.platformData
+        ? {
+            ...account.platformData,
+            ...(account.platformData.facebookPageAccessToken &&
+              isEncrypted(account.platformData.facebookPageAccessToken) && {
+                facebookPageAccessToken: decryptToken(
+                  account.platformData.facebookPageAccessToken
+                ),
+              }),
+          }
+        : account.platformData,
+    };
+
+    // Route to correct platform (using decrypted tokens)
+    const accountToUse = decryptedAccount;
+    switch (accountToUse.platform) {
       case "instagram": {
         const instagramBusinessAccountId =
-          account.platformData?.instagramBusinessAccountId ||
-          account.platformUserId;
+          accountToUse.platformData?.instagramBusinessAccountId ||
+          accountToUse.platformUserId;
 
         if (!instagramBusinessAccountId) {
           return {
@@ -299,7 +320,7 @@ export const sendDirectMessage = action({
         }
 
         return sendInstagramDM({
-          accessToken: account.accessToken,
+          accessToken: accountToUse.accessToken,
           recipientId: args.recipientId,
           message: args.message,
           instagramBusinessAccountId,
@@ -311,7 +332,7 @@ export const sendDirectMessage = action({
 
         // If username provided instead of ID, look up the ID
         if (args.recipientUsername && !args.recipientId) {
-          const userId = await getTwitterUserId(account.accessToken, args.recipientUsername);
+          const userId = await getTwitterUserId(accountToUse.accessToken, args.recipientUsername);
           if (!userId) {
             return {
               success: false,
@@ -323,15 +344,15 @@ export const sendDirectMessage = action({
         }
 
         return sendTwitterDM({
-          accessToken: account.accessToken,
+          accessToken: accountToUse.accessToken,
           recipientId,
           message: args.message,
         });
       }
 
       case "facebook": {
-        const pageId = account.platformData?.facebookPageId;
-        const pageAccessToken = account.platformData?.facebookPageAccessToken || account.accessToken;
+        const pageId = accountToUse.platformData?.facebookPageId;
+        const pageAccessToken = accountToUse.platformData?.facebookPageAccessToken || accountToUse.accessToken;
 
         if (!pageId) {
           return {
@@ -352,8 +373,8 @@ export const sendDirectMessage = action({
       default:
         return {
           success: false,
-          error: `DM not supported for platform: ${account.platform}`,
-          platform: account.platform as any,
+          error: `DM not supported for platform: ${accountToUse.platform}`,
+          platform: accountToUse.platform as any,
         };
     }
   },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { api } from '@/convex/_generated/api';
 import { fetchMutation } from 'convex/nextjs';
+import { encryptToken } from '@/lib/encryption';
 
 /**
  * Saves the user's selected social media account after they choose from multiple options
@@ -72,7 +73,20 @@ export async function POST(
     // Store the connection in Convex
     // For Instagram and Facebook, use the Page Access Token (not User Access Token)
     const accessTokenToStore = userData.platformData?.facebookPageAccessToken || accessToken;
-    
+
+    // Encrypt tokens before storing in database
+    const encryptedAccessToken = encryptToken(accessTokenToStore);
+
+    // Encrypt facebookPageAccessToken in platformData if present
+    const encryptedPlatformData = userData.platformData
+      ? {
+          ...userData.platformData,
+          ...(userData.platformData.facebookPageAccessToken && {
+            facebookPageAccessToken: encryptToken(userData.platformData.facebookPageAccessToken),
+          }),
+        }
+      : undefined;
+
     await fetchMutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
@@ -81,11 +95,11 @@ export async function POST(
       platformUsername: userData.username,
       platformDisplayName: userData.displayName,
       profileImageUrl: userData.profileImage,
-      accessToken: accessTokenToStore,
+      accessToken: encryptedAccessToken,
       refreshToken: undefined,
       tokenExpiresAt: undefined,
       grantedScopes: [],
-      platformData: userData.platformData,
+      platformData: encryptedPlatformData,
     });
 
     return NextResponse.json({ success: true });

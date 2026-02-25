@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { decryptToken, isEncrypted } from "./lib/encryption";
 
 // Discord API Configuration
 const DISCORD_API_BASE = "https://discord.com/api/v10";
@@ -40,17 +41,25 @@ export const addUserToGuild = action({
         return { success: false, error: "Discord server not found" };
       }
 
+      // Decrypt tokens if encrypted at rest
+      const decryptedAccessToken = isEncrypted(connection.accessToken)
+        ? decryptToken(connection.accessToken)
+        : connection.accessToken;
+      const decryptedBotToken = isEncrypted(guild.botToken)
+        ? decryptToken(guild.botToken)
+        : guild.botToken;
+
       // Add user to guild using Discord API
       const response = await fetch(
         `${DISCORD_API_BASE}/guilds/${args.guildId}/members/${connection.discordUserId}`,
         {
           method: "PUT",
           headers: {
-            Authorization: `Bot ${guild.botToken}`,
+            Authorization: `Bot ${decryptedBotToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            access_token: connection.accessToken,
+            access_token: decryptedAccessToken,
           }),
         }
       );
@@ -112,13 +121,18 @@ export const assignDiscordRole = action({
         return { success: false, error: "Discord server not found" };
       }
 
+      // Decrypt bot token if encrypted at rest
+      const decryptedBotToken = isEncrypted(guild.botToken)
+        ? decryptToken(guild.botToken)
+        : guild.botToken;
+
       // Assign role using Discord API
       const response = await fetch(
         `${DISCORD_API_BASE}/guilds/${args.guildId}/members/${connection.discordUserId}/roles/${args.roleId}`,
         {
           method: "PUT",
           headers: {
-            Authorization: `Bot ${guild.botToken}`,
+            Authorization: `Bot ${decryptedBotToken}`,
             "Content-Type": "application/json",
           },
         }
@@ -247,13 +261,18 @@ export const assignDiscordRoleInternal = internalAction({
         return { success: false, error: "Discord server not found" };
       }
 
+      // Decrypt bot token if encrypted at rest
+      const decryptedBotTokenInternal = isEncrypted(guild.botToken)
+        ? decryptToken(guild.botToken)
+        : guild.botToken;
+
       // Assign role using Discord API
       const response = await fetch(
         `${DISCORD_API_BASE}/guilds/${args.guildId}/members/${connection.discordUserId}/roles/${args.roleId}`,
         {
           method: "PUT",
           headers: {
-            Authorization: `Bot ${guild.botToken}`,
+            Authorization: `Bot ${decryptedBotTokenInternal}`,
             "Content-Type": "application/json",
           },
         }

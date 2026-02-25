@@ -310,11 +310,15 @@ async function evaluateSegmentForUser(
     return { matches: false, reasons: ["User not found"] };
   }
   
-  // Get lead score
-  const leadScore = await ctx.db
+  // Get lead score — pick the highest score if user has scores across multiple stores.
+  // Segmentation doesn't have store context, so we take the best-case score.
+  const leadScores = await ctx.db
     .query("leadScores")
     .withIndex("by_userId", (q: any) => q.eq("userId", userId))
-    .unique();
+    .take(100);
+  const leadScore = leadScores.length > 0
+    ? leadScores.reduce((best: any, s: any) => (s.score > best.score ? s : best), leadScores[0])
+    : null;
   
   // Get email engagement
   const emailLogs = await ctx.db

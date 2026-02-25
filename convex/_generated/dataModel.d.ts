@@ -6806,6 +6806,7 @@ export type DataModel = {
       purchaseActivity: number;
       score: number;
       scoreHistory: Array<{ reason: string; score: number; timestamp: number }>;
+      storeId?: string;
       totalEmailsClicked: number;
       totalEmailsOpened: number;
       totalPurchases: number;
@@ -6827,6 +6828,7 @@ export type DataModel = {
       | "purchaseActivity"
       | "score"
       | "scoreHistory"
+      | "storeId"
       | "totalEmailsClicked"
       | "totalEmailsOpened"
       | "totalPurchases"
@@ -6837,6 +6839,9 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_grade: ["grade", "_creationTime"];
       by_score: ["score", "_creationTime"];
+      by_storeId_grade: ["storeId", "grade", "_creationTime"];
+      by_storeId_score: ["storeId", "score", "_creationTime"];
+      by_storeId_userId: ["storeId", "userId", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
     };
     searchIndexes: {};

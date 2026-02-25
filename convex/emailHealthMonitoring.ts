@@ -263,12 +263,18 @@ export const calculateEmailHealthMetrics = internalMutation({
     const allUsers = await ctx.db.query("users").take(5000);
     const totalSubscribers = allUsers.length;
     
-    // Get lead scores to determine active subscribers
+    // Get lead scores to determine active subscribers.
+    // A user may have scores under multiple stores — deduplicate by userId,
+    // counting a user as active if they're active under ANY store.
     const leadScores = await ctx.db.query("leadScores").take(5000);
-    const activeSubscribers = leadScores.filter(score => {
+    const activeUserIds = new Set<string>();
+    for (const score of leadScores) {
       const daysSinceActivity = (now - score.lastActivity) / (24 * 60 * 60 * 1000);
-      return daysSinceActivity <= 30;
-    }).length;
+      if (daysSinceActivity <= 30) {
+        activeUserIds.add(score.userId);
+      }
+    }
+    const activeSubscribers = activeUserIds.size;
     
     const inactiveSubscribers = totalSubscribers - activeSubscribers;
     

@@ -10802,7 +10802,7 @@ export declare const api: {
     getLeadScoreDistribution: FunctionReference<
       "query",
       "public",
-      {},
+      { storeId: string },
       {
         averageScore: number;
         gradeA: number;
@@ -10815,13 +10815,18 @@ export declare const api: {
     getTopLeads: FunctionReference<
       "query",
       "public",
-      { grade?: "A" | "B" | "C" | "D"; limit?: number; minScore?: number },
+      {
+        grade?: "A" | "B" | "C" | "D";
+        limit?: number;
+        minScore?: number;
+        storeId: string;
+      },
       Array<any>
     >;
     getUserLeadScore: FunctionReference<
       "query",
       "public",
-      { userId: string },
+      { storeId: string; userId: string },
       {
         _creationTime: number;
         _id: Id<"leadScores">;
@@ -10839,6 +10844,7 @@ export declare const api: {
           score: number;
           timestamp: number;
         }>;
+        storeId?: string;
         totalEmailsClicked: number;
         totalEmailsOpened: number;
         totalPurchases: number;
@@ -10862,6 +10868,7 @@ export declare const api: {
           | "bounced"
           | "unsubscribed";
         metadata?: any;
+        storeId: string;
         userId: string;
       },
       { newGrade: "A" | "B" | "C" | "D"; newScore: number; pointsAdded: number }
@@ -15529,6 +15536,19 @@ export declare const api: {
         tierId: Id<"creatorSubscriptionTiers">;
       },
       any
+    >;
+  };
+  migrateLeadScoresStoreId: {
+    backfillLeadScoresStoreId: FunctionReference<
+      "mutation",
+      "public",
+      { defaultStoreId?: string },
+      {
+        defaultStoreIdUsed: string;
+        patched: number;
+        skipped: number;
+        total: number;
+      }
     >;
   };
   migrations: {
@@ -27948,6 +27968,61 @@ export declare const internal: {
         }
       >;
     };
+  };
+  migrateEncryptTokens: {
+    encryptExistingTokens: FunctionReference<
+      "action",
+      "internal",
+      {},
+      {
+        discordGuilds: {
+          encrypted: number;
+          processed: number;
+          skipped: number;
+        };
+        discordIntegrations: {
+          encrypted: number;
+          processed: number;
+          skipped: number;
+        };
+        integrations: { encrypted: number; processed: number; skipped: number };
+        socialAccounts: {
+          encrypted: number;
+          processed: number;
+          skipped: number;
+        };
+      }
+    >;
+  };
+  migrateEncryptTokensHelpers: {
+    getAllDiscordGuilds: FunctionReference<"query", "internal", {}, any>;
+    getAllDiscordIntegrations: FunctionReference<"query", "internal", {}, any>;
+    getAllIntegrations: FunctionReference<"query", "internal", {}, any>;
+    getAllSocialAccounts: FunctionReference<"query", "internal", {}, any>;
+    patchDiscordGuild: FunctionReference<
+      "mutation",
+      "internal",
+      { id: Id<"discordGuilds">; updates: any },
+      any
+    >;
+    patchDiscordIntegration: FunctionReference<
+      "mutation",
+      "internal",
+      { id: Id<"discordIntegrations">; updates: any },
+      any
+    >;
+    patchIntegration: FunctionReference<
+      "mutation",
+      "internal",
+      { id: Id<"integrations">; updates: any },
+      any
+    >;
+    patchSocialAccount: FunctionReference<
+      "mutation",
+      "internal",
+      { id: Id<"socialAccounts">; updates: any },
+      any
+    >;
   };
   migrations: {
     backfillCourseCustomers: {

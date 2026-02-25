@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal, api } from "../_generated/api";
 import OpenAI from "openai";
+import { decryptToken, isEncrypted } from "../lib/encryption";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
@@ -259,7 +260,10 @@ async function executeAutomation(
     return;
   }
 
-  const accessToken = tokenData.accessToken;
+  // Decrypt token if encrypted at rest
+  const accessToken = isEncrypted(tokenData.accessToken)
+    ? decryptToken(tokenData.accessToken)
+    : tokenData.accessToken;
   const facebookPageId = tokenData.facebookPageId;
 
   // LISTENER TYPE 1: MESSAGE - Send DM with optional comment reply
@@ -482,6 +486,14 @@ async function continueSmartAIConversation(
     console.error("❌ No active Instagram connection for:", receiverId);
     return;
   }
+
+  // Decrypt token if encrypted at rest
+  tokenData = {
+    ...tokenData,
+    accessToken: isEncrypted(tokenData.accessToken)
+      ? decryptToken(tokenData.accessToken)
+      : tokenData.accessToken,
+  };
 
   // Build system prompt
   const systemPrompt = buildSmartAIPrompt(automation.listener?.prompt);

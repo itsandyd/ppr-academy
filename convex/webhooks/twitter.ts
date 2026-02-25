@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal, api } from "../_generated/api";
 import OpenAI from "openai";
+import { decryptToken, isEncrypted } from "../lib/encryption";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
@@ -69,13 +70,18 @@ export const processWebhook = internalAction({
             continue;
           }
 
+          // Decrypt token if encrypted at rest
+          const decryptedToken = isEncrypted(account.accessToken)
+            ? decryptToken(account.accessToken)
+            : account.accessToken;
+
           // Execute the automation
           await executeTwitterAutomation(ctx, {
             automation: matcher,
             senderId,
             recipientId: forUserId,
             messageText,
-            accessToken: account.accessToken,
+            accessToken: decryptedToken,
             users: payload.users || {},
           });
         }

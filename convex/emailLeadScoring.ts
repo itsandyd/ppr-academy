@@ -1,6 +1,10 @@
 /**
  * Lead Scoring System - Track and score user engagement
  * ActiveCampaign-level lead scoring with engagement tracking
+ *
+ * IMPORTANT: All lead scores are scoped by storeId so that each creator
+ * has independent engagement data for their subscribers. The same user
+ * can have different scores under different stores.
  */
 
 import { v } from "convex/values";
@@ -37,15 +41,17 @@ const GRADE_THRESHOLDS = {
 // ============================================================================
 
 /**
- * Get lead score for a user
+ * Get lead score for a user within a specific store
  */
 export const getUserLeadScore = query({
   args: {
     userId: v.string(), // Clerk ID
+    storeId: v.string(),
   },
   returns: v.union(
     v.object({
       userId: v.string(),
+      storeId: v.optional(v.string()),
       score: v.number(),
       grade: v.union(v.literal("A"), v.literal("B"), v.literal("C"), v.literal("D")),
       emailEngagement: v.number(),
@@ -72,18 +78,21 @@ export const getUserLeadScore = query({
   handler: async (ctx, args) => {
     const score = await ctx.db
       .query("leadScores")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_storeId_userId", (q) =>
+        q.eq("storeId", args.storeId).eq("userId", args.userId)
+      )
       .unique();
-    
+
     return score;
   },
 });
 
 /**
- * Get top leads by score
+ * Get top leads by score for a specific store
  */
 export const getTopLeads = query({
   args: {
+    storeId: v.string(),
     limit: v.optional(v.number()),
     minScore: v.optional(v.number()),
     grade: v.optional(v.union(v.literal("A"), v.literal("B"), v.literal("C"), v.literal("D"))),
@@ -91,37 +100,41 @@ export const getTopLeads = query({
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
-    
+
     let scores;
-    
+
     if (args.grade !== undefined) {
       scores = await ctx.db
         .query("leadScores")
-        .withIndex("by_grade", (q) => q.eq("grade", args.grade as "A" | "B" | "C" | "D"))
+        .withIndex("by_storeId_grade", (q) =>
+          q.eq("storeId", args.storeId).eq("grade", args.grade as "A" | "B" | "C" | "D")
+        )
         .order("desc")
         .take(limit);
     } else {
       scores = await ctx.db
         .query("leadScores")
-        .withIndex("by_score")
+        .withIndex("by_storeId_score", (q) => q.eq("storeId", args.storeId))
         .order("desc")
         .take(limit);
     }
-    
+
     // Filter by minimum score if provided
     const filtered = args.minScore !== undefined
       ? scores.filter(s => s.score >= args.minScore!)
       : scores;
-    
+
     return filtered;
   },
 });
 
 /**
- * Get lead score distribution
+ * Get lead score distribution for a specific store
  */
 export const getLeadScoreDistribution = query({
-  args: {},
+  args: {
+    storeId: v.string(),
+  },
   returns: v.object({
     totalLeads: v.number(),
     gradeA: v.number(),
@@ -130,20 +143,23 @@ export const getLeadScoreDistribution = query({
     gradeD: v.number(),
     averageScore: v.number(),
   }),
-  handler: async (ctx) => {
-    const allScores = await ctx.db.query("leadScores").take(5000);
-    
+  handler: async (ctx, args) => {
+    const allScores = await ctx.db
+      .query("leadScores")
+      .withIndex("by_storeId_score", (q) => q.eq("storeId", args.storeId))
+      .take(5000);
+
     const distribution = {
       totalLeads: allScores.length,
       gradeA: allScores.filter(s => s.grade === "A").length,
       gradeB: allScores.filter(s => s.grade === "B").length,
       gradeC: allScores.filter(s => s.grade === "C").length,
       gradeD: allScores.filter(s => s.grade === "D").length,
-      averageScore: allScores.length > 0 
-        ? allScores.reduce((sum, s) => sum + s.score, 0) / allScores.length 
+      averageScore: allScores.length > 0
+        ? allScores.reduce((sum, s) => sum + s.score, 0) / allScores.length
         : 0,
     };
-    
+
     return distribution;
   },
 });
@@ -153,11 +169,13 @@ export const getLeadScoreDistribution = query({
 // ============================================================================
 
 /**
- * Update lead score based on activity
+ * Update lead score based on activity, scoped to a specific store.
+ * Each (storeId, userId) pair gets its own independent score.
  */
 export const updateLeadScore = mutation({
   args: {
     userId: v.string(),
+    storeId: v.string(),
     activityType: v.union(
       v.literal("email_opened"),
       v.literal("email_clicked"),
@@ -179,13 +197,15 @@ export const updateLeadScore = mutation({
   }),
   handler: async (ctx, args) => {
     const now = Date.now();
-    
-    // Get existing score or create new one
+
+    // Get existing score for this (storeId, userId) pair
     let scoreDoc = await ctx.db
       .query("leadScores")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_storeId_userId", (q) =>
+        q.eq("storeId", args.storeId).eq("userId", args.userId)
+      )
       .unique();
-    
+
     // Calculate points to add
     const pointsMap: Record<string, number> = {
       email_opened: SCORING_RULES.EMAIL_OPENED,
@@ -199,16 +219,17 @@ export const updateLeadScore = mutation({
       bounced: SCORING_RULES.BOUNCE_PENALTY,
       unsubscribed: SCORING_RULES.UNSUBSCRIBE_PENALTY,
     };
-    
+
     const pointsToAdd = pointsMap[args.activityType];
-    
+
     if (!scoreDoc) {
-      // Create new score document
+      // Create new score document scoped to this store
       const newScore = Math.max(0, pointsToAdd);
       const grade = calculateGrade(newScore);
-      
+
       await ctx.db.insert("leadScores", {
         userId: args.userId,
+        storeId: args.storeId,
         score: newScore,
         grade,
         emailEngagement: args.activityType.startsWith("email_") ? pointsToAdd : 0,
@@ -228,40 +249,40 @@ export const updateLeadScore = mutation({
         createdAt: now,
         updatedAt: now,
       });
-      
+
       return {
         newScore,
         newGrade: grade,
         pointsAdded: pointsToAdd,
       };
     }
-    
+
     // Update existing score
     const newScore = Math.max(0, scoreDoc.score + pointsToAdd);
     const newGrade = calculateGrade(newScore);
-    
+
     // Update engagement breakdown
-    const emailEngagement = args.activityType.startsWith("email_") 
-      ? scoreDoc.emailEngagement + pointsToAdd 
+    const emailEngagement = args.activityType.startsWith("email_")
+      ? scoreDoc.emailEngagement + pointsToAdd
       : scoreDoc.emailEngagement;
     const courseEngagement = args.activityType.startsWith("course_") || args.activityType === "quiz_completed" || args.activityType === "certificate_earned"
-      ? scoreDoc.courseEngagement + pointsToAdd 
+      ? scoreDoc.courseEngagement + pointsToAdd
       : scoreDoc.courseEngagement;
-    const purchaseActivity = args.activityType === "purchase" 
-      ? scoreDoc.purchaseActivity + pointsToAdd 
+    const purchaseActivity = args.activityType === "purchase"
+      ? scoreDoc.purchaseActivity + pointsToAdd
       : scoreDoc.purchaseActivity;
-    
+
     // Update counters
-    const totalEmailsOpened = args.activityType === "email_opened" 
-      ? scoreDoc.totalEmailsOpened + 1 
+    const totalEmailsOpened = args.activityType === "email_opened"
+      ? scoreDoc.totalEmailsOpened + 1
       : scoreDoc.totalEmailsOpened;
-    const totalEmailsClicked = args.activityType === "email_clicked" 
-      ? scoreDoc.totalEmailsClicked + 1 
+    const totalEmailsClicked = args.activityType === "email_clicked"
+      ? scoreDoc.totalEmailsClicked + 1
       : scoreDoc.totalEmailsClicked;
-    const totalPurchases = args.activityType === "purchase" 
-      ? scoreDoc.totalPurchases + 1 
+    const totalPurchases = args.activityType === "purchase"
+      ? scoreDoc.totalPurchases + 1
       : scoreDoc.totalPurchases;
-    
+
     // Add to history (keep last 10)
     const scoreHistory = [
       {
@@ -271,7 +292,7 @@ export const updateLeadScore = mutation({
       },
       ...scoreDoc.scoreHistory.slice(0, 9),
     ];
-    
+
     await ctx.db.patch(scoreDoc._id, {
       score: newScore,
       grade: newGrade,
@@ -286,7 +307,7 @@ export const updateLeadScore = mutation({
       scoreHistory,
       updatedAt: now,
     });
-    
+
     return {
       newScore,
       newGrade,
@@ -296,7 +317,8 @@ export const updateLeadScore = mutation({
 });
 
 /**
- * Apply time-based score decay for inactive users (Internal - called by cron)
+ * Apply time-based score decay for inactive users (Internal - called by cron).
+ * Processes all lead scores across all stores.
  */
 export const applyScoreDecay = internalMutation({
   args: {},
@@ -307,32 +329,32 @@ export const applyScoreDecay = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
-    
-    // Get all scores
+
+    // Get all scores (decay runs globally across all stores)
     const allScores = await ctx.db.query("leadScores").take(5000);
-    
+
     let processed = 0;
     let decayed = 0;
-    
+
     for (const scoreDoc of allScores) {
       processed++;
-      
+
       // Calculate days since last activity
       const daysSinceLastActivity = Math.floor((now - scoreDoc.lastActivity) / oneDayMs);
-      
+
       // Calculate days since last decay
       const daysSinceLastDecay = Math.floor((now - scoreDoc.lastDecayAt) / oneDayMs);
-      
+
       // Only decay if at least 1 day has passed since last decay
       if (daysSinceLastDecay > 0) {
         // Decay: -1 point per day of inactivity
         const decayPoints = daysSinceLastDecay * SCORING_RULES.INACTIVE_DAY_PENALTY;
         const newScore = Math.max(0, scoreDoc.score + decayPoints);
         const newGrade = calculateGrade(newScore);
-        
+
         if (newScore !== scoreDoc.score) {
           decayed++;
-          
+
           // Add to history
           const scoreHistory = [
             {
@@ -342,7 +364,7 @@ export const applyScoreDecay = internalMutation({
             },
             ...scoreDoc.scoreHistory.slice(0, 9),
           ];
-          
+
           await ctx.db.patch(scoreDoc._id, {
             score: newScore,
             grade: newGrade,
@@ -354,7 +376,7 @@ export const applyScoreDecay = internalMutation({
         }
       }
     }
-    
+
     return { processed, decayed };
   },
 });
@@ -369,4 +391,3 @@ function calculateGrade(score: number): "A" | "B" | "C" | "D" {
   if (score >= GRADE_THRESHOLDS.C) return "C";
   return "D";
 }
-

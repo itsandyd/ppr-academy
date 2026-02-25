@@ -188,21 +188,18 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   };
 
   const connectPlatform = (platform: string) => {
-    const redirectUri = `${window.location.origin}/api/social/oauth/${platform}/callback`;
-    const state = storeId;
+    // Delegate to server-side authorize route which handles PKCE generation,
+    // cryptographic state, and secure cookie storage before redirecting to
+    // the OAuth provider.
+    const supportedPlatforms = ['instagram', 'twitter', 'facebook', 'linkedin', 'tiktok'];
 
-    const authUrls: Record<string, string> = {
-      instagram: `https://www.facebook.com/v21.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_messages,pages_manage_posts,pages_read_engagement,pages_show_list,pages_manage_metadata,pages_messaging,pages_manage_engagement,business_management&display=popup&response_type=code&auth_type=rerequest`,
-      twitter: `https://twitter.com/i/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=tweet.read tweet.write users.read offline.access&response_type=code&code_challenge=challenge&code_challenge_method=plain`,
-      facebook: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_read_engagement,pages_manage_posts,pages_show_list,business_management&auth_type=rerequest`,
-      linkedin: `https://www.linkedin.com/oauth/v2/authorization?client_id=${process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=r_liteprofile r_emailaddress w_member_social&response_type=code`,
-      tiktok: `https://www.tiktok.com/auth/authorize/?client_key=${process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY}&redirect_uri=${redirectUri}&state=${state}&scope=user.info.basic,video.upload,video.publish&response_type=code`,
-    };
+    if (supportedPlatforms.includes(platform)) {
+      const authorizeUrl =
+        `${window.location.origin}/api/social/oauth/${platform}/authorize?storeId=${encodeURIComponent(storeId)}`;
 
-    if (authUrls[platform]) {
       // Open OAuth in popup window (like professional tools)
       const popup = window.open(
-        authUrls[platform],
+        authorizeUrl,
         "oauth_popup",
         "width=500,height=700,scrollbars=yes,resizable=yes"
       );

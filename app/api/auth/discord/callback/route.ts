@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { encryptToken } from "@/lib/encryption";
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token";
@@ -123,8 +124,8 @@ export async function GET(request: NextRequest) {
           discordAvatar: discordUser.avatar
             ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
             : undefined,
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
+          accessToken: encryptToken(tokenData.access_token),
+          refreshToken: encryptToken(tokenData.refresh_token),
           expiresIn: tokenData.expires_in,
         },
       }),
