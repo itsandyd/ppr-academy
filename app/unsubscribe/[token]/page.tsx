@@ -6,49 +6,84 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
 
-type UnsubscribeStatus = "loading" | "success" | "error" | "invalid";
+type UnsubscribeStatus = "loading" | "verifying" | "confirmed" | "success" | "error" | "invalid";
 
 export default function UnsubscribePage() {
   const params = useParams();
   const token = params.token as string;
   const [status, setStatus] = useState<UnsubscribeStatus>("loading");
   const [email, setEmail] = useState<string>("");
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [scope, setScope] = useState<"creator" | "all" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Step 1: Verify the token via GET
   useEffect(() => {
-    async function processUnsubscribe() {
+    async function verifyToken() {
       try {
-        const response = await fetch("/api/unsubscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-
+        const response = await fetch(`/api/unsubscribe?token=${encodeURIComponent(token)}`);
         const data = await response.json();
 
-        if (response.ok && data.success) {
-          setStatus("success");
+        if (response.ok && data.valid) {
           setEmail(data.email || "");
-        } else if (data.error === "invalid_token") {
+          setStoreId(data.storeId || null);
+
+          if (data.storeId) {
+            // v2 token with creator scope — show choice
+            setStatus("verifying");
+          } else {
+            // v1 legacy token — process immediately as global
+            processUnsubscribe("all");
+          }
+        } else {
           setStatus("invalid");
           setErrorMessage("This unsubscribe link is invalid or has expired.");
-        } else {
-          setStatus("error");
-          setErrorMessage(data.message || "Something went wrong. Please try again.");
         }
-      } catch (error) {
+      } catch {
         setStatus("error");
         setErrorMessage("Network error. Please try again.");
       }
     }
 
     if (token) {
-      processUnsubscribe();
+      verifyToken();
     } else {
       setStatus("invalid");
       setErrorMessage("No unsubscribe token provided.");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Step 2: Process the unsubscribe
+  async function processUnsubscribe(chosenScope: "creator" | "all") {
+    setStatus("loading");
+    setScope(chosenScope);
+
+    try {
+      const response = await fetch("/api/unsubscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, scope: chosenScope }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setStatus("success");
+        setEmail(data.email || email);
+        setScope(data.scope || chosenScope);
+      } else if (data.error === "invalid_token") {
+        setStatus("invalid");
+        setErrorMessage("This unsubscribe link is invalid or has expired.");
+      } else {
+        setStatus("error");
+        setErrorMessage(data.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setStatus("error");
+      setErrorMessage("Network error. Please try again.");
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8 dark:from-slate-900 dark:to-slate-800">
@@ -56,13 +91,17 @@ export default function UnsubscribePage() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             {status === "loading" && <Loader2 className="h-12 w-12 animate-spin text-blue-500" />}
-            {status === "success" && <CheckCircle2 className="h-12 w-12 text-green-500" />}
+            {status === "verifying" && <Mail className="h-12 w-12 text-blue-500" />}
+            {(status === "success" || status === "confirmed") && (
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
+            )}
             {(status === "error" || status === "invalid") && (
               <XCircle className="h-12 w-12 text-red-500" />
             )}
           </div>
           <CardTitle className="text-2xl">
             {status === "loading" && "Processing..."}
+            {status === "verifying" && "Unsubscribe"}
             {status === "success" && "Unsubscribed"}
             {status === "error" && "Error"}
             {status === "invalid" && "Invalid Link"}
@@ -73,10 +112,42 @@ export default function UnsubscribePage() {
             <p className="text-muted-foreground">Please wait while we process your request...</p>
           )}
 
+          {/* Per-creator choice screen */}
+          {status === "verifying" && (
+            <>
+              <p className="text-muted-foreground">
+                Choose how you&apos;d like to unsubscribe:
+              </p>
+              {email && (
+                <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-100 p-3 text-sm text-muted-foreground dark:bg-slate-800">
+                  <Mail className="h-4 w-4" />
+                  <span>{email}</span>
+                </div>
+              )}
+              <div className="space-y-3 pt-2">
+                <Button
+                  className="w-full"
+                  onClick={() => processUnsubscribe("creator")}
+                >
+                  Unsubscribe from this creator only
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => processUnsubscribe("all")}
+                >
+                  Unsubscribe from all PausePlayRepeat emails
+                </Button>
+              </div>
+            </>
+          )}
+
           {status === "success" && (
             <>
               <p className="text-muted-foreground">
-                You have been successfully unsubscribed from our mailing list.
+                {scope === "creator"
+                  ? "You have been unsubscribed from this creator\u2019s mailing list."
+                  : "You have been unsubscribed from all marketing emails."}
               </p>
               {email && (
                 <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-100 p-3 text-sm text-muted-foreground dark:bg-slate-800">
@@ -85,9 +156,24 @@ export default function UnsubscribePage() {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">
-                You will no longer receive marketing emails from PausePlayRepeat. Important
-                transactional emails (purchase confirmations, etc.) may still be sent.
+                {scope === "creator"
+                  ? "You may still receive emails from other creators on PausePlayRepeat, as well as important transactional emails (purchase confirmations, etc.)."
+                  : "You will no longer receive marketing emails from PausePlayRepeat. Important transactional emails (purchase confirmations, etc.) may still be sent."}
               </p>
+
+              {/* If they only unsubscribed from one creator, offer global option */}
+              {scope === "creator" && storeId && (
+                <div className="border-t pt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => processUnsubscribe("all")}
+                  >
+                    Unsubscribe from all emails instead
+                  </Button>
+                </div>
+              )}
             </>
           )}
 

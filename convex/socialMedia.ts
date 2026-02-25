@@ -264,13 +264,57 @@ export const getInstagramToken = query({
 });
 
 /**
- * Get posts scheduled to publish (stub)
+ * Get posts that are due to publish: status="scheduled" and scheduledFor <= now.
+ * Returns up to 25 posts per batch to avoid long-running actions.
  */
 export const getPostsToPublish = internalQuery({
   args: {},
   returns: v.array(v.any()),
+  handler: async (ctx) => {
+    const now = Date.now();
+    // Query by status index then filter by scheduledFor <= now
+    const duePosts = await ctx.db
+      .query("scheduledPosts")
+      .withIndex("by_status", (q) => q.eq("status", "scheduled"))
+      .collect();
+
+    return duePosts
+      .filter((post) => post.scheduledFor <= now)
+      .slice(0, 25);
+  },
+});
+
+/**
+ * Get a social account by ID (internal — includes tokens for publishing).
+ */
+export const getSocialAccountById = internalQuery({
+  args: {
+    accountId: v.id("socialAccounts"),
+  },
+  returns: v.any(),
   handler: async (ctx, args) => {
-    return [];
+    return await ctx.db.get(args.accountId);
+  },
+});
+
+/**
+ * Resolve Convex storage IDs to public URLs (internal).
+ */
+export const getMediaUrlsInternal = internalQuery({
+  args: {
+    storageIds: v.array(v.id("_storage")),
+  },
+  returns: v.array(v.union(v.string(), v.null())),
+  handler: async (ctx, args) => {
+    return await Promise.all(
+      args.storageIds.map(async (id) => {
+        try {
+          return await ctx.storage.getUrl(id);
+        } catch {
+          return null;
+        }
+      })
+    );
   },
 });
 

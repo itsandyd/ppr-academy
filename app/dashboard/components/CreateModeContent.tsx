@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { StoreSetupWizardEnhanced } from "@/components/dashboard/store-setup-wizard-enhanced";
+import { StripeConnectBanner } from "@/components/dashboard/stripe-connect-banner";
 import {
   Music,
   Package,
@@ -248,6 +249,9 @@ export function CreateModeContent() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Stripe Connect setup banner - shows when payments aren't connected */}
+      <StripeConnectBanner variant="prominent" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

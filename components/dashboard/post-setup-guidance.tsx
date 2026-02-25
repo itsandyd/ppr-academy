@@ -57,7 +57,7 @@ export function PostSetupGuidance({
       description: "Set up payments to receive earnings from sales",
       icon: DollarSign,
       color: "from-green-500 to-emerald-500",
-      href: `/store/${storeId}/settings/payouts`,
+      href: `/dashboard/settings/payouts?mode=create`,
       completed: false // POST-LAUNCH: Check store.stripeAccountId to determine if Stripe is connected
     },
     {

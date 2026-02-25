@@ -25,12 +25,13 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
-    
+
     // Create account onboarding link
+    // Return users to the dashboard payouts page after onboarding
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${baseUrl}/store/${storeId}/settings/payouts?refresh=true`,
-      return_url: `${baseUrl}/store/${storeId}/settings/payouts?success=true`,
+      refresh_url: `${baseUrl}/dashboard/settings/payouts?refresh=true`,
+      return_url: `${baseUrl}/dashboard/settings/payouts?success=true`,
       type: "account_onboarding",
     });
 

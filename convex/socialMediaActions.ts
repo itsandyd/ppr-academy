@@ -424,16 +424,129 @@ async function publishToLinkedIn(post: any, account: any): Promise<{ success: bo
 }
 
 /**
- * Main action to publish a scheduled post
- * NOTE: This is stubbed out - posting functionality not needed for automation
+ * Cron-triggered action: finds all due scheduled posts and publishes them.
+ * Uses "publishing" status as a lock to prevent duplicate publishes.
  */
-export const publishScheduledPost = internalAction({
-  args: {
-    postId: v.id("scheduledPosts"),
-  },
+export const publishScheduledPosts = internalAction({
+  args: {},
   returns: v.null(),
-  handler: async (ctx, args) => {
-    // Stub for now - posting functionality not needed for automation
+  handler: async (ctx) => {
+    // 1. Fetch posts that are due
+    const duePosts: any[] = await ctx.runQuery(internal.socialMedia.getPostsToPublish);
+
+    if (duePosts.length === 0) {
+      return null;
+    }
+
+    console.log(`[scheduler] Found ${duePosts.length} post(s) due for publishing`);
+
+    // 2. Process each post independently — one failure must not block others
+    for (const post of duePosts) {
+      try {
+        // Mark as "publishing" (optimistic lock)
+        await ctx.runMutation(internal.socialMedia.updatePostStatus, {
+          postId: post._id,
+          status: "publishing",
+        });
+
+        // 3. Look up the connected social account
+        const account: any = await ctx.runQuery(
+          internal.socialMedia.getSocialAccountById,
+          { accountId: post.socialAccountId }
+        );
+
+        if (!account) {
+          await ctx.runMutation(internal.socialMedia.updatePostStatus, {
+            postId: post._id,
+            status: "failed",
+            errorMessage: "Social account not found — it may have been disconnected.",
+          });
+          continue;
+        }
+
+        if (!account.isActive || !account.isConnected) {
+          await ctx.runMutation(internal.socialMedia.updatePostStatus, {
+            postId: post._id,
+            status: "failed",
+            errorMessage: `Reconnect your ${account.platform} account — it is currently disconnected.`,
+          });
+          continue;
+        }
+
+        // 4. Resolve media URLs from storage IDs if present
+        let mediaUrls = post.mediaUrls || [];
+        if ((!mediaUrls || mediaUrls.length === 0) && post.mediaStorageIds && post.mediaStorageIds.length > 0) {
+          const resolvedUrls: (string | null)[] = await ctx.runQuery(
+            internal.socialMedia.getMediaUrlsInternal,
+            { storageIds: post.mediaStorageIds }
+          );
+          mediaUrls = resolvedUrls.filter((u): u is string => u !== null);
+        }
+
+        // Build the post payload that platform functions expect
+        const postPayload = {
+          content: post.content,
+          mediaUrls,
+          postType: post.postType,
+          platformOptions: post.platformOptions || {},
+        };
+
+        // 5. Dispatch to platform-specific publisher
+        let result: { success: boolean; postId?: string; postUrl?: string; error?: string };
+
+        switch (account.platform) {
+          case "instagram":
+            result = await publishToInstagram(postPayload, account);
+            break;
+          case "twitter":
+            result = await publishToTwitter(postPayload, account);
+            break;
+          case "facebook":
+            result = await publishToFacebook(postPayload, account);
+            break;
+          case "tiktok":
+            result = await publishToTikTok(postPayload, account);
+            break;
+          case "linkedin":
+            result = await publishToLinkedIn(postPayload, account);
+            break;
+          default:
+            result = { success: false, error: `Unsupported platform: ${account.platform}` };
+        }
+
+        // 6. Update post status based on result
+        if (result.success) {
+          console.log(`[scheduler] Published post ${post._id} to ${account.platform}`);
+          await ctx.runMutation(internal.socialMedia.updatePostStatus, {
+            postId: post._id,
+            status: "published",
+            platformPostId: result.postId,
+            platformPostUrl: result.postUrl,
+          });
+        } else {
+          console.error(`[scheduler] Failed to publish post ${post._id}: ${result.error}`);
+          await ctx.runMutation(internal.socialMedia.updatePostStatus, {
+            postId: post._id,
+            status: "failed",
+            errorMessage: result.error || "Unknown publishing error",
+          });
+        }
+      } catch (error: any) {
+        // Catch-all so one post doesn't crash the batch
+        console.error(`[scheduler] Unexpected error publishing post ${post._id}:`, error);
+        try {
+          await ctx.runMutation(internal.socialMedia.updatePostStatus, {
+            postId: post._id,
+            status: "failed",
+            errorMessage: error.message || "Unexpected error during publishing",
+          });
+        } catch {
+          // If even the status update fails, log and move on
+          console.error(`[scheduler] Could not update status for post ${post._id}`);
+        }
+      }
+    }
+
     return null;
   },
 });

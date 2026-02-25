@@ -96,9 +96,13 @@ export const resolveAndEnqueueDripEmail = internalAction({
     const crypto = await import("crypto");
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
     const emailBase64 = Buffer.from(args.email).toString("base64url");
-    const signature = crypto.createHmac("sha256", secret).update(args.email).digest("base64url");
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com"}/unsubscribe/${emailBase64}.${signature}`;
+    const storeBase64 = Buffer.from(args.storeId).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(`${args.email}|${args.storeId}`).digest("base64url");
+    const token = `${emailBase64}.${storeBase64}.${signature}`;
+    const unsubscribeUrl = `${baseUrl}/unsubscribe/${token}`;
+    const apiUnsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${token}`;
 
     const firstName = args.name.split(" ")[0] || "there";
     const personalizedHtml = args.htmlContent
@@ -137,7 +141,7 @@ export const resolveAndEnqueueDripEmail = internalAction({
       htmlContent: personalizedHtml,
       textContent: personalizedText,
       headers: {
-        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
@@ -165,9 +169,12 @@ export const sendDripEmail = internalAction({
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
     const emailBase64 = Buffer.from(args.email).toString("base64url");
     const signature = crypto.createHmac("sha256", secret).update(args.email).digest("base64url");
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com"}/unsubscribe/${emailBase64}.${signature}`;
+    const token = `${emailBase64}.${signature}`;
+    const unsubscribeUrl = `${baseUrl}/unsubscribe/${token}`;
+    const apiUnsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${token}`;
 
     const firstName = args.name.split(" ")[0] || "there";
     const personalizedHtml = args.htmlContent
@@ -193,7 +200,7 @@ export const sendDripEmail = internalAction({
       html: personalizedHtml,
       text: args.textContent,
       headers: {
-        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });

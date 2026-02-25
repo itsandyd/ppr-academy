@@ -101,6 +101,104 @@ export const unsubscribeByEmail = mutation({
   },
 });
 
+/**
+ * Unsubscribe an email address from a specific creator/store only.
+ * Updates the emailContacts record for that store without affecting other stores
+ * or the global resendPreferences.
+ */
+export const unsubscribeByEmailForStore = mutation({
+  args: {
+    email: v.string(),
+    storeId: v.string(),
+    reason: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
+
+    // Find the emailContacts record for this specific store
+    const contacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .take(5000);
+
+    const storeContact = contacts.find((c) => c.storeId === args.storeId);
+
+    if (storeContact) {
+      if (storeContact.status === "unsubscribed") {
+        return { success: true, message: "Already unsubscribed from this creator" };
+      }
+
+      await ctx.db.patch(storeContact._id, {
+        status: "unsubscribed",
+        unsubscribedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    } else {
+      // No contact record exists for this store — create one as unsubscribed
+      const now = Date.now();
+      await ctx.db.insert("emailContacts", {
+        email,
+        storeId: args.storeId,
+        status: "unsubscribed",
+        subscribedAt: now,
+        unsubscribedAt: now,
+        tagIds: [],
+        emailsSent: 0,
+        emailsOpened: 0,
+        emailsClicked: 0,
+        source: "unsubscribe",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // Cancel any active workflow executions for this email in this store
+    const activeExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_customerEmail", (q) => q.eq("customerEmail", email))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("storeId"), args.storeId),
+          q.neq(q.field("status"), "completed"),
+          q.neq(q.field("status"), "failed"),
+          q.neq(q.field("status"), "cancelled")
+        )
+      )
+      .take(100);
+
+    for (const execution of activeExecutions) {
+      await ctx.db.patch(execution._id, {
+        status: "cancelled" as const,
+        completedAt: Date.now(),
+      });
+    }
+
+    // Cancel active drip campaign enrollments for this email in this store
+    // dripCampaignEnrollments doesn't have storeId directly — check via campaign
+    const activeEnrollments = await ctx.db
+      .query("dripCampaignEnrollments")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .take(100);
+
+    for (const enrollment of activeEnrollments) {
+      // Look up the campaign to check if it belongs to this store
+      const campaign = await ctx.db.get(enrollment.campaignId);
+      if (campaign && (campaign as any).storeId === args.storeId) {
+        await ctx.db.patch(enrollment._id, {
+          status: "cancelled" as const,
+        });
+      }
+    }
+
+    return { success: true, message: "Successfully unsubscribed from this creator" };
+  },
+});
+
 export const checkSuppression = query({
   args: {
     email: v.string(),

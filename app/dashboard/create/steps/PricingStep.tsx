@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Gift, Sparkles, ArrowLeft, ArrowRight, Zap } from 'lucide-react';
+import { StripeConnectBanner } from '@/components/dashboard/stripe-connect-banner';
 import { PricingModel, ProductCategory } from '../types';
 
 interface PricingStepProps {
@@ -163,6 +164,11 @@ export function PricingStep({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Stripe Connect prompt for paid products */}
+      {pricingModel === 'paid' && (
+        <StripeConnectBanner variant="compact" />
       )}
 
       {/* Info card */}

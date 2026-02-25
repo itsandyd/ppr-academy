@@ -11777,6 +11777,12 @@ export declare const api: {
       { email: string; reason?: string },
       { message: string; success: boolean }
     >;
+    unsubscribeByEmailForStore: FunctionReference<
+      "mutation",
+      "public",
+      { email: string; reason?: string; storeId: string },
+      { message: string; success: boolean }
+    >;
   };
   emailUserStats: {
     getUserStatsForEmail: FunctionReference<
@@ -28920,7 +28926,19 @@ export declare const internal: {
     >;
   };
   socialMedia: {
+    getMediaUrlsInternal: FunctionReference<
+      "query",
+      "internal",
+      { storageIds: Array<Id<"_storage">> },
+      Array<string | null>
+    >;
     getPostsToPublish: FunctionReference<"query", "internal", {}, Array<any>>;
+    getSocialAccountById: FunctionReference<
+      "query",
+      "internal",
+      { accountId: Id<"socialAccounts"> },
+      any
+    >;
     updatePostStatus: FunctionReference<
       "mutation",
       "internal",
@@ -28935,12 +28953,7 @@ export declare const internal: {
     >;
   };
   socialMediaActions: {
-    publishScheduledPost: FunctionReference<
-      "action",
-      "internal",
-      { postId: Id<"scheduledPosts"> },
-      null
-    >;
+    publishScheduledPosts: FunctionReference<"action", "internal", {}, null>;
     refreshOAuthToken: FunctionReference<
       "action",
       "internal",

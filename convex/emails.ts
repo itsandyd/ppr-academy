@@ -120,20 +120,33 @@ function getResendClient(apiKey?: string) {
   return resendClient;
 }
 
-function generateUnsubscribeUrl(email: string): string {
+function generateUnsubscribeToken(email: string, storeId?: string): string {
   const secret =
     process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
   const emailBase64 = Buffer.from(email).toString("base64url");
+
+  if (storeId) {
+    const storeBase64 = Buffer.from(storeId).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(`${email}|${storeId}`).digest("base64url");
+    return `${emailBase64}.${storeBase64}.${signature}`;
+  }
+
   const signature = crypto.createHmac("sha256", secret).update(email).digest("base64url");
-  const token = `${emailBase64}.${signature}`;
+  return `${emailBase64}.${signature}`;
+}
+
+function generateUnsubscribeUrl(email: string, storeId?: string): string {
+  const token = generateUnsubscribeToken(email, storeId);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
   return `${baseUrl}/unsubscribe/${token}`;
 }
 
-function getListUnsubscribeHeaders(email: string): Record<string, string> {
-  const url = generateUnsubscribeUrl(email);
+function getListUnsubscribeHeaders(email: string, storeId?: string): Record<string, string> {
+  const token = generateUnsubscribeToken(email, storeId);
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+  const apiUrl = `${baseUrl}/api/unsubscribe?token=${token}`;
   return {
-    "List-Unsubscribe": `<${url}>`,
+    "List-Unsubscribe": `<${apiUrl}>`,
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
   };
 }
@@ -495,8 +508,9 @@ export const sendCampaignBatch = internalAction({
           continue;
         }
 
-        const unsubscribeUrl = generateUnsubscribeUrl(recipient.email);
-        const listUnsubscribeHeaders = getListUnsubscribeHeaders(recipient.email);
+        const campaignStoreId = (campaign as any).storeId;
+        const unsubscribeUrl = generateUnsubscribeUrl(recipient.email, campaignStoreId);
+        const listUnsubscribeHeaders = getListUnsubscribeHeaders(recipient.email, campaignStoreId);
 
         // Get user stats if available
         const userStats = recipient.userId ? userStatsMap.get?.(recipient.userId) : undefined;
@@ -895,8 +909,8 @@ export const sendBroadcastEmail = action({
             ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
             : "there";
 
-        const unsubscribeUrl = generateUnsubscribeUrl(contact.email);
-        const listUnsubscribeHeaders = getListUnsubscribeHeaders(contact.email);
+        const unsubscribeUrl = generateUnsubscribeUrl(contact.email, args.storeId);
+        const listUnsubscribeHeaders = getListUnsubscribeHeaders(contact.email, args.storeId);
 
         const personalizedHtml = personalizeContent(args.htmlContent, {
           name: recipientName,

@@ -70,4 +70,11 @@ crons.interval(
   {}
 );
 
+crons.interval(
+  "publish scheduled social media posts",
+  { minutes: 1 },
+  internal.socialMediaActions.publishScheduledPosts,
+  {}
+);
+
 export default crons;

@@ -779,11 +779,14 @@ export const resolveAndEnqueueCustomEmail = internalAction({
 
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
-    // Generate unsubscribe URL
+    // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
-    const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
-    const unsubscribeUrl = `${platformUrl}/unsubscribe/${emailBase64}.${signature}`;
+    const storeBase64 = Buffer.from(args.storeId).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(`${args.customerEmail}|${args.storeId}`).digest("base64url");
+    const token = `${emailBase64}.${storeBase64}.${signature}`;
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${token}`;
+    const apiUnsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${token}`;
 
     // Replace all template variables
     const replaceAllVariables = (text: string): string => {
@@ -832,6 +835,7 @@ ${bodyContent}
 </div>
 <div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
 <a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+<p style="margin:8px 0 0;font-size:11px;color:#bbb;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
 </div>
 </body>
 </html>`;
@@ -854,7 +858,7 @@ ${bodyContent}
       subject: finalSubject,
       htmlContent,
       headers: {
-        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
       priority: args.priority,
@@ -915,11 +919,14 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
 
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
-    // Generate unsubscribe URL
+    // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
-    const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
-    const unsubscribeUrl = `${platformUrl}/unsubscribe/${emailBase64}.${signature}`;
+    const storeBase64 = Buffer.from(args.storeId).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(`${args.customerEmail}|${args.storeId}`).digest("base64url");
+    const token = `${emailBase64}.${storeBase64}.${signature}`;
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${token}`;
+    const apiUnsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${token}`;
 
     // Personalize content
     const htmlContent = (template.htmlContent || template.content || "")
@@ -949,7 +956,7 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
       subject,
       htmlContent,
       headers: {
-        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
@@ -1073,11 +1080,14 @@ export const sendCustomWorkflowEmail = internalAction({
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "PPR Academy";
 
-    // Generate unsubscribe URL
+    // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
-    const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
-    const unsubscribeUrl = `${platformUrl}/unsubscribe/${emailBase64}.${signature}`;
+    const storeBase64 = Buffer.from(args.storeId).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(`${args.customerEmail}|${args.storeId}`).digest("base64url");
+    const token = `${emailBase64}.${storeBase64}.${signature}`;
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${token}`;
+    const apiUnsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${token}`;
 
     // Replace all template variables
     const replaceAllVariables = (text: string): string => {
@@ -1127,6 +1137,7 @@ ${bodyContent}
 </div>
 <div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
 <a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+<p style="margin:8px 0 0;font-size:11px;color:#bbb;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
 </div>
 </body>
 </html>`;
@@ -1191,11 +1202,14 @@ export const sendWorkflowEmail = internalAction({
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Generate unsubscribe URL
+    // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
     const emailBase64 = Buffer.from(args.customerEmail).toString("base64url");
-    const signature = crypto.createHmac("sha256", secret).update(args.customerEmail).digest("base64url");
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com"}/unsubscribe/${emailBase64}.${signature}`;
+    const storeBase64 = Buffer.from(args.storeId).toString("base64url");
+    const signature = crypto.createHmac("sha256", secret).update(`${args.customerEmail}|${args.storeId}`).digest("base64url");
+    const token = `${emailBase64}.${storeBase64}.${signature}`;
+    const unsubscribeUrl = `${platformUrl}/unsubscribe/${token}`;
 
     // Personalize content
     const htmlContent = (template.htmlContent || template.content || "")
@@ -1214,12 +1228,18 @@ export const sendWorkflowEmail = internalAction({
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "PPR Academy";
 
+    const apiUnsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${token}`;
+
     try {
       await resend.emails.send({
         from: `${fromName} <${fromEmail}>`,
         to: args.customerEmail,
         subject,
         html: htmlContent,
+        headers: {
+          "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       });
 
     } catch (error) {
