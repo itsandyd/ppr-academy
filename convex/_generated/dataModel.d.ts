@@ -2496,6 +2496,73 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  contentBriefs: {
+    document: {
+      assets?: Array<{
+        name: string;
+        notes?: string;
+        storageId?: string;
+        type: string;
+        url?: string;
+      }>;
+      brief: string;
+      category: string;
+      cta?: string;
+      dayOfWeek?: number;
+      dmKeyword?: string;
+      hook: string;
+      notes?: string;
+      platform: string;
+      postNumber: number;
+      productId?: string;
+      scheduledDate?: string;
+      scriptedContent?: string;
+      socialPostId?: Id<"socialMediaPosts">;
+      source?: string;
+      status: string;
+      storeId: string;
+      tags?: Array<string>;
+      title: string;
+      visualDirection?: string;
+      week?: number;
+      _id: Id<"contentBriefs">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "assets"
+      | "brief"
+      | "category"
+      | "cta"
+      | "dayOfWeek"
+      | "dmKeyword"
+      | "hook"
+      | "notes"
+      | "platform"
+      | "postNumber"
+      | "productId"
+      | "scheduledDate"
+      | "scriptedContent"
+      | "socialPostId"
+      | "source"
+      | "status"
+      | "storeId"
+      | "tags"
+      | "title"
+      | "visualDirection"
+      | "week";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_category: ["storeId", "category", "_creationTime"];
+      by_storeId_status: ["storeId", "status", "_creationTime"];
+      by_storeId_week: ["storeId", "week", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   coupons: {
     document: {
       applicableTo:

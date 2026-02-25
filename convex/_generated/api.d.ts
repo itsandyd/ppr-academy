@@ -6120,6 +6120,141 @@ export declare const api: {
       { success: boolean }
     >;
   };
+  contentBriefs: {
+    bulkCreate: FunctionReference<
+      "mutation",
+      "public",
+      {
+        briefs: Array<{
+          assets?: Array<{
+            name: string;
+            notes?: string;
+            storageId?: string;
+            type: string;
+            url?: string;
+          }>;
+          brief: string;
+          category: string;
+          cta?: string;
+          dayOfWeek?: number;
+          dmKeyword?: string;
+          hook: string;
+          notes?: string;
+          platform: string;
+          postNumber: number;
+          productId?: string;
+          scheduledDate?: string;
+          scriptedContent?: string;
+          socialPostId?: Id<"socialMediaPosts">;
+          source?: string;
+          status: string;
+          storeId: string;
+          tags?: Array<string>;
+          title: string;
+          visualDirection?: string;
+          week?: number;
+        }>;
+      },
+      any
+    >;
+    create: FunctionReference<
+      "mutation",
+      "public",
+      {
+        assets?: Array<{
+          name: string;
+          notes?: string;
+          storageId?: string;
+          type: string;
+          url?: string;
+        }>;
+        brief: string;
+        category: string;
+        cta?: string;
+        dayOfWeek?: number;
+        dmKeyword?: string;
+        hook: string;
+        notes?: string;
+        platform: string;
+        postNumber: number;
+        productId?: string;
+        scheduledDate?: string;
+        scriptedContent?: string;
+        socialPostId?: Id<"socialMediaPosts">;
+        source?: string;
+        status: string;
+        storeId: string;
+        tags?: Array<string>;
+        title: string;
+        visualDirection?: string;
+        week?: number;
+      },
+      any
+    >;
+    get: FunctionReference<"query", "public", { id: Id<"contentBriefs"> }, any>;
+    list: FunctionReference<
+      "query",
+      "public",
+      { category?: string; status?: string; storeId: string; week?: number },
+      any
+    >;
+    remove: FunctionReference<
+      "mutation",
+      "public",
+      { id: Id<"contentBriefs"> },
+      any
+    >;
+    reorder: FunctionReference<
+      "mutation",
+      "public",
+      {
+        dayOfWeek?: number;
+        id: Id<"contentBriefs">;
+        scheduledDate?: string;
+        week?: number;
+      },
+      any
+    >;
+    update: FunctionReference<
+      "mutation",
+      "public",
+      {
+        assets?: Array<{
+          name: string;
+          notes?: string;
+          storageId?: string;
+          type: string;
+          url?: string;
+        }>;
+        brief?: string;
+        category?: string;
+        cta?: string;
+        dayOfWeek?: number;
+        dmKeyword?: string;
+        hook?: string;
+        id: Id<"contentBriefs">;
+        notes?: string;
+        platform?: string;
+        productId?: string;
+        scheduledDate?: string;
+        scriptedContent?: string;
+        socialPostId?: Id<"socialMediaPosts">;
+        source?: string;
+        status?: string;
+        tags?: Array<string>;
+        title?: string;
+        visualDirection?: string;
+        week?: number;
+      },
+      any
+    >;
+    updateStatus: FunctionReference<
+      "mutation",
+      "public",
+      { id: Id<"contentBriefs">; status: string },
+      any
+    >;
+  };
   contentGeneration: {
     generateCourseFromContent: FunctionReference<
       "action",
@@ -18512,6 +18647,10 @@ export declare const api: {
         success: boolean;
       }
     >;
+  };
+  seedContentBriefs: {
+    clearAll: FunctionReference<"mutation", "public", { storeId: string }, any>;
+    seed: FunctionReference<"mutation", "public", { storeId: string }, any>;
   };
   sendTimeOptimization: {
     getOptimalCampaignSendTime: FunctionReference<

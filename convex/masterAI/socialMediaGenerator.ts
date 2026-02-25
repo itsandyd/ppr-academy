@@ -540,12 +540,37 @@ Example format:
 #musicproduction #producertok #fyp #beatmaker
 `;
 
+const CONCEPT_CHUNKER = `You are a content director preparing a video script for visual production.
+
+Given a video script, divide it into 5-8 visual concept blocks. Each block represents ONE distinct idea, argument, or scene that would be shown as a single visual in a video.
+
+# RULES
+- Group consecutive sentences that support the same point into one block
+- A block can be 1-10 sentences long
+- Transitional sentences ("The truth is simple", "Let's run the numbers", "So ask yourself") should be absorbed into the block they introduce or conclude — they do NOT get their own image
+- Short emphatic sentences ("You need buyers.", "Trust pays your bills.") should be grouped with the sentences around them that provide context
+- Use paragraph breaks (double newlines) as natural block boundaries when present
+- Aim for 5-8 blocks total regardless of script length
+- If the script has fewer than 5 natural concepts, use fewer blocks (minimum 3)
+- If the script naturally has more than 8 concepts, merge the least visually distinct ones
+
+# OUTPUT FORMAT (JSON)
+{
+  "blocks": [
+    {
+      "sentences": "Full text of all grouped sentences in this block...",
+      "concept": "Short label for the visual concept (e.g., 'The follower count myth', 'Conversion rate math')"
+    }
+  ]
+}
+
+IMPORTANT: Output ONLY valid JSON, no markdown fences or extra text.
+`;
+
 const IMAGE_PROMPT_GENERATOR = `You are an expert at creating image prompts for educational content illustrations.
 
 # TASK
-Given a social media script, create an image prompt for EVERY meaningful sentence or line break. Each slide in a carousel should have its own image.
-
-Split the script by line breaks. For each non-empty line, create an image prompt.
+You will be given a set of concept blocks from a video script. Each block has a concept label and the full text of that section. Create ONE image prompt per concept block.
 
 # MANDATORY VISUAL STYLE: Excalidraw Hand-Drawn Aesthetic
 
@@ -570,7 +595,7 @@ Split the script by line breaks. For each non-empty line, create an image prompt
 {
   "imagePrompts": [
     {
-      "sentence": "The EXACT text from this line of the script (copy verbatim)",
+      "sentence": "The concept label and a brief summary of the block text",
       "prompt": "Excalidraw-style hand-drawn illustration showing [detailed description]. White background, flat indigo and purple colors, wobbly sketch lines, simple icons and shapes. Educational diagram style.",
       "aspectRatio": "9:16"
     }
@@ -578,8 +603,11 @@ Split the script by line breaks. For each non-empty line, create an image prompt
 }
 
 IMPORTANT:
-- Create one entry for EVERY line/sentence in the script
-- The "sentence" field must contain the EXACT text from the script, not a paraphrase
+- Create exactly ONE entry per concept block — do NOT split a block into multiple prompts
+- The "sentence" field should contain the concept label followed by the first sentence of the block
+- Focus each prompt on the MAIN IDEA of the block, not individual sentences
+- If a block contains math or numbers, show the key comparison or result, not every step
+- If a block describes a feature, show the feature in action, not each sub-detail
 - Use the requested aspect ratio for all images (passed as parameter)
 `;
 
@@ -783,10 +811,93 @@ export const generateImagePrompts = action({
   handler: async (ctx, args) => {
     const { script, aspectRatio = "9:16" } = args;
 
-    const lineCount = script.split("\n").filter((line) => line.trim().length > 0).length;
+    // ── Step 1: Group the script into concept blocks (5-8) ──
+    console.log("[generateImagePrompts] Step 1: Chunking script into concept blocks...");
 
-    // Doubled token budget — detailed Excalidraw prompts + JSON overhead need more room
-    const estimatedTokensNeeded = Math.max(8000, lineCount * 400);
+    let conceptBlocks: Array<{ sentences: string; concept: string }> = [];
+
+    for (let chunkAttempt = 1; chunkAttempt <= 2; chunkAttempt++) {
+      const chunkResponse = await callLLM({
+        model: DEFAULT_MODEL as ModelId,
+        messages: [
+          { role: "system" as const, content: CONCEPT_CHUNKER },
+          {
+            role: "user" as const,
+            content: `Divide this video script into 5-8 visual concept blocks:\n\n${script}`,
+          },
+        ],
+        temperature: 0.4,
+        maxTokens: 4000,
+        responseFormat: "json" as const,
+      });
+
+      console.log(`[generateImagePrompts] chunk attempt=${chunkAttempt} finishReason=${chunkResponse.finishReason} contentLen=${chunkResponse.content?.length ?? 0}`);
+
+      const parsedChunks = safeParseJson<{
+        blocks: Array<{ sentences: string; concept: string }>;
+      }>(chunkResponse.content, { blocks: [] });
+
+      console.log(`[generateImagePrompts] parsed ${parsedChunks.blocks?.length ?? 0} concept blocks`);
+
+      if (parsedChunks.blocks && parsedChunks.blocks.length >= 3) {
+        conceptBlocks = parsedChunks.blocks;
+        break;
+      }
+
+      if (chunkAttempt === 2) {
+        console.error("[generateImagePrompts] Concept chunking failed after 2 attempts, falling back to paragraph splitting");
+        // Fallback: split by paragraph breaks, then merge small ones
+        const paragraphs = script
+          .split(/\n\s*\n/)
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+
+        if (paragraphs.length <= 8) {
+          conceptBlocks = paragraphs.map((p, i) => ({
+            sentences: p,
+            concept: `Section ${i + 1}`,
+          }));
+        } else {
+          // Merge paragraphs to get ~7 blocks
+          const targetBlocks = 7;
+          const perBlock = Math.ceil(paragraphs.length / targetBlocks);
+          for (let i = 0; i < paragraphs.length; i += perBlock) {
+            const group = paragraphs.slice(i, i + perBlock).join("\n\n");
+            conceptBlocks.push({
+              sentences: group,
+              concept: `Section ${Math.floor(i / perBlock) + 1}`,
+            });
+          }
+        }
+      }
+    }
+
+    // Safety cap: if somehow more than 10 blocks, merge the extras
+    if (conceptBlocks.length > 10) {
+      console.log(`[generateImagePrompts] Too many blocks (${conceptBlocks.length}), merging to 8`);
+      const merged: typeof conceptBlocks = [];
+      const perBlock = Math.ceil(conceptBlocks.length / 8);
+      for (let i = 0; i < conceptBlocks.length; i += perBlock) {
+        const group = conceptBlocks.slice(i, i + perBlock);
+        merged.push({
+          sentences: group.map((b) => b.sentences).join("\n\n"),
+          concept: group[0].concept,
+        });
+      }
+      conceptBlocks = merged;
+    }
+
+    console.log(`[generateImagePrompts] Final block count: ${conceptBlocks.length}`);
+
+    // ── Step 2: Generate one image prompt per concept block ──
+    console.log("[generateImagePrompts] Step 2: Generating image prompts for concept blocks...");
+
+    const blocksPayload = conceptBlocks
+      .map((b, i) => `--- Block ${i + 1}: ${b.concept} ---\n${b.sentences}`)
+      .join("\n\n");
+
+    // Token budget: ~600 tokens per block for detailed Excalidraw prompts + JSON overhead
+    const estimatedTokensNeeded = Math.max(8000, conceptBlocks.length * 600);
 
     const callOpts = {
       model: DEFAULT_MODEL as ModelId,
@@ -797,7 +908,7 @@ export const generateImagePrompts = action({
         },
         {
           role: "user" as const,
-          content: `Aspect ratio to use: ${aspectRatio}\n\nCreate an image prompt for EVERY line in this script:\n\n${script}`,
+          content: `Aspect ratio to use: ${aspectRatio}\n\nCreate ONE image prompt per concept block below. There are ${conceptBlocks.length} blocks — output exactly ${conceptBlocks.length} image prompts.\n\n${blocksPayload}`,
         },
       ],
       temperature: 0.7,
@@ -809,7 +920,7 @@ export const generateImagePrompts = action({
     for (let attempt = 1; attempt <= 2; attempt++) {
       const response = await callLLM(callOpts);
 
-      console.log(`[generateImagePrompts] attempt=${attempt} finishReason=${response.finishReason} contentLen=${response.content?.length ?? 0}`);
+      console.log(`[generateImagePrompts] prompt attempt=${attempt} finishReason=${response.finishReason} contentLen=${response.content?.length ?? 0}`);
       console.log(`[generateImagePrompts] content preview:`, response.content?.substring(0, 500));
 
       // Check for truncation
@@ -834,7 +945,7 @@ export const generateImagePrompts = action({
         }>;
       }>(response.content, { imagePrompts: [] });
 
-      console.log(`[generateImagePrompts] parsed count: ${parsed.imagePrompts?.length ?? 0}`);
+      console.log(`[generateImagePrompts] parsed prompt count: ${parsed.imagePrompts?.length ?? 0}`);
 
       if (parsed.imagePrompts.length === 0) {
         console.error(`[generateImagePrompts] PARSE FAILED (attempt ${attempt}) — raw content:`, response.content?.substring(0, 1000));

@@ -53,6 +53,7 @@ import {
   UserPlus,
   Filter,
   MailCheck,
+  ClipboardList,
 } from "lucide-react";
 import {
   Sidebar,
@@ -221,6 +222,7 @@ const createCategories: SidebarCategory[] = [
       { href: "/dashboard/social/automation?mode=create", label: "Automation", icon: Zap, color: "text-amber-500" },
       { href: "/dashboard/social/library?mode=create", label: "Library", icon: FolderOpen, color: "text-pink-500" },
       { href: "/dashboard/social/profiles?mode=create", label: "Profiles", icon: UserCog, color: "text-pink-500" },
+      { href: "/dashboard/content-plan?mode=create", label: "Content Plan", icon: ClipboardList, color: "text-violet-500" },
       { href: "/dashboard/lead-magnet-ideas?mode=create", label: "Lead Magnets", icon: Magnet, color: "text-orange-500" },
       { href: "/dashboard/emails/leads?mode=create", label: "Lead Capture", icon: Target, color: "text-green-500" },
       { href: "/dashboard/emails/setup?mode=create", label: "Email Setup", icon: Settings, color: "text-gray-500" },

@@ -7043,4 +7043,52 @@ export default defineSchema({
     // Metadata
     lastUpdated: v.number(),
   }),
+
+  // Content Planner — briefs that track content from idea through publication
+  contentBriefs: defineTable({
+    // Identity
+    storeId: v.string(),
+    postNumber: v.number(),
+
+    // Content
+    title: v.string(),
+    category: v.string(),
+    platform: v.string(),
+    hook: v.string(),
+    brief: v.string(),
+    visualDirection: v.optional(v.string()),
+    cta: v.optional(v.string()),
+    dmKeyword: v.optional(v.string()),
+    source: v.optional(v.string()),
+
+    // Script & Assets
+    scriptedContent: v.optional(v.string()),
+    assets: v.optional(v.array(v.object({
+      type: v.string(),
+      url: v.optional(v.string()),
+      storageId: v.optional(v.string()),
+      name: v.string(),
+      notes: v.optional(v.string()),
+    }))),
+
+    // Scheduling
+    week: v.optional(v.number()),
+    dayOfWeek: v.optional(v.number()),
+    scheduledDate: v.optional(v.string()),
+
+    // Status pipeline
+    status: v.string(),
+
+    // Linking
+    socialPostId: v.optional(v.id("socialMediaPosts")),
+    productId: v.optional(v.string()),
+
+    // Meta
+    tags: v.optional(v.array(v.string())),
+    notes: v.optional(v.string()),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_storeId_status", ["storeId", "status"])
+    .index("by_storeId_week", ["storeId", "week"])
+    .index("by_storeId_category", ["storeId", "category"]),
 });
