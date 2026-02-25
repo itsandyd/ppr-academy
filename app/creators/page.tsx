@@ -399,10 +399,11 @@ export default function CreatorsLetterPage() {
             </p>
 
             <p>
-              You can schedule posts across platforms. You can syndicate your
-              content so one piece of work shows up everywhere. You don&apos;t
+              You get a content library and calendar to plan and organize
+              everything. Ready-to-post scripts for Instagram, TikTok, and
+              YouTube — already written, already optimized. You don&apos;t
               have to sit there for two hours figuring out what to post. The
-              platform looks at what you sell and helps you create content that
+              platform looks at what you sell and creates the content that
               sells it.
             </p>
 
@@ -414,20 +415,18 @@ export default function CreatorsLetterPage() {
             </p>
 
             <p>
-              You create 90 days of content once. The system posts it, cycles
-              through it, and when it reaches the end — it starts over. Your
-              social media stays active even when you&apos;re not thinking about
-              it. Same with email sequences. Build them once and they run
-              forever, nurturing every new subscriber who finds you.
+              You create 90 days of content once. Your email sequences run
+              forever on autopilot — nurturing every new subscriber who finds
+              you, cycling through your courses, and never stopping. Your
+              social content library stays stocked and ready to post whenever
+              you need it.
             </p>
 
             <p>
               Most creators burn out because they think they need to come up with
-              something new every single day for the rest of their lives. You
-              don&apos;t. You need 90 good posts and a system that recycles them.
-              By the time your audience sees post #1 again, they&apos;ve either
-              forgotten it or they&apos;re a new follower who&apos;s never seen
-              it.
+              something new every single day. You don&apos;t. You need 90 good
+              pieces of content and a system that keeps working while you make
+              music.
             </p>
 
             <p className="text-lg font-medium text-foreground sm:text-xl">
@@ -498,6 +497,120 @@ export default function CreatorsLetterPage() {
               product pricing, your email sequences — you can literally just DM
               me. I&apos;ll tell you what I&apos;d do. Because I&apos;ve already
               done it.
+            </p>
+          </div>
+
+          {/* --- Divider --- */}
+          <hr className="my-14 border-border/40" />
+
+          {/* --- Section: It doesn't matter where you're starting from --- */}
+          <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">
+            It doesn&apos;t matter where you&apos;re starting from.
+          </p>
+
+          <div className="space-y-6 text-base leading-[1.85] text-muted-foreground sm:text-lg sm:leading-[1.85]">
+            <p>
+              I talk to producers every single day. And I&apos;ve realized
+              there are basically three types of people reading this page right
+              now. Let me talk to each of you directly.
+            </p>
+
+            {/* --- Sub-section 1: I have products but no way to sell them --- */}
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              &ldquo;I have products but no way to sell them.&rdquo;
+            </p>
+
+            <p>
+              You&apos;ve got beats, presets, sample packs — maybe even a
+              course idea you keep talking about but never start. The stuff is
+              there. You know it&apos;s good. But nobody sees it because you
+              don&apos;t have a storefront or a system for getting it in front
+              of people.
+            </p>
+
+            <p>
+              Sign up, get a storefront in 30 seconds, list your products.
+              You&apos;re immediately in the marketplace where 100,000
+              producers can find your work. You don&apos;t have to build an
+              audience from scratch — mine is already here and already buying.
+            </p>
+
+            <p>
+              You bring the products. The platform gives you everything
+              else — the storefront, the email sequences, the content tools.
+            </p>
+
+            {/* --- Sub-section 2: Already selling on other platforms --- */}
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              &ldquo;I&apos;m already selling on Patreon / Gumroad /
+              BeatStars.&rdquo;
+            </p>
+
+            <p>
+              Your setup probably looks like this: Patreon for memberships,
+              Mailchimp for emails, Buffer for scheduling, ManyChat for DM
+              automation, Linktree for your bio link. Five, six, seven tools
+              duct-taped together.
+            </p>
+
+            <p>
+              A typical producer on Patreon pays 8-12% in platform fees, plus
+              $30-50 a month for Mailchimp, $25 a month for Buffer or Later,
+              $15-45 a month for ManyChat, and another $5-10 for Linktree.
+              That&apos;s $75-130 a month in tools on top of Patreon&apos;s
+              cut — and none of those tools talk to each other. PPR is 10%
+              with all of it built in. No extra subscriptions. No duct tape.
+            </p>
+
+            <p>
+              You don&apos;t even have to leave your current platform. List
+              your stuff here too. One more revenue stream. If PPR ends up
+              replacing $100+ a month in tool subscriptions and you move
+              everything over, even better.
+            </p>
+
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              There&apos;s no risk in trying. There&apos;s only risk in paying
+              for seven tools when one does the job.
+            </p>
+
+            {/* --- Sub-section 3: I don't even know what I'd sell --- */}
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              &ldquo;I don&apos;t even know what I&apos;d sell.&rdquo;
+            </p>
+
+            <p>
+              You&apos;re not a &ldquo;creator.&rdquo; You&apos;re a
+              producer. You make music. The idea of selling something online
+              feels like it&apos;s for other people. That&apos;s fine.
+              Start by learning.
+            </p>
+
+            <p>
+              Take the courses — every course has free preview chapters so you
+              can try before you commit, and full access starts at $12/month
+              with PPR Pro. Get better at your craft. And then one day — when
+              a friend asks how you got that vocal chain sounding so clean, or
+              when you realize you&apos;ve built 50 presets you&apos;d
+              actually pay money for — you&apos;ll think: I could sell this.
+            </p>
+
+            <p>
+              When that day comes, you&apos;re already here. You click one
+              button, your store is live — free tier, one product, no credit
+              card. You go from student to creator without leaving the place
+              where you learned everything.
+            </p>
+
+            <p className="text-lg font-medium text-foreground sm:text-xl">
+              Learn here. Create here. Sell here. Grow here.
+            </p>
+
+            <p>
+              That&apos;s the flywheel. The same platform where you learned
+              mixing is where you sell your mixing templates. No pressure. No
+              timeline. Just know that when you&apos;re ready, it&apos;s all
+              here waiting for you.
             </p>
           </div>
 
