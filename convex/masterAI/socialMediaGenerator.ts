@@ -542,17 +542,19 @@ Example format:
 
 const CONCEPT_CHUNKER = `You are a content director preparing a video script for visual production.
 
-Given a video script, divide it into 5-8 visual concept blocks. Each block represents ONE distinct idea, argument, or scene that would be shown as a single visual in a video.
+Given a video script, divide it into 6-8 visual concept blocks. Each block represents ONE distinct idea, argument, or scene that would be shown as a single visual in a video.
 
 # RULES
 - Group consecutive sentences that support the same point into one block
 - A block can be 1-10 sentences long
 - Transitional sentences ("The truth is simple", "Let's run the numbers", "So ask yourself") should be absorbed into the block they introduce or conclude — they do NOT get their own image
 - Short emphatic sentences ("You need buyers.", "Trust pays your bills.") should be grouped with the sentences around them that provide context
-- Use paragraph breaks (double newlines) as natural block boundaries when present
-- Aim for 5-8 blocks total regardless of script length
-- If the script has fewer than 5 natural concepts, use fewer blocks (minimum 3)
-- If the script naturally has more than 8 concepts, merge the least visually distinct ones
+- Paragraph breaks (double newlines) are strong block boundaries. Each paragraph should be its own block by default. Only merge two paragraphs into one block if they clearly express the exact same idea.
+- Aim for 6-8 blocks total regardless of script length
+- Every distinct argument or shift in topic MUST have its own block. Do NOT merge two different ideas together just to keep the count low. Err on the side of 8 blocks rather than 6.
+- If the script has fewer than 6 natural concepts, use fewer blocks (minimum 3)
+- If the script naturally has more than 8 concepts, merge only the least visually distinct ones
+- You MUST produce at least 6 blocks for any script with 6 or more paragraphs or distinct ideas
 
 # OUTPUT FORMAT (JSON)
 {
@@ -811,7 +813,7 @@ export const generateImagePrompts = action({
   handler: async (ctx, args) => {
     const { script, aspectRatio = "9:16" } = args;
 
-    // ── Step 1: Group the script into concept blocks (5-8) ──
+    // ── Step 1: Group the script into concept blocks (6-8) ──
     console.log("[generateImagePrompts] Step 1: Chunking script into concept blocks...");
 
     let conceptBlocks: Array<{ sentences: string; concept: string }> = [];
@@ -823,7 +825,7 @@ export const generateImagePrompts = action({
           { role: "system" as const, content: CONCEPT_CHUNKER },
           {
             role: "user" as const,
-            content: `Divide this video script into 5-8 visual concept blocks:\n\n${script}`,
+            content: `Divide this video script into 6-8 visual concept blocks. Every distinct argument or topic shift must get its own block — do not over-merge:\n\n${script}`,
           },
         ],
         temperature: 0.4,
@@ -870,6 +872,37 @@ export const generateImagePrompts = action({
           }
         }
       }
+    }
+
+    // Minimum floor: if fewer than 6 blocks, split the longest block(s) by paragraph breaks
+    if (conceptBlocks.length > 0 && conceptBlocks.length < 6) {
+      console.log(`[generateImagePrompts] Only ${conceptBlocks.length} blocks — splitting longest blocks to reach 6`);
+      while (conceptBlocks.length < 6) {
+        // Find the longest block that can be split on paragraph breaks
+        let bestIdx = -1;
+        let bestParts: string[] = [];
+        for (let i = 0; i < conceptBlocks.length; i++) {
+          const parts = conceptBlocks[i].sentences
+            .split(/\n\s*\n/)
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+          if (parts.length >= 2 && parts.length > bestParts.length) {
+            bestIdx = i;
+            bestParts = parts;
+          }
+        }
+        if (bestIdx === -1) break; // No block can be split further
+        const original = conceptBlocks[bestIdx];
+        const mid = Math.ceil(bestParts.length / 2);
+        conceptBlocks.splice(bestIdx, 1, {
+          sentences: bestParts.slice(0, mid).join("\n\n"),
+          concept: original.concept,
+        }, {
+          sentences: bestParts.slice(mid).join("\n\n"),
+          concept: `${original.concept} (cont.)`,
+        });
+      }
+      console.log(`[generateImagePrompts] After splitting: ${conceptBlocks.length} blocks`);
     }
 
     // Safety cap: if somehow more than 10 blocks, merge the extras
