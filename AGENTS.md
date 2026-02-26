@@ -157,3 +157,4 @@ This is a single Next.js 15 monolith with cloud-hosted backends (Convex, Clerk, 
 - **Sentry/Turbopack warning** is expected on Next.js 15.3.6 (requires 15.4.1+). It does not affect functionality.
 - **Pre-commit hook** runs `npm run typecheck:full` which is not defined in `package.json` scripts; `npm run typecheck` is the actual command.
 - **Some vitest tests have pre-existing failures** (17/102 as of baseline). Do not treat these as regressions unless your changes touch the affected code.
+- **Authentication is Google OAuth only.** Clerk is configured with only "Continue with Google" — there is no email/password login. Authenticated routes (`/dashboard`, `/onboarding`, `/library`, `/home`, `/profile`) require a valid Clerk session via Google sign-in. Manual testing of authenticated flows requires logging in through the Desktop pane.
