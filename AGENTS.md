@@ -133,3 +133,27 @@ RESEND_API_KEY           # Email
 - **Credits system**: Sample marketplace uses credits, not direct purchase
 - **Follow gates**: Free products can require social follows
 - **AI features**: `convex/masterAI/` has 18+ files for AI orchestration
+
+## Cursor Cloud specific instructions
+
+### Services
+
+This is a single Next.js 15 monolith with cloud-hosted backends (Convex, Clerk, Stripe). No Docker or local databases required.
+
+| Service | Command | Notes |
+|---------|---------|-------|
+| Next.js dev | `npm run dev:next` | Turbopack on port 3000; sufficient for most frontend/UI work |
+| Full dev | `npm run dev` | Also starts `npx convex dev` + `stripe listen`; requires Stripe CLI |
+| Tests | `npm run test` | Vitest; 8 test files in `__tests__/` |
+| Lint | `npm run lint` | Next.js ESLint; warnings only, no errors |
+| Build | `npm run build` | ~4 min production build |
+| Typecheck | `npm run typecheck` | `tsc --noEmit` |
+
+### Gotchas
+
+- **`.env.local` must exist** with env vars from the injected secrets. The update script auto-generates it from environment variables. If secrets change, delete `.env.local` and re-run the update script.
+- **Stripe CLI is not installed** in the Cloud VM. `npm run dev` will fail on the Stripe listener. Use `npm run dev:next` for frontend work, or install the Stripe CLI manually if needed.
+- **Convex is cloud-hosted**. `npx convex dev` syncs local function code to the Convex deployment. It requires `CONVEX_DEPLOYMENT` env var and a valid Convex login/token. For frontend-only changes, `npm run dev:next` alone is sufficient.
+- **Sentry/Turbopack warning** is expected on Next.js 15.3.6 (requires 15.4.1+). It does not affect functionality.
+- **Pre-commit hook** runs `npm run typecheck:full` which is not defined in `package.json` scripts; `npm run typecheck` is the actual command.
+- **Some vitest tests have pre-existing failures** (17/102 as of baseline). Do not treat these as regressions unless your changes touch the affected code.
