@@ -21189,6 +21189,7 @@ export declare const api: {
       { clerkId: string },
       null
     >;
+    disconnectStripeAccount: FunctionReference<"mutation", "public", {}, null>;
     getAllUsers: FunctionReference<
       "query",
       "public",

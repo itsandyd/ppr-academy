@@ -149,6 +149,34 @@ export const updateUserByClerkId = mutation({
   },
 });
 
+/**
+ * Disconnect the user's Stripe Connect account.
+ * Clears stripeConnectAccountId, stripeAccountStatus, and stripeOnboardingComplete
+ * so the user can go through the Connect flow again with a fresh account.
+ */
+export const disconnectStripeAccount = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, {
+      stripeConnectAccountId: undefined,
+      stripeAccountStatus: undefined,
+      stripeOnboardingComplete: undefined,
+    });
+    return null;
+  },
+});
+
 export const updateMyProfile = mutation({
   args: {
     name: v.optional(v.string()),

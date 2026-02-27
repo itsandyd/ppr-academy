@@ -22,7 +22,8 @@ import {
   Settings,
   Banknote,
   Clock,
-  History
+  History,
+  Unlink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -34,7 +35,9 @@ export default function PayoutSettingsPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isRequestingPayout, setIsRequestingPayout] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
+  const [statusCheckFailed, setStatusCheckFailed] = useState(false);
 
   // Check for success/refresh params
   const success = searchParams.get("success");
@@ -77,6 +80,7 @@ export default function PayoutSettingsPage() {
 
   // Update user with Stripe account info
   const updateUser = useMutation(api.users.updateUserByClerkId);
+  const disconnectStripe = useMutation(api.users.disconnectStripeAccount);
 
   useEffect(() => {
     if (success === "true") {
@@ -100,18 +104,23 @@ export default function PayoutSettingsPage() {
     const checkAccountStatus = async () => {
       if (convexUser?.stripeConnectAccountId) {
         try {
+          setStatusCheckFailed(false);
           const response = await fetch("/api/stripe/connect/account-status", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ accountId: convexUser.stripeConnectAccountId }),
           });
-          
+
           const data = await response.json();
           if (data.success) {
             setStripeAccountStatus(data.account);
+          } else {
+            console.error("Stripe account status check returned error:", data);
+            setStatusCheckFailed(true);
           }
         } catch (error) {
           console.error("Failed to check account status:", error);
+          setStatusCheckFailed(true);
         }
       }
     };
@@ -256,6 +265,30 @@ export default function PayoutSettingsPage() {
     }
   };
 
+  const handleDisconnectStripe = async () => {
+    if (!confirm("Are you sure you want to disconnect your Stripe account? You'll need to reconnect to receive payments.")) {
+      return;
+    }
+    setIsDisconnecting(true);
+    try {
+      await disconnectStripe();
+      setStripeAccountStatus(null);
+      setStatusCheckFailed(false);
+      toast({
+        title: "Stripe account disconnected",
+        description: "You can reconnect anytime by setting up payments again.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to disconnect Stripe account.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toFixed(2)}`;
   };
@@ -348,6 +381,34 @@ export default function PayoutSettingsPage() {
                 {stripeAccountStatus && getStatusBadge(stripeAccountStatus.status)}
               </div>
 
+              {/* Error: Stripe API can't access this account */}
+              {statusCheckFailed && (
+                <Alert variant="destructive" className="border-red-200 dark:border-red-800">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="flex flex-col gap-3">
+                    <span>
+                      Unable to verify this Stripe account. It may have been created in a different
+                      Stripe mode (test vs live) or is no longer accessible. Disconnect and reconnect
+                      to fix this.
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDisconnectStripe}
+                      disabled={isDisconnecting}
+                      className="w-fit border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/30"
+                    >
+                      {isDisconnecting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Unlink className="mr-2 h-4 w-4" />
+                      )}
+                      Disconnect &amp; Reconnect
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Account Details */}
               {stripeAccountStatus && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -424,14 +485,28 @@ export default function PayoutSettingsPage() {
                 )}
                 
                 <Button variant="outline" asChild>
-                  <a 
-                    href="https://dashboard.stripe.com/connect/accounts/overview" 
-                    target="_blank" 
+                  <a
+                    href="https://dashboard.stripe.com/connect/accounts/overview"
+                    target="_blank"
                     rel="noopener noreferrer"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Stripe Dashboard
                   </a>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  onClick={handleDisconnectStripe}
+                  disabled={isDisconnecting}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  {isDisconnecting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Unlink className="w-4 h-4 mr-2" />
+                  )}
+                  Disconnect
                 </Button>
               </div>
             </div>
