@@ -161,11 +161,17 @@ export default function LandingPagesPage() {
         </div>
         <Card>
           <CardContent className="flex min-h-[300px] items-center justify-center">
-            <div className="text-center">
-              <Layout className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-              <p className="mt-4 text-muted-foreground">
-                Set up your store to create landing pages
+            <div className="flex flex-col items-center text-center px-6">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
+                <Layout className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">Create landing pages that convert</h3>
+              <p className="mt-2 text-[13px] text-muted-foreground max-w-[340px] leading-relaxed">
+                Build custom pages to promote your beats, sample packs, and courses. Set up your store first to get started.
               </p>
+              <Button asChild className="mt-5">
+                <Link href="/dashboard">Set Up Store</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

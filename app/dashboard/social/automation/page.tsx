@@ -216,13 +216,12 @@ export default function AutomationsListPage() {
     return (
       <div className="p-6">
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <Zap className="w-8 h-8 text-muted-foreground" />
+          <div className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
+            <Zap className="w-7 h-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
           </div>
-          <h2 className="text-xl font-semibold mb-2">No automations yet</h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            Create your first automation to start engaging with your audience
-            automatically. Respond to DMs, comments, and more.
+          <h2 className="text-xl font-semibold tracking-tight mb-2">Automate your DMs and comments</h2>
+          <p className="text-muted-foreground mb-6 max-w-md text-[13px] leading-relaxed">
+            Respond to fans instantly. Set up keyword triggers that send links, freebies, or personalized replies — 24/7.
           </p>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>

@@ -282,10 +282,12 @@ export default function SequencesPage() {
         </div>
       ) : filteredWorkflows?.length === 0 ? (
         <Card className="p-12 text-center">
-          <Workflow className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Sequences Yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Create your first email sequence to automate your marketing
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
+            <Workflow className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+          </div>
+          <h3 className="text-lg font-semibold tracking-tight mb-2">Automate your email marketing</h3>
+          <p className="text-muted-foreground mb-5 text-[13px] max-w-[340px] mx-auto leading-relaxed">
+            Set up drip sequences that nurture new subscribers into paying customers — on autopilot.
           </p>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

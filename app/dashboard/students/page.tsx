@@ -588,11 +588,11 @@ export default function StudentsPage() {
           ) : (
             <EmptyState
               icon={Users}
-              title={searchQuery || productFilter !== "all" ? "No students found" : "No students yet"}
+              title={searchQuery || productFilter !== "all" ? "No students found" : "Your students will appear here"}
               description={
                 searchQuery || productFilter !== "all"
                   ? "Try a different search term or filter"
-                  : "Students will appear here when they enroll in your courses."
+                  : "When producers enroll in your courses, you'll see their progress, completion rates, and engagement here."
               }
               action={
                 !(searchQuery || productFilter !== "all")

@@ -227,11 +227,11 @@ export default function CreatorSubscribersPage() {
         {subscribers.length === 0 ? (
           <EmptyState
             icon={search ? Users : Mail}
-            title={search ? "No matching subscribers" : "No contacts yet"}
+            title={search ? "No matching subscribers" : "Build your audience"}
             description={
               search
                 ? "Try a different search term or filter"
-                : "Import your email list or wait for subscribers to sign up."
+                : "Import your email list or embed a signup form on your store. Every subscriber is a potential customer."
             }
             action={
               !search

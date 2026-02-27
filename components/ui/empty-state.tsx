@@ -30,27 +30,32 @@ export function EmptyState({
     <div
       className={cn(
         "flex flex-col items-center justify-center text-center",
-        compact ? "py-8" : "py-12",
+        compact ? "py-8 px-4" : "py-14 px-6",
         className
       )}
     >
       <div
         className={cn(
-          "rounded-full bg-muted/50 flex items-center justify-center",
-          compact ? "h-10 w-10" : "h-14 w-14"
+          "relative rounded-2xl flex items-center justify-center",
+          "bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100",
+          "dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60",
+          "shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)]",
+          "ring-1 ring-zinc-200/60 dark:ring-zinc-700/40",
+          compact ? "h-11 w-11 rounded-xl" : "h-16 w-16"
         )}
       >
         <Icon
           className={cn(
-            "text-muted-foreground/50",
+            "text-zinc-500 dark:text-zinc-400",
             compact ? "h-5 w-5" : "h-7 w-7"
           )}
+          strokeWidth={1.5}
         />
       </div>
       <h3
         className={cn(
-          "font-medium text-foreground",
-          compact ? "mt-3 text-sm" : "mt-4 text-lg"
+          "font-semibold text-foreground tracking-tight",
+          compact ? "mt-3 text-sm" : "mt-5 text-lg"
         )}
       >
         {title}
@@ -58,15 +63,15 @@ export function EmptyState({
       {description && (
         <p
           className={cn(
-            "text-muted-foreground max-w-sm",
-            compact ? "mt-1 text-xs" : "mt-2 text-sm"
+            "text-muted-foreground max-w-[340px] leading-relaxed",
+            compact ? "mt-1 text-xs" : "mt-2 text-[13px]"
           )}
         >
           {description}
         </p>
       )}
       {action && (
-        <div className={compact ? "mt-3" : "mt-4"}>
+        <div className={compact ? "mt-3" : "mt-5"}>
           {action.href ? (
             <Button asChild size={compact ? "sm" : "default"}>
               <Link href={action.href}>{action.label}</Link>
@@ -92,8 +97,8 @@ export function NoDataEmptyState({
 }
 
 export function NoContactsEmptyState({
-  title = "No contacts yet",
-  description = "Add contacts to your list to start building your audience",
+  title = "Build your audience",
+  description = "Import your email list or embed a signup form on your store. Every subscriber is a potential customer.",
   action,
   ...props
 }: Partial<EmptyStateProps>) {
@@ -102,15 +107,15 @@ export function NoContactsEmptyState({
       icon={Users}
       title={title}
       description={description}
-      action={action || { label: "Add Contact", href: "/dashboard/contacts/new" }}
+      action={action || { label: "Import Contacts", href: "/dashboard/emails/setup" }}
       {...props}
     />
   );
 }
 
 export function NoEmailsEmptyState({
-  title = "No emails sent",
-  description = "Your sent emails and their status will appear here",
+  title = "Send your first email campaign",
+  description = "Reach your fans directly. Announce releases, share updates, and drive sales with targeted email campaigns.",
   action,
   ...props
 }: Partial<EmptyStateProps>) {
@@ -119,15 +124,15 @@ export function NoEmailsEmptyState({
       icon={Mail}
       title={title}
       description={description}
-      action={action || { label: "Send Email", href: "/dashboard/emails/compose" }}
+      action={action || { label: "Create Campaign", href: "/dashboard/emails/campaigns" }}
       {...props}
     />
   );
 }
 
 export function NoCoursesEmptyState({
-  title = "No courses yet",
-  description = "Create your first course to start teaching",
+  title = "Teach what you know",
+  description = "Turn your production skills into a course. Add video lessons, quizzes, and earn from every enrollment.",
   action,
   ...props
 }: Partial<EmptyStateProps>) {
@@ -136,15 +141,15 @@ export function NoCoursesEmptyState({
       icon={FileText}
       title={title}
       description={description}
-      action={action || { label: "Create Course", href: "/dashboard/courses/create" }}
+      action={action || { label: "Create Course", href: "/dashboard/create/course?category=course" }}
       {...props}
     />
   );
 }
 
 export function NoProductsEmptyState({
-  title = "No products yet",
-  description = "Create your first digital product to start selling",
+  title = "List your first product",
+  description = "Sell beats, sample packs, presets, courses, coaching, and more. Your first product can be live in minutes.",
   action,
   ...props
 }: Partial<EmptyStateProps>) {
@@ -153,7 +158,7 @@ export function NoProductsEmptyState({
       icon={Package}
       title={title}
       description={description}
-      action={action || { label: "Create Product", href: "/dashboard/products/create" }}
+      action={action || { label: "Create Product", href: "/dashboard/create" }}
       {...props}
     />
   );

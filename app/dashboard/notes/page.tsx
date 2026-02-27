@@ -420,16 +420,23 @@ export default function DashboardNotesPage() {
           {filteredNotes.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
+                  <FileText className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+                </div>
+                <h3 className="text-lg font-semibold tracking-tight text-foreground">
                   {searchQuery
                     ? "No notes match your search"
                     : activeTab === "all"
-                      ? "No notes yet. Create your first note!"
+                      ? "Capture your ideas"
                       : `No ${activeTab} notes`}
-                </p>
+                </h3>
                 {!searchQuery && activeTab === "all" && (
-                  <Button onClick={handleCreateNote} className="mt-4 gap-2">
+                  <p className="mt-2 text-[13px] text-muted-foreground max-w-[340px] mx-auto leading-relaxed">
+                    Jot down song ideas, session notes, lyric drafts, or production tips. Never lose a creative thought.
+                  </p>
+                )}
+                {!searchQuery && activeTab === "all" && (
+                  <Button onClick={handleCreateNote} className="mt-5 gap-2">
                     <PlusCircle className="h-4 w-4" />
                     Create Note
                   </Button>

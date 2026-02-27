@@ -1229,8 +1229,8 @@ function EmptyState() {
   return (
     <SharedEmptyState
       icon={Package}
-      title="No products yet"
-      description="Create your first course, sample pack, or digital product to start selling."
+      title="List your first product"
+      description="Sell beats, sample packs, presets, courses, coaching, and more. Your first product can be live in minutes."
       action={{ label: "Create Product", href: "/dashboard/create" }}
     />
   );

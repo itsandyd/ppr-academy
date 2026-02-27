@@ -222,9 +222,9 @@ export default function DownloadsPage() {
       ) : (
         <EmptyState
           icon={Download}
-          title="No downloads yet"
-          description="Purchase sample packs, MIDI packs, or preset packs from the marketplace to build your library."
-          action={{ label: "Browse Products", href: "/marketplace/samples" }}
+          title="Your downloads will appear here"
+          description="When you purchase sample packs, MIDI kits, or presets from the marketplace, they'll be ready to download here."
+          action={{ label: "Browse Marketplace", href: "/marketplace/samples" }}
         />
       )}
     </div>

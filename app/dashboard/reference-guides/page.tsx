@@ -89,8 +89,8 @@ export default function ReferenceGuidesPage() {
       {!hasCourses ? (
         <EmptyState
           icon={BookOpen}
-          title="No courses yet"
-          description="Create a course first, then generate reference guide PDFs from its content."
+          title="Generate reference guides from your courses"
+          description="AI reads your course content and creates branded PDF guides with key takeaways, quick references, and pro tips."
           action={{ label: "Create Course", href: "/dashboard/create/course?category=course" }}
         />
       ) : (

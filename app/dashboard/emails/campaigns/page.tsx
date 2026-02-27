@@ -309,8 +309,8 @@ export default function CreatorCampaignsPage() {
         {campaigns.length === 0 ? (
           <EmptyState
             icon={Send}
-            title="No campaigns sent"
-            description="Create your first email campaign to reach your audience."
+            title="Send your first email campaign"
+            description="Reach your fans directly. Announce releases, share updates, and drive sales with targeted email campaigns."
             action={{ label: "Create Campaign", href: "/dashboard/emails/campaigns" }}
             compact
           />
@@ -362,9 +362,13 @@ export default function CreatorCampaignsPage() {
       {/* Mobile Cards */}
       <div className="space-y-3 md:hidden">
         {campaigns.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            No campaigns yet
-          </div>
+          <EmptyState
+            icon={Send}
+            title="Send your first email campaign"
+            description="Reach your fans directly with targeted email campaigns."
+            action={{ label: "Create Campaign", href: "/dashboard/emails/campaigns" }}
+            compact
+          />
         ) : (
           campaigns.map((c: any) => (
             <Card

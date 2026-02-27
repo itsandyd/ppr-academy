@@ -62,9 +62,9 @@ export default function AnalyticsPage() {
         </div>
         <EmptyState
           icon={BarChart3}
-          title="No analytics data yet"
-          description="Set up your store to start tracking revenue, students, and engagement."
-          action={{ label: "Set Up Store", href: "/dashboard" }}
+          title="Your stats will show up here"
+          description="Once you've listed products and started getting traffic, you'll see revenue, views, and conversion data here."
+          action={{ label: "Create Your First Product", href: "/dashboard/create" }}
         />
       </div>
     );
@@ -265,8 +265,9 @@ export default function AnalyticsPage() {
           ) : (
             <EmptyState
               icon={ShoppingCart}
-              title="No purchases yet"
-              description="Share your products to start selling!"
+              title="Sales will appear here"
+              description="Once customers start purchasing your products, you'll see their orders and revenue here."
+              action={{ label: "Share Your Store", href: "/dashboard?mode=create" }}
               compact
             />
           )}

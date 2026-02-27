@@ -133,15 +133,15 @@ export default function CoursesPage() {
         mode === 'learn' ? (
           <EmptyState
             icon={BookOpen}
-            title="No courses yet"
-            description="Browse our marketplace to find courses from top music producers."
+            title="Start learning"
+            description="Browse courses from top producers covering mixing, sound design, arrangement, and more."
             action={{ label: "Browse Courses", href: "/marketplace/courses" }}
           />
         ) : (
           <EmptyState
             icon={Package}
-            title="No courses created"
-            description="Create your first course to start teaching and earning."
+            title="Teach what you know"
+            description="Turn your production skills into a course. Add video lessons, quizzes, and earn from every enrollment."
             action={{ label: "Create Course", href: "/dashboard/create/course?category=course" }}
           />
         )

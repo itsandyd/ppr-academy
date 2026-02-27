@@ -416,7 +416,7 @@ export default function AffiliatesPage() {
                       ? "No active affiliates yet"
                       : "No affiliates yet"
                   }
-                  description="Share your affiliate link to attract partners who can promote your products."
+                  description="Partners who promote your products will appear here. Share your affiliate link to start building your team."
                 />
               )}
             </TabsContent>

@@ -23,12 +23,15 @@ import {
   Package,
   Video,
   Music,
-  TrendingUp,
   Grid3x3,
   List,
   Plug,
   Layers,
   Crown,
+  Clock,
+  Flame,
+  ArrowDownNarrowWide,
+  ArrowUpNarrowWide,
 } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceGrid } from "@/app/_components/marketplace-grid";
@@ -103,6 +106,7 @@ export default function MarketplacePage() {
     selectedSpecificCategories.length > 0,
     priceRange,
     searchTerm,
+    sortBy !== "newest",
   ].filter(Boolean).length;
 
   const clearFilters = () => {
@@ -249,7 +253,12 @@ export default function MarketplacePage() {
                 {/* Content Type */}
                 <div className="space-y-3">
                   <label className="text-sm font-medium">Content Type</label>
-                  <Tabs value={contentType} onValueChange={(v: any) => setContentType(v)}>
+                  <Tabs value={contentType} onValueChange={(v: any) => {
+                    // "memberships" and "sample-packs" navigate to dedicated pages via Link;
+                    // don't update local state for values the backend validator doesn't support
+                    if (v === "memberships") return;
+                    setContentType(v);
+                  }}>
                     <TabsList className="grid w-full grid-cols-2 bg-white dark:bg-black">
                       <TabsTrigger value="all" className="text-xs">
                         All
@@ -487,30 +496,16 @@ export default function MarketplacePage() {
           {/* Main Content */}
           <div className="space-y-6 lg:col-span-3">
             {/* Toolbar */}
-            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-2xl font-bold">
-                  {searchTerm ? `Results for "${searchTerm}"` : "All Content"}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {total} {total === 1 ? "result" : "results"} found
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Sort */}
-                <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-                  <SelectTrigger className="w-[180px] bg-white dark:bg-black">
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-black">
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-4">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    {searchTerm ? `Results for "${searchTerm}"` : "All Content"}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {total} {total === 1 ? "result" : "results"} found
+                  </p>
+                </div>
 
                 {/* View Mode Toggle */}
                 <div className="flex rounded-lg border border-border">
@@ -530,6 +525,40 @@ export default function MarketplacePage() {
                   >
                     <List className="h-4 w-4" />
                   </Button>
+                </div>
+              </div>
+
+              {/* Sort Bar */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <span className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Sort by
+                </span>
+                <div className="flex items-center gap-1.5 rounded-full border border-border bg-card p-1">
+                  {(
+                    [
+                      { value: "newest", label: "Newest", icon: Clock },
+                      { value: "popular", label: "Popular", icon: Flame },
+                      { value: "price-low", label: "Price \u2191", icon: ArrowUpNarrowWide },
+                      { value: "price-high", label: "Price \u2193", icon: ArrowDownNarrowWide },
+                    ] as const
+                  ).map((option) => {
+                    const isActive = sortBy === option.value;
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => setSortBy(option.value)}
+                        className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all duration-200 ${
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -565,6 +594,14 @@ export default function MarketplacePage() {
                   <Badge variant="secondary" className="gap-2">
                     Price: {priceRange.replace("-", " - ")}
                     <button onClick={() => setPriceRange(undefined)}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {sortBy !== "newest" && (
+                  <Badge variant="secondary" className="gap-2">
+                    Sort: {sortBy === "popular" ? "Popular" : sortBy === "price-low" ? "Price \u2191" : "Price \u2193"}
+                    <button onClick={() => setSortBy("newest")}>
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>

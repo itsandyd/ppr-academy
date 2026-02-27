@@ -138,7 +138,7 @@ export default function MyOrdersPage() {
             <SharedEmptyState
               icon={Inbox}
               title="No active orders"
-              description="When you purchase a mixing service, your orders will appear here."
+              description="When you purchase a mixing or mastering service, your active orders will appear here."
               action={{ label: "Browse Mixing Services", href: "/marketplace/mixing-services" }}
             />
           ) : (
@@ -155,7 +155,7 @@ export default function MyOrdersPage() {
             <SharedEmptyState
               icon={CheckCircle}
               title="No completed orders"
-              description="Your completed orders will appear here."
+              description="Your completed mixing and mastering orders will appear here once they're finished."
             />
           ) : (
             <div className="space-y-4">
@@ -171,7 +171,7 @@ export default function MyOrdersPage() {
             <SharedEmptyState
               icon={AlertCircle}
               title="No cancelled orders"
-              description="Cancelled or refunded orders will appear here."
+              description="Cancelled or refunded orders will appear here. Hopefully this stays empty!"
             />
           ) : (
             <div className="space-y-4">
