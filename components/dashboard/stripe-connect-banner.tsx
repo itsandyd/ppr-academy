@@ -69,7 +69,7 @@ export function StripeConnectBanner({
   // Determine the current status.
   // Use the live Stripe data (accountInfo) when available, but fall back to
   // the persisted Convex status so we don't flash "incomplete" while the
-  // account-status API call is in flight.
+  // account-status API call is in flight or if the call fails entirely.
   const getStatus = useCallback((): StripeStatus => {
     if (!stripeAccountId) return "not_started";
     if (accountInfo) {
@@ -84,8 +84,13 @@ export function StripeConnectBanner({
     if (convexUser?.stripeAccountStatus === "restricted") return "restricted";
     // Still loading from Stripe — don't show a misleading banner
     if (isCheckingStatus) return "enabled"; // hide banner while loading
+    // If the API call failed but the account ID exists, show the account
+    // as "restricted" (needs attention) rather than "incomplete" (not started).
+    // This avoids the confusing "Finish setting up payments" message when
+    // the user already completed Stripe onboarding but the status check fails.
+    if (fetchError) return "restricted";
     return "incomplete";
-  }, [stripeAccountId, accountInfo, convexUser?.stripeOnboardingComplete, convexUser?.stripeAccountStatus, isCheckingStatus]);
+  }, [stripeAccountId, accountInfo, convexUser?.stripeOnboardingComplete, convexUser?.stripeAccountStatus, isCheckingStatus, fetchError]);
 
   // Fetch account status from Stripe
   useEffect(() => {
