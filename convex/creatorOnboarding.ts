@@ -49,8 +49,9 @@ export const getOnboardingStatus = query({
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
-    // Step 1: Profile set up — has bio AND avatar on the store
-    const profileSetUp = !!(store.bio && store.bio.trim().length > 0 && store.avatar);
+    // Step 1: Profile set up — has bio AND avatar (on store or user)
+    const hasAvatar = !!(store.avatar || user?.imageUrl);
+    const profileSetUp = !!(store.bio && store.bio.trim().length > 0 && hasAvatar);
 
     // Step 2: Store customized — has genreTags or accentColor or tagline set
     const storeCustomized = !!(

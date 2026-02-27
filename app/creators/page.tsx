@@ -143,6 +143,8 @@ export default function CreatorsLetterPage() {
               alt="PausePlayRepeat creator dashboard — stats, products, and tools in one place"
               caption="One dashboard. Every product type, every metric, every tool. No more toggling between seven logins."
               url="pauseplayrepeat.com/dashboard"
+              src="/screenshots/dashboard.png"
+              
             />
 
             <p>
@@ -235,7 +237,8 @@ export default function CreatorsLetterPage() {
             <ScreenshotShowcase
               alt="Sample pack browser with individual audio previews and waveform players"
               caption="Buyers preview every single sample before downloading. The good sounds sell themselves."
-              url="pauseplayrepeat.com/ppr/sample-packs/lo-fi-drums"
+              url="pauseplayrepeat.com/marketplace/samples"
+              src="/screenshots/sample_preview.png"
             />
 
             <p>
@@ -252,6 +255,7 @@ export default function CreatorsLetterPage() {
               alt="A creator storefront on PausePlayRepeat — dark hero banner, product grid, and stats sidebar"
               caption="Your storefront. Your brand. Courses, beats, presets, samples — all in one place your fans actually want to browse."
               url="pauseplayrepeat.com/your-name"
+              src="/screenshots/storefront.png"
             />
 
             <p>
@@ -462,7 +466,8 @@ export default function CreatorsLetterPage() {
             <ScreenshotShowcase
               alt="AI-powered content engine generating social media scripts and email sequences"
               caption="The AI content engine turns your products into 90 days of ready-to-post content — scripts, captions, and email sequences on autopilot."
-              url="pauseplayrepeat.com/dashboard/content"
+              url="pauseplayrepeat.com/dashboard/emails/workflows"
+              src="/screenshots/email-engine.png"
             />
           </div>
 
@@ -525,6 +530,7 @@ export default function CreatorsLetterPage() {
               alt="Product creation wizard — simple step-by-step flow to list a course, beat pack, or preset"
               caption="List a product in minutes, not hours. Every creation flow was designed by a producer who hated the alternatives."
               url="pauseplayrepeat.com/dashboard/create"
+              src="/screenshots/product-wizard.png"
             />
 
             <p>You don&apos;t have to figure it out the hard way.</p>
@@ -748,7 +754,7 @@ export default function CreatorsLetterPage() {
               alt="PausePlayRepeat pricing — free tier with one product, paid plans starting at $12/month"
               caption="Free to start. No credit card. One product, one storefront, zero risk."
               url="pauseplayrepeat.com/pricing"
-              aspectRatio="3/2"
+              src="/screenshots/pricing.png"
             />
           </div>
 
