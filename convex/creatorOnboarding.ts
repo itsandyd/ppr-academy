@@ -59,9 +59,12 @@ export const getOnboardingStatus = query({
       (store.tagline && store.tagline.trim().length > 0)
     );
 
-    // Step 3: Payments connected — Stripe is connected on user
+    // Step 3: Payments connected — Stripe is connected and fully enabled
+    // Accept either stripeOnboardingComplete flag OR stripeAccountStatus === "enabled"
+    // to handle cases where one was set by the webhook and the other by the client.
     const paymentsConnected = !!(
-      user?.stripeConnectAccountId && user?.stripeOnboardingComplete
+      user?.stripeConnectAccountId &&
+      (user?.stripeOnboardingComplete || user?.stripeAccountStatus === "enabled")
     );
 
     // Step 4: First product created — check both digital products and courses

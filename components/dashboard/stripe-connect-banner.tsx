@@ -64,21 +64,35 @@ export function StripeConnectBanner({
 
   const stripeAccountId = convexUser?.stripeConnectAccountId;
   const storeId = userStore?._id;
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
-  // Determine the current status
+  // Determine the current status.
+  // Use the live Stripe data (accountInfo) when available, but fall back to
+  // the persisted Convex status so we don't flash "incomplete" while the
+  // account-status API call is in flight.
   const getStatus = useCallback((): StripeStatus => {
     if (!stripeAccountId) return "not_started";
-    if (!accountInfo) return "incomplete"; // Has account but haven't fetched status yet
-    if (accountInfo.isComplete) return "enabled";
-    if (accountInfo.detailsSubmitted) return "restricted";
+    if (accountInfo) {
+      if (accountInfo.isComplete) return "enabled";
+      if (accountInfo.detailsSubmitted) return "restricted";
+      return "incomplete";
+    }
+    // accountInfo not yet fetched — use persisted Convex value as fallback
+    if (convexUser?.stripeOnboardingComplete && convexUser?.stripeAccountStatus === "enabled") {
+      return "enabled";
+    }
+    if (convexUser?.stripeAccountStatus === "restricted") return "restricted";
+    // Still loading from Stripe — don't show a misleading banner
+    if (isCheckingStatus) return "enabled"; // hide banner while loading
     return "incomplete";
-  }, [stripeAccountId, accountInfo]);
+  }, [stripeAccountId, accountInfo, convexUser?.stripeOnboardingComplete, convexUser?.stripeAccountStatus, isCheckingStatus]);
 
   // Fetch account status from Stripe
   useEffect(() => {
     if (!stripeAccountId) return;
 
     const checkStatus = async () => {
+      setIsCheckingStatus(true);
       try {
         const res = await fetch("/api/stripe/connect/account-status", {
           method: "POST",
@@ -95,17 +109,26 @@ export function StripeConnectBanner({
               ? "restricted"
               : "pending";
           if (user?.id && newStatus !== convexUser?.stripeAccountStatus) {
+            // Only upgrade stripeOnboardingComplete, never downgrade it.
+            // The webhook may have already set it to true based on
+            // details_submitted alone.
+            const shouldUpdateOnboarding =
+              data.account.isComplete || !convexUser?.stripeOnboardingComplete;
             await updateUser({
               clerkId: user.id,
               updates: {
                 stripeAccountStatus: newStatus as "pending" | "restricted" | "enabled",
-                stripeOnboardingComplete: data.account.isComplete,
+                ...(shouldUpdateOnboarding
+                  ? { stripeOnboardingComplete: data.account.isComplete }
+                  : {}),
               },
             });
           }
         }
       } catch {
         setFetchError(true);
+      } finally {
+        setIsCheckingStatus(false);
       }
     };
     checkStatus();
@@ -201,11 +224,15 @@ export function StripeConnectBanner({
             : data.account.detailsSubmitted
               ? "restricted"
               : "pending";
+          const shouldUpdateOnboarding =
+            data.account.isComplete || !convexUser?.stripeOnboardingComplete;
           await updateUser({
             clerkId: user.id,
             updates: {
               stripeAccountStatus: newStatus as "pending" | "restricted" | "enabled",
-              stripeOnboardingComplete: data.account.isComplete,
+              ...(shouldUpdateOnboarding
+                ? { stripeOnboardingComplete: data.account.isComplete }
+                : {}),
             },
           });
         }

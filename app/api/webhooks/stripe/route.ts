@@ -105,12 +105,17 @@ export async function POST(request: NextRequest) {
 
             // Update user with account ID and status
             // This ensures stripeConnectAccountId is always saved, even if frontend failed to save it
+            const isFullyComplete = !!(
+              account.details_submitted &&
+              account.charges_enabled &&
+              account.payouts_enabled
+            );
             await fetchMutationAccount(apiAccount.users.updateUserByClerkId, {
               clerkId: user.clerkId as string,
               updates: {
                 stripeConnectAccountId: account.id,
                 stripeAccountStatus: status,
-                stripeOnboardingComplete: account.details_submitted || false,
+                stripeOnboardingComplete: isFullyComplete,
               },
             });
 
@@ -118,7 +123,7 @@ export async function POST(request: NextRequest) {
               userId: user._id,
               accountId: account.id,
               status,
-              onboardingComplete: account.details_submitted,
+              onboardingComplete: isFullyComplete,
             });
           } else {
             serverLogger.payment("Could not find user for Stripe account update", {
