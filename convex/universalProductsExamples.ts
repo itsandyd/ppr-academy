@@ -290,6 +290,214 @@ export const createTestBeatLeasePaid = internalMutation({
   },
 });
 
+/**
+ * Seed Demo Beat Leases for PPR Marketplace
+ *
+ * Creates 5 PPR-branded demo beats with full 4-tier licensing to showcase
+ * the beat lease system on /marketplace/beats.
+ */
+export const seedDemoBeatLeases = internalMutation({
+  args: {
+    storeId: v.string(),
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    beatsCreated: v.array(v.id("digitalProducts")),
+  }),
+  handler: async (ctx, args) => {
+    const beatsCreated: Id<"digitalProducts">[] = [];
+
+    const makeTiers = (basicPrice: number, premiumPrice: number, exclusivePrice: number, unlimitedPrice: number) => [
+      {
+        type: "basic" as const,
+        enabled: true,
+        price: basicPrice,
+        name: "Basic Lease",
+        distributionLimit: 5000,
+        streamingLimit: 500000,
+        commercialUse: true,
+        musicVideoUse: true,
+        radioBroadcasting: false,
+        stemsIncluded: false,
+        creditRequired: true,
+      },
+      {
+        type: "premium" as const,
+        enabled: true,
+        price: premiumPrice,
+        name: "Premium Lease",
+        distributionLimit: 50000,
+        streamingLimit: 5000000,
+        commercialUse: true,
+        musicVideoUse: true,
+        radioBroadcasting: true,
+        stemsIncluded: true,
+        creditRequired: true,
+      },
+      {
+        type: "unlimited" as const,
+        enabled: true,
+        price: unlimitedPrice,
+        name: "Unlimited Lease",
+        commercialUse: true,
+        musicVideoUse: true,
+        radioBroadcasting: true,
+        stemsIncluded: true,
+        creditRequired: false,
+      },
+      {
+        type: "exclusive" as const,
+        enabled: true,
+        price: exclusivePrice,
+        name: "Exclusive Rights",
+        commercialUse: true,
+        musicVideoUse: true,
+        radioBroadcasting: true,
+        stemsIncluded: true,
+        creditRequired: false,
+      },
+    ];
+
+    const demoBeats = [
+      {
+        title: "Midnight Drive — Dark Trap Beat",
+        slug: "midnight-drive-dark-trap-beat",
+        description: "Hard-hitting dark trap instrumental with heavy 808s, eerie melodies, and cinematic pads. Perfect for aggressive rap verses or moody hooks. Inspired by Metro Boomin and Southside.",
+        bpm: 140,
+        key: "G minor",
+        genre: ["Trap", "Hip Hop"],
+        tags: ["trap", "dark", "808", "hard", "metro-boomin", "type-beat"],
+        beatLeaseConfig: {
+          bpm: 140,
+          key: "G minor",
+          genre: "trap",
+          tiers: makeTiers(2500, 7500, 50000, 20000),
+        },
+        price: 2500,
+      },
+      {
+        title: "Crystal Rain — Lo-Fi Type Beat",
+        slug: "crystal-rain-lo-fi-type-beat",
+        description: "Chill lo-fi hip-hop beat with warm vinyl crackle, jazzy piano chords, and laid-back drums. Ideal for study sessions, relaxing vibes, or introspective rap.",
+        bpm: 85,
+        key: "D minor",
+        genre: ["Lo-Fi", "Hip Hop"],
+        tags: ["lo-fi", "chill", "jazz", "study", "relaxing", "piano"],
+        beatLeaseConfig: {
+          bpm: 85,
+          key: "D minor",
+          genre: "lo-fi",
+          tiers: makeTiers(2000, 6000, 40000, 15000),
+        },
+        price: 2000,
+      },
+      {
+        title: "Velvet Nights — R&B Soul Beat",
+        slug: "velvet-nights-rnb-soul-beat",
+        description: "Smooth R&B instrumental with silky guitar licks, warm bass, and neo-soul chord progressions. Built for vocal performances — hooks and verses sit perfectly over this groove.",
+        bpm: 92,
+        key: "Bb major",
+        genre: ["R&B", "Pop"],
+        tags: ["rnb", "soul", "smooth", "guitar", "neo-soul", "vocal"],
+        beatLeaseConfig: {
+          bpm: 92,
+          key: "Bb major",
+          genre: "r&b",
+          tiers: makeTiers(3000, 8000, 60000, 25000),
+        },
+        price: 3000,
+      },
+      {
+        title: "Lagos to London — Afrobeat Banger",
+        slug: "lagos-to-london-afrobeat-banger",
+        description: "High-energy Afrobeat instrumental with infectious log drums, tropical percussion, and catchy guitar patterns. Burna Boy / Wizkid type vibes perfect for the dance floor.",
+        bpm: 108,
+        key: "C minor",
+        genre: ["Afrobeat", "Dancehall"],
+        tags: ["afrobeat", "afropop", "dancehall", "african", "burna-boy", "tropical"],
+        beatLeaseConfig: {
+          bpm: 108,
+          key: "C minor",
+          genre: "afrobeat",
+          tiers: makeTiers(2500, 7500, 55000, 20000),
+        },
+        price: 2500,
+      },
+      {
+        title: "Shattered Glass — Drill Instrumental",
+        slug: "shattered-glass-drill-instrumental",
+        description: "Aggressive UK drill beat with sliding 808s, dark string arpeggios, and hard-hitting hi-hat patterns. Ready for bars — raw, unfiltered energy for the streets.",
+        bpm: 145,
+        key: "F# minor",
+        genre: ["Drill", "Trap"],
+        tags: ["drill", "uk-drill", "aggressive", "808", "dark", "hard"],
+        beatLeaseConfig: {
+          bpm: 145,
+          key: "F# minor",
+          genre: "drill",
+          tiers: makeTiers(2500, 7500, 50000, 20000),
+        },
+        price: 2500,
+      },
+    ];
+
+    for (const beat of demoBeats) {
+      const id = await ctx.db.insert("digitalProducts", {
+        title: beat.title,
+        slug: beat.slug,
+        description: beat.description,
+        storeId: args.storeId,
+        userId: args.userId,
+        productType: "digital",
+        productCategory: "beat-lease",
+        price: beat.price,
+        bpm: beat.bpm,
+        musicalKey: beat.key,
+        genre: beat.genre,
+        tags: beat.tags,
+        beatLeaseConfig: beat.beatLeaseConfig,
+        isPublished: true,
+        followGateEnabled: false,
+        orderBumpEnabled: false,
+        affiliateEnabled: false,
+      });
+      beatsCreated.push(id);
+    }
+
+    return { success: true, beatsCreated };
+  },
+});
+
+/**
+ * Clean Up Demo Beat Leases
+ */
+export const cleanUpDemoBeatLeases = internalMutation({
+  args: { storeId: v.string() },
+  returns: v.object({ success: v.boolean(), deleted: v.number() }),
+  handler: async (ctx, args) => {
+    const demoSlugs = [
+      "midnight-drive-dark-trap-beat",
+      "crystal-rain-lo-fi-type-beat",
+      "velvet-nights-rnb-soul-beat",
+      "lagos-to-london-afrobeat-banger",
+      "shattered-glass-drill-instrumental",
+    ];
+    const products = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(1000);
+    let deleted = 0;
+    for (const p of products) {
+      if (demoSlugs.includes((p as any).slug)) {
+        await ctx.db.delete(p._id);
+        deleted++;
+      }
+    }
+    return { success: true, deleted };
+  },
+});
+
 // ============================================================================
 // BULK TEST DATA CREATION
 // ============================================================================

@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { BookOpen, Clock, Users, Star, Play, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useCallback } from "react";
 import { ProductCardProps } from "./types";
 
 /**
  * CourseCard - Educational content with lessons, duration, and skill level
  */
 export function CourseCard({ product, onClick }: ProductCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
   const isNew = Date.now() - product._creationTime < 7 * 24 * 60 * 60 * 1000;
   const isFree = product.price === 0;
   const skillLevel = product.skillLevel || "All Levels";
@@ -28,13 +32,17 @@ export function CourseCard({ product, onClick }: ProductCardProps) {
       <div className="relative h-48 bg-gradient-to-br from-blue-600/80 to-indigo-600/80 overflow-hidden">
         {product.imageUrl ? (
           <>
+            {!imageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-blue-900/40 via-indigo-900/20 to-blue-900/40" />
+            )}
             <Image
               src={product.imageUrl}
               alt={product.title}
               width={640}
               height={192}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onLoad={handleImageLoad}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </>

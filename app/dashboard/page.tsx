@@ -48,8 +48,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    // Wait for convexUser to load before making routing decisions
-    if (convexUser === undefined) return;
+    // Wait for convexUser and stores to load before making routing decisions
+    if (convexUser === undefined || stores === undefined) return;
 
     if (!mode || (mode !== "learn" && mode !== "create")) {
       const localMode = getStoredMode();
@@ -70,14 +70,11 @@ export default function DashboardPage() {
         return;
       }
 
-      // No preference set and no stores - send to onboarding
-      if (convexUser && !convexUser.dashboardPreference) {
+      // No preference set or no Convex record yet - send to onboarding
+      if (!convexUser || !convexUser.dashboardPreference) {
         router.replace("/onboarding");
         return;
       }
-
-      // Fallback for edge cases (user record not yet synced)
-      router.replace(`/dashboard?mode=learn`);
     }
   }, [mode, convexUser, stores, router, isLoaded]);
 

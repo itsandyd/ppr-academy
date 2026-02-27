@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -165,7 +166,12 @@ interface SocialLink {
   label?: string;
 }
 
+const VALID_TABS = ["basic", "branding", "social", "settings", "revenue"];
+
 export default function ProfilePage() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "basic";
   const { user } = useUser();
   const store = useQuery(
     api.stores.getUserStore,
@@ -636,7 +642,7 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      <Tabs defaultValue="basic" className="space-y-6">
+      <Tabs defaultValue={initialTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5 md:w-auto md:inline-flex">
           <TabsTrigger value="basic" className="gap-2">
             <User className="h-4 w-4" />

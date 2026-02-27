@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, Store, ArrowRight, Loader2, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,20 +19,22 @@ export default function OnboardingPage() {
   );
 
   const setInitialRole = useMutation(api.users.setInitialRole);
+  const createOrUpdateUser = useMutation(api.users.createOrUpdateUserFromClerk);
 
-  // If user already has a preference, skip onboarding
-  if (
-    convexUser &&
-    convexUser.dashboardPreference &&
-    (convexUser.dashboardPreference === "learn" ||
-      convexUser.dashboardPreference === "create")
-  ) {
-    router.replace(`/dashboard?mode=${convexUser.dashboardPreference}`);
-    return null;
-  }
+  // If user already has a preference, redirect to dashboard
+  const hasPreference =
+    convexUser?.dashboardPreference === "learn" ||
+    convexUser?.dashboardPreference === "create";
 
-  // Loading state
-  if (!isLoaded || !user || convexUser === undefined) {
+  const preferenceMode = convexUser?.dashboardPreference;
+  useEffect(() => {
+    if (hasPreference && preferenceMode) {
+      router.replace(`/dashboard?mode=${preferenceMode}`);
+    }
+  }, [hasPreference, preferenceMode, router]);
+
+  // Loading state (or redirecting)
+  if (!isLoaded || !user || convexUser === undefined || hasPreference) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -45,6 +47,15 @@ export default function OnboardingPage() {
     setSelecting(role);
 
     try {
+      // Ensure user record exists before setting role
+      await createOrUpdateUser({
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress ?? null,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        imageUrl: user.imageUrl ?? null,
+      });
+
       await setInitialRole({ clerkId: user.id, role });
 
       // Set localStorage so dashboard picks it up immediately

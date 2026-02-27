@@ -108,8 +108,25 @@ export default function BeatsMarketplacePage() {
 
   if (selectedGenre && selectedGenre !== "All Genres") {
     filteredBeats = filteredBeats.filter(
-      (beat: any) => beat.genres?.includes(selectedGenre) || beat.genre?.includes(selectedGenre)
+      (beat: any) => beat.genre?.includes(selectedGenre)
     );
+  }
+
+  if (selectedBpmRange && selectedBpmRange !== "all") {
+    filteredBeats = filteredBeats.filter((beat: any) => {
+      const bpm = beat.bpm || 0;
+      if (selectedBpmRange === "160+") return bpm >= 160;
+      const [min, max] = selectedBpmRange.split("-").map(Number);
+      return bpm >= min && bpm <= max;
+    });
+  }
+
+  if (selectedLicense && selectedLicense !== "all") {
+    filteredBeats = filteredBeats.filter((beat: any) => {
+      const tiers = beat.beatLeaseConfig?.tiers;
+      if (!tiers) return false;
+      return tiers.some((t: any) => t.enabled && t.type === selectedLicense);
+    });
   }
 
   if (priceRange) {
@@ -422,6 +439,29 @@ export default function BeatsMarketplacePage() {
   );
 }
 
+const TIER_META: Record<string, { label: string; color: string; dot: string }> = {
+  basic: { label: "Basic", color: "text-emerald-600 dark:text-emerald-400", dot: "bg-emerald-500" },
+  premium: { label: "Premium", color: "text-blue-600 dark:text-blue-400", dot: "bg-blue-500" },
+  unlimited: { label: "Unlimited", color: "text-violet-600 dark:text-violet-400", dot: "bg-violet-500" },
+  exclusive: { label: "Exclusive", color: "text-amber-600 dark:text-amber-400", dot: "bg-amber-500" },
+};
+
+function getLowestTierPrice(beat: any): number | null {
+  const tiers = beat.beatLeaseConfig?.tiers;
+  if (!tiers || tiers.length === 0) return null;
+  const enabled = tiers.filter((t: any) => t.enabled);
+  if (enabled.length === 0) return null;
+  return Math.min(...enabled.map((t: any) => t.price));
+}
+
+function getEnabledTiers(beat: any): any[] {
+  return (beat.beatLeaseConfig?.tiers ?? []).filter((t: any) => t.enabled);
+}
+
+function formatPrice(cents: number): string {
+  return cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`;
+}
+
 function BeatCard({
   beat,
   index,
@@ -435,6 +475,12 @@ function BeatCard({
   isPlaying: boolean;
   onPlayPause: () => void;
 }) {
+  const lowestPrice = getLowestTierPrice(beat);
+  const enabledTiers = getEnabledTiers(beat);
+  const displayPrice = lowestPrice ?? beat.price ?? 0;
+  const hasMultipleTiers = enabledTiers.length > 1;
+  const genres: string[] = beat.genre ?? [];
+
   if (viewMode === "list") {
     return (
       <Link href={`/marketplace/beats/${beat.slug || beat._id}`}>
@@ -483,11 +529,28 @@ function BeatCard({
                 </div>
                 <div className="flex items-center gap-4">
                   {beat.bpm && <Badge variant="outline">{beat.bpm} BPM</Badge>}
-                  {beat.genres?.[0] && <Badge variant="secondary">{beat.genres[0]}</Badge>}
+                  {beat.musicalKey && <Badge variant="outline">{beat.musicalKey}</Badge>}
+                  {genres[0] && <Badge variant="secondary">{genres[0]}</Badge>}
+                  {enabledTiers.length > 0 && (
+                    <div className="hidden items-center gap-1 sm:flex">
+                      {enabledTiers.map((tier: any) => {
+                        const meta = TIER_META[tier.type];
+                        return meta ? (
+                          <span
+                            key={tier.type}
+                            className={`h-2 w-2 rounded-full ${meta.dot}`}
+                            title={`${meta.label}: ${formatPrice(tier.price)}`}
+                          />
+                        ) : null;
+                      })}
+                    </div>
+                  )}
                   <span className="text-lg font-bold text-orange-500">
-                    {beat.price === 0 ? "Free" : `$${(beat.price / 100).toFixed(2)}`}
+                    {displayPrice === 0
+                      ? "Free"
+                      : `${hasMultipleTiers ? "From " : ""}${formatPrice(displayPrice)}`}
                   </span>
-                  <Button size="sm">View Details</Button>
+                  <Button size="sm">License</Button>
                 </div>
               </CardContent>
             </div>
@@ -532,12 +595,22 @@ function BeatCard({
                 {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
               </Button>
             </div>
-            {beat.bpm && (
-              <Badge className="absolute right-3 top-3 bg-black/70 text-white">
-                {beat.bpm} BPM
-              </Badge>
+            {/* Top-left: BPM + Key badges */}
+            <div className="absolute left-3 top-3 flex gap-1.5">
+              {beat.bpm && (
+                <Badge className="bg-black/70 text-white backdrop-blur-sm">
+                  {beat.bpm} BPM
+                </Badge>
+              )}
+              {beat.musicalKey && (
+                <Badge className="bg-black/70 text-white backdrop-blur-sm">
+                  {beat.musicalKey}
+                </Badge>
+              )}
+            </div>
+            {beat.price === 0 && (
+              <Badge className="absolute right-3 top-3 bg-green-500 text-white">Free</Badge>
             )}
-            {beat.price === 0 && <Badge className="absolute left-3 top-3 bg-green-500">Free</Badge>}
           </div>
 
           <CardContent className="p-4">
@@ -545,9 +618,9 @@ function BeatCard({
               {beat.title}
             </h3>
 
-            {beat.genres && beat.genres.length > 0 && (
+            {genres.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-1">
-                {beat.genres.slice(0, 2).map((genre: string) => (
+                {genres.slice(0, 2).map((genre: string) => (
                   <Badge key={genre} variant="secondary" className="text-xs">
                     {genre}
                   </Badge>
@@ -567,12 +640,35 @@ function BeatCard({
               </span>
             </div>
 
+            {/* Tier pricing display */}
+            {enabledTiers.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {enabledTiers.map((tier: any) => {
+                  const meta = TIER_META[tier.type];
+                  if (!meta) return null;
+                  return (
+                    <span
+                      key={tier.type}
+                      className={`inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium leading-none ${meta.color}`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                      {meta.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="flex items-center justify-between border-t border-border pt-3">
-              <span className="text-xl font-bold text-orange-500">
-                {beat.price === 0 ? "Free" : `$${(beat.price / 100).toFixed(2)}`}
-              </span>
+              <div>
+                <span className="text-xl font-bold text-orange-500">
+                  {displayPrice === 0
+                    ? "Free"
+                    : `${hasMultipleTiers ? "From " : ""}${formatPrice(displayPrice)}`}
+                </span>
+              </div>
               <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
-                View Details
+                License
               </Button>
             </div>
           </CardContent>

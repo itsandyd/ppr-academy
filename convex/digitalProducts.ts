@@ -1628,6 +1628,36 @@ export const getAllPublishedProducts = query({
       fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
       fileSize: v.optional(v.number()),
       installationNotes: v.optional(v.string()),
+      // Beat lease fields
+      beatLeaseConfig: v.optional(
+        v.object({
+          tiers: v.optional(
+            v.array(
+              v.object({
+                type: v.union(
+                  v.literal("basic"),
+                  v.literal("premium"),
+                  v.literal("exclusive"),
+                  v.literal("unlimited")
+                ),
+                enabled: v.boolean(),
+                price: v.number(),
+                name: v.string(),
+                distributionLimit: v.optional(v.number()),
+                streamingLimit: v.optional(v.number()),
+                commercialUse: v.boolean(),
+                musicVideoUse: v.boolean(),
+                radioBroadcasting: v.boolean(),
+                stemsIncluded: v.boolean(),
+                creditRequired: v.boolean(),
+              })
+            )
+          ),
+          bpm: v.optional(v.number()),
+          key: v.optional(v.string()),
+          genre: v.optional(v.string()),
+        })
+      ),
     })
   ),
   handler: async (ctx) => {
@@ -1681,7 +1711,7 @@ export const getAllPublishedProducts = query({
           productType: product.productType,
           buttonLabel: product.buttonLabel,
           style: product.style,
-          category: product.productType,
+          category: product.productCategory,
           storeId: product.storeId,
           published: product.isPublished || false,
           downloadCount: purchases.length,
@@ -1707,6 +1737,8 @@ export const getAllPublishedProducts = query({
           fileFormat: product.fileFormat,
           fileSize: product.fileSize,
           installationNotes: product.installationNotes,
+          // Beat lease config for tier pricing display
+          beatLeaseConfig: product.beatLeaseConfig,
         };
       })
     );

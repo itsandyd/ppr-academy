@@ -5,6 +5,10 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Footer } from "../_components/footer";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import {
+  ScreenshotShowcase,
+  SectionVisualBreak,
+} from "@/components/creators/screenshot-showcase";
 
 export default function CreatorsLetterPage() {
   const [showFloatingCta, setShowFloatingCta] = useState(false);
@@ -134,6 +138,13 @@ export default function CreatorsLetterPage() {
               None of them had a storefront designed for what we actually sell.
             </p>
 
+            {/* Screenshot: Dashboard — one login, everything in one place */}
+            <ScreenshotShowcase
+              alt="PausePlayRepeat creator dashboard — stats, products, and tools in one place"
+              caption="One dashboard. Every product type, every metric, every tool. No more toggling between seven logins."
+              url="pauseplayrepeat.com/dashboard"
+            />
+
             <p>
               But not just for me. That&apos;s the part I need you to
               understand.
@@ -169,7 +180,7 @@ export default function CreatorsLetterPage() {
           </div>
 
           {/* --- Divider --- */}
-          <hr className="my-14 border-border/40" />
+          <SectionVisualBreak />
 
           {/* --- Section 3: What PPR is --- */}
           <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">
@@ -220,6 +231,13 @@ export default function CreatorsLetterPage() {
               creators who actually make quality sounds.
             </p>
 
+            {/* Screenshot: Sample pack browser with individual previews */}
+            <ScreenshotShowcase
+              alt="Sample pack browser with individual audio previews and waveform players"
+              caption="Buyers preview every single sample before downloading. The good sounds sell themselves."
+              url="pauseplayrepeat.com/ppr/sample-packs/lo-fi-drums"
+            />
+
             <p>
               You can sell courses — real text-based courses with modules and
               chapters, not some guy screen recording his DAW for 3 hours. You
@@ -228,6 +246,13 @@ export default function CreatorsLetterPage() {
             </p>
 
             <p>Everything. One storefront. One place.</p>
+
+            {/* Screenshot: Creator storefront */}
+            <ScreenshotShowcase
+              alt="A creator storefront on PausePlayRepeat — dark hero banner, product grid, and stats sidebar"
+              caption="Your storefront. Your brand. Courses, beats, presets, samples — all in one place your fans actually want to browse."
+              url="pauseplayrepeat.com/your-name"
+            />
 
             <p>
               Your storefront lives at{" "}
@@ -300,7 +325,7 @@ export default function CreatorsLetterPage() {
           </div>
 
           {/* --- Divider --- */}
-          <hr className="my-14 border-border/40" />
+          <SectionVisualBreak />
 
           {/* --- Section 5: This is where you come in --- */}
           <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">
@@ -432,10 +457,17 @@ export default function CreatorsLetterPage() {
             <p className="text-lg font-medium text-foreground sm:text-xl">
               That&apos;s not lazy. That&apos;s leverage.
             </p>
+
+            {/* Screenshot: AI content engine / email workflow builder */}
+            <ScreenshotShowcase
+              alt="AI-powered content engine generating social media scripts and email sequences"
+              caption="The AI content engine turns your products into 90 days of ready-to-post content — scripts, captions, and email sequences on autopilot."
+              url="pauseplayrepeat.com/dashboard/content"
+            />
           </div>
 
           {/* --- Divider --- */}
-          <hr className="my-14 border-border/40" />
+          <SectionVisualBreak />
 
           {/* --- Section: How I actually built this --- */}
           <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">
@@ -487,6 +519,13 @@ export default function CreatorsLetterPage() {
               Every feature on PausePlayRepeat is a problem I personally ran
               into and solved the hard way.
             </p>
+
+            {/* Screenshot: Product creation wizard */}
+            <ScreenshotShowcase
+              alt="Product creation wizard — simple step-by-step flow to list a course, beat pack, or preset"
+              caption="List a product in minutes, not hours. Every creation flow was designed by a producer who hated the alternatives."
+              url="pauseplayrepeat.com/dashboard/create"
+            />
 
             <p>You don&apos;t have to figure it out the hard way.</p>
 
@@ -633,7 +672,7 @@ export default function CreatorsLetterPage() {
           </div>
 
           {/* --- Divider --- */}
-          <hr className="my-14 border-border/40" />
+          <SectionVisualBreak />
 
           {/* --- Section 7: Founding creators --- */}
           <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">
@@ -703,10 +742,18 @@ export default function CreatorsLetterPage() {
               list your stuff on a platform that already has an audience looking
               for it.
             </p>
+
+            {/* Screenshot: Pricing / free-to-start experience */}
+            <ScreenshotShowcase
+              alt="PausePlayRepeat pricing — free tier with one product, paid plans starting at $12/month"
+              caption="Free to start. No credit card. One product, one storefront, zero risk."
+              url="pauseplayrepeat.com/pricing"
+              aspectRatio="3/2"
+            />
           </div>
 
           {/* --- Divider --- */}
-          <hr className="my-14 border-border/40" />
+          <SectionVisualBreak />
 
           {/* --- Section 9: What I won't tell you --- */}
           <p className="mb-10 text-xl font-semibold leading-relaxed text-foreground sm:text-2xl sm:leading-relaxed">

@@ -509,6 +509,8 @@ export default defineSchema({
         discordEnabled: v.optional(v.boolean()),
       })
     ),
+    // Creator Onboarding
+    onboardingDismissedAt: v.optional(v.number()), // Timestamp when creator dismissed the checklist
   })
     .index("by_userId", ["userId"])
     .index("by_slug", ["slug"])

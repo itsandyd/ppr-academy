@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState } from "react";
+import { FC, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -184,7 +184,7 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
               <div className="space-y-6">
                 {/* Product Image */}
                 {(isValidUrl(selectedProduct.imageUrl) || isValidUrl(selectedProduct.thumbnail)) && (
-                  <div className="relative h-64 overflow-hidden rounded-lg">
+                  <div className="relative h-64 overflow-hidden rounded-lg bg-gradient-to-br from-muted to-muted/80">
                     <Image
                       src={(isValidUrl(selectedProduct.imageUrl) ? selectedProduct.imageUrl : selectedProduct.thumbnail) as string}
                       alt={selectedProduct.title}
@@ -405,6 +405,9 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
   index,
   onClick,
 }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
   // Determine icon and color based on content type
   const IconComponent =
     item.contentType === "course"
@@ -439,6 +442,8 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
             ? "Ableton Rack"
             : "Product";
 
+  const hasImage = isValidUrl(item.thumbnail) || isValidUrl(item.imageUrl);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -451,13 +456,20 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
       >
         {/* Thumbnail */}
         <div className="relative h-52 overflow-hidden bg-gradient-to-br from-muted to-muted/80">
-          {isValidUrl(item.thumbnail) || isValidUrl(item.imageUrl) ? (
-            <Image
-              src={(isValidUrl(item.thumbnail) ? item.thumbnail : item.imageUrl) as string}
-              alt={item.title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
+          {hasImage ? (
+            <>
+              {!imageLoaded && (
+                <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-muted-foreground/5 to-muted" />
+              )}
+              <Image
+                src={(isValidUrl(item.thumbnail) ? item.thumbnail : item.imageUrl) as string}
+                alt={item.title}
+                fill
+                className={`object-cover transition-all duration-300 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoad={handleImageLoad}
+                priority={index < 4}
+              />
+            </>
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <IconComponent className="h-16 w-16 text-muted-foreground/30" />

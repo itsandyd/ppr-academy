@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Users, Calendar, Clock, Video, MessageCircle, Sparkles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useCallback } from "react";
 import { ProductCardProps } from "./types";
 
 /**
  * CoachingCard - One-on-one coaching sessions and mentorship
  */
 export function CoachingCard({ product, onClick, displayName }: ProductCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
   const isNew = Date.now() - product._creationTime < 7 * 24 * 60 * 60 * 1000;
   const isFree = product.price === 0;
 
@@ -27,13 +31,17 @@ export function CoachingCard({ product, onClick, displayName }: ProductCardProps
       <div className="relative h-36 bg-gradient-to-br from-indigo-600/80 via-violet-600/70 to-purple-600/80 overflow-hidden">
         {product.imageUrl ? (
           <>
+            {!imageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-indigo-900/40 via-violet-900/20 to-indigo-900/40" />
+            )}
             <Image
               src={product.imageUrl}
               alt={product.title}
               width={640}
               height={144}
-              className="h-full w-full object-cover opacity-40"
+              className={`h-full w-full object-cover transition-opacity duration-300 ${imageLoaded ? "opacity-40" : "opacity-0"}`}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onLoad={handleImageLoad}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </>

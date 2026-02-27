@@ -87,6 +87,7 @@ const storeValidator = v.object({
     discordWebhookUrl: v.optional(v.string()),
     discordEnabled: v.optional(v.boolean()),
   })),
+  onboardingDismissedAt: v.optional(v.number()),
 });
 
 // Get all stores for a user

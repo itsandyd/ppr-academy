@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Music, Play, Pause, Clock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductCardProps } from "./types";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 /**
  * BeatLeaseCard - Specialized card for beat leases with audio preview
@@ -16,6 +16,8 @@ import { useState, useRef, useEffect } from "react";
 export function BeatLeaseCard({ product, onClick }: ProductCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isNew = Date.now() - product._creationTime < 7 * 24 * 60 * 60 * 1000;
@@ -78,14 +80,20 @@ export function BeatLeaseCard({ product, onClick }: ProductCardProps) {
       {/* Cover Art / Waveform */}
       <div className="relative h-48 bg-gradient-to-br from-purple-900/50 to-fuchsia-900/50 overflow-hidden">
         {product.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={product.title}
-            width={640}
-            height={192}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+          <>
+            {!imageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-purple-900/40 via-fuchsia-900/20 to-purple-900/40" />
+            )}
+            <Image
+              src={product.imageUrl}
+              alt={product.title}
+              width={640}
+              height={192}
+              className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onLoad={handleImageLoad}
+            />
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <Music className="h-16 w-16 text-purple-400/60" />

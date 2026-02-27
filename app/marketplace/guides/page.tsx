@@ -74,13 +74,10 @@ export default function GuidesMarketplacePage() {
   const guides = allProducts.filter(
     (p: any) =>
       p.productCategory === "pdf" ||
+      p.productCategory === "pdf-guide" ||
+      p.productCategory === "cheat-sheet" ||
       p.productCategory === "ebook" ||
-      p.productCategory === "guide" ||
-      p.productType === "pdf" ||
-      p.productType === "ebook" ||
-      p.category?.toLowerCase().includes("guide") ||
-      p.category?.toLowerCase().includes("pdf") ||
-      p.category?.toLowerCase().includes("ebook")
+      p.productCategory === "guide"
   );
 
   useEffect(() => {

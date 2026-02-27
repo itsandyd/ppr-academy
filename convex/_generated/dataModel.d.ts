@@ -10974,6 +10974,7 @@ export type DataModel = {
         slackEnabled?: boolean;
         slackWebhookUrl?: string;
       };
+      onboardingDismissedAt?: number;
       plan?:
         | "free"
         | "starter"
@@ -11070,6 +11071,7 @@ export type DataModel = {
       | "notificationIntegrations.discordWebhookUrl"
       | "notificationIntegrations.slackEnabled"
       | "notificationIntegrations.slackWebhookUrl"
+      | "onboardingDismissedAt"
       | "plan"
       | "planStartedAt"
       | "productSortOrder"

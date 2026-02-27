@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { StoreSetupWizardEnhanced } from "@/components/dashboard/store-setup-wizard-enhanced";
 import { StripeConnectBanner } from "@/components/dashboard/stripe-connect-banner";
+import { CreatorOnboardingChecklist } from "@/components/dashboard/creator-onboarding-checklist";
 import {
   Music,
   Package,
@@ -67,6 +68,13 @@ export function CreateModeContent() {
   const digitalProducts = useQuery(
     api.digitalProducts.getProductsByStore,
     storeId ? { storeId } : "skip"
+  );
+
+  const onboardingStatus = useQuery(
+    api.creatorOnboarding.getOnboardingStatus,
+    storeId && user?.id
+      ? { storeId, clerkId: user.id }
+      : "skip"
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,6 +200,8 @@ export function CreateModeContent() {
   const totalProducts = stats.totalProducts + stats.totalCourses;
   const hasContent = totalProducts > 0;
 
+  const isNewCreator = onboardingStatus?.isNewCreator && !onboardingStatus?.dismissed;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -201,7 +211,9 @@ export function CreateModeContent() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Welcome back, {user?.firstName || "Creator"}! 🎵
+              {isNewCreator
+                ? `Welcome to PausePlayRepeat, ${user?.firstName || "Creator"}!`
+                : `Welcome back, ${user?.firstName || "Creator"}!`}
             </h1>
             <p className="text-muted-foreground">
               {hasContent
@@ -252,6 +264,15 @@ export function CreateModeContent() {
 
       {/* Stripe Connect setup banner - shows when payments aren't connected */}
       <StripeConnectBanner variant="prominent" />
+
+      {/* Creator onboarding checklist */}
+      {storeId && user?.id && (
+        <CreatorOnboardingChecklist
+          storeId={storeId}
+          clerkId={user.id}
+          storeSlugOverride={stores?.[0]?.slug}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

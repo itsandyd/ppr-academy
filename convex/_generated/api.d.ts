@@ -7838,6 +7838,32 @@ export declare const api: {
       { error?: string; success: boolean }
     >;
   };
+  creatorOnboarding: {
+    dismissOnboarding: FunctionReference<
+      "mutation",
+      "public",
+      { storeId: Id<"stores"> },
+      any
+    >;
+    getOnboardingStatus: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string; storeId: Id<"stores"> },
+      {
+        completedCount: number;
+        dismissed: boolean;
+        isNewCreator: boolean;
+        steps: {
+          firstProductCreated: boolean;
+          paymentsConnected: boolean;
+          profileSetUp: boolean;
+          storeCustomized: boolean;
+        };
+        storeSlug: string;
+        totalSteps: number;
+      }
+    >;
+  };
   creatorPlans: {
     adminGetStoreByUserId: FunctionReference<
       "query",
@@ -8584,6 +8610,24 @@ export declare const api: {
         _creationTime: number;
         _id: Id<"digitalProducts">;
         abletonVersion?: string;
+        beatLeaseConfig?: {
+          bpm?: number;
+          genre?: string;
+          key?: string;
+          tiers?: Array<{
+            commercialUse: boolean;
+            creditRequired: boolean;
+            distributionLimit?: number;
+            enabled: boolean;
+            musicVideoUse: boolean;
+            name: string;
+            price: number;
+            radioBroadcasting: boolean;
+            stemsIncluded: boolean;
+            streamingLimit?: number;
+            type: "basic" | "premium" | "exclusive" | "unlimited";
+          }>;
+        };
         bpm?: number;
         buttonLabel?: string;
         category?: string;
@@ -19597,6 +19641,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -19694,6 +19739,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -19778,6 +19824,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -19875,6 +19922,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -19959,6 +20007,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -20043,6 +20092,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -20186,6 +20236,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -20311,6 +20362,7 @@ export declare const api: {
           slackEnabled?: boolean;
           slackWebhookUrl?: string;
         };
+        onboardingDismissedAt?: number;
         plan?:
           | "free"
           | "starter"
@@ -29204,6 +29256,12 @@ export declare const internal: {
     >;
   };
   universalProductsExamples: {
+    cleanUpDemoBeatLeases: FunctionReference<
+      "mutation",
+      "internal",
+      { storeId: string },
+      { deleted: number; success: boolean }
+    >;
     cleanUpTestProducts: FunctionReference<
       "mutation",
       "internal",
@@ -29269,6 +29327,12 @@ export declare const internal: {
       "internal",
       { storeId: string },
       Array<any>
+    >;
+    seedDemoBeatLeases: FunctionReference<
+      "mutation",
+      "internal",
+      { storeId: string; userId: string },
+      { beatsCreated: Array<Id<"digitalProducts">>; success: boolean }
     >;
   };
   users: {

@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Layers, Download, Lock, Star, Sparkles, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useCallback } from "react";
 import { ProductCardProps } from "./types";
 
 /**
  * BundleCard - Product bundles with discount display
  */
 export function BundleCard({ product, onClick }: ProductCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
   const isNew = Date.now() - product._creationTime < 7 * 24 * 60 * 60 * 1000;
   const isFree = product.price === 0;
   const hasFollowGate = product.followGateEnabled;
@@ -30,14 +34,20 @@ export function BundleCard({ product, onClick }: ProductCardProps) {
       {/* Product image */}
       <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80 overflow-hidden">
         {product.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={product.title}
-            width={640}
-            height={192}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+          <>
+            {!imageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-muted-foreground/5 to-muted" />
+            )}
+            <Image
+              src={product.imageUrl}
+              alt={product.title}
+              width={640}
+              height={192}
+              className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onLoad={handleImageLoad}
+            />
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20">
             <Layers className="h-16 w-16 text-orange-400 dark:text-orange-600" />
