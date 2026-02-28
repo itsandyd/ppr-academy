@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,18 +28,55 @@ import {
   Sparkles,
   Crown,
   ArrowUpRight,
+  Shield,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface AdminCreatorsViewProps {
   clerkId: string;
 }
 
+const IMPERSONATION_STORAGE_KEY = "ppr-admin-impersonation";
+
 export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
+  const logActivity = useMutation(api.adminActivityLogs.logActivity);
+
+  const handleManageStore = async (creator: any, store: any) => {
+    const state = {
+      storeId: store._id,
+      userId: creator.userId,
+      storeName: store.name,
+      creatorName: creator.name,
+    };
+    try {
+      sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Ignore storage errors
+    }
+
+    // Log the impersonation event
+    try {
+      await logActivity({
+        adminClerkId: clerkId,
+        action: "impersonation_started",
+        actionType: "view",
+        resourceType: "store",
+        resourceId: store._id,
+        resourceName: `${creator.name} - ${store.name}`,
+        details: `Admin started managing store "${store.name}" for creator "${creator.name}"`,
+      });
+    } catch {
+      // Don't block navigation if logging fails
+    }
+
+    router.push("/dashboard?mode=create");
+  };
 
   // Fetch all creators with their products
   const creatorsData = useQuery(api.adminAnalytics.getAllCreatorsWithProducts, { clerkId });
@@ -332,6 +369,14 @@ export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
                               )}
                               {store.isPublic ? "Public" : "Private"}
                             </Badge>
+                            <Button
+                              size="sm"
+                              className="gap-1.5 bg-amber-500 text-white hover:bg-amber-600"
+                              onClick={() => handleManageStore(creator, store)}
+                            >
+                              <Shield className="h-3 w-3" />
+                              Manage Store
+                            </Button>
                             <Link href={`/${store.slug}`} target="_blank">
                               <Button variant="outline" size="sm" className="gap-1.5">
                                 View

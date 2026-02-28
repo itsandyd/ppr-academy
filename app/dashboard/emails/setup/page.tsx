@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,6 +88,7 @@ const workflowTypeInfo = {
 export default function EmailSetupWizard() {
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
 
   const [step, setStep] = useState<WizardStep>("welcome");
@@ -96,8 +98,8 @@ export default function EmailSetupWizard() {
   const [isCreating, setIsCreating] = useState(false);
   const [creationProgress, setCreationProgress] = useState(0);
 
-  // Fetch store data
-  const store = useQuery(api.stores.getUserStore, user?.id ? { userId: user.id } : "skip") as
+  // Fetch store data (uses impersonated user when admin is managing)
+  const store = useQuery(api.stores.getUserStore, effectiveUserId ? { userId: effectiveUserId } : "skip") as
     | { _id: Id<"stores">; name?: string; bio?: string }
     | null
     | undefined;

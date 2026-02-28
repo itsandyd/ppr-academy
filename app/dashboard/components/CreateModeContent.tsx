@@ -44,14 +44,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { toast } from "sonner";
+import { useImpersonation } from "@/lib/impersonation-context";
 
 export function CreateModeContent() {
   const { user } = useUser();
   const router = useRouter();
+  const { isImpersonating, impersonatedUserId, impersonatedStoreId } = useImpersonation();
 
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
-  const storeId = stores?.[0]?._id;
+  // When impersonating, use the target creator's identity for queries
+  const effectiveClerkId = isImpersonating && impersonatedUserId ? impersonatedUserId : user?.id;
+
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveClerkId ? { clerkId: effectiveClerkId } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveClerkId ? { userId: effectiveClerkId } : "skip");
+  const storeId = isImpersonating && impersonatedStoreId ? impersonatedStoreId as any : stores?.[0]?._id;
 
   const storeStats = useQuery(api.storeStats.getStoreStats, storeId ? { storeId } : "skip");
 
@@ -70,10 +75,12 @@ export function CreateModeContent() {
     storeId ? { storeId } : "skip"
   );
 
+  // When impersonating, use the target creator's clerkId for onboarding
+  const onboardingClerkId = isImpersonating && impersonatedUserId ? impersonatedUserId : user?.id;
   const onboardingStatus = useQuery(
     api.creatorOnboarding.getOnboardingStatus,
-    storeId && user?.id
-      ? { storeId, clerkId: user.id }
+    storeId && onboardingClerkId
+      ? { storeId, clerkId: onboardingClerkId }
       : "skip"
   );
 
@@ -149,6 +156,7 @@ export function CreateModeContent() {
     []
   );
 
+  const displayName = isImpersonating ? convexUser?.name || convexUser?.firstName || "Creator" : user?.firstName || "Creator";
   const isLoading = !user || convexUser === undefined || stores === undefined;
 
   if (isLoading) {
@@ -211,9 +219,11 @@ export function CreateModeContent() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {isNewCreator
-                ? `Welcome to PausePlayRepeat, ${user?.firstName || "Creator"}!`
-                : `Welcome back, ${user?.firstName || "Creator"}!`}
+              {isImpersonating
+                ? `Managing ${displayName}'s Store`
+                : isNewCreator
+                  ? `Welcome to PausePlayRepeat, ${displayName}!`
+                  : `Welcome back, ${displayName}!`}
             </h1>
             <p className="text-muted-foreground">
               {hasContent

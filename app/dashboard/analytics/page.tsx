@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { BarChart3, TrendingUp, Users, DollarSign, ShoppingCart, Package, Loader2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,11 +14,12 @@ import { RevenueChart, CoursePerformanceChart, LiveActivityFeed, VideoAnalytics,
 
 export default function AnalyticsPage() {
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
-  // Get user's store
+  // Get user's store (uses impersonated user when admin is managing)
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get store stats

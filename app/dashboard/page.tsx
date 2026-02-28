@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { DashboardShell } from "./components/DashboardShell";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,14 +32,15 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const mode = searchParams.get("mode") as DashboardMode | null;
 
-  // Get user from Convex
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+  // Get user from Convex (uses impersonated user when admin is managing)
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveUserId ? { clerkId: effectiveUserId } : "skip");
 
   // Get stores
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
 
   useEffect(() => {
     if (mode === "learn" || mode === "create") {

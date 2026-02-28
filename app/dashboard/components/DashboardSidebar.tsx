@@ -76,6 +76,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ModeToggle } from "./ModeToggle";
 import { ModeToggle as ThemeToggle } from "@/components/mode-toggle";
+import { useImpersonation } from "@/lib/impersonation-context";
 
 type DashboardMode = "learn" | "create";
 
@@ -266,6 +267,7 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
+  const { isImpersonating, impersonatedCreatorName, impersonatedStoreName } = useImpersonation();
   const links = mode === "learn" ? learnLinks : createLinks;
   const savePreference = useMutation(api.users.setDashboardPreference);
 
@@ -360,13 +362,22 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
       {/* Header */}
       <SidebarHeader className="border-b border-border p-4">
         <Link href="/dashboard" className="group flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 transition-transform group-hover:scale-110">
+          <div className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110",
+            isImpersonating
+              ? "bg-gradient-to-r from-amber-500 to-orange-500"
+              : "bg-gradient-to-r from-purple-500 to-pink-500"
+          )}>
             <Music className="h-5 w-5 text-white" />
           </div>
           <div>
-            <span className="text-lg font-bold">PPR Academy</span>
+            <span className="text-lg font-bold">
+              {isImpersonating ? impersonatedStoreName || "Creator Store" : "PPR Academy"}
+            </span>
             <p className="text-xs text-muted-foreground">
-              {mode === "learn" ? "Learning Hub" : "Creator Studio"}
+              {isImpersonating
+                ? `Managing ${impersonatedCreatorName || "Creator"}`
+                : mode === "learn" ? "Learning Hub" : "Creator Studio"}
             </p>
           </div>
         </Link>
@@ -729,10 +740,12 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">
-                {user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]}
+                {isImpersonating
+                  ? impersonatedCreatorName || "Creator"
+                  : user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0]}
               </p>
               <p className="text-xs text-muted-foreground">
-                {mode === "learn" ? "Learning" : "Creating"}
+                {isImpersonating ? "Admin managing" : mode === "learn" ? "Learning" : "Creating"}
               </p>
             </div>
           </div>

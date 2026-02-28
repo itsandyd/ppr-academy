@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
+import { useImpersonation } from "@/lib/impersonation-context";
 
 type DashboardMode = "learn" | "create";
 
@@ -25,9 +27,11 @@ export function DashboardShell({ mode, children }: DashboardShellProps) {
   const router = useRouter();
   const { user } = useUser();
   const savePreference = useMutation(api.users.setDashboardPreference);
+  const { isImpersonating, impersonatedUserId } = useImpersonation();
 
-  // Check if user has stores (required for Create mode)
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  // When impersonating, query the target creator's stores instead of admin's
+  const effectiveUserId = isImpersonating && impersonatedUserId ? impersonatedUserId : user?.id;
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
 
   const handleModeChange = async (newMode: DashboardMode) => {
     // Update URL immediately (optimistic)
@@ -51,6 +55,9 @@ export function DashboardShell({ mode, children }: DashboardShellProps) {
     <SidebarProvider>
       <DashboardSidebar mode={mode} onModeChange={handleModeChange} />
       <main className="flex w-full flex-1 flex-col">
+        {/* Admin impersonation banner */}
+        <ImpersonationBanner />
+
         {/* Top Header */}
         <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
           <SidebarTrigger className="-ml-1 md:hidden" />

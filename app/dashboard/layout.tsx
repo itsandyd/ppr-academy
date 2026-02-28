@@ -4,6 +4,7 @@ import { ReactNode, Suspense, useEffect, useState } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { DashboardShell } from "./components/DashboardShell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImpersonationProvider } from "@/lib/impersonation-context";
 
 export const dynamic = "force-dynamic";
 
@@ -68,14 +69,16 @@ function DashboardLayoutInner({ children }: DashboardLayoutProps) {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <Skeleton className="h-screen w-full" />
-        </div>
-      }
-    >
-      <DashboardLayoutInner>{children}</DashboardLayoutInner>
-    </Suspense>
+    <ImpersonationProvider>
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center">
+            <Skeleton className="h-screen w-full" />
+          </div>
+        }
+      >
+        <DashboardLayoutInner>{children}</DashboardLayoutInner>
+      </Suspense>
+    </ImpersonationProvider>
   );
 }

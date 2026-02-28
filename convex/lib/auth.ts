@@ -34,7 +34,15 @@ export async function requireStoreOwner(
   }
 
   if (store.userId !== identity.subject) {
-    throw new Error("Unauthorized: you don't own this store");
+    // Allow admin users to access any store (for impersonation mode)
+    const callingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!callingUser?.admin) {
+      throw new Error("Unauthorized: you don't own this store");
+    }
   }
 
   return { identity, store };

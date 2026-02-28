@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { Id } from "@/convex/_generated/dataModel";
 import { Node, Edge } from "reactflow";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
@@ -862,6 +863,7 @@ export default function WorkflowBuilderPage() {
   const sequenceTypeParam = searchParams.get("type") as SequenceType | null;
   const workflowNameParam = searchParams.get("name");
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
 
   // Initialize workflow name from URL param or default
@@ -941,14 +943,14 @@ export default function WorkflowBuilderPage() {
   const [abAutoSelectWinner, setAbAutoSelectWinner] = useState(true);
   const [abWinnerThreshold, setAbWinnerThreshold] = useState(5);
 
-  // Get user's store
+  // Get user's store (uses impersonated user when admin is managing)
   const store = useQuery(
     // @ts-ignore - Convex type instantiation is excessively deep
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   ) as { _id: Id<"stores">; plan?: string } | null | undefined;
-  // Use Clerk user ID for storeId since that's what emailContacts uses
-  const storeId = user?.id || "";
+  // Use effective user ID for storeId since that's what emailContacts uses
+  const storeId = effectiveUserId || "";
 
   // Check if user has access to automations feature
   const {

@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUploadThing } from "@/lib/uploadthing-hooks";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import {
   User,
   Save,
@@ -173,28 +174,29 @@ export default function ProfilePage() {
   const tabParam = searchParams.get("tab");
   const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "basic";
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const updateStoreProfile = useMutation(api.stores.updateStoreProfile);
 
   // Get user data from Convex for Stripe Connect info
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
+    effectiveUserId ? { clerkId: effectiveUserId } : "skip"
   );
 
   // Get pending earnings
   const pendingEarnings = useQuery(
     api.monetizationUtils.getCreatorPendingEarnings,
-    user?.id ? { creatorId: user.id } : "skip"
+    effectiveUserId ? { creatorId: effectiveUserId } : "skip"
   );
 
   // Get payout history
   const payoutHistory = useQuery(
     api.monetizationUtils.getCreatorPayouts,
-    user?.id ? { creatorId: user.id } : "skip"
+    effectiveUserId ? { creatorId: effectiveUserId } : "skip"
   );
 
   // Calculate totals from payout history

@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/lib/impersonation-context';
 import { LearnProductsView } from './LearnProductsView';
 import { CreateProductsView } from './CreateProductsView';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ export default function ProductsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const mode = searchParams.get('mode') as 'learn' | 'create' | null;
 
   // Redirect to dashboard if no mode specified
@@ -25,10 +27,10 @@ export default function ProductsPage() {
     }
   }, [mode, router]);
 
-  // Get Convex user
+  // Get Convex user (uses impersonated user when admin is managing)
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
+    effectiveUserId ? { clerkId: effectiveUserId } : 'skip'
   );
 
   const isLoading = !user || convexUser === undefined;

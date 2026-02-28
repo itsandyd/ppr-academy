@@ -8,6 +8,7 @@ import { QuickCreatorSetup } from '@/components/dashboard/quick-creator-setup';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Music, Upload, BookOpen, Video, ArrowRight } from 'lucide-react';
+import { useImpersonation } from '@/lib/impersonation-context';
 
 interface StoreRequiredGuardProps {
   children: ReactNode;
@@ -17,11 +18,13 @@ interface StoreRequiredGuardProps {
 export function StoreRequiredGuard({ children, mode }: StoreRequiredGuardProps) {
   const { user } = useUser();
   const [showSetup, setShowSetup] = useState(false);
+  const { isImpersonating, impersonatedUserId } = useImpersonation();
 
-  // Check if user has stores
+  // When impersonating, query the target creator's stores
+  const effectiveUserId = isImpersonating && impersonatedUserId ? impersonatedUserId : user?.id;
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : 'skip'
+    effectiveUserId ? { userId: effectiveUserId } : 'skip'
   );
 
   // Learn mode doesn't require stores

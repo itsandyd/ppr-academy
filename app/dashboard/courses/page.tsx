@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/lib/impersonation-context';
 import { toast } from 'sonner';
 import { CourseCardEnhanced } from '@/components/ui/course-card-enhanced';
 import { Card } from '@/components/ui/card';
@@ -21,6 +22,7 @@ export default function CoursesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const mode = searchParams.get('mode') as 'learn' | 'create' | null;
 
   // Redirect if no mode
@@ -32,7 +34,7 @@ export default function CoursesPage() {
 
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
+    effectiveUserId ? { clerkId: effectiveUserId } : 'skip'
   );
 
   // Learn mode: Enrolled courses

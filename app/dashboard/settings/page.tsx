@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import {
   Banknote,
   Bell,
@@ -162,9 +163,10 @@ const MODE_STORAGE_KEY = "dashboard-mode";
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Read the current dashboard mode — same logic as layout.tsx
