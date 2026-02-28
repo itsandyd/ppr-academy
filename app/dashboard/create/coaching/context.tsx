@@ -19,22 +19,26 @@ const coachingConfig: ProductConfig<CoachingData, CoachingSteps> = {
   productName: "Coaching Session",
   idParamName: "coachingId",
   routeBase: "/dashboard/create/coaching",
-  steps: ["basics", "pricing", "followGate", "discord", "availability"] as const,
+  steps: ["basics", "pricing", "followGate", "platform", "availability"] as const,
 
   getDefaultData: () => ({
     pricingModel: "paid",
     sessionType: "production-coaching",
     duration: 60,
     price: "50",
+    sessionPlatform: "zoom" as const,
     discordConfig: {
       requireDiscord: true,
       autoCreateChannel: true,
       notifyOnBooking: true,
     },
+    sessionDurations: [60],
     bufferTime: 15,
     maxBookingsPerDay: 3,
+    minNoticeHours: 24,
     advanceBookingDays: 30,
     sessionFormat: "video",
+    lateCancellationFeePercent: 50,
   }),
 
   validateStep: (step, data) => {
@@ -48,8 +52,19 @@ const coachingConfig: ProductConfig<CoachingData, CoachingSteps> = {
           return !!(data.followGateEnabled && data.followGateRequirements);
         }
         return true;
-      case "discord":
+      case "platform": {
+        if (!data.sessionPlatform) return false;
+        // Require link for platforms that need one
+        if (["zoom", "google_meet", "custom"].includes(data.sessionPlatform)) {
+          return !!data.sessionLink;
+        }
+        // Require phone for phone/facetime
+        if (["phone", "facetime"].includes(data.sessionPlatform)) {
+          return !!data.sessionPhone;
+        }
+        // Discord doesn't need a link (auto-created)
         return true;
+      }
       case "availability":
         return !!data.weekSchedule;
       default:
@@ -70,6 +85,19 @@ const coachingConfig: ProductConfig<CoachingData, CoachingSteps> = {
     tags: data.tags,
     duration: data.duration,
     sessionType: data.sessionType,
+    sessionPlatform: data.sessionPlatform,
+    sessionLink: data.sessionLink,
+    sessionPhone: data.sessionPhone,
+    lateCancellationFeePercent: data.lateCancellationFeePercent,
+    availability: data.weekSchedule ? {
+      weekSchedule: data.weekSchedule,
+      dateOverrides: data.dateOverrides || [],
+      sessionDurations: data.sessionDurations || [data.duration || 60],
+      bufferTime: data.bufferTime ?? 15,
+      maxBookingsPerDay: data.maxBookingsPerDay ?? 3,
+      minNoticeHours: data.minNoticeHours ?? 24,
+      advanceBookingDays: data.advanceBookingDays ?? 30,
+    } : undefined,
   }),
 
   mapToUpdateParams: (data, productId) => ({
@@ -80,6 +108,19 @@ const coachingConfig: ProductConfig<CoachingData, CoachingSteps> = {
     price: data.price ? parseFloat(data.price) : undefined,
     duration: data.duration,
     sessionType: data.sessionType,
+    sessionPlatform: data.sessionPlatform,
+    sessionLink: data.sessionLink,
+    sessionPhone: data.sessionPhone,
+    lateCancellationFeePercent: data.lateCancellationFeePercent,
+    availability: data.weekSchedule ? {
+      weekSchedule: data.weekSchedule,
+      dateOverrides: data.dateOverrides || [],
+      sessionDurations: data.sessionDurations || [data.duration || 60],
+      bufferTime: data.bufferTime ?? 15,
+      maxBookingsPerDay: data.maxBookingsPerDay ?? 3,
+      minNoticeHours: data.minNoticeHours ?? 24,
+      advanceBookingDays: data.advanceBookingDays ?? 30,
+    } : undefined,
   }),
 };
 

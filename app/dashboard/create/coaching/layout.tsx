@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { CoachingCreationProvider, useCoachingCreation } from "./context";
 import { useStoresByUser } from "@/lib/convex-typed-hooks";
-import { Headphones, DollarSign, Calendar, Users, MessageCircle } from "lucide-react";
+import { Headphones, DollarSign, Calendar, Users, Video } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
@@ -43,11 +43,11 @@ const steps: Step[] = [
     estimatedTime: "2-3 min",
   },
   {
-    id: "discord",
-    label: "Discord Setup",
-    icon: MessageCircle,
-    description: "Auto-create private channels",
-    estimatedTime: "2-3 min",
+    id: "platform",
+    label: "Session Platform",
+    icon: Video,
+    description: "Choose where sessions happen",
+    estimatedTime: "1-2 min",
   },
   {
     id: "availability",

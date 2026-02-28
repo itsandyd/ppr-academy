@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { useCoachingCreation } from "./context";
 import { BasicsForm } from "./steps/BasicsForm";
 import { PricingForm } from "./steps/PricingForm";
-import { DiscordForm } from "./steps/DiscordForm";
+import { PlatformForm } from "./steps/PlatformForm";
 import { AvailabilityForm } from "./steps/AvailabilityForm";
 import { CoachingFollowGateForm } from "./steps/FollowGateForm";
 
@@ -22,9 +22,9 @@ function CoachingCreateContent() {
       case "pricing":
         return <PricingForm />;
       case "followGate":
-        return state.data.pricingModel === "free_with_gate" ? <CoachingFollowGateForm /> : <DiscordForm />;
-      case "discord":
-        return <DiscordForm />;
+        return state.data.pricingModel === "free_with_gate" ? <CoachingFollowGateForm /> : <PlatformForm />;
+      case "platform":
+        return <PlatformForm />;
       case "availability":
         return <AvailabilityForm />;
       default:

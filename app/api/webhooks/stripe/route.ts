@@ -864,6 +864,10 @@ export async function POST(request: NextRequest) {
             currency,
             sessionTitle,
             duration,
+            sessionPlatform,
+            sessionLink,
+            sessionPhone,
+            coachStripeAccountId,
           } = session.metadata;
 
           if (userId && productId && scheduledDate && startTime) {
@@ -890,8 +894,20 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              if (result.success) {
+              if (result.success && result.sessionId) {
                 serverLogger.info("Coaching", "Session booked successfully");
+
+                // Store Stripe payment intent ID and coach's Connect account on the session for escrow
+                const paymentIntentId = session.payment_intent as string;
+                await fetchMutationCoaching(
+                  internalCoaching.coachingProducts.storePaymentInfo as any,
+                  {
+                    sessionId: result.sessionId,
+                    stripePaymentIntentId: paymentIntentId,
+                    coachStripeAccountId: coachStripeAccountId || undefined,
+                  }
+                );
+                serverLogger.info("Coaching", "Payment info stored on session (escrow held)");
 
                 // Create a purchase record for the coaching session with correct productType
                 const product = await fetchQueryCoaching(
@@ -906,11 +922,11 @@ export async function POST(request: NextRequest) {
                     {
                       userId,
                       productId: productId as any,
-                      coachingSessionId: result.sessionId!,
+                      coachingSessionId: result.sessionId,
                       amount: parseInt(amount || "0"),
                       currency: currency || "USD",
                       paymentMethod: "stripe",
-                      transactionId: session.payment_intent as string,
+                      transactionId: paymentIntentId,
                       ...utmData,
                     }
                   );

@@ -5705,6 +5705,14 @@ export declare const api: {
       }
     >;
   };
+  coachingCancellation: {
+    cancelSession: FunctionReference<
+      "mutation",
+      "public",
+      { reason?: string; sessionId: Id<"coachingSessions">; userId: string },
+      { error?: string; refundType?: string; success: boolean }
+    >;
+  };
   coachingProducts: {
     backfillCoachingSlugs: FunctionReference<
       "mutation",
@@ -5748,7 +5756,11 @@ export declare const api: {
         description?: string;
         duration: number;
         imageUrl?: string;
+        lateCancellationFeePercent?: number;
         price: number;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionType: string;
         storeId: string;
         thumbnailStyle?: string;
@@ -5765,7 +5777,7 @@ export declare const api: {
     getAvailableSlots: FunctionReference<
       "query",
       "public",
-      { date: number; productId: Id<"digitalProducts"> },
+      { date: number; duration?: number; productId: Id<"digitalProducts"> },
       Array<{ available: boolean; end: string; start: string }>
     >;
     getBookedSessions: FunctionReference<
@@ -5781,6 +5793,7 @@ export declare const api: {
       {
         _id: Id<"digitalProducts">;
         availability?: any;
+        coachStripeAccountId?: string;
         deliverables?: string;
         description?: string;
         discordRequired?: boolean;
@@ -5788,6 +5801,9 @@ export declare const api: {
         imageUrl?: string;
         price: number;
         pricingModel?: string;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionType?: string;
         slug?: string;
         storeId: string;
@@ -5823,6 +5839,7 @@ export declare const api: {
       {
         _id: Id<"digitalProducts">;
         availability?: any;
+        coachStripeAccountId?: string;
         deliverables?: string;
         description?: string;
         discordRequired?: boolean;
@@ -5830,6 +5847,9 @@ export declare const api: {
         imageUrl?: string;
         price: number;
         pricingModel?: string;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionType?: string;
         slug?: string;
         storeId: string;
@@ -5844,6 +5864,7 @@ export declare const api: {
       {
         _id: Id<"digitalProducts">;
         availability?: any;
+        coachStripeAccountId?: string;
         deliverables?: string;
         description?: string;
         discordRequired?: boolean;
@@ -5851,6 +5872,9 @@ export declare const api: {
         imageUrl?: string;
         price: number;
         pricingModel?: string;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionType?: string;
         slug?: string;
         storeId: string;
@@ -5903,15 +5927,23 @@ export declare const api: {
       Array<{
         _creationTime: number;
         _id: Id<"coachingSessions">;
+        coachConfirmed?: boolean;
+        confirmationDeadline?: number;
         discordSetupComplete?: boolean;
         duration: number;
         endTime: string;
         notes?: string;
+        paymentStatus?: string;
         productId: Id<"digitalProducts">;
         productTitle: string;
+        review?: { rating: number; reviewText?: string };
         scheduledDate: number;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         startTime: string;
         status: string;
+        studentConfirmed?: boolean;
         studentEmail?: string;
         studentId: string;
         studentName?: string;
@@ -5923,9 +5955,13 @@ export declare const api: {
       "public",
       { coachId: string },
       {
+        averageRating: number;
         cancelled: number;
         completed: number;
+        pendingRevenue: number;
+        releasedRevenue: number;
         revenue: number;
+        reviewCount: number;
         total: number;
         upcoming: number;
       }
@@ -5954,19 +5990,29 @@ export declare const api: {
       Array<{
         _creationTime: number;
         _id: Id<"coachingSessions">;
+        cancelledAt?: number;
+        cancelledBy?: string;
+        coachConfirmed?: boolean;
         coachId: string;
         coachName?: string;
+        confirmationDeadline?: number;
         discordChannelId?: string;
         duration: number;
         endTime: string;
         notes?: string;
+        paymentStatus?: string;
         productId: Id<"digitalProducts">;
         productTitle: string;
+        review?: { rating: number; reviewText?: string };
         scheduledDate: number;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         startTime: string;
         status: string;
         storeName?: string;
         storeSlug?: string;
+        studentConfirmed?: boolean;
         totalCost: number;
       }>
     >;
@@ -5993,8 +6039,12 @@ export declare const api: {
         duration?: number;
         imageUrl?: string;
         isPublished?: boolean;
+        lateCancellationFeePercent?: number;
         price?: number;
         productId: Id<"digitalProducts">;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionType?: string;
         thumbnailStyle?: string;
         title?: string;
@@ -6017,7 +6067,84 @@ export declare const api: {
       { error?: string; success: boolean }
     >;
   };
+  coachingReviews: {
+    getReviewForSession: FunctionReference<
+      "query",
+      "public",
+      { sessionId: Id<"coachingSessions"> },
+      {
+        _id: Id<"coachingReviews">;
+        createdAt: number;
+        rating: number;
+        reviewText?: string;
+        studentName?: string;
+      } | null
+    >;
+    getReviewsForCoach: FunctionReference<
+      "query",
+      "public",
+      { coachId: string },
+      Array<{
+        _id: Id<"coachingReviews">;
+        createdAt: number;
+        rating: number;
+        reviewText?: string;
+        sessionId: Id<"coachingSessions">;
+        studentName?: string;
+      }>
+    >;
+    submitReview: FunctionReference<
+      "mutation",
+      "public",
+      {
+        rating: number;
+        reviewText?: string;
+        sessionId: Id<"coachingSessions">;
+      },
+      { error?: string; success: boolean }
+    >;
+  };
   coachingSessionQueries: {
+    confirmSession: FunctionReference<
+      "mutation",
+      "public",
+      { sessionId: Id<"coachingSessions">; userId: string },
+      { error?: string; success: boolean }
+    >;
+    getSessionByPaymentIntent: FunctionReference<
+      "query",
+      "public",
+      { paymentIntentId: string },
+      Id<"coachingSessions"> | null
+    >;
+    getSessionForConfirmation: FunctionReference<
+      "query",
+      "public",
+      { sessionId: Id<"coachingSessions"> },
+      {
+        _id: Id<"coachingSessions">;
+        coachEmail?: string;
+        coachId: string;
+        coachName?: string;
+        duration: number;
+        endTime: string;
+        notes?: string;
+        productId: Id<"digitalProducts">;
+        productTitle: string;
+        scheduledDate: number;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
+        startTime: string;
+        status: string;
+        storeName?: string;
+        storeSlug?: string;
+        studentEmail?: string;
+        studentId: string;
+        studentName?: string;
+        totalCost: number;
+      } | null
+    >;
     getSessionsNeedingReminders: FunctionReference<
       "query",
       "public",
@@ -6040,6 +6167,12 @@ export declare const api: {
       "public",
       { sessionId: Id<"coachingSessions"> },
       null
+    >;
+    reportNoShow: FunctionReference<
+      "mutation",
+      "public",
+      { sessionId: Id<"coachingSessions">; userId: string },
+      { error?: string; success: boolean }
     >;
   };
   collaborativeNotes: {
@@ -12960,6 +13093,26 @@ export declare const api: {
           | "archived";
       },
       any
+    >;
+  };
+  googleCalendarQueries: {
+    disconnectCalendar: FunctionReference<
+      "mutation",
+      "public",
+      { userId: string },
+      { success: boolean }
+    >;
+    getCoachBusyTimes: FunctionReference<
+      "query",
+      "public",
+      { coachId: string; dateEnd: number; dateStart: number },
+      Array<{ end: number; start: number }>
+    >;
+    isCalendarConnected: FunctionReference<
+      "query",
+      "public",
+      { userId: string },
+      { connected: boolean; connectedAt?: number }
     >;
   };
   importFans: {
@@ -23139,6 +23292,47 @@ export declare const internal: {
       any | null
     >;
   };
+  coachingCancellation: {
+    systemCancelSession: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        reason: string;
+        refundFull: boolean;
+        sessionId: Id<"coachingSessions">;
+      },
+      null
+    >;
+  };
+  coachingConfirmation: {
+    incrementCoachNoShow: FunctionReference<
+      "action",
+      "internal",
+      { coachId: string; sessionId?: Id<"coachingSessions"> },
+      null
+    >;
+    incrementStudentNoShow: FunctionReference<
+      "action",
+      "internal",
+      { studentId: string },
+      null
+    >;
+    processConfirmations: FunctionReference<"action", "internal", {}, null>;
+    sendConfirmationRequests: FunctionReference<
+      "action",
+      "internal",
+      {
+        coachId: string;
+        duration: number;
+        productId: Id<"digitalProducts">;
+        sessionDate: string;
+        sessionId: Id<"coachingSessions">;
+        sessionTime: string;
+        studentId: string;
+      },
+      null
+    >;
+  };
   coachingDiscordActions: {
     cleanupSessionDiscord: FunctionReference<
       "action",
@@ -23163,14 +23357,26 @@ export declare const internal: {
       "action",
       "internal",
       {
+        coachEmail?: string;
         coachName: string;
         duration: number;
+        notes?: string;
+        scheduledTimestamp?: number;
         sessionDate: string;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionTime: string;
         sessionTitle: string;
         studentEmail: string;
         studentName: string;
       },
+      { error?: string; success: boolean }
+    >;
+    sendCoachingPausedEmail: FunctionReference<
+      "action",
+      "internal",
+      { coachEmail: string; coachName: string; noShowCount: number },
       { error?: string; success: boolean }
     >;
     sendNewBookingNotificationEmail: FunctionReference<
@@ -23182,11 +23388,43 @@ export declare const internal: {
         coachName: string;
         duration: number;
         notes?: string;
+        scheduledTimestamp?: number;
         sessionDate: string;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionTime: string;
         sessionTitle: string;
         studentEmail: string;
         studentName: string;
+      },
+      { error?: string; success: boolean }
+    >;
+    sendNoShowWarningEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        coachEmail: string;
+        coachName: string;
+        sessionDate: string;
+        sessionTitle: string;
+        studentName: string;
+      },
+      { error?: string; success: boolean }
+    >;
+    sendSessionConfirmationRequestEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        duration: number;
+        isCoach: boolean;
+        otherPartyName: string;
+        recipientEmail: string;
+        recipientName: string;
+        sessionDate: string;
+        sessionId: Id<"coachingSessions">;
+        sessionTime: string;
+        sessionTitle: string;
       },
       { error?: string; success: boolean }
     >;
@@ -23201,10 +23439,42 @@ export declare const internal: {
         recipientEmail: string;
         recipientName: string;
         sessionDate: string;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
         sessionTime: string;
         sessionTitle: string;
       },
       { error?: string; success: boolean }
+    >;
+  };
+  coachingPayments: {
+    processPartialRefund: FunctionReference<
+      "action",
+      "internal",
+      {
+        reason?: string;
+        refundPercent: number;
+        sessionId: Id<"coachingSessions">;
+      },
+      {
+        error?: string;
+        refundId?: string;
+        success: boolean;
+        transferId?: string;
+      }
+    >;
+    refundStudentPayment: FunctionReference<
+      "action",
+      "internal",
+      { reason?: string; sessionId: Id<"coachingSessions"> },
+      { error?: string; refundId?: string; success: boolean }
+    >;
+    releasePaymentToCreator: FunctionReference<
+      "action",
+      "internal",
+      { sessionId: Id<"coachingSessions"> },
+      { error?: string; success: boolean; transferId?: string }
     >;
   };
   coachingProducts: {
@@ -23242,6 +23512,16 @@ export declare const internal: {
         success: boolean;
       }
     >;
+    storePaymentInfo: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        coachStripeAccountId?: string;
+        sessionId: Id<"coachingSessions">;
+        stripePaymentIntentId: string;
+      },
+      null
+    >;
     updateSessionDiscordInfo: FunctionReference<
       "mutation",
       "internal",
@@ -23253,10 +23533,45 @@ export declare const internal: {
       null
     >;
   };
+  coachingReminderActions: {
+    processReminders: FunctionReference<"action", "internal", {}, null>;
+  };
   coachingSessionManager: {
     manageCoachingSessions: FunctionReference<"action", "internal", {}, null>;
   };
   coachingSessionQueries: {
+    getProduct: FunctionReference<
+      "query",
+      "internal",
+      { productId: Id<"digitalProducts"> },
+      { title: string } | null
+    >;
+    getSessionForEmail: FunctionReference<
+      "query",
+      "internal",
+      { sessionId: Id<"coachingSessions"> },
+      {
+        productTitle?: string;
+        scheduledDate: number;
+        studentName?: string;
+      } | null
+    >;
+    getSessionForPayment: FunctionReference<
+      "query",
+      "internal",
+      { sessionId: Id<"coachingSessions"> },
+      {
+        _id: Id<"coachingSessions">;
+        coachId: string;
+        coachStripeAccountId?: string;
+        paymentStatus?: string;
+        status: string;
+        stripePaymentIntentId?: string;
+        stripeTransferId?: string;
+        studentId: string;
+        totalCost: number;
+      } | null
+    >;
     getSessionGuildInfo: FunctionReference<
       "query",
       "internal",
@@ -23280,6 +23595,47 @@ export declare const internal: {
         studentId: string;
       }>
     >;
+    getSessionsNeedingConfirmation: FunctionReference<
+      "query",
+      "internal",
+      {},
+      Array<{
+        _id: Id<"coachingSessions">;
+        coachConfirmed?: boolean;
+        coachId: string;
+        confirmationRequestedAt?: number;
+        duration: number;
+        endTime: string;
+        productId: Id<"digitalProducts">;
+        scheduledDate: number;
+        startTime: string;
+        studentConfirmed?: boolean;
+        studentId: string;
+        totalCost: number;
+      }>
+    >;
+    getSessionsNeedingEnhancedReminders: FunctionReference<
+      "query",
+      "internal",
+      {},
+      Array<{
+        _id: Id<"coachingSessions">;
+        coachId: string;
+        duration: number;
+        endTime: string;
+        productId: Id<"digitalProducts">;
+        reminder1hSent?: boolean;
+        reminder24hSent?: boolean;
+        reminderStartSent?: boolean;
+        scheduledDate: number;
+        sessionLink?: string;
+        sessionPhone?: string;
+        sessionPlatform?: string;
+        startTime: string;
+        studentId: string;
+        totalCost: number;
+      }>
+    >;
     getSessionsNeedingSetup: FunctionReference<
       "query",
       "internal",
@@ -23292,9 +23648,60 @@ export declare const internal: {
         endTime: string;
         productId: Id<"digitalProducts">;
         scheduledDate: number;
+        sessionPlatform?: string;
         startTime: string;
         studentId: string;
       }>
+    >;
+    getSessionsPastDeadline: FunctionReference<
+      "query",
+      "internal",
+      {},
+      Array<{
+        _id: Id<"coachingSessions">;
+        coachConfirmed?: boolean;
+        coachId: string;
+        coachStripeAccountId?: string;
+        confirmationDeadline?: number;
+        paymentStatus?: string;
+        productId: Id<"digitalProducts">;
+        stripePaymentIntentId?: string;
+        studentConfirmed?: boolean;
+        studentId: string;
+        totalCost: number;
+      }>
+    >;
+    getUserByClerkId: FunctionReference<
+      "query",
+      "internal",
+      { clerkId: string },
+      {
+        _id: Id<"users">;
+        email?: string;
+        firstName?: string;
+        name?: string;
+      } | null
+    >;
+    incrementCoachNoShowMutation: FunctionReference<
+      "mutation",
+      "internal",
+      { coachId: string },
+      number
+    >;
+    incrementStudentNoShowMutation: FunctionReference<
+      "mutation",
+      "internal",
+      { studentId: string },
+      number
+    >;
+    markEnhancedReminderSent: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        reminderType: "24h" | "1h" | "start";
+        sessionId: Id<"coachingSessions">;
+      },
+      null
     >;
     markSessionCleanedUp: FunctionReference<
       "mutation",
@@ -23309,6 +23716,29 @@ export declare const internal: {
         discordChannelId: string;
         discordRoleId: string;
         sessionId: Id<"coachingSessions">;
+      },
+      null
+    >;
+    updatePaymentStatus: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        paymentStatus: string;
+        sessionId: Id<"coachingSessions">;
+        stripeTransferId?: string;
+      },
+      null
+    >;
+    updateSessionConfirmation: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        coachConfirmed?: boolean;
+        confirmationDeadline?: number;
+        confirmationRequestedAt?: number;
+        sessionId: Id<"coachingSessions">;
+        status?: string;
+        studentConfirmed?: boolean;
       },
       null
     >;
@@ -25631,6 +26061,119 @@ export declare const internal: {
         youtubeScript: string;
       },
       any
+    >;
+  };
+  googleCalendarActions: {
+    createCalendarEvent: FunctionReference<
+      "action",
+      "internal",
+      {
+        attendeeEmail?: string;
+        coachId: string;
+        description: string;
+        durationMinutes: number;
+        location?: string;
+        sessionId: Id<"coachingSessions">;
+        startTime: number;
+        title: string;
+      },
+      { error?: string; eventId?: string; success: boolean }
+    >;
+    deleteCalendarEvent: FunctionReference<
+      "action",
+      "internal",
+      { coachId: string; eventId: string },
+      { error?: string; success: boolean }
+    >;
+    refreshCalendarCache: FunctionReference<
+      "action",
+      "internal",
+      { coachId: string; dateRangeEnd: number; dateRangeStart: number },
+      { busyPeriodCount?: number; error?: string; success: boolean }
+    >;
+    updateCalendarEvent: FunctionReference<
+      "action",
+      "internal",
+      {
+        attendeeEmail?: string;
+        coachId: string;
+        description?: string;
+        durationMinutes: number;
+        eventId: string;
+        location?: string;
+        startTime: number;
+        title?: string;
+      },
+      { error?: string; success: boolean }
+    >;
+  };
+  googleCalendarQueries: {
+    getCachedBusyTimes: FunctionReference<
+      "query",
+      "internal",
+      { dateEnd: number; dateStart: number; userId: string },
+      {
+        busyPeriods: Array<{ end: number; start: number }>;
+        cachedAt: number;
+      } | null
+    >;
+    getCalendarConnection: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
+      {
+        accessToken: string;
+        calendarId: string;
+        refreshToken: string;
+        tokenExpiresAt: number;
+      } | null
+    >;
+    getRefreshTokenForDisconnect: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
+      string | null
+    >;
+    hasCalendarConnection: FunctionReference<
+      "query",
+      "internal",
+      { userId: string },
+      boolean
+    >;
+    storeBusyTimes: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        busyPeriods: Array<{ end: number; start: number }>;
+        dateRangeEnd: number;
+        dateRangeStart: number;
+        userId: string;
+      },
+      null
+    >;
+    storeCalendarConnection: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        accessToken: string;
+        calendarId: string;
+        refreshToken: string;
+        tokenExpiresAt: number;
+        userId: string;
+      },
+      null
+    >;
+    storeEventId: FunctionReference<
+      "mutation",
+      "internal",
+      { googleCalendarEventId: string; sessionId: Id<"coachingSessions"> },
+      null
+    >;
+    updateAccessToken: FunctionReference<
+      "mutation",
+      "internal",
+      { accessToken: string; tokenExpiresAt: number; userId: string },
+      null
     >;
   };
   inboxActions: {

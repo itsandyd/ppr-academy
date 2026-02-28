@@ -39,7 +39,7 @@ export function CoachingFollowGateForm() {
   const handleContinue = async () => {
     await saveCoaching();
     router.push(
-      `/dashboard/create/coaching?step=discord${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
+      `/dashboard/create/coaching?step=platform${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
     );
   };
 

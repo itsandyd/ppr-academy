@@ -221,6 +221,10 @@ export const createCoachingProduct = mutation({
     customFields: v.optional(v.any()), // custom info fields to collect
     availability: v.optional(v.any()), // availability configuration
     thumbnailStyle: v.optional(v.string()), // thumbnail display style
+    sessionPlatform: v.optional(v.string()), // "zoom" | "google_meet" | "discord" | etc.
+    sessionLink: v.optional(v.string()),
+    sessionPhone: v.optional(v.string()),
+    lateCancellationFeePercent: v.optional(v.number()),
   },
   returns: v.object({
     success: v.boolean(),
@@ -259,6 +263,10 @@ export const createCoachingProduct = mutation({
         customFields: args.customFields,
         availability: args.availability,
         thumbnailStyle: args.thumbnailStyle,
+        sessionPlatform: args.sessionPlatform,
+        sessionLink: args.sessionLink,
+        sessionPhone: args.sessionPhone,
+        lateCancellationFeePercent: args.lateCancellationFeePercent,
       });
 
       return { success: true, productId };
@@ -284,6 +292,10 @@ export const updateCoachingProduct = mutation({
     thumbnailStyle: v.optional(v.string()),
     isPublished: v.optional(v.boolean()),
     discordRoleId: v.optional(v.string()),
+    sessionPlatform: v.optional(v.string()),
+    sessionLink: v.optional(v.string()),
+    sessionPhone: v.optional(v.string()),
+    lateCancellationFeePercent: v.optional(v.number()),
   },
   returns: v.object({
     success: v.boolean(),
@@ -438,19 +450,22 @@ export const bookCoachingSession = mutation({
 
       const coachId = product.userId;
       const duration = (product as any).duration || 60;
+      const sessionPlatform = (product as any).sessionPlatform || "zoom";
 
-      // Check if user has Discord connected
-      const discordConnection = await ctx.db
-        .query("discordIntegrations")
-        .withIndex("by_userId", (q) => q.eq("userId", studentId))
-        .unique();
+      // Check if user has Discord connected (only required for Discord-based sessions)
+      if (sessionPlatform === "discord") {
+        const discordConnection = await ctx.db
+          .query("discordIntegrations")
+          .withIndex("by_userId", (q) => q.eq("userId", studentId))
+          .unique();
 
-      if (!discordConnection) {
-        return {
-          success: false,
-          error: "Discord connection required",
-          requiresDiscordAuth: true,
-        };
+        if (!discordConnection) {
+          return {
+            success: false,
+            error: "Discord connection required",
+            requiresDiscordAuth: true,
+          };
+        }
       }
 
       // Calculate end time
@@ -473,17 +488,23 @@ export const bookCoachingSession = mutation({
         notes: args.notes,
         sessionType: (product as any).sessionType || "video",
         totalCost: product.price,
+        sessionPlatform,
+        sessionLink: (product as any).sessionLink,
+        sessionPhone: (product as any).sessionPhone,
         discordSetupComplete: false,
         reminderSent: false,
+        paymentStatus: "held",
       });
 
-      // Schedule Discord setup (will create channel and assign role)
-      await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
-        sessionId,
-        coachId,
-        studentId,
-        productId: args.productId,
-      });
+      // Schedule Discord setup only for Discord-based sessions
+      if (sessionPlatform === "discord") {
+        await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
+          sessionId,
+          coachId,
+          studentId,
+          productId: args.productId,
+        });
+      }
 
       // Send confirmation emails
       const student = await ctx.db
@@ -511,9 +532,15 @@ export const bookCoachingSession = mutation({
           studentEmail: student.email,
           sessionTitle: product.title,
           coachName,
+          coachEmail: coach.email,
           sessionDate,
           sessionTime: args.startTime,
+          scheduledTimestamp: args.scheduledDate,
           duration,
+          sessionPlatform,
+          sessionLink: (product as any).sessionLink,
+          sessionPhone: (product as any).sessionPhone,
+          notes: args.notes,
         });
 
         // Email to coach
@@ -525,9 +552,13 @@ export const bookCoachingSession = mutation({
           sessionTitle: product.title,
           sessionDate,
           sessionTime: args.startTime,
+          scheduledTimestamp: args.scheduledDate,
           duration,
           amount: product.price,
           notes: args.notes,
+          sessionPlatform,
+          sessionLink: (product as any).sessionLink,
+          sessionPhone: (product as any).sessionPhone,
         });
       }
 
@@ -566,18 +597,22 @@ export const internalBookCoachingSession = internalMutation({
 
       const coachId = product.userId;
       const duration = (product as any).duration || 60;
+      const sessionPlatform = (product as any).sessionPlatform || "zoom";
 
-      const discordConnection = await ctx.db
-        .query("discordIntegrations")
-        .withIndex("by_userId", (q) => q.eq("userId", studentId))
-        .unique();
+      // Check Discord connection only for Discord-based sessions
+      if (sessionPlatform === "discord") {
+        const discordConnection = await ctx.db
+          .query("discordIntegrations")
+          .withIndex("by_userId", (q) => q.eq("userId", studentId))
+          .unique();
 
-      if (!discordConnection) {
-        return {
-          success: false,
-          error: "Discord connection required",
-          requiresDiscordAuth: true,
-        };
+        if (!discordConnection) {
+          return {
+            success: false,
+            error: "Discord connection required",
+            requiresDiscordAuth: true,
+          };
+        }
       }
 
       const [hours, minutes] = args.startTime.split(":").map(Number);
@@ -598,16 +633,23 @@ export const internalBookCoachingSession = internalMutation({
         notes: args.notes,
         sessionType: (product as any).sessionType || "video",
         totalCost: product.price,
+        sessionPlatform,
+        sessionLink: (product as any).sessionLink,
+        sessionPhone: (product as any).sessionPhone,
         discordSetupComplete: false,
         reminderSent: false,
+        paymentStatus: "held",
       });
 
-      await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
-        sessionId,
-        coachId,
-        studentId,
-        productId: args.productId,
-      });
+      // Schedule Discord setup only for Discord-based sessions
+      if (sessionPlatform === "discord") {
+        await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
+          sessionId,
+          coachId,
+          studentId,
+          productId: args.productId,
+        });
+      }
 
       const student = await ctx.db
         .query("users")
@@ -633,9 +675,15 @@ export const internalBookCoachingSession = internalMutation({
           studentEmail: student.email,
           sessionTitle: product.title,
           coachName,
+          coachEmail: coach.email,
           sessionDate,
           sessionTime: args.startTime,
+          scheduledTimestamp: args.scheduledDate,
           duration,
+          sessionPlatform,
+          sessionLink: (product as any).sessionLink,
+          sessionPhone: (product as any).sessionPhone,
+          notes: args.notes,
         });
 
         await ctx.scheduler.runAfter(0, internal.coachingEmails.sendNewBookingNotificationEmail, {
@@ -646,9 +694,26 @@ export const internalBookCoachingSession = internalMutation({
           sessionTitle: product.title,
           sessionDate,
           sessionTime: args.startTime,
+          scheduledTimestamp: args.scheduledDate,
           duration,
           amount: product.price,
           notes: args.notes,
+          sessionPlatform,
+          sessionLink: (product as any).sessionLink,
+          sessionPhone: (product as any).sessionPhone,
+        });
+
+        // Schedule Google Calendar event creation if coach has connected their calendar
+        const meetingLink = (product as any).sessionLink;
+        await ctx.scheduler.runAfter(0, internal.googleCalendarActions.createCalendarEvent, {
+          coachId,
+          sessionId,
+          title: `Coaching: ${product.title} with ${studentName}`,
+          description: `${duration}-minute coaching session with ${studentName} (${student.email}).\n\n${args.notes ? `Notes: ${args.notes}\n\n` : ""}${meetingLink ? `Join: ${meetingLink}` : ""}`,
+          startTime: args.scheduledDate,
+          durationMinutes: duration,
+          location: meetingLink,
+          attendeeEmail: student.email,
         });
       }
 
@@ -657,6 +722,24 @@ export const internalBookCoachingSession = internalMutation({
       console.error("Error booking coaching session:", error);
       return { success: false, error: error.message };
     }
+  },
+});
+
+// Store Stripe payment info on a coaching session (called from webhook after checkout)
+export const storePaymentInfo = internalMutation({
+  args: {
+    sessionId: v.id("coachingSessions"),
+    stripePaymentIntentId: v.string(),
+    coachStripeAccountId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, {
+      stripePaymentIntentId: args.stripePaymentIntentId,
+      paymentStatus: "held",
+      ...(args.coachStripeAccountId && { coachStripeAccountId: args.coachStripeAccountId }),
+    });
+    return null;
   },
 });
 
@@ -684,6 +767,17 @@ export const getCoachSessions = query({
       notes: v.optional(v.string()),
       totalCost: v.number(),
       discordSetupComplete: v.optional(v.boolean()),
+      paymentStatus: v.optional(v.string()),
+      sessionPlatform: v.optional(v.string()),
+      sessionLink: v.optional(v.string()),
+      sessionPhone: v.optional(v.string()),
+      coachConfirmed: v.optional(v.boolean()),
+      studentConfirmed: v.optional(v.boolean()),
+      confirmationDeadline: v.optional(v.number()),
+      review: v.optional(v.object({
+        rating: v.number(),
+        reviewText: v.optional(v.string()),
+      })),
     })
   ),
   handler: async (ctx, args) => {
@@ -704,6 +798,11 @@ export const getCoachSessions = query({
           .withIndex("by_clerkId", (q) => q.eq("clerkId", session.studentId))
           .first();
 
+        const review = await ctx.db
+          .query("coachingReviews")
+          .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
+          .first();
+
         return {
           _id: session._id,
           _creationTime: session._creationTime,
@@ -720,6 +819,14 @@ export const getCoachSessions = query({
           notes: session.notes,
           totalCost: session.totalCost,
           discordSetupComplete: session.discordSetupComplete,
+          paymentStatus: session.paymentStatus,
+          sessionPlatform: session.sessionPlatform,
+          sessionLink: session.sessionLink,
+          sessionPhone: session.sessionPhone,
+          coachConfirmed: session.coachConfirmed,
+          studentConfirmed: session.studentConfirmed,
+          confirmationDeadline: session.confirmationDeadline,
+          review: review ? { rating: review.rating, reviewText: review.reviewText } : undefined,
         };
       })
     );
@@ -787,6 +894,19 @@ export const getStudentSessions = query({
       notes: v.optional(v.string()),
       totalCost: v.number(),
       discordChannelId: v.optional(v.string()),
+      paymentStatus: v.optional(v.string()),
+      sessionPlatform: v.optional(v.string()),
+      sessionLink: v.optional(v.string()),
+      sessionPhone: v.optional(v.string()),
+      coachConfirmed: v.optional(v.boolean()),
+      studentConfirmed: v.optional(v.boolean()),
+      confirmationDeadline: v.optional(v.number()),
+      cancelledBy: v.optional(v.string()),
+      cancelledAt: v.optional(v.number()),
+      review: v.optional(v.object({
+        rating: v.number(),
+        reviewText: v.optional(v.string()),
+      })),
     })
   ),
   handler: async (ctx, args) => {
@@ -805,6 +925,11 @@ export const getStudentSessions = query({
               .first()
           : null;
 
+        const review = await ctx.db
+          .query("coachingReviews")
+          .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
+          .first();
+
         return {
           _id: session._id,
           _creationTime: session._creationTime,
@@ -822,6 +947,16 @@ export const getStudentSessions = query({
           notes: session.notes,
           totalCost: session.totalCost,
           discordChannelId: session.discordChannelId,
+          paymentStatus: session.paymentStatus,
+          sessionPlatform: session.sessionPlatform,
+          sessionLink: session.sessionLink,
+          sessionPhone: session.sessionPhone,
+          coachConfirmed: session.coachConfirmed,
+          studentConfirmed: session.studentConfirmed,
+          confirmationDeadline: session.confirmationDeadline,
+          cancelledBy: session.cancelledBy,
+          cancelledAt: session.cancelledAt,
+          review: review ? { rating: review.rating, reviewText: review.reviewText } : undefined,
         };
       })
     );
@@ -838,6 +973,10 @@ export const getCoachSessionStats = query({
     completed: v.number(),
     cancelled: v.number(),
     revenue: v.number(),
+    averageRating: v.number(),
+    reviewCount: v.number(),
+    pendingRevenue: v.number(),
+    releasedRevenue: v.number(),
   }),
   handler: async (ctx, args) => {
     const sessions = await ctx.db
@@ -845,7 +984,16 @@ export const getCoachSessionStats = query({
       .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
       .take(1000);
 
+    const reviews = await ctx.db
+      .query("coachingReviews")
+      .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
+      .take(1000);
+
     const now = Date.now();
+    const avgRating = reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : 0;
+
     return {
       total: sessions.length,
       upcoming: sessions.filter((s) => s.status === "SCHEDULED" && s.scheduledDate > now).length,
@@ -854,17 +1002,40 @@ export const getCoachSessionStats = query({
       revenue: sessions
         .filter((s) => s.status === "COMPLETED")
         .reduce((sum, s) => sum + s.totalCost, 0),
+      averageRating: Math.round(avgRating * 10) / 10,
+      reviewCount: reviews.length,
+      pendingRevenue: sessions
+        .filter((s) => s.paymentStatus === "held")
+        .reduce((sum, s) => sum + s.totalCost, 0),
+      releasedRevenue: sessions
+        .filter((s) => s.paymentStatus === "released")
+        .reduce((sum, s) => sum + s.totalCost, 0),
     };
   },
 });
 
 // ==================== AVAILABILITY QUERIES ====================
 
-// Get available time slots for a coaching product on a specific date
+/**
+ * Get available time slots for a coaching product on a specific date.
+ *
+ * This query applies all availability constraints:
+ * 1. Weekly schedule (which days, which time windows)
+ * 2. Date overrides (blocked dates, extra availability)
+ * 3. Existing bookings (no double-booking)
+ * 4. Buffer time between sessions
+ * 5. Minimum scheduling notice
+ * 6. Maximum advance booking window
+ * 7. Daily booking cap
+ *
+ * Returns discrete bookable slots derived from the creator's time windows
+ * and the requested session duration.
+ */
 export const getAvailableSlots = query({
   args: {
     productId: v.id("digitalProducts"),
-    date: v.number(),
+    date: v.number(), // timestamp of the target date
+    duration: v.optional(v.number()), // requested session duration (minutes)
   },
   returns: v.array(
     v.object({
@@ -880,26 +1051,79 @@ export const getAvailableSlots = query({
     const availability = (product as any).availability;
     if (!availability?.weekSchedule?.schedule) return [];
 
+    const weekSchedule = availability.weekSchedule;
+    const dateOverrides: Array<{
+      date: string;
+      available: boolean;
+      timeWindows?: Array<{ start: string; end: string }>;
+    }> = availability.dateOverrides || [];
+    const sessionDurations: number[] = availability.sessionDurations || [(product as any).duration || 60];
+    const bufferTime: number = availability.bufferTime ?? 15;
+    const maxBookingsPerDay: number = availability.maxBookingsPerDay ?? 99;
+    const minNoticeHours: number = availability.minNoticeHours ?? 24;
+    const advanceBookingDays: number = availability.advanceBookingDays ?? 30;
+
+    const requestedDuration = args.duration || sessionDurations[0] || 60;
+
+    // --- Date boundaries ---
     const dateObj = new Date(args.date);
-    const dayOfWeek = dateObj.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+    const dateStr = dateObj.toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const now = Date.now();
 
-    const daySchedule = availability.weekSchedule.schedule.find(
-      (d: any) => d.day === dayOfWeek && d.enabled
-    );
+    // Check: is the date within the advance booking window?
+    const maxAdvanceMs = advanceBookingDays * 24 * 60 * 60 * 1000;
+    if (args.date > now + maxAdvanceMs) return [];
 
-    if (!daySchedule || !daySchedule.timeSlots) return [];
+    // Check: is the date in the past?
+    const dateStart = new Date(args.date);
+    dateStart.setHours(0, 0, 0, 0);
+    const dateEnd = new Date(args.date);
+    dateEnd.setHours(23, 59, 59, 999);
+    if (dateEnd.getTime() < now) return [];
 
+    // --- Determine time windows for this date ---
+    // First check date overrides
+    const override = dateOverrides.find((o: any) => o.date === dateStr);
+    let timeWindows: Array<{ start: string; end: string }> = [];
+
+    if (override) {
+      if (!override.available) {
+        // Date is blocked
+        return [];
+      }
+      // Use override's time windows
+      timeWindows = override.timeWindows || [];
+    } else {
+      // Fall back to weekly schedule
+      const dayOfWeek = dateObj
+        .toLocaleDateString("en-US", { weekday: "long" })
+        .toLowerCase();
+
+      const daySchedule = weekSchedule.schedule.find(
+        (d: any) => d.day === dayOfWeek && d.enabled
+      );
+
+      if (!daySchedule) return [];
+
+      // Support both new timeWindows and legacy timeSlots
+      timeWindows =
+        daySchedule.timeWindows && daySchedule.timeWindows.length > 0
+          ? daySchedule.timeWindows
+          : (daySchedule.timeSlots || []).map((s: any) => ({
+              start: s.start,
+              end: s.end,
+            }));
+    }
+
+    if (timeWindows.length === 0) return [];
+
+    // --- Get existing bookings for this date ---
     const existingSessions = await ctx.db
       .query("coachingSessions")
       .withIndex("by_productId", (q) => q.eq("productId", args.productId))
       .take(1000);
 
-    const dateStart = new Date(args.date);
-    dateStart.setHours(0, 0, 0, 0);
-    const dateEnd = new Date(args.date);
-    dateEnd.setHours(23, 59, 59, 999);
-
-    const bookedSlots = existingSessions.filter((s) => {
+    const dayBookings = existingSessions.filter((s) => {
       return (
         s.scheduledDate >= dateStart.getTime() &&
         s.scheduledDate <= dateEnd.getTime() &&
@@ -907,16 +1131,124 @@ export const getAvailableSlots = query({
       );
     });
 
-    return daySchedule.timeSlots.map((slot: any) => {
-      const isBooked = bookedSlots.some((s) => s.startTime === slot.start);
-      return {
-        start: slot.start,
-        end: slot.end,
-        available: slot.available && !isBooked,
-      };
-    });
+    // Check daily booking cap
+    if (dayBookings.length >= maxBookingsPerDay) {
+      // All slots unavailable due to daily cap
+      return timeWindows.flatMap((w: any) => {
+        const slots = generateSlots(w.start, w.end, requestedDuration);
+        return slots.map((s) => ({ ...s, available: false }));
+      });
+    }
+
+    // --- Get Google Calendar busy times (from cache) ---
+    const coachId = product.userId;
+    const calendarCache = await ctx.db
+      .query("googleCalendarCache")
+      .withIndex("by_userId", (q) => q.eq("userId", coachId))
+      .first();
+
+    // Only use cache if it's fresh (10 min TTL) and covers this date
+    const CACHE_TTL_MS = 10 * 60 * 1000;
+    const googleBusyPeriods: Array<{ start: number; end: number }> =
+      calendarCache &&
+      now - calendarCache.cachedAt < CACHE_TTL_MS &&
+      calendarCache.dateRangeStart <= dateStart.getTime() &&
+      calendarCache.dateRangeEnd >= dateEnd.getTime()
+        ? calendarCache.busyPeriods.filter(
+            (p) => p.end > dateStart.getTime() && p.start < dateEnd.getTime()
+          )
+        : [];
+
+    // --- Generate discrete slots from time windows ---
+    const allSlots: Array<{ start: string; end: string; available: boolean }> = [];
+
+    for (const window of timeWindows) {
+      const slots = generateSlots(window.start, window.end, requestedDuration);
+
+      for (const slot of slots) {
+        // Check minimum notice
+        const slotStartMinutes =
+          parseInt(slot.start.split(":")[0]) * 60 +
+          parseInt(slot.start.split(":")[1]);
+        const slotTimestamp = dateStart.getTime() + slotStartMinutes * 60 * 1000;
+        const minNoticeMs = minNoticeHours * 60 * 60 * 1000;
+
+        if (slotTimestamp < now + minNoticeMs) {
+          allSlots.push({ ...slot, available: false });
+          continue;
+        }
+
+        // Check overlap with existing bookings (including buffer)
+        const isBookingConflict = dayBookings.some((booking) => {
+          const bookingStartMin = timeToMinutes(booking.startTime);
+          const bookingEndMin = timeToMinutes(booking.endTime);
+          const slotStartMin = timeToMinutes(slot.start);
+          const slotEndMin = timeToMinutes(slot.end);
+
+          // Add buffer on both sides of existing booking
+          const bufferedBookingStart = bookingStartMin - bufferTime;
+          const bufferedBookingEnd = bookingEndMin + bufferTime;
+
+          // Check overlap
+          return slotStartMin < bufferedBookingEnd && slotEndMin > bufferedBookingStart;
+        });
+
+        // Check overlap with Google Calendar busy times
+        const slotEndMinutes =
+          parseInt(slot.end.split(":")[0]) * 60 +
+          parseInt(slot.end.split(":")[1]);
+        const slotEndTimestamp = dateStart.getTime() + slotEndMinutes * 60 * 1000;
+
+        const isGoogleConflict = googleBusyPeriods.some((busy) => {
+          return slotTimestamp < busy.end && slotEndTimestamp > busy.start;
+        });
+
+        allSlots.push({ ...slot, available: !isBookingConflict && !isGoogleConflict });
+      }
+    }
+
+    return allSlots;
   },
 });
+
+/** Convert "HH:MM" to minutes since midnight */
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** Convert minutes since midnight to "HH:MM" */
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * Generate discrete bookable slots within a time window.
+ * E.g., window 09:00-17:00 with 60-min sessions produces
+ * 09:00-10:00, 10:00-11:00, ..., 16:00-17:00
+ */
+function generateSlots(
+  windowStart: string,
+  windowEnd: string,
+  duration: number
+): Array<{ start: string; end: string }> {
+  const startMin = timeToMinutes(windowStart);
+  const endMin = timeToMinutes(windowEnd);
+  const slots: Array<{ start: string; end: string }> = [];
+
+  let current = startMin;
+  while (current + duration <= endMin) {
+    slots.push({
+      start: minutesToTime(current),
+      end: minutesToTime(current + duration),
+    });
+    current += duration; // next slot starts at end of this one
+  }
+
+  return slots;
+}
 
 // Get booked sessions for a date range (for calendar display)
 export const getBookedSessions = query({
@@ -972,6 +1304,10 @@ export const getCoachingProductForBooking = query({
       availability: v.optional(v.any()),
       discordRequired: v.optional(v.boolean()),
       pricingModel: v.optional(v.string()),
+      sessionPlatform: v.optional(v.string()),
+      sessionLink: v.optional(v.string()),
+      sessionPhone: v.optional(v.string()),
+      coachStripeAccountId: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -979,6 +1315,12 @@ export const getCoachingProductForBooking = query({
     const product = await ctx.db.get(args.productId);
     if (!product || !product.isPublished) return null;
     if ((product as any).productType !== "coaching") return null;
+
+    // Get coach's Stripe Connect account ID
+    const coach = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", product.userId))
+      .first();
 
     return {
       _id: product._id,
@@ -995,6 +1337,10 @@ export const getCoachingProductForBooking = query({
       availability: (product as any).availability,
       discordRequired: (product as any).discordConfig?.requireDiscord ?? true,
       pricingModel: (product as any).pricingModel,
+      sessionPlatform: (product as any).sessionPlatform,
+      sessionLink: (product as any).sessionLink,
+      sessionPhone: (product as any).sessionPhone,
+      coachStripeAccountId: coach?.stripeConnectAccountId,
     };
   },
 });
@@ -1021,6 +1367,10 @@ export const getCoachingProductBySlug = query({
       availability: v.optional(v.any()),
       discordRequired: v.optional(v.boolean()),
       pricingModel: v.optional(v.string()),
+      sessionPlatform: v.optional(v.string()),
+      sessionLink: v.optional(v.string()),
+      sessionPhone: v.optional(v.string()),
+      coachStripeAccountId: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -1032,6 +1382,11 @@ export const getCoachingProductBySlug = query({
 
     if (!product || !product.isPublished) return null;
     if ((product as any).productType !== "coaching") return null;
+
+    const coach = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", product.userId))
+      .first();
 
     return {
       _id: product._id,
@@ -1048,6 +1403,10 @@ export const getCoachingProductBySlug = query({
       availability: (product as any).availability,
       discordRequired: (product as any).discordConfig?.requireDiscord ?? true,
       pricingModel: (product as any).pricingModel,
+      sessionPlatform: (product as any).sessionPlatform,
+      sessionLink: (product as any).sessionLink,
+      sessionPhone: (product as any).sessionPhone,
+      coachStripeAccountId: coach?.stripeConnectAccountId,
     };
   },
 });
@@ -1071,6 +1430,10 @@ export const getCoachingProductByGlobalSlug = query({
       availability: v.optional(v.any()),
       discordRequired: v.optional(v.boolean()),
       pricingModel: v.optional(v.string()),
+      sessionPlatform: v.optional(v.string()),
+      sessionLink: v.optional(v.string()),
+      sessionPhone: v.optional(v.string()),
+      coachStripeAccountId: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -1082,6 +1445,11 @@ export const getCoachingProductByGlobalSlug = query({
 
     if (!product || !product.isPublished) return null;
     if ((product as any).productType !== "coaching") return null;
+
+    const coach = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", product.userId))
+      .first();
 
     return {
       _id: product._id,
@@ -1098,6 +1466,10 @@ export const getCoachingProductByGlobalSlug = query({
       availability: (product as any).availability,
       discordRequired: (product as any).discordConfig?.requireDiscord ?? true,
       pricingModel: (product as any).pricingModel,
+      sessionPlatform: (product as any).sessionPlatform,
+      sessionLink: (product as any).sessionLink,
+      sessionPhone: (product as any).sessionPhone,
+      coachStripeAccountId: coach?.stripeConnectAccountId,
     };
   },
 });

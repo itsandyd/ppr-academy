@@ -29,6 +29,9 @@ export async function POST(request: NextRequest) {
       coachStripeAccountId,
       storeSlug,
       notes,
+      sessionPlatform,
+      sessionLink,
+      sessionPhone,
     } = await request.json();
 
     if (userId && userId !== user.id) {
@@ -61,7 +64,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "payment",
-      success_url: `${baseUrl}/library/coaching?purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/booking/confirmation?stripe_session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/${storeSlug}/coaching/${productId}`,
       customer_email: customerEmail,
       metadata: {
@@ -77,6 +80,11 @@ export async function POST(request: NextRequest) {
         notes: notes || "",
         amount: priceInCents.toString(),
         currency: "usd",
+        sessionPlatform: sessionPlatform || "discord",
+        ...(sessionLink && { sessionLink }),
+        ...(sessionPhone && { sessionPhone }),
+        // Store coach's Stripe account for delayed transfer after session confirmation
+        ...(coachStripeAccountId && { coachStripeAccountId }),
         ...(utm?.utm_source && { utm_source: utm.utm_source }),
         ...(utm?.utm_medium && { utm_medium: utm.utm_medium }),
         ...(utm?.utm_campaign && { utm_campaign: utm.utm_campaign }),
@@ -85,14 +93,9 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    if (coachStripeAccountId) {
-      sessionData.payment_intent_data = {
-        application_fee_amount: platformFeeAmount,
-        transfer_data: {
-          destination: coachStripeAccountId,
-        },
-      };
-    }
+    // Escrow: Do NOT use transfer_data for coaching sessions.
+    // Payment goes to platform account first. Transfer to creator happens
+    // only after the session is confirmed as completed.
 
     const session = await stripe.checkout.sessions.create(sessionData);
 

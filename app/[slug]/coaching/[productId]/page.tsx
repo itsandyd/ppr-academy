@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo } from "react";
+import { use, useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Calendar,
   Clock,
@@ -22,6 +21,10 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Video,
+  Phone,
+  Globe,
+  Monitor,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -32,15 +35,15 @@ import { toast } from "sonner";
 import {
   format,
   addMonths,
-  subMonths,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-  isSameMonth,
   isSameDay,
   isToday,
   isBefore,
   startOfDay,
+  addDays,
+  isSameMonth,
 } from "date-fns";
 
 interface CoachingBookingPageProps {
@@ -54,6 +57,38 @@ function isConvexId(str: string): boolean {
   return /^[a-z0-9]{32}$/.test(str);
 }
 
+function getPlatformLabel(platform: string | undefined): string {
+  switch (platform) {
+    case "zoom": return "Zoom";
+    case "google_meet": return "Google Meet";
+    case "discord": return "Discord";
+    case "phone": return "Phone Call";
+    case "facetime": return "FaceTime";
+    case "custom": return "Custom Link";
+    default: return "Video Call";
+  }
+}
+
+function getPlatformIcon(platform: string | undefined) {
+  switch (platform) {
+    case "zoom": return <Video className="h-4 w-4" />;
+    case "google_meet": return <Video className="h-4 w-4" />;
+    case "discord": return <MessageCircle className="h-4 w-4" />;
+    case "phone": return <Phone className="h-4 w-4" />;
+    case "facetime": return <Phone className="h-4 w-4" />;
+    case "custom": return <Monitor className="h-4 w-4" />;
+    default: return <Video className="h-4 w-4" />;
+  }
+}
+
+/** Convert 24h "HH:MM" to 12h format like "2:00 PM" */
+function formatTime12h(time24: string): string {
+  const [h, m] = time24.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
 export default function CoachingBookingPage({ params }: CoachingBookingPageProps) {
   const { slug: storeSlug, productId: productSlugOrId } = use(params);
   const { user, isLoaded: userLoaded } = useUser();
@@ -64,6 +99,15 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [isBooking, setIsBooking] = useState(false);
+
+  // Detect buyer's timezone
+  const buyerTimezone = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      return "UTC";
+    }
+  }, []);
 
   const store = useQuery(api.stores.getStoreBySlug, { slug: storeSlug });
 
@@ -91,12 +135,36 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
       : "skip"
   );
 
+  // Only check discord if the platform requires it
+  const needsDiscord = product?.sessionPlatform === "discord" || (!product?.sessionPlatform && product?.discordRequired);
   const discordConnection = useQuery(
     api.coachingProducts.checkUserDiscordConnection,
-    user?.id ? { userId: user.id } : "skip"
+    user?.id && needsDiscord ? { userId: user.id } : "skip"
   );
 
   const bookSession = useMutation(api.coachingProducts.bookCoachingSession);
+
+  // Refresh Google Calendar cache for conflict checking when product loads
+  const cacheRefreshed = useRef(false);
+  useEffect(() => {
+    if (!product?.userId || cacheRefreshed.current) return;
+    cacheRefreshed.current = true;
+
+    const now = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+
+    fetch("/api/google/refresh-cache", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        coachId: product.userId,
+        dateRangeStart: now,
+        dateRangeEnd: now + ninetyDays,
+      }),
+    }).catch(() => {
+      // Non-critical — availability still works without Google Calendar data
+    });
+  }, [product?.userId]);
 
   const calendarDays = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -104,21 +172,30 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
+  // Calculate advance booking limit from availability config
+  const advanceBookingDays = product?.availability?.advanceBookingDays ?? 30;
+  const maxBookingDate = useMemo(() => addDays(new Date(), advanceBookingDays), [advanceBookingDays]);
+
   const availability = product?.availability?.weekSchedule;
   const enabledDays = useMemo(() => {
     if (!availability?.schedule) return new Set<string>();
     return new Set(
       availability.schedule
-        .filter((d: any) => d.enabled && d.timeSlots?.length > 0)
+        .filter((d: any) => d.enabled && (d.timeSlots?.length > 0 || d.timeWindows?.length > 0))
         .map((d: any) => d.day)
     );
   }, [availability]);
 
   const isDayAvailable = (date: Date) => {
     if (isBefore(startOfDay(date), startOfDay(new Date()))) return false;
+    if (isBefore(maxBookingDate, startOfDay(date))) return false;
     const dayName = format(date, "EEEE").toLowerCase();
     return enabledDays.has(dayName);
   };
+
+  // Calendar navigation limits
+  const canGoBack = !isSameMonth(currentMonth, new Date());
+  const canGoForward = isBefore(startOfMonth(currentMonth), startOfMonth(maxBookingDate));
 
   const handleBookSession = async () => {
     if (!user?.id || !selectedDate || !selectedSlot || !product) {
@@ -126,7 +203,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
       return;
     }
 
-    if (!discordConnection?.isConnected) {
+    if (needsDiscord && !discordConnection?.isConnected) {
       toast.error("Please connect your Discord account first");
       return;
     }
@@ -147,8 +224,12 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
             customerEmail: user.primaryEmailAddress?.emailAddress,
             customerName: user.fullName,
             userId: user.id,
-            storeSlug: storeSlug,
+            storeSlug,
             notes,
+            sessionPlatform: product.sessionPlatform,
+            sessionLink: product.sessionLink,
+            sessionPhone: product.sessionPhone,
+            coachStripeAccountId: product.coachStripeAccountId,
           }),
         });
 
@@ -160,6 +241,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
           toast.error(data.error || "Failed to create checkout");
         }
       } else {
+        // Free session - book directly
         const result = await bookSession({
           productId: product._id,
           scheduledDate: selectedDate.getTime(),
@@ -167,16 +249,16 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
           notes: notes || undefined,
         });
 
-        if (result.success) {
-          toast.success("Session booked successfully!");
-          router.push("/dashboard/coaching");
+        if (result.success && result.sessionId) {
+          toast.success("Session booked!");
+          router.push(`/booking/confirmation?session=${result.sessionId}`);
         } else if (result.requiresDiscordAuth) {
           toast.error("Please connect Discord first");
         } else {
           toast.error(result.error || "Failed to book session");
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to book session");
     } finally {
       setIsBooking(false);
@@ -197,6 +279,9 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
       </div>
     );
   }
+
+  const platformLabel = getPlatformLabel(product.sessionPlatform);
+  const discordRequired = needsDiscord;
 
   // Generate structured data for SEO
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
@@ -220,7 +305,6 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
 
   return (
     <div className="min-h-screen bg-background">
-      {/* JSON-LD Structured Data */}
       <StructuredData data={structuredData} />
 
       <div className="mx-auto max-w-6xl px-4 py-8">
@@ -233,7 +317,9 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-3">
+          {/* Left: Calendar + Time Picker */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Product header */}
             <Card>
               <CardHeader>
                 <div className="flex items-start gap-4">
@@ -253,10 +339,14 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                   <div className="flex-1">
                     <CardTitle className="text-2xl">{product.title}</CardTitle>
                     <p className="mt-1 text-muted-foreground">{product.description}</p>
-                    <div className="mt-3 flex items-center gap-4">
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
                       <Badge variant="secondary">
                         <Clock className="mr-1 h-3 w-3" />
                         {product.duration || 60} min
+                      </Badge>
+                      <Badge variant="secondary">
+                        {getPlatformIcon(product.sessionPlatform)}
+                        <span className="ml-1">{platformLabel}</span>
                       </Badge>
                       <span className="text-2xl font-bold">
                         {product.price === 0 ? "Free" : `$${product.price}`}
@@ -267,6 +357,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
               </CardHeader>
             </Card>
 
+            {/* Step 1: Pick a Date */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -279,7 +370,11 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                    onClick={() => {
+                      const prev = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+                      setCurrentMonth(prev);
+                    }}
+                    disabled={!canGoBack}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -288,6 +383,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     variant="outline"
                     size="icon"
                     onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                    disabled={!canGoForward}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -322,9 +418,30 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     return (
                       <button
                         key={day.toISOString()}
-                        onClick={() => available && setSelectedDate(day)}
+                        onClick={() => {
+                          if (available) {
+                            setSelectedDate(day);
+                            setSelectedSlot(null);
+                          }
+                        }}
                         disabled={!available}
-                        className={`rounded-lg p-2 text-sm transition-all ${available ? "cursor-pointer hover:bg-primary/10" : "cursor-not-allowed text-muted-foreground/40"} ${selected ? "bg-primary text-primary-foreground" : ""} ${today && !selected ? "ring-1 ring-primary" : ""} `}
+                        className={`aspect-square rounded-lg p-2 text-sm transition-all ${
+                          available
+                            ? "cursor-pointer hover:bg-primary/10 font-medium"
+                            : "cursor-not-allowed text-muted-foreground/30"
+                        } ${
+                          selected
+                            ? "bg-primary text-primary-foreground hover:bg-primary"
+                            : ""
+                        } ${
+                          today && !selected
+                            ? "ring-1 ring-primary"
+                            : ""
+                        } ${
+                          available && !selected
+                            ? "bg-primary/5"
+                            : ""
+                        }`}
                       >
                         {format(day, "d")}
                       </button>
@@ -332,14 +449,14 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                   })}
                 </div>
 
-                {availability?.timezone && (
-                  <p className="mt-4 text-center text-xs text-muted-foreground">
-                    Times shown in {availability.timezone}
-                  </p>
-                )}
+                <div className="mt-4 flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                  <Globe className="h-3 w-3" />
+                  <span>Your timezone: {buyerTimezone.replace(/_/g, " ")}</span>
+                </div>
               </CardContent>
             </Card>
 
+            {/* Step 2: Pick a Time */}
             {selectedDate && (
               <Card>
                 <CardHeader>
@@ -359,9 +476,10 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     <div className="py-8 text-center text-muted-foreground">
                       <AlertCircle className="mx-auto mb-2 h-8 w-8" />
                       <p>No available slots on this date</p>
+                      <p className="mt-1 text-xs">Try selecting a different date</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                       {availableSlots
                         .filter(
                           (slot: { start: string; end: string; available: boolean }) =>
@@ -371,13 +489,18 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                           <button
                             key={slot.start}
                             onClick={() => setSelectedSlot(slot.start)}
-                            className={`rounded-lg border p-3 text-sm font-medium transition-all ${
+                            className={`rounded-lg border p-3 text-center transition-all ${
                               selectedSlot === slot.start
                                 ? "border-primary bg-primary text-primary-foreground"
-                                : "bg-background hover:border-primary/50"
-                            } `}
+                                : "bg-background hover:border-primary/50 hover:bg-primary/5"
+                            }`}
                           >
-                            {slot.start}
+                            <span className="text-sm font-medium">
+                              {formatTime12h(slot.start)}
+                            </span>
+                            <span className="block text-xs opacity-70">
+                              {product.duration || 60} min
+                            </span>
                           </button>
                         ))}
                     </div>
@@ -386,14 +509,15 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
               </Card>
             )}
 
+            {/* Step 3: Notes */}
             {selectedSlot && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Additional Notes (Optional)</CardTitle>
+                  <CardTitle>What would you like help with? (Optional)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Textarea
-                    placeholder="Any specific topics you'd like to cover, questions, or context..."
+                    placeholder="I need help with my vocal mixing chain, mastering workflow, or any specific topic..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={4}
@@ -404,6 +528,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
             )}
           </div>
 
+          {/* Right: Booking Summary (sticky sidebar) */}
           <div className="space-y-6">
             <Card className="sticky top-6">
               <CardHeader className="pb-4">
@@ -434,23 +559,32 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     <span className="text-sm text-muted-foreground">Duration</span>
                     <span className="text-sm font-medium">{product.duration || 60} minutes</span>
                   </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-sm text-muted-foreground">Platform</span>
+                    <span className="flex items-center gap-1.5 text-sm font-medium">
+                      {getPlatformIcon(product.sessionPlatform)}
+                      {platformLabel}
+                    </span>
+                  </div>
                   {selectedDate && (
                     <div className="flex justify-between gap-4">
                       <span className="text-sm text-muted-foreground">Date</span>
                       <span className="text-sm font-medium">
-                        {format(selectedDate, "EEEE, MMM d, yyyy")}
+                        {format(selectedDate, "EEE, MMM d, yyyy")}
                       </span>
                     </div>
                   )}
                   {selectedSlot && (
                     <div className="flex justify-between gap-4">
                       <span className="text-sm text-muted-foreground">Time</span>
-                      <span className="text-sm font-medium">{selectedSlot}</span>
+                      <span className="text-sm font-medium">
+                        {formatTime12h(selectedSlot)}
+                      </span>
                     </div>
                   )}
                   {!selectedDate && !selectedSlot && (
                     <p className="text-sm italic text-muted-foreground">
-                      Select a date and time above
+                      Select a date and time to continue
                     </p>
                   )}
                 </div>
@@ -464,59 +598,63 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                   </div>
                 </div>
 
-                <div
-                  className={`rounded-lg p-3 ${discordConnection?.isConnected ? "bg-green-50 dark:bg-green-950/20" : "bg-orange-50 dark:bg-orange-950/20"}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageCircle
-                      className={`h-4 w-4 ${discordConnection?.isConnected ? "text-green-600" : "text-orange-600"}`}
-                    />
-                    <span className="text-sm font-medium">
-                      {discordConnection?.isConnected
-                        ? `Discord: ${discordConnection.discordUsername}`
-                        : "Discord Required"}
-                    </span>
+                {/* Discord connection (only if platform is Discord) */}
+                {discordRequired && (
+                  <div
+                    className={`rounded-lg p-3 ${discordConnection?.isConnected ? "bg-green-50 dark:bg-green-950/20" : "bg-orange-50 dark:bg-orange-950/20"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageCircle
+                        className={`h-4 w-4 ${discordConnection?.isConnected ? "text-green-600" : "text-orange-600"}`}
+                      />
+                      <span className="text-sm font-medium">
+                        {discordConnection?.isConnected
+                          ? `Discord: ${discordConnection.discordUsername}`
+                          : "Discord Required"}
+                      </span>
+                    </div>
+                    {!discordConnection?.isConnected && (
+                      <>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          This session is held on Discord
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 w-full"
+                          onClick={() => {
+                            const returnUrl = window.location.pathname;
+                            const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+                            if (!clientId) {
+                              toast.error("Discord not configured");
+                              return;
+                            }
+                            const redirectUri = encodeURIComponent(
+                              `${window.location.origin}/api/auth/discord/callback`
+                            );
+                            const scope = encodeURIComponent("identify guilds.join");
+                            const stateParam = encodeURIComponent(returnUrl);
+                            window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${stateParam}`;
+                          }}
+                        >
+                          <MessageCircle className="mr-2 h-4 w-4" />
+                          Connect Discord
+                        </Button>
+                      </>
+                    )}
                   </div>
-                  {!discordConnection?.isConnected && (
-                    <>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Sessions are held on Discord for quality assurance
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-full"
-                        onClick={() => {
-                          const returnUrl = window.location.pathname;
-                          const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-                          if (!clientId) {
-                            toast.error("Discord not configured");
-                            return;
-                          }
-                          const redirectUri = encodeURIComponent(
-                            `${window.location.origin}/api/auth/discord/callback`
-                          );
-                          const scope = encodeURIComponent("identify guilds.join");
-                          const stateParam = encodeURIComponent(returnUrl);
-                          window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${stateParam}`;
-                        }}
-                      >
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Connect Discord
-                      </Button>
-                    </>
-                  )}
-                </div>
+                )}
 
+                {/* Book / Sign in button */}
                 {!userLoaded ? (
                   <Button disabled className="w-full">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Loading...
                   </Button>
                 ) : !user ? (
-                  <Button className="w-full" asChild>
+                  <Button className="w-full" size="lg" asChild>
                     <Link
-                      href={`/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`}
+                      href={`/sign-in?redirect_url=${encodeURIComponent(`/${storeSlug}/coaching/${productSlugOrId}`)}`}
                     >
                       Sign in to Book
                     </Link>
@@ -526,22 +664,31 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     className="w-full"
                     size="lg"
                     disabled={
-                      !selectedDate || !selectedSlot || isBooking || !discordConnection?.isConnected
+                      !selectedDate ||
+                      !selectedSlot ||
+                      isBooking ||
+                      (discordRequired && !discordConnection?.isConnected)
                     }
                     onClick={handleBookSession}
                   >
                     {isBooking ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Booking...
+                        {product.price > 0 ? "Redirecting to payment..." : "Booking..."}
                       </>
                     ) : (
                       <>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        {product.price === 0 ? "Book Free Session" : `Book - $${product.price}`}
+                        {product.price === 0 ? "Book Free Session" : `Pay $${product.price}`}
                       </>
                     )}
                   </Button>
+                )}
+
+                {product.price > 0 && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Secure payment via Stripe. Payment held until session is confirmed.
+                  </p>
                 )}
 
                 {product.deliverables && (

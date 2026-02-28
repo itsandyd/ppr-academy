@@ -77,4 +77,20 @@ crons.interval(
   {}
 );
 
+// Coaching session confirmations — send confirmation requests after sessions end, auto-resolve past deadline
+crons.interval(
+  "process coaching session confirmations",
+  { minutes: 15 },
+  internal.coachingConfirmation.processConfirmations,
+  {}
+);
+
+// Coaching session reminders — 24h, 1h, and start-time reminders
+crons.interval(
+  "send coaching session reminders",
+  { minutes: 15 },
+  internal.coachingReminderActions.processReminders,
+  {}
+);
+
 export default crons;

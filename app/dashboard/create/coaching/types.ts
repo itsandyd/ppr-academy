@@ -9,6 +9,14 @@ export type CoachingSessionType =
   | "feedback-session"
   | "custom";
 
+export type SessionPlatform =
+  | "zoom"
+  | "google_meet"
+  | "discord"
+  | "phone"
+  | "facetime"
+  | "custom";
+
 export type DayOfWeek =
   | "monday"
   | "tuesday"
@@ -18,16 +26,23 @@ export type DayOfWeek =
   | "saturday"
   | "sunday";
 
-export interface TimeSlot {
+export interface TimeWindow {
   start: string; // "09:00" in 24h format
-  end: string; // "10:00"
+  end: string; // "17:00"
+}
+
+/** Kept for backward compat with existing stored data */
+export interface TimeSlot {
+  start: string;
+  end: string;
   available: boolean;
 }
 
 export interface DaySchedule {
   day: DayOfWeek;
   enabled: boolean;
-  timeSlots: TimeSlot[];
+  timeWindows: TimeWindow[]; // availability windows (e.g., 9am-12pm + 2pm-5pm)
+  timeSlots?: TimeSlot[]; // legacy field - read but not written
 }
 
 export interface WeekSchedule {
@@ -35,19 +50,18 @@ export interface WeekSchedule {
   schedule: DaySchedule[];
 }
 
-// Override for specific dates
 export interface DateOverride {
   date: string; // ISO date "2025-11-20"
   available: boolean;
-  timeSlots?: TimeSlot[];
-  reason?: string; // "Busy", "Vacation", etc.
+  timeWindows?: TimeWindow[]; // if available=true, custom windows for that day
+  reason?: string; // "Vacation", "Holiday", "Extra hours", etc.
 }
 
 export interface DiscordConfig {
   requireDiscord: boolean;
   autoCreateChannel: boolean;
   channelTemplate?: string;
-  roleId?: string; // Discord role ID for access
+  roleId?: string;
   notifyOnBooking: boolean;
 }
 
@@ -62,7 +76,7 @@ export interface CoachingData {
 
   // Pricing
   price?: string;
-  pricingModel?: "free_with_gate" | "paid"; // Can be free or paid
+  pricingModel?: "free_with_gate" | "paid";
 
   // Follow Gate (if free)
   followGateEnabled?: boolean;
@@ -82,26 +96,36 @@ export interface CoachingData {
   };
   followGateMessage?: string;
 
-  // Discord Integration
+  // Discord Integration (legacy, kept for backward compat)
   discordConfig?: DiscordConfig;
+
+  // Session Platform
+  sessionPlatform?: SessionPlatform;
+  sessionLink?: string;
+  sessionPhone?: string;
 
   // Availability
   weekSchedule?: WeekSchedule;
-  dateOverrides?: DateOverride[]; // Specific date exceptions
-  bufferTime?: number; // Minutes between sessions
+  dateOverrides?: DateOverride[];
+  sessionDurations?: number[]; // durations offered: [30, 45, 60, 90]
+  bufferTime?: number; // minutes between sessions (0, 15, 30, 60)
   maxBookingsPerDay?: number;
-  advanceBookingDays?: number; // How far in advance can people book?
+  minNoticeHours?: number; // minimum scheduling notice in hours (e.g., 24)
+  advanceBookingDays?: number; // how far out buyers can book (e.g., 30, 60)
 
   // Session details
   sessionFormat?: "video" | "audio" | "chat" | "in-person";
-  preparationNotes?: string; // What students should prepare
-  deliverables?: string; // What they'll get (e.g., "Mixed track", "Feedback document")
+  preparationNotes?: string;
+  deliverables?: string;
+
+  // Cancellation
+  lateCancellationFeePercent?: number;
 }
 
 export interface StepCompletion {
   basics: boolean;
   pricing: boolean;
   followGate: boolean;
-  discord: boolean;
+  platform: boolean;
   availability: boolean;
 }

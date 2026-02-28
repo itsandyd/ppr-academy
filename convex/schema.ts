@@ -53,6 +53,17 @@ export default defineSchema({
     creatorLevel: v.optional(v.number()), // Creator level (1-10+)
     creatorXP: v.optional(v.number()), // XP earned from creating content
     creatorBadges: v.optional(v.array(v.string())), // Creator-specific badges
+    // Default coaching session platform
+    defaultSessionPlatform: v.optional(v.string()), // "zoom" | "google_meet" | "discord" | "phone" | "facetime" | "custom"
+    defaultSessionLink: v.optional(v.string()), // Default meeting URL
+    defaultSessionPhone: v.optional(v.string()), // Default phone for phone/facetime
+    // No-show tracking
+    coachNoShowCount: v.optional(v.number()),
+    coachingDisabled: v.optional(v.boolean()),
+    coachingDisabledAt: v.optional(v.number()),
+    studentNoShowCount: v.optional(v.number()),
+    // Google Calendar
+    googleCalendarConnected: v.optional(v.boolean()),
   })
     .index("by_email", ["email"])
     .index("by_clerkId", ["clerkId"])
@@ -1174,6 +1185,11 @@ export default defineSchema({
     availability: v.optional(v.any()), // Availability configuration
     thumbnailStyle: v.optional(v.string()), // Thumbnail display style
     discordRoleId: v.optional(v.string()), // Discord role for coaching access
+    // Session platform configuration
+    sessionPlatform: v.optional(v.string()), // "zoom" | "google_meet" | "discord" | "phone" | "facetime" | "custom"
+    sessionLink: v.optional(v.string()), // Meeting URL for zoom/google_meet/custom
+    sessionPhone: v.optional(v.string()), // Phone number for phone/facetime
+    lateCancellationFeePercent: v.optional(v.number()), // Default 50, creator can configure
     // Ableton Rack specific fields
     abletonVersion: v.optional(v.string()), // "Live 9", "Live 10", "Live 11", "Live 12"
     minAbletonVersion: v.optional(v.string()), // Minimum required version
@@ -1521,25 +1537,93 @@ export default defineSchema({
     duration: v.number(),
     status: v.union(
       v.literal("SCHEDULED"),
+      v.literal("CONFIRMED"),
       v.literal("IN_PROGRESS"),
       v.literal("COMPLETED"),
+      v.literal("PAID_OUT"),
       v.literal("CANCELLED"),
-      v.literal("NO_SHOW")
+      v.literal("NO_SHOW"),
+      v.literal("NO_SHOW_CREATOR"),
+      v.literal("NO_SHOW_BUYER"),
+      v.literal("DISPUTED"),
+      v.literal("UNDER_REVIEW")
     ),
     notes: v.optional(v.string()),
     sessionType: v.optional(v.string()),
     totalCost: v.number(),
+    // Session platform
+    sessionPlatform: v.optional(v.string()), // "zoom" | "google_meet" | "discord" | "phone" | "facetime" | "custom"
+    sessionLink: v.optional(v.string()), // Meeting URL
+    sessionPhone: v.optional(v.string()), // Phone number
+    // Discord integration (used when platform=discord)
     discordChannelId: v.optional(v.string()),
     discordRoleId: v.optional(v.string()),
     discordSetupComplete: v.optional(v.boolean()),
     discordCleanedUp: v.optional(v.boolean()),
-    reminderSent: v.optional(v.boolean()),
+    // Reminders
+    reminderSent: v.optional(v.boolean()), // Legacy - kept for backward compat
+    reminder24hSent: v.optional(v.boolean()),
+    reminder1hSent: v.optional(v.boolean()),
+    reminderStartSent: v.optional(v.boolean()),
+    // Session confirmation
+    coachConfirmed: v.optional(v.boolean()),
+    studentConfirmed: v.optional(v.boolean()),
+    confirmationRequestedAt: v.optional(v.number()),
+    confirmationDeadline: v.optional(v.number()),
+    // Payment tracking (escrow)
+    paymentStatus: v.optional(v.string()), // "held" | "released" | "refunded" | "partial_refund"
+    stripePaymentIntentId: v.optional(v.string()),
+    stripeTransferId: v.optional(v.string()),
+    coachStripeAccountId: v.optional(v.string()), // Coach's Stripe Connect account for delayed transfer
+    // Cancellation
+    cancelledBy: v.optional(v.string()), // "coach" | "student" | "system"
+    cancelledAt: v.optional(v.number()),
+    cancellationReason: v.optional(v.string()),
+    // No-show
+    noShowReportedBy: v.optional(v.string()),
+    // Google Calendar
+    googleCalendarEventId: v.optional(v.string()),
   })
     .index("by_productId", ["productId"])
     .index("by_coachId", ["coachId"])
     .index("by_studentId", ["studentId"])
     .index("by_scheduledDate", ["scheduledDate"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_stripePaymentIntentId", ["stripePaymentIntentId"]),
+
+  // Coaching session reviews (left by students after sessions)
+  coachingReviews: defineTable({
+    sessionId: v.id("coachingSessions"),
+    studentId: v.string(), // Clerk ID
+    coachId: v.string(), // Clerk ID
+    rating: v.number(), // 1-5
+    reviewText: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_coachId", ["coachId"])
+    .index("by_studentId", ["studentId"]),
+
+  // Google Calendar Connections (for coaching calendar sync)
+  googleCalendarConnections: defineTable({
+    userId: v.string(), // Clerk ID
+    refreshToken: v.string(),
+    accessToken: v.string(),
+    tokenExpiresAt: v.number(),
+    calendarId: v.string(), // Usually "primary"
+    connectedAt: v.number(),
+  })
+    .index("by_userId", ["userId"]),
+
+  // Google Calendar Busy-Time Cache (for conflict checking in availability queries)
+  googleCalendarCache: defineTable({
+    userId: v.string(), // Clerk ID of the coach
+    dateRangeStart: v.number(), // Start of cached range (Unix timestamp)
+    dateRangeEnd: v.number(), // End of cached range (Unix timestamp)
+    busyPeriods: v.array(v.object({ start: v.number(), end: v.number() })),
+    cachedAt: v.number(), // When this cache entry was created
+  })
+    .index("by_userId", ["userId"]),
 
   // User Progress Tracking - Enhanced for library
   userProgress: defineTable({

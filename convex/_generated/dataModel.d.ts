@@ -2352,27 +2352,82 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
-  coachingSessions: {
+  coachingReviews: {
     document: {
       coachId: string;
+      createdAt: number;
+      rating: number;
+      reviewText?: string;
+      sessionId: Id<"coachingSessions">;
+      studentId: string;
+      _id: Id<"coachingReviews">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "coachId"
+      | "createdAt"
+      | "rating"
+      | "reviewText"
+      | "sessionId"
+      | "studentId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_coachId: ["coachId", "_creationTime"];
+      by_sessionId: ["sessionId", "_creationTime"];
+      by_studentId: ["studentId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  coachingSessions: {
+    document: {
+      cancellationReason?: string;
+      cancelledAt?: number;
+      cancelledBy?: string;
+      coachConfirmed?: boolean;
+      coachId: string;
+      coachStripeAccountId?: string;
+      confirmationDeadline?: number;
+      confirmationRequestedAt?: number;
       discordChannelId?: string;
       discordCleanedUp?: boolean;
       discordRoleId?: string;
       discordSetupComplete?: boolean;
       duration: number;
       endTime: string;
+      googleCalendarEventId?: string;
+      noShowReportedBy?: string;
       notes?: string;
+      paymentStatus?: string;
       productId: Id<"digitalProducts">;
+      reminder1hSent?: boolean;
+      reminder24hSent?: boolean;
       reminderSent?: boolean;
+      reminderStartSent?: boolean;
       scheduledDate: number;
+      sessionLink?: string;
+      sessionPhone?: string;
+      sessionPlatform?: string;
       sessionType?: string;
       startTime: string;
       status:
         | "SCHEDULED"
+        | "CONFIRMED"
         | "IN_PROGRESS"
         | "COMPLETED"
+        | "PAID_OUT"
         | "CANCELLED"
-        | "NO_SHOW";
+        | "NO_SHOW"
+        | "NO_SHOW_CREATOR"
+        | "NO_SHOW_BUYER"
+        | "DISPUTED"
+        | "UNDER_REVIEW";
+      stripePaymentIntentId?: string;
+      stripeTransferId?: string;
+      studentConfirmed?: boolean;
       studentId: string;
       totalCost: number;
       _id: Id<"coachingSessions">;
@@ -2381,20 +2436,39 @@ export type DataModel = {
     fieldPaths:
       | "_creationTime"
       | "_id"
+      | "cancellationReason"
+      | "cancelledAt"
+      | "cancelledBy"
+      | "coachConfirmed"
       | "coachId"
+      | "coachStripeAccountId"
+      | "confirmationDeadline"
+      | "confirmationRequestedAt"
       | "discordChannelId"
       | "discordCleanedUp"
       | "discordRoleId"
       | "discordSetupComplete"
       | "duration"
       | "endTime"
+      | "googleCalendarEventId"
+      | "noShowReportedBy"
       | "notes"
+      | "paymentStatus"
       | "productId"
+      | "reminder1hSent"
+      | "reminder24hSent"
       | "reminderSent"
+      | "reminderStartSent"
       | "scheduledDate"
+      | "sessionLink"
+      | "sessionPhone"
+      | "sessionPlatform"
       | "sessionType"
       | "startTime"
       | "status"
+      | "stripePaymentIntentId"
+      | "stripeTransferId"
+      | "studentConfirmed"
       | "studentId"
       | "totalCost";
     indexes: {
@@ -2404,6 +2478,7 @@ export type DataModel = {
       by_productId: ["productId", "_creationTime"];
       by_scheduledDate: ["scheduledDate", "_creationTime"];
       by_status: ["status", "_creationTime"];
+      by_stripePaymentIntentId: ["stripePaymentIntentId", "_creationTime"];
       by_studentId: ["studentId", "_creationTime"];
     };
     searchIndexes: {};
@@ -4082,6 +4157,7 @@ export type DataModel = {
       installationNotes?: string;
       isPinned?: boolean;
       isPublished?: boolean;
+      lateCancellationFeePercent?: number;
       macroCount?: number;
       macroScreenshotUrls?: Array<string>;
       mediaType?: "youtube" | "spotify" | "website" | "social";
@@ -4178,6 +4254,9 @@ export type DataModel = {
       requiresMaxForLive?: boolean;
       sampleCategories?: Array<string>;
       sampleIds?: Array<Id<"audioSamples">>;
+      sessionLink?: string;
+      sessionPhone?: string;
+      sessionPlatform?: string;
       sessionType?: string;
       slug?: string;
       stemsUrl?: string;
@@ -4286,6 +4365,7 @@ export type DataModel = {
       | "installationNotes"
       | "isPinned"
       | "isPublished"
+      | "lateCancellationFeePercent"
       | "macroCount"
       | "macroScreenshotUrls"
       | "mediaType"
@@ -4347,6 +4427,9 @@ export type DataModel = {
       | "requiresMaxForLive"
       | "sampleCategories"
       | "sampleIds"
+      | "sessionLink"
+      | "sessionPhone"
+      | "sessionPlatform"
       | "sessionType"
       | "slug"
       | "stemsUrl"
@@ -6444,6 +6527,60 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_repository: ["repository", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  googleCalendarCache: {
+    document: {
+      busyPeriods: Array<{ end: number; start: number }>;
+      cachedAt: number;
+      dateRangeEnd: number;
+      dateRangeStart: number;
+      userId: string;
+      _id: Id<"googleCalendarCache">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "busyPeriods"
+      | "cachedAt"
+      | "dateRangeEnd"
+      | "dateRangeStart"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  googleCalendarConnections: {
+    document: {
+      accessToken: string;
+      calendarId: string;
+      connectedAt: number;
+      refreshToken: string;
+      tokenExpiresAt: number;
+      userId: string;
+      _id: Id<"googleCalendarConnections">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "accessToken"
+      | "calendarId"
+      | "connectedAt"
+      | "refreshToken"
+      | "tokenExpiresAt"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_userId: ["userId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -12024,17 +12161,24 @@ export type DataModel = {
       avatarUrl?: string;
       bio?: string;
       clerkId?: string;
+      coachNoShowCount?: number;
+      coachingDisabled?: boolean;
+      coachingDisabledAt?: number;
       creatorBadges?: Array<string>;
       creatorLevel?: number;
       creatorSince?: number;
       creatorXP?: number;
       dashboardPreference?: "learn" | "create";
+      defaultSessionLink?: string;
+      defaultSessionPhone?: string;
+      defaultSessionPlatform?: string;
       discordId?: string;
       discordUsername?: string;
       discordVerified?: boolean;
       email?: string;
       emailVerified?: number;
       firstName?: string;
+      googleCalendarConnected?: boolean;
       hashedPassword?: string;
       image?: string;
       imageUrl?: string;
@@ -12050,6 +12194,7 @@ export type DataModel = {
       stripeAccountStatus?: "pending" | "restricted" | "enabled";
       stripeConnectAccountId?: string;
       stripeOnboardingComplete?: boolean;
+      studentNoShowCount?: number;
       tiktok?: string;
       twitter?: string;
       userRoleId?: string;
@@ -12067,17 +12212,24 @@ export type DataModel = {
       | "avatarUrl"
       | "bio"
       | "clerkId"
+      | "coachingDisabled"
+      | "coachingDisabledAt"
+      | "coachNoShowCount"
       | "creatorBadges"
       | "creatorLevel"
       | "creatorSince"
       | "creatorXP"
       | "dashboardPreference"
+      | "defaultSessionLink"
+      | "defaultSessionPhone"
+      | "defaultSessionPlatform"
       | "discordId"
       | "discordUsername"
       | "discordVerified"
       | "email"
       | "emailVerified"
       | "firstName"
+      | "googleCalendarConnected"
       | "hashedPassword"
       | "image"
       | "imageUrl"
@@ -12089,6 +12241,7 @@ export type DataModel = {
       | "stripeAccountStatus"
       | "stripeConnectAccountId"
       | "stripeOnboardingComplete"
+      | "studentNoShowCount"
       | "tiktok"
       | "twitter"
       | "userRoleId"

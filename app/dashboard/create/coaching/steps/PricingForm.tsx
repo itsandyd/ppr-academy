@@ -16,7 +16,7 @@ export function PricingForm() {
   const handleNext = async () => {
     await saveCoaching();
     // If free, go to follow gate; if paid, go to discord
-    const nextStep = state.data.pricingModel === 'free_with_gate' ? 'followGate' : 'discord';
+    const nextStep = state.data.pricingModel === 'free_with_gate' ? 'followGate' : 'platform';
     router.push(`/dashboard/create/coaching?step=${nextStep}${state.coachingId ? `&coachingId=${state.coachingId}` : ''}`);
   };
 
@@ -230,7 +230,7 @@ export function PricingForm() {
           ← Back
         </Button>
         <Button onClick={handleNext} disabled={!canProceed}>
-          Continue to Discord Setup →
+          Continue to Session Platform →
         </Button>
       </div>
     </div>
