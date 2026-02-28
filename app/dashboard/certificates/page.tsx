@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Award, Loader2, ArrowLeft, BookOpen } from "lucide-react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -93,20 +94,12 @@ export default function CertificatesPage() {
           ))}
         </div>
       ) : (
-        <Card className="p-12 text-center">
-          <Award className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-xl font-semibold">No Certificates Yet</h3>
-          <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-            Complete courses to earn certificates that showcase your achievements. Each certificate
-            can be shared and verified.
-          </p>
-          <Link href="/dashboard/courses?mode=learn">
-            <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
-              <BookOpen className="mr-2 h-4 w-4" />
-              Continue Learning
-            </Button>
-          </Link>
-        </Card>
+        <EmptyState
+          icon={Award}
+          title="Earn your first certificate"
+          description="Complete courses to earn shareable certificates that prove your skills. Add them to your profile and stand out."
+          action={{ label: "Browse Courses", href: "/dashboard/courses?mode=learn" }}
+        />
       )}
     </div>
   );

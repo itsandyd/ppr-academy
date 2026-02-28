@@ -50,6 +50,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { campaignCategories } from "@/lib/marketing-campaigns/types";
 import { TikTokIcon, platformIcons } from "@/components/marketing/CampaignCard";
 import { Mail, Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
@@ -142,18 +143,12 @@ export default function CampaignsPage() {
   if (!store) {
     return (
       <div className="container py-8">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mb-2">Store Required</h2>
-            <p className="text-muted-foreground mb-4">
-              You need to create a store before you can create marketing campaigns.
-            </p>
-            <Button asChild>
-              <Link href="/dashboard/settings/store">Create Store</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={AlertCircle}
+          title="Set up your store first"
+          description="Create your store before launching marketing campaigns. Once set up, you can promote products across email and social."
+          action={{ label: "Create Store", href: "/dashboard/settings/store" }}
+        />
       </div>
     );
   }
@@ -233,31 +228,24 @@ export default function CampaignsPage() {
 
       {/* Campaigns List */}
       {!filteredCampaigns || filteredCampaigns.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 flex flex-col items-center text-center">
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
-              <Megaphone className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-lg font-semibold tracking-tight text-foreground">
-              {searchQuery || statusFilter !== "all" || typeFilter !== "all"
-                ? "No campaigns match your filters"
-                : "No campaigns yet"}
-            </h3>
-            {!(searchQuery || statusFilter !== "all" || typeFilter !== "all") && (
-              <p className="mt-2 text-[13px] text-muted-foreground max-w-[340px] leading-relaxed">
-                Create targeted campaigns to promote your products, run giveaways, or announce new releases.
-              </p>
-            )}
-            {!searchQuery && statusFilter === "all" && typeFilter === "all" && (
-              <Button asChild className="mt-5">
-                <Link href="/dashboard/marketing/campaigns/new">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Create Campaign
-                </Link>
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Megaphone}
+          title={
+            searchQuery || statusFilter !== "all" || typeFilter !== "all"
+              ? "No campaigns match your filters"
+              : "Plan your next launch"
+          }
+          description={
+            searchQuery || statusFilter !== "all" || typeFilter !== "all"
+              ? "Try adjusting your search or filters."
+              : "Create marketing campaigns to promote new releases, run flash sales, or re-engage your audience across email and social."
+          }
+          action={
+            !searchQuery && statusFilter === "all" && typeFilter === "all"
+              ? { label: "Create Campaign", href: "/dashboard/marketing/campaigns/new" }
+              : undefined
+          }
+        />
       ) : (
         <div className="space-y-3">
           {filteredCampaigns.map((campaign) => {

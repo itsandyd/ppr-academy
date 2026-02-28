@@ -35,6 +35,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -179,20 +180,12 @@ function LearnModeMemberships() {
           )}
         </div>
       ) : (
-        <Card className="p-12 text-center">
-          <Crown className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-xl font-semibold">No Active Memberships</h3>
-          <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-            Subscribe to creator memberships for ongoing access to exclusive courses, products, and
-            content.
-          </p>
-          <Link href="/marketplace/memberships">
-            <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-              <Crown className="mr-2 h-4 w-4" />
-              Browse Memberships
-            </Button>
-          </Link>
-        </Card>
+        <EmptyState
+          icon={Crown}
+          title="Get exclusive access"
+          description="Subscribe to creator memberships for ongoing access to courses, sample packs, feedback, and community perks from top producers."
+          action={{ label: "Browse Memberships", href: "/marketplace/memberships" }}
+        />
       )}
     </div>
   );
@@ -403,16 +396,12 @@ function CreateModeMemberships() {
 
   if (!store) {
     return (
-      <Card className="p-12 text-center">
-        <Crown className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-        <h3 className="mb-2 text-xl font-semibold">Store Required</h3>
-        <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-          Create a store first to start offering memberships.
-        </p>
-        <Link href="/dashboard?mode=create">
-          <Button>Create Store</Button>
-        </Link>
-      </Card>
+      <EmptyState
+        icon={Crown}
+        title="Set up your store first"
+        description="You need a store before you can create membership tiers. Once set up, offer recurring access to your courses, products, and exclusive content."
+        action={{ label: "Create Store", href: "/dashboard?mode=create" }}
+      />
     );
   }
 
@@ -574,20 +563,12 @@ function CreateModeMemberships() {
           })}
         </div>
       ) : (
-        <Card className="p-12 text-center">
-          <Crown className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-xl font-semibold">No Membership Tiers Yet</h3>
-          <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-            Create subscription tiers to offer recurring access to your courses, products, and
-            exclusive content.
-          </p>
-          <Link href="/dashboard/create/membership">
-            <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Membership
-            </Button>
-          </Link>
-        </Card>
+        <EmptyState
+          icon={Crown}
+          title="Launch a membership program"
+          description="Offer subscription tiers with recurring access to your courses, sample packs, and exclusive content. Memberships create predictable monthly income."
+          action={{ label: "Create Membership", href: "/dashboard/create/membership" }}
+        />
       )}
     </div>
   );

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { stripHtml } from "@/lib/text-utils";
 
 const DAW_OPTIONS = [
   { value: "all", label: "All DAWs" },
@@ -374,7 +375,7 @@ function ProjectCard({
             <h3 className="line-clamp-1 text-lg font-bold transition-colors group-hover:text-purple-600">
               {project.title}
             </h3>
-            <p className="line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
+            <p className="line-clamp-2 text-sm text-muted-foreground">{project.description ? stripHtml(project.description) : ""}</p>
           </div>
 
           {/* Genres */}

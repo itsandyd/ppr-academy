@@ -24,6 +24,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -168,16 +169,13 @@ export default function CoachingPage() {
                 <SessionCard key={session._id} session={session} getStatusBadge={getStatusBadge} />
               ))
             ) : (
-              <Card className="p-8 text-center">
-                <Calendar className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-medium">No Upcoming Sessions</h3>
-                <p className="mb-4 text-muted-foreground">
-                  Book a session with a coach to get personalized guidance
-                </p>
-                <Link href="/marketplace/creators">
-                  <Button>Find Coaches</Button>
-                </Link>
-              </Card>
+              <EmptyState
+                icon={Calendar}
+                title="No upcoming sessions"
+                description="Book a session with a coach to get personalized guidance on your production."
+                action={{ label: "Find Coaches", href: "/marketplace/creators" }}
+                compact
+              />
             )}
           </TabsContent>
 
@@ -187,11 +185,12 @@ export default function CoachingPage() {
                 <SessionCard key={session._id} session={session} getStatusBadge={getStatusBadge} />
               ))
             ) : (
-              <Card className="p-8 text-center">
-                <Video className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-medium">No Past Sessions</h3>
-                <p className="text-muted-foreground">Your completed sessions will appear here</p>
-              </Card>
+              <EmptyState
+                icon={Video}
+                title="No past sessions"
+                description="Your completed coaching sessions and notes will appear here."
+                compact
+              />
             )}
           </TabsContent>
 
@@ -202,20 +201,12 @@ export default function CoachingPage() {
           </TabsContent>
         </Tabs>
       ) : (
-        <Card className="p-12 text-center">
-          <Video className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-xl font-semibold">No Coaching Sessions Yet</h3>
-          <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-            Book 1-on-1 sessions with experienced music producers and get personalized feedback on
-            your tracks, production techniques, and more.
-          </p>
-          <Link href="/marketplace/creators">
-            <Button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600">
-              <User className="mr-2 h-4 w-4" />
-              Find Coaches
-            </Button>
-          </Link>
-        </Card>
+        <EmptyState
+          icon={Video}
+          title="Get personalized coaching"
+          description="Book 1-on-1 sessions with experienced producers. Get feedback on your mixes, learn new techniques, and level up your sound."
+          action={{ label: "Find Coaches", href: "/marketplace/creators" }}
+        />
       )}
     </div>
   );

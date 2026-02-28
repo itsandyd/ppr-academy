@@ -188,16 +188,12 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold">Students</h1>
           <p className="mt-1 text-muted-foreground">Manage your students and customers</p>
         </div>
-        <Card>
-          <CardContent className="flex min-h-[300px] items-center justify-center">
-            <div className="text-center">
-              <Package className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-              <p className="mt-4 text-muted-foreground">
-                Set up your store to start tracking students
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Package}
+          title="Set up your store first"
+          description="Create your store to start selling courses and tracking student progress, completions, and engagement."
+          action={{ label: "Create Store", href: "/dashboard?mode=create" }}
+        />
       </div>
     );
   }
@@ -588,15 +584,15 @@ export default function StudentsPage() {
           ) : (
             <EmptyState
               icon={Users}
-              title={searchQuery || productFilter !== "all" ? "No students found" : "Your students will appear here"}
+              title={searchQuery || productFilter !== "all" ? "No students found" : "Track your students"}
               description={
                 searchQuery || productFilter !== "all"
-                  ? "Try a different search term or filter"
-                  : "When producers enroll in your courses, you'll see their progress, completion rates, and engagement here."
+                  ? "Try a different search term or filter."
+                  : "When producers enroll in your courses or buy your products, you'll see their progress, completion rates, and engagement here."
               }
               action={
                 !(searchQuery || productFilter !== "all")
-                  ? { label: "Share Your Store", href: "/dashboard?mode=create" }
+                  ? { label: "Create a Course", href: "/dashboard/create/course?category=course" }
                   : undefined
               }
             />

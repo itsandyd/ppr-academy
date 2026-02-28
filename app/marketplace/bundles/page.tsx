@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { stripHtml } from "@/lib/text-utils";
 
 const BUNDLE_TYPE_OPTIONS = [
   { value: "all", label: "All Types" },
@@ -317,7 +318,7 @@ function BundleCard({
             <h3 className="line-clamp-1 text-lg font-bold transition-colors group-hover:text-violet-600">
               {bundle.name}
             </h3>
-            <p className="line-clamp-2 text-sm text-muted-foreground">{bundle.description}</p>
+            <p className="line-clamp-2 text-sm text-muted-foreground">{bundle.description ? stripHtml(bundle.description) : ""}</p>
           </div>
 
           {/* Items Count */}

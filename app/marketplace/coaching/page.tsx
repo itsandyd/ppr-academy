@@ -33,6 +33,7 @@ import {
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import { stripHtml } from "@/lib/text-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,7 @@ export default function CoachingMarketplacePage() {
   const [selectedSessionType, setSelectedSessionType] = useState<string | undefined>(undefined);
   const [selectedDuration, setSelectedDuration] = useState<string | undefined>(undefined);
   const [priceRange, setPriceRange] = useState<
-    "free" | "under-50" | "50-100" | "over-100" | undefined
+    "free" | "under-10" | "10-25" | "25-50" | "50-100" | "over-100" | undefined
   >(undefined);
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -391,7 +392,7 @@ function CoachingCard({
                 <div>
                   <h3 className="mb-1 line-clamp-1 font-semibold">{session.title}</h3>
                   <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
-                    {session.description}
+                    {session.description ? stripHtml(session.description) : ""}
                   </p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     {session.duration && (
@@ -466,7 +467,7 @@ function CoachingCard({
             <h3 className="mb-2 line-clamp-2 font-semibold transition-colors group-hover:text-purple-500">
               {session.title}
             </h3>
-            <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{session.description}</p>
+            <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{session.description ? stripHtml(session.description) : ""}</p>
 
             <div className="mb-4 flex items-center gap-2">
               <Avatar className="h-8 w-8">

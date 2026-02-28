@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { stripHtml } from "@/lib/text-utils";
 
 const SERVICE_TYPE_OPTIONS = [
   { value: "all", label: "All Services" },
@@ -345,7 +346,7 @@ function ServiceCard({
             <h3 className="line-clamp-1 text-lg font-bold transition-colors group-hover:text-purple-600">
               {service.title}
             </h3>
-            <p className="line-clamp-2 text-sm text-muted-foreground">{service.description}</p>
+            <p className="line-clamp-2 text-sm text-muted-foreground">{service.description ? stripHtml(service.description) : ""}</p>
           </div>
 
           {/* Turnaround Time */}

@@ -285,9 +285,9 @@ export default function SequencesPage() {
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
             <Workflow className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
           </div>
-          <h3 className="text-lg font-semibold tracking-tight mb-2">Automate your email marketing</h3>
+          <h3 className="text-lg font-semibold tracking-tight mb-2">Nurture fans into customers</h3>
           <p className="text-muted-foreground mb-5 text-[13px] max-w-[340px] mx-auto leading-relaxed">
-            Set up drip sequences that nurture new subscribers into paying customers — on autopilot.
+            Set up automated email sequences that welcome new subscribers, follow up after purchases, and re-engage inactive fans — on autopilot.
           </p>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

@@ -32,6 +32,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import { stripHtml } from "@/lib/text-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -391,7 +392,7 @@ function GuideCard({
                 <div>
                   <h3 className="mb-1 line-clamp-1 font-semibold">{guide.title}</h3>
                   <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
-                    {guide.description}
+                    {guide.description ? stripHtml(guide.description) : ""}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {guide.category && <Badge variant="secondary">{guide.category}</Badge>}
@@ -453,7 +454,7 @@ function GuideCard({
             <h3 className="mb-2 line-clamp-2 font-semibold transition-colors group-hover:text-emerald-500">
               {guide.title}
             </h3>
-            <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{guide.description}</p>
+            <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{guide.description ? stripHtml(guide.description) : ""}</p>
 
             <div className="mb-3 flex items-center gap-2">
               <Avatar className="h-6 w-6">

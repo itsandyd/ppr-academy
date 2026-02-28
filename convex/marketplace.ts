@@ -294,7 +294,14 @@ export const searchMarketplace = query({
     category: v.optional(v.string()),
     specificCategories: v.optional(v.array(v.string())), // Array of specific category names (Reverb, Delay, Synth, etc.)
     priceRange: v.optional(
-      v.union(v.literal("free"), v.literal("under-50"), v.literal("50-100"), v.literal("over-100"))
+      v.union(
+        v.literal("free"),
+        v.literal("under-10"),
+        v.literal("10-25"),
+        v.literal("25-50"),
+        v.literal("50-100"),
+        v.literal("over-100")
+      )
     ),
     sortBy: v.optional(
       v.union(
@@ -728,10 +735,14 @@ export const searchMarketplace = query({
         switch (priceRange) {
           case "free":
             return price === 0;
-          case "under-50":
-            return price > 0 && price < 50;
+          case "under-10":
+            return price > 0 && price < 10;
+          case "10-25":
+            return price >= 10 && price <= 25;
+          case "25-50":
+            return price > 25 && price <= 50;
           case "50-100":
-            return price >= 50 && price <= 100;
+            return price > 50 && price <= 100;
           case "over-100":
             return price > 100;
           default:
@@ -772,29 +783,188 @@ export const searchMarketplace = query({
  * Get unique categories from all published content
  */
 export const getMarketplaceCategories = query({
-  args: {},
+  args: {
+    contentType: v.optional(v.string()),
+  },
   returns: v.array(v.string()),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const categories = new Set<string>();
+    const { contentType } = args;
 
-    // Get categories from courses (bounded)
-    const courses = await ctx.db
-      .query("courses")
-      .filter((q) => q.eq(q.field("isPublished"), true))
-      .take(500);
-    courses.forEach((c) => {
-      if (c.category) categories.add(c.category);
-    });
+    // Get categories from courses
+    if (!contentType || contentType === "all" || contentType === "courses") {
+      const courses = await ctx.db
+        .query("courses")
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .take(500);
+      courses.forEach((c) => {
+        if (c.category) categories.add(c.category);
+      });
+    }
 
-    // Get categories from products (bounded)
-    const products = await ctx.db
-      .query("digitalProducts")
-      .filter((q) => q.eq(q.field("isPublished"), true))
-      .take(500);
-    products.forEach((p) => {
-      if (p.category) categories.add(p.category);
-    });
+    // Get categories from products
+    if (!contentType || contentType === "all" || contentType === "products") {
+      const products = await ctx.db
+        .query("digitalProducts")
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .take(500);
+      products.forEach((p) => {
+        if (p.category) categories.add(p.category);
+      });
+    }
+
+    // Get categories from bundles
+    if (!contentType || contentType === "all" || contentType === "bundles") {
+      const bundles = await ctx.db
+        .query("bundles")
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .take(200);
+      bundles.forEach((b) => {
+        if (b.bundleType) categories.add(b.bundleType);
+      });
+    }
 
     return Array.from(categories).sort();
+  },
+});
+
+/**
+ * Get the most recently added marketplace items across all content types.
+ * Used for the "Just Added" section on the marketplace homepage.
+ */
+export const getJustAdded = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 10;
+
+    const getImageUrl = async (imageUrl: string | undefined): Promise<string | undefined> => {
+      if (!imageUrl) return undefined;
+      if (imageUrl.startsWith("http")) return imageUrl;
+      try {
+        return (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
+      } catch {
+        return imageUrl;
+      }
+    };
+
+    // Fetch the most recent items from each content type
+    const [courses, products, coaching, bundles] = await Promise.all([
+      ctx.db
+        .query("courses")
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .order("desc")
+        .take(limit),
+      ctx.db
+        .query("digitalProducts")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("isPublished"), true),
+            q.neq(q.field("productType"), "coaching")
+          )
+        )
+        .order("desc")
+        .take(limit),
+      ctx.db
+        .query("digitalProducts")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("isPublished"), true),
+            q.eq(q.field("productType"), "coaching")
+          )
+        )
+        .order("desc")
+        .take(limit),
+      ctx.db
+        .query("bundles")
+        .filter((q) => q.eq(q.field("isPublished"), true))
+        .order("desc")
+        .take(limit),
+    ]);
+
+    // Combine, sort by creation time, and take the top N
+    const combined = [
+      ...courses.map((c) => ({
+        _id: c._id,
+        _creationTime: c._creationTime,
+        title: c.title,
+        slug: c.slug || c.title.toLowerCase().replace(/\s+/g, "-"),
+        price: c.price || 0,
+        imageUrl: c.imageUrl,
+        contentType: "course" as const,
+        storeId: c.storeId,
+      })),
+      ...products.map((p) => ({
+        _id: p._id,
+        _creationTime: p._creationTime,
+        title: p.title,
+        slug: (p as any).slug,
+        price: p.price,
+        imageUrl: p.imageUrl,
+        contentType: "product" as const,
+        storeId: p.storeId,
+      })),
+      ...coaching.map((c) => ({
+        _id: c._id,
+        _creationTime: c._creationTime,
+        title: c.title,
+        slug: (c as any).slug,
+        price: c.price,
+        imageUrl: c.imageUrl,
+        contentType: "coaching" as const,
+        storeId: c.storeId,
+      })),
+      ...bundles.map((b) => ({
+        _id: b._id,
+        _creationTime: b._creationTime,
+        title: b.name,
+        slug: b.slug || b._id,
+        price: b.bundlePrice,
+        imageUrl: b.imageUrl,
+        contentType: "bundle" as const,
+        storeId: b.storeId,
+      })),
+    ];
+
+    combined.sort((a, b) => b._creationTime - a._creationTime);
+    const top = combined.slice(0, limit);
+
+    // Enrich with creator info and resolve image URLs
+    const enriched = await Promise.all(
+      top.map(async (item) => {
+        let creatorName = "Creator";
+        let creatorAvatar: string | undefined;
+
+        if (item.storeId) {
+          const store = await ctx.db.get(item.storeId as Id<"stores">);
+          if (store) {
+            const user = await ctx.db
+              .query("users")
+              .filter((q) => q.eq(q.field("clerkId"), store.userId))
+              .first();
+            if (user) {
+              creatorName = user.name || store.name || "Creator";
+              creatorAvatar = user.imageUrl;
+            }
+          }
+        }
+
+        return {
+          _id: item._id,
+          _creationTime: item._creationTime,
+          title: item.title,
+          slug: item.slug,
+          price: item.price,
+          thumbnail: await getImageUrl(item.imageUrl),
+          contentType: item.contentType,
+          creatorName,
+          creatorAvatar: await getImageUrl(creatorAvatar),
+        };
+      })
+    );
+
+    return enriched;
   },
 });

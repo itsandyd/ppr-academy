@@ -175,16 +175,12 @@ export default function AffiliatesPage() {
             Manage your affiliate partners
           </p>
         </div>
-        <Card>
-          <CardContent className="flex min-h-[300px] items-center justify-center">
-            <div className="text-center">
-              <Package className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-              <p className="mt-4 text-muted-foreground">
-                Set up your store to start an affiliate program
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Package}
+          title="Set up your store first"
+          description="Create your store to start an affiliate program. Partners will promote your products and earn commissions on sales."
+          action={{ label: "Create Store", href: "/dashboard?mode=create" }}
+        />
       </div>
     );
   }
@@ -414,9 +410,15 @@ export default function AffiliatesPage() {
                       ? "No pending applications"
                       : selectedTab === "active"
                       ? "No active affiliates yet"
-                      : "No affiliates yet"
+                      : "Grow with affiliate partners"
                   }
-                  description="Partners who promote your products will appear here. Share your affiliate link to start building your team."
+                  description={
+                    selectedTab === "pending"
+                      ? "New affiliate applications will appear here for your review."
+                      : selectedTab === "active"
+                      ? "Approved affiliates who are actively promoting your products will show up here."
+                      : "Let other creators and influencers promote your products and earn a commission on every sale they drive."
+                  }
                 />
               )}
             </TabsContent>

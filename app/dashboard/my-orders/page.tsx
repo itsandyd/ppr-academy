@@ -137,8 +137,8 @@ export default function MyOrdersPage() {
           {activeOrders.length === 0 ? (
             <SharedEmptyState
               icon={Inbox}
-              title="No active orders"
-              description="When you purchase a mixing or mastering service, your active orders will appear here."
+              title="Get your tracks professionally mixed"
+              description="Hire a mixing or mastering engineer from the marketplace. Track uploads, revisions, and delivery all in one place."
               action={{ label: "Browse Mixing Services", href: "/marketplace/mixing-services" }}
             />
           ) : (
@@ -154,8 +154,8 @@ export default function MyOrdersPage() {
           {completedOrders.length === 0 ? (
             <SharedEmptyState
               icon={CheckCircle}
-              title="No completed orders"
-              description="Your completed mixing and mastering orders will appear here once they're finished."
+              title="No completed orders yet"
+              description="Finished mixes and masters will appear here. Download final files and leave reviews."
             />
           ) : (
             <div className="space-y-4">

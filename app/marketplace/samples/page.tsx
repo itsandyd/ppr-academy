@@ -52,6 +52,7 @@ import Image from "next/image";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ReportButton } from "@/components/shared/report-button";
+import { stripHtml } from "@/lib/text-utils";
 
 const GENRES = [
   "Hip Hop",
@@ -1066,7 +1067,7 @@ function PackCard({ pack, index, onPurchase, isOwned }: any) {
             <h3 className="line-clamp-1 text-lg font-bold transition-colors group-hover:text-chart-1">
               {pack.title}
             </h3>
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{pack.description}</p>
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{pack.description ? stripHtml(pack.description) : ""}</p>
           </div>
 
           {/* Genres */}

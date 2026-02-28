@@ -9,6 +9,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   Users,
   BookOpen,
@@ -18,6 +25,9 @@ import {
   Music,
   Menu,
   Store,
+  Filter,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -29,19 +39,54 @@ export const dynamic = "force-dynamic";
 
 export default function CreatorsPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<"most-products" | "most-students" | "most-courses" | "name-az">("most-students");
   const { isSignedIn } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Fetch all creators
   const allCreators = useQuery(api.marketplace.getAllCreators, { limit: 100 }) || [];
 
-  // Filter creators based on search
-  const filteredCreators = allCreators.filter(
-    (creator: any) =>
-      creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creator.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creator.categories.some((cat: any) => cat.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Collect all unique categories for the filter dropdown
+  const allCategories = Array.from(
+    new Set(allCreators.flatMap((c: any) => c.categories))
+  ).sort();
+
+  // Filter creators based on search and category
+  const filteredCreators = allCreators
+    .filter((creator: any) => {
+      const matchesSearch =
+        !searchTerm ||
+        creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        creator.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        creator.categories.some((cat: any) => cat.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesCategory =
+        !selectedCategory ||
+        creator.categories.some((cat: any) => cat === selectedCategory);
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a: any, b: any) => {
+      switch (sortBy) {
+        case "most-products":
+          return b.totalProducts - a.totalProducts;
+        case "most-students":
+          return b.totalStudents - a.totalStudents;
+        case "most-courses":
+          return b.totalCourses - a.totalCourses;
+        case "name-az":
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+
+  const activeFiltersCount = [selectedCategory, searchTerm].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory(undefined);
+    setSortBy("most-students");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -227,10 +272,53 @@ export default function CreatorsPage() {
         </div>
       </section>
 
-      {/* Creators Grid */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <p className="text-muted-foreground">
+      {/* Filters & Sort */}
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={selectedCategory || "all"}
+              onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
+            >
+              <SelectTrigger className="w-[180px] bg-white dark:bg-black">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-black">
+                <SelectItem value="all">All Categories</SelectItem>
+                {allCategories.map((cat: string) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={sortBy}
+              onValueChange={(v) => setSortBy(v as any)}
+            >
+              <SelectTrigger className="w-[180px] bg-white dark:bg-black">
+                <ArrowUpDown className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-black">
+                <SelectItem value="most-students">Most Students</SelectItem>
+                <SelectItem value="most-products">Most Products</SelectItem>
+                <SelectItem value="most-courses">Most Courses</SelectItem>
+                <SelectItem value="name-az">Name A–Z</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
+                <X className="mr-1 h-4 w-4" />
+                Clear filters
+              </Button>
+            )}
+          </div>
+
+          <p className="text-sm text-muted-foreground">
             {filteredCreators.length} {filteredCreators.length === 1 ? "creator" : "creators"} found
           </p>
         </div>
@@ -346,11 +434,13 @@ export default function CreatorsPage() {
             <Users className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
             <h3 className="mb-2 text-xl font-semibold">No creators found</h3>
             <p className="mb-6 text-muted-foreground">
-              {searchTerm
-                ? `No creators match "${searchTerm}". Try a different search term.`
+              {searchTerm || selectedCategory
+                ? "No creators match your filters. Try adjusting your search or category."
                 : "There are no creators yet. Check back soon!"}
             </p>
-            {searchTerm && <Button onClick={() => setSearchTerm("")}>Clear Search</Button>}
+            {(searchTerm || selectedCategory) && (
+              <Button onClick={clearFilters}>Clear Filters</Button>
+            )}
           </Card>
         )}
       </section>

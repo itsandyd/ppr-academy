@@ -33,6 +33,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import { stripHtml } from "@/lib/text-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -461,7 +462,7 @@ function PresetPackCard({
                     {pack.title}
                   </h3>
                   <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
-                    {pack.description}
+                    {pack.description ? stripHtml(pack.description) : ""}
                   </p>
                   <div className="flex items-center gap-2 text-xs">
                     {pack.targetPlugin && (
@@ -536,7 +537,7 @@ function PresetPackCard({
               {pack.title}
             </h3>
             <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
-              {pack.description}
+              {pack.description ? stripHtml(pack.description) : ""}
             </p>
 
             <div className="mb-3 flex items-center gap-2">

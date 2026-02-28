@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -32,36 +32,124 @@ import {
   Flame,
   ArrowDownNarrowWide,
   ArrowUpNarrowWide,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { MarketplaceGrid } from "@/app/_components/marketplace-grid";
+import { stripHtml } from "@/lib/text-utils";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 
 export const dynamic = "force-dynamic";
 
-export default function MarketplacePage() {
-  const router = useRouter();
+type ContentType = "all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks" | "bundles";
+type PriceRange = "free" | "under-10" | "10-25" | "25-50" | "50-100" | "over-100";
+type SortBy = "newest" | "popular" | "price-low" | "price-high";
 
-  // Filter state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [contentType, setContentType] = useState<
-    "all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks" | "bundles"
-  >("all");
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
-  const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
-  const [categorySearchQuery, setCategorySearchQuery] = useState(""); // Search query for filtering categories
-  const [priceRange, setPriceRange] = useState<
-    "free" | "under-50" | "50-100" | "over-100" | undefined
-  >(undefined);
-  const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
+const VALID_CONTENT_TYPES: ContentType[] = ["all", "courses", "products", "coaching", "sample-packs", "plugins", "ableton-racks", "bundles"];
+const VALID_PRICE_RANGES: PriceRange[] = ["free", "under-10", "10-25", "25-50", "50-100", "over-100"];
+const VALID_SORT_BY: SortBy[] = ["newest", "popular", "price-low", "price-high"];
+
+export default function MarketplacePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    }>
+      <MarketplaceContent />
+    </Suspense>
+  );
+}
+
+function MarketplaceContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // Read filter state from URL params
+  const contentType = (VALID_CONTENT_TYPES.includes(searchParams.get("type") as ContentType)
+    ? searchParams.get("type") as ContentType
+    : "all");
+  const selectedCategory = searchParams.get("category") || undefined;
+  const selectedSpecificCategories = searchParams.get("subcategories")?.split(",").filter(Boolean) || [];
+  const priceRange = (VALID_PRICE_RANGES.includes(searchParams.get("price") as PriceRange)
+    ? searchParams.get("price") as PriceRange
+    : undefined);
+  const sortBy = (VALID_SORT_BY.includes(searchParams.get("sort") as SortBy)
+    ? searchParams.get("sort") as SortBy
+    : "newest");
+  const searchTerm = searchParams.get("q") || "";
+  const currentPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+
+  // Local-only state (not in URL)
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 18;
+
+  // Helper to update URL params
+  const updateParams = useCallback((updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined || value === "" || value === "all") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    }
+    // Reset to page 1 when changing filters (not when changing page)
+    if (!("page" in updates)) {
+      params.delete("page");
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [searchParams, pathname, router]);
+
+  // Filter setters that update URL
+  const setContentType = useCallback((v: ContentType) => {
+    const updates: Record<string, string | undefined> = { type: v === "all" ? undefined : v };
+    // Clear category when switching to plugins or all
+    if (v === "plugins" || v === "all") {
+      updates.category = undefined;
+    }
+    // Clear subcategories when leaving plugins
+    if (v !== "plugins") {
+      updates.subcategories = undefined;
+    }
+    updateParams(updates);
+  }, [updateParams]);
+
+  const setSelectedCategory = useCallback((v: string | undefined) => {
+    updateParams({ category: v });
+  }, [updateParams]);
+
+  const setSelectedSpecificCategories = useCallback((v: string[] | ((prev: string[]) => string[])) => {
+    const newVal = typeof v === "function" ? v(selectedSpecificCategories) : v;
+    updateParams({ subcategories: newVal.length > 0 ? newVal.join(",") : undefined });
+  }, [updateParams, selectedSpecificCategories]);
+
+  const setPriceRange = useCallback((v: PriceRange | undefined) => {
+    updateParams({ price: v });
+  }, [updateParams]);
+
+  const setSortBy = useCallback((v: SortBy) => {
+    updateParams({ sort: v === "newest" ? undefined : v });
+  }, [updateParams]);
+
+  const setSearchTerm = useCallback((v: string) => {
+    updateParams({ q: v || undefined });
+  }, [updateParams]);
+
+  const setCurrentPage = useCallback((v: number | ((prev: number) => number)) => {
+    const newPage = typeof v === "function" ? v(currentPage) : v;
+    updateParams({ page: newPage > 1 ? String(newPage) : undefined });
+  }, [updateParams, currentPage]);
 
   // Fetch data
   const marketplaceData = useQuery(api.marketplace.searchMarketplace, {
@@ -76,7 +164,9 @@ export default function MarketplacePage() {
     offset: (currentPage - 1) * ITEMS_PER_PAGE,
   });
 
-  const categories = useQuery(api.marketplace.getMarketplaceCategories) || [];
+  const categories = useQuery(api.marketplace.getMarketplaceCategories, {
+    contentType: contentType !== "plugins" ? contentType : undefined,
+  }) || [];
   const creators = useQuery(api.marketplace.getAllCreators, { limit: 8 }) || [];
   const stats = useQuery(api.marketplace.getPlatformStats);
 
@@ -110,29 +200,8 @@ export default function MarketplacePage() {
   ].filter(Boolean).length;
 
   const clearFilters = () => {
-    setSearchTerm("");
-    setContentType("all");
-    setSelectedCategory(undefined);
-    setSelectedSpecificCategories([]);
-    setPriceRange(undefined);
-    setSortBy("newest");
-    setCurrentPage(1); // Reset to first page when clearing filters
+    router.replace(pathname, { scroll: false });
   };
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, contentType, selectedCategory, selectedSpecificCategories, priceRange, sortBy]);
-
-  // Clear category and specific categories selection when switching content types
-  useEffect(() => {
-    if (contentType === "plugins" || contentType === "all") {
-      setSelectedCategory(undefined);
-    }
-    if (contentType !== "plugins") {
-      setSelectedSpecificCategories([]);
-    }
-  }, [contentType]);
 
   const contentTypeCounts = useMemo(() => {
     const counts = {
@@ -231,6 +300,9 @@ export default function MarketplacePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Just Added Section */}
+      <JustAddedSection />
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -440,7 +512,7 @@ export default function MarketplacePage() {
                   <label className="text-sm font-medium">Price Range</label>
                   <Select
                     value={priceRange || "all"}
-                    onValueChange={(v) => setPriceRange(v === "all" ? undefined : (v as any))}
+                    onValueChange={(v) => setPriceRange(v === "all" ? undefined : (v as PriceRange))}
                   >
                     <SelectTrigger className="bg-white dark:bg-black">
                       <SelectValue placeholder="All Prices" />
@@ -448,7 +520,9 @@ export default function MarketplacePage() {
                     <SelectContent className="bg-white dark:bg-black">
                       <SelectItem value="all">All Prices</SelectItem>
                       <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="under-50">Under $50</SelectItem>
+                      <SelectItem value="under-10">Under $10</SelectItem>
+                      <SelectItem value="10-25">$10 - $25</SelectItem>
+                      <SelectItem value="25-50">$25 - $50</SelectItem>
                       <SelectItem value="50-100">$50 - $100</SelectItem>
                       <SelectItem value="over-100">Over $100</SelectItem>
                     </SelectContent>
@@ -592,7 +666,15 @@ export default function MarketplacePage() {
                 )}
                 {priceRange && (
                   <Badge variant="secondary" className="gap-2">
-                    Price: {priceRange.replace("-", " - ")}
+                    Price: {
+                      priceRange === "free" ? "Free" :
+                      priceRange === "under-10" ? "Under $10" :
+                      priceRange === "10-25" ? "$10 - $25" :
+                      priceRange === "25-50" ? "$25 - $50" :
+                      priceRange === "50-100" ? "$50 - $100" :
+                      priceRange === "over-100" ? "Over $100" :
+                      priceRange
+                    }
                     <button onClick={() => setPriceRange(undefined)}>
                       <X className="h-3 w-3" />
                     </button>
@@ -703,5 +785,174 @@ export default function MarketplacePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// --- Just Added Section ---
+
+const CONTENT_TYPE_CONFIG: Record<string, { label: string; icon: typeof BookOpen; badgeClass: string }> = {
+  course: { label: "Course", icon: BookOpen, badgeClass: "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20" },
+  product: { label: "Product", icon: Package, badgeClass: "bg-chart-3/10 text-chart-3 dark:bg-chart-3/20" },
+  coaching: { label: "Coaching", icon: Video, badgeClass: "bg-chart-4/10 text-chart-4 dark:bg-chart-4/20" },
+  bundle: { label: "Bundle", icon: Layers, badgeClass: "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20" },
+};
+
+function getItemHref(item: { contentType: string; slug?: string; _id: string }) {
+  switch (item.contentType) {
+    case "course":
+      return `/courses/${item.slug || item._id}`;
+    case "bundle":
+      return `/marketplace/bundles/${item.slug || item._id}`;
+    case "coaching":
+      return `/marketplace/coaching/${item.slug || item._id}`;
+    default:
+      return `/marketplace`;
+  }
+}
+
+const isValidImageUrl = (url: string | undefined | null): url is string => {
+  if (!url || typeof url !== "string" || url.trim() === "") return false;
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+function JustAddedSection() {
+  const justAdded = useQuery(api.marketplace.getJustAdded, { limit: 10 });
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scroll = useCallback((direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = 280 + 16; // card min-width + gap
+    el.scrollBy({
+      left: direction === "left" ? -cardWidth * 2 : cardWidth * 2,
+      behavior: "smooth",
+    });
+  }, []);
+
+  if (!justAdded || justAdded.length === 0) return null;
+
+  return (
+    <section className="border-b border-border bg-background">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-5 w-5 text-chart-1" />
+            <h2 className="text-xl font-bold">Just Added</h2>
+            <Badge variant="secondary" className="text-xs font-normal">
+              New
+            </Badge>
+          </div>
+
+          {/* Arrow Buttons (hidden on mobile where swipe is used) */}
+          <div className="hidden items-center gap-1.5 sm:flex">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => scroll("left")}
+              disabled={!canScrollLeft}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => scroll("right")}
+              disabled={!canScrollRight}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Scrollable Row */}
+        <div
+          ref={scrollRef}
+          onScroll={updateScrollState}
+          className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scrollbar-none sm:snap-none"
+        >
+          {justAdded.map((item: any) => (
+            <JustAddedCard key={item._id} item={item} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function JustAddedCard({ item }: { item: any }) {
+  const router = useRouter();
+  const config = CONTENT_TYPE_CONFIG[item.contentType] || CONTENT_TYPE_CONFIG.product;
+  const Icon = config.icon;
+  const hasImage = isValidImageUrl(item.thumbnail);
+
+  return (
+    <Card
+      className="group w-[280px] min-w-[280px] shrink-0 snap-start cursor-pointer overflow-hidden border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5"
+      onClick={() => router.push(getItemHref(item))}
+    >
+      {/* Thumbnail */}
+      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-muted to-muted/80">
+        {hasImage ? (
+          <Image
+            src={item.thumbnail}
+            alt={item.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Icon className="h-12 w-12 text-muted-foreground/30" />
+          </div>
+        )}
+
+        {/* Type Badge */}
+        <Badge className={`absolute left-2.5 top-2.5 text-xs ${config.badgeClass} font-medium shadow-sm`}>
+          <Icon className="mr-1 h-3 w-3" />
+          {config.label}
+        </Badge>
+
+        {/* Price Badge */}
+        <Badge className="absolute right-2.5 top-2.5 border border-border bg-card text-xs font-bold text-foreground shadow-sm dark:bg-card">
+          {item.price === 0 ? "FREE" : `$${Number(item.price).toFixed(2)}`}
+        </Badge>
+      </div>
+
+      {/* Content */}
+      <CardContent className="space-y-2 p-4">
+        <h3 className="line-clamp-1 text-sm font-semibold text-foreground transition-colors group-hover:text-chart-1">
+          {item.title}
+        </h3>
+
+        {/* Creator */}
+        <div className="flex items-center gap-2">
+          <Avatar className="h-5 w-5 border border-border">
+            <AvatarImage src={item.creatorAvatar} />
+            <AvatarFallback className="bg-gradient-to-r from-chart-1 to-chart-2 text-[10px] text-primary-foreground">
+              {item.creatorName?.charAt(0) || "C"}
+            </AvatarFallback>
+          </Avatar>
+          <span className="truncate text-xs text-muted-foreground">
+            {item.creatorName || "Creator"}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

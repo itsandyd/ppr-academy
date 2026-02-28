@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { stripHtml } from "@/lib/text-utils";
 
 const ABLETON_VERSIONS = ["All Versions", "Live 9", "Live 10", "Live 11", "Live 12"];
 const RACK_TYPES = ["All Types", "Audio Effect", "Instrument", "MIDI Effect", "Drum Rack"];

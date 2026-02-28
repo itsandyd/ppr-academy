@@ -3,6 +3,23 @@
  */
 
 /**
+ * Strip HTML tags and entities from a string for plain-text display (e.g. card descriptions).
+ */
+export function stripHtml(html: string): string {
+  if (!html || typeof html !== "string") return "";
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Legacy alias for cleanTextForSpeech - strips HTML tags from a string
  * @deprecated Use cleanTextForSpeech instead
  */

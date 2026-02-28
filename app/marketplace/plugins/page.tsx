@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 import { cn } from "@/lib/utils";
+import { stripHtml } from "@/lib/text-utils";
 
 type Plugin = {
   _id: Id<"plugins">;
@@ -624,7 +625,7 @@ function PluginCard({ plugin, index }: { plugin: Plugin; index: number }) {
             {/* Description */}
             {plugin.description && (
               <p className="line-clamp-2 text-sm text-muted-foreground">
-                {plugin.description}
+                {stripHtml(plugin.description)}
               </p>
             )}
           </CardContent>

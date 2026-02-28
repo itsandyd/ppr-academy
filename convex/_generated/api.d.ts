@@ -14647,10 +14647,16 @@ export declare const api: {
       { limit?: number },
       Array<any>
     >;
+    getJustAdded: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      Array<any>
+    >;
     getMarketplaceCategories: FunctionReference<
       "query",
       "public",
-      {},
+      { contentType?: string },
       Array<string>
     >;
     getPlatformStats: FunctionReference<
@@ -14680,7 +14686,13 @@ export declare const api: {
           | "bundles";
         limit?: number;
         offset?: number;
-        priceRange?: "free" | "under-50" | "50-100" | "over-100";
+        priceRange?:
+          | "free"
+          | "under-10"
+          | "10-25"
+          | "25-50"
+          | "50-100"
+          | "over-100";
         searchTerm?: string;
         sortBy?: "newest" | "popular" | "price-low" | "price-high";
         specificCategories?: Array<string>;

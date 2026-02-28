@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import { stripHtml } from "@/lib/text-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default function CoursesMarketplacePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [priceRange, setPriceRange] = useState<
-    "free" | "under-50" | "50-100" | "over-100" | undefined
+    "free" | "under-10" | "10-25" | "25-50" | "50-100" | "over-100" | undefined
   >(undefined);
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -53,7 +54,7 @@ export default function CoursesMarketplacePage() {
     offset: (currentPage - 1) * ITEMS_PER_PAGE,
   });
 
-  const categories = useQuery(api.marketplace.getMarketplaceCategories) || [];
+  const categories = useQuery(api.marketplace.getMarketplaceCategories, { contentType: "courses" }) || [];
 
   useEffect(() => {
     setCurrentPage(1);
@@ -283,7 +284,7 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
               <div>
                 <h3 className="mb-1 line-clamp-1 font-semibold">{course.title}</h3>
                 <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
-                  {course.description}
+                  {course.description ? stripHtml(course.description) : ""}
                 </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   {course.enrollmentCount > 0 && (
@@ -328,7 +329,7 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
           <h3 className="mb-2 line-clamp-2 font-semibold transition-colors group-hover:text-chart-1">
             {course.title}
           </h3>
-          <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
+          <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{course.description ? stripHtml(course.description) : ""}</p>
           <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
             {course.creatorName && (
               <span className="flex items-center gap-1">

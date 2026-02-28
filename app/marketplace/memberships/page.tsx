@@ -21,6 +21,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { stripHtml } from "@/lib/text-utils";
 
 export default function MembershipsMarketplacePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -172,7 +173,7 @@ function MembershipCard({ tier, index }: { tier: any; index: number }) {
               <h3 className="mb-1 text-lg font-bold transition-colors group-hover:text-amber-600">
                 {tier.tierName}
               </h3>
-              <p className="line-clamp-2 text-sm text-muted-foreground">{tier.description}</p>
+              <p className="line-clamp-2 text-sm text-muted-foreground">{tier.description ? stripHtml(tier.description) : ""}</p>
             </div>
 
             {/* Content counts */}
