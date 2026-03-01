@@ -313,14 +313,9 @@ export default function CreatorsLetterPage() {
             </p>
 
             <p>
-              Last week was my first real week of sales. $165 in 5 days. From one
-              creator — me. Selling $9 courses. With zero paid advertising. Just
-              organic traffic from the audience I already built.
-            </p>
-
-            <p>
-              $165 isn&apos;t life-changing money. I know that. But think about
-              what it means.
+              People are buying. The audience is here, they trust this platform,
+              and they&apos;re willing to pay for good products. Just from
+              organic traffic — zero paid advertising.
             </p>
 
             <p className="text-lg font-medium text-foreground sm:text-xl">
