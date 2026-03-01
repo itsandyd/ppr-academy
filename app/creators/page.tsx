@@ -312,12 +312,6 @@ export default function CreatorsLetterPage() {
               on posts. And I&apos;m just getting started.
             </p>
 
-            <p>
-              People are buying. The audience is here, they trust this platform,
-              and they&apos;re willing to pay for good products. Just from
-              organic traffic — zero paid advertising.
-            </p>
-
             <p className="text-lg font-medium text-foreground sm:text-xl">
               The audience is there. They&apos;re willing to pay. They just need
               something worth buying.
@@ -392,12 +386,6 @@ export default function CreatorsLetterPage() {
               how serious I am about making this easy for you.
             </p>
 
-            <ScreenshotShowcase
-              alt="Andrew managing a creator's store — admin impersonation with full dashboard access"
-              url="pauseplayrepeat.com/admin/manage-store"
-              caption="I built a feature so I can manage your store directly. You don't have to learn the UI."
-              src="/screenshots/admin-impersonation.png"
-            />
           </div>
 
           {/* --- Divider --- */}
