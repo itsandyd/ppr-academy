@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -78,6 +79,7 @@ export default function NoteEditPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const noteId = params.noteId as string;
 
   // State
@@ -98,7 +100,7 @@ export default function NoteEditPage() {
   });
 
   // Get user's stores
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
   const storeId = stores?.[0]?._id;
 
   // Get the note
@@ -110,9 +112,9 @@ export default function NoteEditPage() {
   // Get folders for folder selection
   const folders = useQuery(
     api.notes.getFoldersByUser,
-    user?.id && storeId
+    effectiveUserId && storeId
       ? {
-          userId: user.id,
+          userId: effectiveUserId,
           storeId,
         }
       : "skip"
@@ -624,7 +626,7 @@ export default function NoteEditPage() {
             <div className="w-full lg:w-80 flex-shrink-0">
               <Card className="sticky top-8">
                 <SourceLibrary
-                  userId={user.id}
+                  userId={effectiveUserId!}
                   storeId={storeId}
                   folderId={note.folderId ?? undefined}
                   onGenerateNotes={(sourceId) => {

@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
@@ -42,6 +43,7 @@ export default function PricingPage() {
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const searchParams = useSearchParams();
 
   // Handle success/cancel from Stripe checkout
@@ -64,7 +66,7 @@ export default function PricingPage() {
   // Get user's store and current plan
   const userStores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const currentStore = userStores?.[0];
   const currentPlan = currentStore?.plan || "free";

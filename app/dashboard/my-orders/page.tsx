@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -50,16 +51,17 @@ const SERVICE_TYPE_LABELS: Record<string, string> = {
 
 export default function MyOrdersPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [activeTab, setActiveTab] = useState("active");
 
   const orders = useQuery(
     api.serviceOrders.getCustomerOrders,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const stats = useQuery(
     api.serviceOrders.getOrderStats,
-    user?.id ? { userId: user.id, role: "customer" } : "skip"
+    effectiveUserId ? { userId: effectiveUserId, role: "customer" } : "skip"
   );
 
   if (!user || orders === undefined || stats === undefined) {

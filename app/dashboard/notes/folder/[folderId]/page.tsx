@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -78,6 +79,7 @@ export default function FolderNotesPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const folderId = params.folderId as string;
 
   // State
@@ -87,15 +89,15 @@ export default function FolderNotesPage() {
   const [newFolderName, setNewFolderName] = useState("");
 
   // Get user's stores
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
   const storeId = stores?.[0]?._id;
 
   // Get folder details
   const folders = useQuery(
     api.notes.getFoldersByUser,
-    user?.id && storeId
+    effectiveUserId && storeId
       ? {
-          userId: user.id,
+          userId: effectiveUserId,
           storeId,
         }
       : "skip"
@@ -106,9 +108,9 @@ export default function FolderNotesPage() {
   // Get notes in this folder
   const notesQuery = useQuery(
     (api.notes as any).getNotesByUser,
-    user?.id && storeId && folderId
+    effectiveUserId && storeId && folderId
       ? {
-          userId: user.id,
+          userId: effectiveUserId,
           storeId,
           folderId: folderId as Id<"noteFolders">,
           paginationOpts: { numItems: 100, cursor: null },
@@ -308,7 +310,7 @@ export default function FolderNotesPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AINoteGenerator
-            userId={user.id}
+            userId={effectiveUserId!}
             storeId={storeId!}
             folderId={folderId}
             onNoteCreated={handleNoteCreated}

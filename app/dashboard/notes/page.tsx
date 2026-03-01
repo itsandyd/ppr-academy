@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -73,6 +74,7 @@ export default function DashboardNotesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const mode = searchParams.get("mode");
 
@@ -81,15 +83,15 @@ export default function DashboardNotesPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Get user's stores
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
   const storeId = stores?.[0]?._id;
 
   // Convex queries
   const folders = useQuery(
     api.notes.getFoldersByUser,
-    user?.id && storeId
+    effectiveUserId && storeId
       ? {
-          userId: user.id,
+          userId: effectiveUserId,
           storeId,
         }
       : "skip"
@@ -97,9 +99,9 @@ export default function DashboardNotesPage() {
 
   const notesQuery = useQuery(
     (api.notes as any).getNotesByUser,
-    user?.id && storeId
+    effectiveUserId && storeId
       ? {
-          userId: user.id,
+          userId: effectiveUserId,
           storeId,
           paginationOpts: { numItems: 100, cursor: null },
         }
@@ -276,7 +278,7 @@ export default function DashboardNotesPage() {
         </div>
         <div className="flex items-center gap-2">
           <AINoteGenerator
-            userId={user.id}
+            userId={effectiveUserId!}
             storeId={storeId}
             onNoteCreated={handleNoteCreated}
           />

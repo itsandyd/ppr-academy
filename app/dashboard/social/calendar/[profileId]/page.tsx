@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -21,6 +22,7 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const profileId = params.profileId as Id<"socialAccountProfiles">;
   const mode = searchParams.get("mode");
@@ -35,7 +37,7 @@ export default function CalendarPage() {
   // Get user's stores
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get the profile
@@ -175,7 +177,7 @@ export default function CalendarPage() {
       <CalendarWeekView
         accountProfileId={profileId}
         storeId={storeId}
-        userId={user.id}
+        userId={effectiveUserId!}
       />
     </div>
   );

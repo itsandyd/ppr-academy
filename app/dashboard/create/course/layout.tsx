@@ -3,6 +3,7 @@
 import React from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PhonePreview } from "@/components/previews/PhonePreview";
@@ -54,19 +55,20 @@ const steps = [
 
 function LayoutContent({ children }: CourseCreateLayoutProps) {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const rawStoreId = params.storeId as string;
   const currentStep = searchParams.get("step") || "course";
   const [showMobilePreview, setShowMobilePreview] = useState(false);
-  
+
   const { state, canPublish, createCourse, saveCourse } = useCourseCreation();
 
   // Get user's stores to handle invalid storeId case
   const userStores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get storeId from user's stores since this route doesn't have storeId in URL params

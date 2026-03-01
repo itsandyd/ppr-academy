@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   Users,
@@ -70,6 +71,7 @@ interface Affiliate {
 
 export default function AffiliatesPage() {
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [selectedTab, setSelectedTab] = useState("all");
   const [approveDialog, setApproveDialog] = useState<Affiliate | null>(null);
   const [rejectDialog, setRejectDialog] = useState<Affiliate | null>(null);
@@ -79,7 +81,7 @@ export default function AffiliatesPage() {
   // Get user's store
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get affiliates for the store

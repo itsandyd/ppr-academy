@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -90,6 +91,7 @@ interface Student {
 
 export default function StudentsPage() {
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const [productFilter, setProductFilter] = useState<string>("all");
@@ -98,7 +100,7 @@ export default function StudentsPage() {
   const store = useQuery(
     // @ts-ignore - Convex type instantiation is excessively deep
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   ) as Store | null | undefined;
 
   // Get students with progress data

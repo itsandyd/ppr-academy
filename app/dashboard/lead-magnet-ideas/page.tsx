@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -449,6 +450,7 @@ function ChapterCard({
 
 export default function LeadMagnetIdeasPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [analysis, setAnalysis] = useState<CourseLeadMagnetAnalysis | null>(null);
@@ -485,7 +487,7 @@ export default function LeadMagnetIdeasPage() {
   // Get Convex user
   const convexUser = useQuery(
     usersApi.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
+    effectiveUserId ? { clerkId: effectiveUserId } : 'skip'
   );
 
   // Fetch user's courses (using clerkId)

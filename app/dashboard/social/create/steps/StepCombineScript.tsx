@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -39,6 +40,7 @@ import {
 
 export function StepCombineScript() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { state, updateData, goToStep, savePost, setGenerating } = useSocialPost();
 
   const [combinedScript, setCombinedScript] = useState(state.data.combinedScript || "");
@@ -72,7 +74,7 @@ export function StepCombineScript() {
 
   const ctaTemplates = useQuery(
     api.socialMediaPosts.getCTATemplatesByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const combineScripts = useAction(api.masterAI.socialMediaGenerator.combineScripts);

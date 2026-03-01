@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Id } from "@/convex/_generated/dataModel";
 import { DAWType } from "../types";
 import { useStoresByUser, useDigitalProductById, useCreateUniversalProduct, useUpdateDigitalProduct } from "@/lib/convex-typed-hooks";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 
 export interface EffectChainData {
   title?: string; description?: string; dawType?: DAWType; dawVersion?: string; tags?: string[]; thumbnail?: string;
@@ -38,10 +39,11 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
   const chainId = searchParams.get("chainId") || undefined;
 
-  const stores = useStoresByUser(user?.id);
+  const stores = useStoresByUser(effectiveUserId);
   const storeId = stores?.[0]?._id;
   const existingChain = useDigitalProductById(chainId as Id<"digitalProducts"> | undefined);
   const createMutation = useCreateUniversalProduct();

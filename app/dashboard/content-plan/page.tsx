@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useEffect, useState, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ export default function ContentPlanPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const mode = searchParams.get("mode");
 
@@ -121,7 +123,7 @@ export default function ContentPlanPage() {
 
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const storeId = stores?.[0]?._id;

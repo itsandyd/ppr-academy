@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import {
   MarketingCampaignTemplate,
   Platform,
@@ -48,11 +49,12 @@ function NewCampaignContent() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get("template");
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   // Get user's stores
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const store = stores?.[0];

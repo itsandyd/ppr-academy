@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,12 +32,13 @@ import { CustomDomainSetup } from "@/components/settings/custom-domain-setup";
 
 export default function DomainsSettingsPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [showEmailWizard, setShowEmailWizard] = useState(false);
 
   // Get user's store
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get real domain health stats

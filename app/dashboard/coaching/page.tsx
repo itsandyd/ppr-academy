@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,7 @@ export default function CoachingPage() {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") as "learn" | "create" | null;
   const { user, isLoaded: isUserLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [reviewSession, setReviewSession] = useState<any>(null);
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; session: any }>({ open: false, session: null });
   const [cancelling, setCancelling] = useState(false);
@@ -70,7 +72,7 @@ export default function CoachingPage() {
     }
   }, [mode, router]);
 
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveUserId ? { clerkId: effectiveUserId } : "skip");
 
   const studentSessions = useQuery(
     api.coachingProducts.getStudentSessions,

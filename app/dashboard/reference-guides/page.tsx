@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ export default function ReferenceGuidesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const mode = searchParams.get('mode');
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function ReferenceGuidesPage() {
 
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
+    effectiveUserId ? { clerkId: effectiveUserId } : 'skip'
   );
 
   const createdCourses = useQuery(

@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { CertificateCard } from "@/components/certificates/CertificateCard";
@@ -20,6 +21,7 @@ export default function CertificatesPage() {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") as "learn" | "create" | null;
   const { user, isLoaded: isUserLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   useEffect(() => {
     if (!mode || mode !== "learn") {
@@ -27,7 +29,7 @@ export default function CertificatesPage() {
     }
   }, [mode, router]);
 
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveUserId ? { clerkId: effectiveUserId } : "skip");
 
   const userCertificates = useQuery(
     api.certificates.getUserCertificates,

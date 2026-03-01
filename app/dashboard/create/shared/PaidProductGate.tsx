@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
@@ -22,11 +23,12 @@ interface PaidProductGateProps {
  */
 export function PaidProductGate({ children, lockedContent }: PaidProductGateProps) {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   // Get user's store
   const userStores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const store = userStores?.[0];
   const storeId = store?._id;
@@ -87,10 +89,11 @@ export function PaidProductGate({ children, lockedContent }: PaidProductGateProp
  */
 export function useCanChargeMoney() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const userStores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const store = userStores?.[0];
   const storeId = store?._id;

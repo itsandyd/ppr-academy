@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -58,6 +59,7 @@ interface LandingPage {
 
 export default function LandingPagesPage() {
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newPageTitle, setNewPageTitle] = useState("");
   const [newPageDescription, setNewPageDescription] = useState("");
@@ -66,7 +68,7 @@ export default function LandingPagesPage() {
   // Get user's store
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get landing pages for the store

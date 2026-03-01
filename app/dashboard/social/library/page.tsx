@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect } from "react";
@@ -18,6 +19,7 @@ export default function ScriptLibraryPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const mode = searchParams.get("mode");
 
@@ -31,7 +33,7 @@ export default function ScriptLibraryPage() {
   // Get user's stores
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   // Get the first store
@@ -107,7 +109,7 @@ export default function ScriptLibraryPage() {
         </div>
       </div>
 
-      <ScriptLibrary storeId={storeId} userId={user.id} />
+      <ScriptLibrary storeId={storeId} userId={effectiveUserId!} />
     </div>
   );
 }

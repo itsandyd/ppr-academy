@@ -76,7 +76,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ModeToggle } from "./ModeToggle";
 import { ModeToggle as ThemeToggle } from "@/components/mode-toggle";
-import { useImpersonation } from "@/lib/impersonation-context";
+import { useImpersonation, useEffectiveUserId } from "@/lib/impersonation-context";
 
 type DashboardMode = "learn" | "create";
 
@@ -267,6 +267,7 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { isImpersonating, impersonatedCreatorName, impersonatedStoreName } = useImpersonation();
   const links = mode === "learn" ? learnLinks : createLinks;
   const savePreference = useMutation(api.users.setDashboardPreference);
@@ -350,7 +351,7 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
   };
 
   // Get user stats for sidebar widgets
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveUserId ? { clerkId: effectiveUserId } : "skip");
 
   const userStats = useQuery(
     api.userLibrary.getUserLibraryStats,

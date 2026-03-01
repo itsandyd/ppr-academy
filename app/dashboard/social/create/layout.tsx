@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,7 @@ const steps = [
 
 function LayoutContent({ children }: SocialCreateLayoutProps) {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "content";
@@ -94,7 +96,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
   }, [mode, searchParams, router]);
 
   // @ts-ignore - Convex type inference
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
 
   const navigateToStep = (step: string) => {
     goToStep(step);

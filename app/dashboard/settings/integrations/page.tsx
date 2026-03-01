@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -15,9 +16,10 @@ import { toast } from "sonner";
 
 export default function IntegrationsSettingsPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const updateStoreIntegrations = useMutation(api.stores.updateNotificationIntegrations);
 

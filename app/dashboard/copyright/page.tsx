@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,9 +94,10 @@ function ClaimStatusBadge({ status }: { status: CopyrightClaim["status"] }) {
 
 export default function CopyrightDashboardPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const store = useQuery((api as any).stores.getUserStore, user?.id ? { userId: user.id } : "skip");
+  const store = useQuery((api as any).stores.getUserStore, effectiveUserId ? { userId: effectiveUserId } : "skip");
 
   const storeId = store?._id as Id<"stores"> | undefined;
 

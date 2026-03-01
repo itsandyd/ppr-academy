@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -440,6 +441,7 @@ export default function SamplesPage() {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") as "learn" | "create" | null;
   const { user, isLoaded: isUserLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -454,7 +456,7 @@ export default function SamplesPage() {
 
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
+    effectiveUserId ? { clerkId: effectiveUserId } : "skip"
   );
 
   const userPurchases = useQuery(

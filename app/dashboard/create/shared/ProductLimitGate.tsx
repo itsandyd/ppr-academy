@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -20,11 +21,12 @@ interface ProductLimitGateProps {
  */
 export function ProductLimitGate({ children, featureType }: ProductLimitGateProps) {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   // Get user's store
   const userStores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const store = userStores?.[0];
   const storeId = store?._id;
@@ -94,9 +96,10 @@ export function ProductLimitGate({ children, featureType }: ProductLimitGateProp
  */
 export function useCurrentStoreId(): Id<"stores"> | undefined {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const userStores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   return userStores?.[0]?._id;
 }

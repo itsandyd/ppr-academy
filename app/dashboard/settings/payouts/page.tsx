@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -30,6 +31,7 @@ import { formatDistanceToNow } from "date-fns";
 
 export default function PayoutSettingsPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
@@ -46,13 +48,13 @@ export default function PayoutSettingsPage() {
   // Get user data from Convex
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
+    effectiveUserId ? { clerkId: effectiveUserId } : "skip"
   );
 
   // Get user's store
   const userStore = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const storeId = userStore?._id;
@@ -60,13 +62,13 @@ export default function PayoutSettingsPage() {
   // Get pending earnings
   const pendingEarnings = useQuery(
     api.monetizationUtils.getCreatorPendingEarnings,
-    user?.id ? { creatorId: user.id } : "skip"
+    effectiveUserId ? { creatorId: effectiveUserId } : "skip"
   );
 
   // Get payout history
   const payoutHistory = useQuery(
     api.monetizationUtils.getCreatorPayouts,
-    user?.id ? { creatorId: user.id } : "skip"
+    effectiveUserId ? { creatorId: effectiveUserId } : "skip"
   );
 
   // Calculate totals from payout history

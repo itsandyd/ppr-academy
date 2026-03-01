@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
 import { CertificateCard } from "@/components/certificates/CertificateCard";
 import { NoCoursesEmptyState } from "@/components/ui/empty-state-enhanced";
@@ -42,6 +43,7 @@ import { BecomeCreatorCard } from "@/components/dashboard/BecomeCreatorCard";
 
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const createUser = useMutation(api.users.createOrUpdateUserFromClerk);
   const searchParams = useSearchParams();
   const sessionVerified = useRef(false);
@@ -50,10 +52,10 @@ export function LearnModeContent() {
   useApplyReferral();
 
   // Get Convex user
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveUserId ? { clerkId: effectiveUserId } : "skip");
 
   // Check if user already has a store (to conditionally show BecomeCreatorCard)
-  const userStores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const userStores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
 
   // Auto-create user if needed
   useEffect(() => {

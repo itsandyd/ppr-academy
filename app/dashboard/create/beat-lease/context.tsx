@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Id } from "@/convex/_generated/dataModel";
 import { BeatLeaseData, StepCompletion, DEFAULT_LEASE_OPTIONS, LeaseOption } from "./types";
 import { useStoresByUser, useCreateUniversalProduct, useUpdateDigitalProduct } from "@/lib/convex-typed-hooks";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 
 function convertToBeatlLeaseConfig(leaseOptions: LeaseOption[] | undefined, metadata: BeatLeaseData["metadata"]) {
   if (!leaseOptions) return undefined;
@@ -37,10 +38,11 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
   const beatId = searchParams.get("beatId") || undefined;
 
-  const stores = useStoresByUser(user?.id);
+  const stores = useStoresByUser(effectiveUserId);
   const storeId = stores?.[0]?._id;
   const createBeatMutation = useCreateUniversalProduct();
   const updateBeatMutation = useUpdateDigitalProduct();

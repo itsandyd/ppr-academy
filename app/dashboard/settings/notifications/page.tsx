@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Bell, ArrowLeft } from "lucide-react";
@@ -19,9 +20,10 @@ import { Button } from "@/components/ui/button";
 
 export default function NotificationSettingsPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const store = useQuery(
     api.stores.getUserStore,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const isCreator = !!store;
 

@@ -7,6 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useUser } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { PlaylistCurationData, StepCompletion } from "./types";
 import { createProductCreationContext, ProductCreationContextType } from "@/lib/create/product-context-factory";
 
@@ -24,6 +25,7 @@ function validateStep(step: keyof StepCompletion, data: PlaylistCurationData): b
 
 export function PlaylistCurationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -31,7 +33,7 @@ export function PlaylistCurationProvider({ children }: { children: React.ReactNo
 
   const createPlaylistMutation = useMutation(api.playlists.createPlaylist);
   const updatePlaylistMutation = useMutation(api.playlists.updatePlaylist);
-  const existingPlaylists = useQuery(api.playlists.getCreatorPlaylists, user?.id ? { creatorId: user.id } : "skip");
+  const existingPlaylists = useQuery(api.playlists.getCreatorPlaylists, effectiveUserId ? { creatorId: effectiveUserId } : "skip");
 
   const [state, setState] = useState({ data: { isPublic: true, acceptsSubmissions: true, pricingModel: "free" as const, currency: "USD", submissionSLA: 7, submissionRules: { requiresMessage: false } } as PlaylistCurationData, stepCompletion: { basics: false, submissionSettings: false, pricing: true } as Record<keyof StepCompletion, boolean>, isLoading: false, isSaving: false, productId: playlistId, lastSaved: undefined as Date | undefined });
 

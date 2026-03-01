@@ -3,6 +3,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 
 export default function CoursePlayerPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,12 +50,12 @@ export default function CoursePlayerPage() {
 
   const courseData = useQuery(
     api.library.getCourseWithProgress,
-    user?.id && slug ? { userId: user.id, slug } : "skip"
+    effectiveUserId && slug ? { userId: effectiveUserId, slug } : "skip"
   );
 
   const accessVerification = useQuery(
     api.library.verifyCourseAccess,
-    user?.id && slug ? { userId: user.id, slug } : "skip"
+    effectiveUserId && slug ? { userId: effectiveUserId, slug } : "skip"
   );
 
   const updateProgress = useMutation(api.library.updateProgress);

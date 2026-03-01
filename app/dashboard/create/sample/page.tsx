@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -69,6 +70,7 @@ const LICENSE_TYPES = [
 export default function CreateSamplePage() {
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -107,7 +109,7 @@ export default function CreateSamplePage() {
   });
 
   // Get user's store
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
   const primaryStore = stores?.[0];
 
   // Mutations

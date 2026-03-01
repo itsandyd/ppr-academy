@@ -13,10 +13,12 @@ import { useRouter } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { LandingPageCopyGenerator } from "../components/LandingPageCopyGenerator";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 
 export function OptionsForm() {
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   const { state, updateData, saveCourse, createCourse, canPublish, validateStep } = useCourseCreation();
 
@@ -412,10 +414,10 @@ export function OptionsForm() {
       </Card>
 
       {/* Landing Page Copy Generator */}
-      {user && (
+      {effectiveUserId && (
         <LandingPageCopyGenerator
           courseId={state.courseId}
-          userId={user.id}
+          userId={effectiveUserId}
           onCopyGenerated={() => {}}
         />
       )}

@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useEffect } from 'react';
@@ -18,7 +19,8 @@ export default function DashboardSocialPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  
+  const effectiveUserId = useEffectiveUserId(user?.id);
+
   const mode = searchParams.get('mode');
 
   // Redirect if not in create mode
@@ -31,7 +33,7 @@ export default function DashboardSocialPage() {
   // Get user's stores
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : 'skip'
+    effectiveUserId ? { userId: effectiveUserId } : 'skip'
   );
 
   // Get the first store (same pattern as CreateModeContent)
@@ -139,6 +141,6 @@ export default function DashboardSocialPage() {
   }
 
   // Show social media management UI
-  return <SocialMediaTabs storeId={storeId} userId={user.id} />;
+  return <SocialMediaTabs storeId={storeId} userId={effectiveUserId!} />;
 }
 

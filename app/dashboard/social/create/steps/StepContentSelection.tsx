@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -89,6 +90,7 @@ function extractSectionContent(html: string, heading: Heading, nextHeading?: Hea
 
 export function StepContentSelection() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const router = useRouter();
   const { state, updateData, goToStep, savePost } = useSocialPost();
 
@@ -113,7 +115,7 @@ export function StepContentSelection() {
 
   const savedPosts = useQuery(
     api.socialMediaPosts.getSocialMediaPostsByUser,
-    user?.id ? { userId: user.id, limit: 10 } : "skip"
+    effectiveUserId ? { userId: effectiveUserId, limit: 10 } : "skip"
   );
 
   const deletePostMutation = useMutation(api.socialMediaPosts.deleteSocialMediaPost);
@@ -121,7 +123,7 @@ export function StepContentSelection() {
   // @ts-ignore
   const userCourses = useQuery(
     api.courses.getCoursesByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const selectedCourse = useMemo(() => {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,7 @@ const categoryColors: Record<string, { bg: string; text: string; border: string 
 export default function WorkflowTemplatesPage() {
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -81,7 +83,7 @@ export default function WorkflowTemplatesPage() {
 
   const storeId = user?.id ?? "";
 
-  const store = useQuery(api.stores.getUserStore, user?.id ? { userId: user.id } : "skip");
+  const store = useQuery(api.stores.getUserStore, effectiveUserId ? { userId: effectiveUserId } : "skip");
 
   const createWorkflow = useMutation(api.emailWorkflows.createWorkflow);
 

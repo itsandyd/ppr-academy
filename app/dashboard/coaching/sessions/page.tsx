@@ -3,6 +3,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,7 @@ function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "md
 
 export default function CoachSessionsPage() {
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
@@ -143,22 +145,22 @@ export default function CoachSessionsPage() {
 
   const stats = useQuery(
     api.coachingProducts.getCoachSessionStats,
-    user?.id ? { coachId: user.id } : "skip"
+    effectiveUserId ? { coachId: effectiveUserId } : "skip"
   );
 
   const sessions = useQuery(
     api.coachingProducts.getCoachSessions,
-    user?.id ? { coachId: user.id } : "skip"
+    effectiveUserId ? { coachId: effectiveUserId } : "skip"
   );
 
   const coachingProducts = useQuery(
     api.coachingProducts.getCoachingProductsByCoach,
-    user?.id ? { coachId: user.id } : "skip"
+    effectiveUserId ? { coachId: effectiveUserId } : "skip"
   );
 
   const calendarStatus = useQuery(
     api.googleCalendarQueries.isCalendarConnected,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
 
   const updateStatus = useMutation(api.coachingProducts.updateSessionStatus);

@@ -15,15 +15,17 @@ import { SampleSelector } from "../components/SampleSelector";
 import { Id } from "@/convex/_generated/dataModel";
 import { Upload, Music } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 
 export function PackFilesForm() {
   const { state, updateData, createPack } = usePackCreation();
   const router = useRouter();
   const [isPublishing, setIsPublishing] = useState(false);
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
 
   // Get user's store for sample selection
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
   const primaryStore = stores?.[0];
 
   const handleBack = () => {

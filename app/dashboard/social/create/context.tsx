@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -102,6 +103,7 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
 
   const postId = searchParams.get("postId") as Id<"socialMediaPosts"> | undefined;
@@ -109,7 +111,7 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
   const currentStep = searchParams.get("step") || "content";
 
   // @ts-ignore - Convex type inference depth issue
-  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+  const convexUser = useQuery(api.users.getUserFromClerk, effectiveUserId ? { clerkId: effectiveUserId } : "skip");
 
   const existingPost = useQuery(
     api.socialMediaPosts.getSocialMediaPostById,

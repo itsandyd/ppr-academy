@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -66,11 +67,12 @@ export default function MembershipsPage() {
 
 function LearnModeMemberships() {
   const { user, isLoaded: isUserLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
 
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
+    effectiveUserId ? { clerkId: effectiveUserId } : "skip"
   );
 
   const memberships = useQuery(
@@ -305,11 +307,12 @@ function SubscriptionCard({
 
 function CreateModeMemberships() {
   const { user, isLoaded: isUserLoaded } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
 
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
+    effectiveUserId ? { userId: effectiveUserId } : "skip"
   );
   const store = stores?.[0];
 

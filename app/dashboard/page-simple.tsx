@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { DashboardShell } from './components/DashboardShell';
@@ -16,19 +17,20 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  
+  const effectiveUserId = useEffectiveUserId(user?.id);
+
   const mode = searchParams.get('mode') as DashboardMode | null;
 
   // Get user from Convex
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
+    effectiveUserId ? { clerkId: effectiveUserId } : 'skip'
   );
 
   // Get stores
   const stores = useQuery(
     api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : 'skip'
+    effectiveUserId ? { userId: effectiveUserId } : 'skip'
   );
 
   // Redirect if no mode specified

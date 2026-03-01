@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { CreateEmailsView } from './CreateEmailsView';
@@ -14,6 +15,7 @@ export default function EmailsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const mode = searchParams.get('mode') as 'learn' | 'create' | null;
 
   // Redirect to dashboard if no mode specified
@@ -26,7 +28,7 @@ export default function EmailsPage() {
   // Get Convex user
   const convexUser = useQuery(
     api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
+    effectiveUserId ? { clerkId: effectiveUserId } : 'skip'
   );
 
   const isLoading = !user || convexUser === undefined;

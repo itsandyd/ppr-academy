@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 
 export interface IncludedContent { id: string; type: "course" | "product"; title: string; imageUrl?: string; }
 export interface MembershipData { tierName?: string; description?: string; priceMonthly?: string; priceYearly?: string; benefits?: string[]; trialDays?: number; includedContent?: IncludedContent[]; includeAllContent?: boolean; thumbnail?: string; }
@@ -30,10 +31,11 @@ export function MembershipCreationProvider({ children }: { children: React.React
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { toast } = useToast();
   const tierId = searchParams.get("tierId") || undefined;
 
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useQuery(api.stores.getStoresByUser, effectiveUserId ? { userId: effectiveUserId } : "skip");
   const storeId = stores?.[0]?._id;
   const storeUserId = stores?.[0]?.userId;
   const contentData = useQuery(api.memberships.getCreatorCoursesAndProducts, storeUserId ? { storeId: storeUserId } : "skip");

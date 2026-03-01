@@ -12,6 +12,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useUser } from "@clerk/nextjs";
+import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { toast } from "sonner";
 import { cleanTextForSpeech, previewCleanedText } from "@/lib/text-utils";
 import { useCourseCreation } from "../context";
@@ -77,6 +78,7 @@ export function ChapterDialog({
 
   const isEditing = !!editData;
   const { user } = useUser();
+  const effectiveUserId = useEffectiveUserId(user?.id);
   const { state } = useCourseCreation();
   
   // Audio generation state
@@ -120,16 +122,16 @@ export function ChapterDialog({
   // Fetch existing chapter data if we have a chapter ID and user
   // Always fetch when we have an actualChapterId, unless we already have audio loaded
   const shouldFetchChapterData = !!(
-    actualChapterId && 
-    user?.id && 
+    actualChapterId &&
+    effectiveUserId &&
     !showAudioPreview // Only skip if we already have audio preview loaded
   );
 
   const existingChapterData = useQuery(
     api.courses.getChapterById,
-    shouldFetchChapterData ? { 
+    shouldFetchChapterData ? {
       chapterId: actualChapterId as Id<"courseChapters">,
-      userId: user.id 
+      userId: effectiveUserId
     } : "skip"
   );
 
