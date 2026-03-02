@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { isCallerAdmin } from "./lib/auth";
 
 /**
  * Universal Products System
@@ -242,8 +243,8 @@ export const createUniversalProduct = mutation({
       throw new Error("Store not found");
     }
 
-    // Authorization check: verify userId matches the store owner
-    if (store.userId !== args.userId) {
+    // Authorization check: verify userId matches the store owner (admins bypass)
+    if (store.userId !== args.userId && !(await isCallerAdmin(ctx))) {
       throw new Error("Unauthorized: You can only create products in your own store");
     }
 
@@ -1185,8 +1186,8 @@ export const saveDraft = mutation({
       };
     }
 
-    // Authorization check: verify userId matches the store owner
-    if (store.userId !== data.userId) {
+    // Authorization check: verify userId matches the store owner (admins bypass)
+    if (store.userId !== data.userId && !(await isCallerAdmin(ctx))) {
       return {
         success: false,
         message: "Unauthorized: You can only create drafts in your own store",

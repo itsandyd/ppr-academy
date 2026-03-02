@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
-import { requireStoreOwner, requireAuth } from "./lib/auth";
+import { requireStoreOwner, requireAuth, isCallerAdmin } from "./lib/auth";
 
 // Dynamic import to avoid TypeScript circular type inference issues
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -794,7 +794,7 @@ export const updateCourse = mutation({
     if (!course) {
       throw new Error("Course not found");
     }
-    if (course.userId !== identity.subject) {
+    if (course.userId !== identity.subject && !(await isCallerAdmin(ctx))) {
       throw new Error("Unauthorized: you don't own this course");
     }
 
@@ -851,7 +851,7 @@ export const updateCourseWithModules = mutation({
     try {
       const identity = await requireAuth(ctx);
       const course = await ctx.db.get(courseId);
-      if (!course || course.userId !== identity.subject) {
+      if (!course || (course.userId !== identity.subject && !(await isCallerAdmin(ctx)))) {
         throw new Error("Unauthorized: you don't own this course");
       }
 
@@ -1381,7 +1381,7 @@ export const updateCourseStripeIdsPublic = mutation({
   handler: async (ctx, args) => {
     const identity = await requireAuth(ctx);
     const course = await ctx.db.get(args.courseId);
-    if (!course || course.userId !== identity.subject) {
+    if (!course || (course.userId !== identity.subject && !(await isCallerAdmin(ctx)))) {
       throw new Error("Unauthorized: you don't own this course");
     }
 

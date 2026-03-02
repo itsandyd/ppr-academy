@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { requireStoreOwner, requireAuth } from "./lib/auth";
+import { requireStoreOwner, requireAuth, isCallerAdmin } from "./lib/auth";
 
 /**
  * Get media URLs from storage IDs
@@ -82,8 +82,9 @@ export const getSocialAccounts = query({
         .query("stores")
         .filter((q) => q.eq(q.field("_id"), args.storeId))
         .first();
-      if (store && store.userId === identity.subject) {
-        // Store owner — return full data including tokens
+      const callerIsAdmin = await isCallerAdmin(ctx);
+      if (store && (store.userId === identity.subject || callerIsAdmin)) {
+        // Store owner or admin — return full data including tokens
         return await ctx.db
           .query("socialAccounts")
           .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))

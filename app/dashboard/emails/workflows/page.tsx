@@ -3502,7 +3502,7 @@ export default function WorkflowBuilderPage() {
             </div>
 
             {/* Content container */}
-            <div className="relative z-10 flex h-full flex-col">
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col">
               {/* Header */}
               <div className="border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex items-start justify-between gap-3">
@@ -3551,7 +3551,7 @@ export default function WorkflowBuilderPage() {
               </div>
 
               {/* Scrollable content */}
-              <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                 {/* Step 1: Campaign Type Selection */}
                 {sequenceWizardStep === 1 && (
                   <div className="space-y-5">

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { generateSlug } from "./lib/utils";
-import { requireStoreOwner, requireAuth } from "./lib/auth";
+import { requireStoreOwner, requireAuth, isCallerAdmin } from "./lib/auth";
 
 // Get products by store (all products - for dashboard)
 export const getProductsByStore = query({
@@ -1375,7 +1375,7 @@ export const updateProduct = mutation({
       return null;
     }
 
-    if (product.userId !== identity.subject) {
+    if (product.userId !== identity.subject && !(await isCallerAdmin(ctx))) {
       throw new Error("Unauthorized: you don't own this product");
     }
 
@@ -1481,7 +1481,7 @@ export const updateEmailConfirmation = mutation({
         return { success: false, message: "Product not found" };
       }
 
-      if (product.userId !== identity.subject) {
+      if (product.userId !== identity.subject && !(await isCallerAdmin(ctx))) {
         return { success: false, message: "Unauthorized: you don't own this product" };
       }
 

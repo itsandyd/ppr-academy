@@ -29,7 +29,9 @@ Posts are created only for product types with verified, functional creation wiza
 ### Category 7 — Post 1: Beat Leases (with Licensing Tiers)
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** You're selling beats on Instagram with "DM for price." I built a system with 4 licensing tiers, automatic contracts, and exclusive auto-removal.
+**Hook:** You're selling beats in DMs with PayPal invoices and no contracts. Someone disputes the payment, you have zero proof of what they bought. Here's how beat licensing should actually work.
+
+> **EDIT NOTE:** Hook rewritten from "I built a system with 4 tiers" (PPR feature) to "You're selling beats with no contracts, someone disputes, zero proof" (the actual fear beat sellers have).
 
 **Script/Body:**
 Here's what selling beats looks like on most platforms. Someone DMs you. You negotiate a price. You send a PayPal invoice. You email the files. You pray they don't dispute it. No contract. No terms. No paper trail.
@@ -63,7 +65,9 @@ Carousel slides:
 ### Category 7 — Post 2: Sample Packs (with Individual Preview)
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** On Gumroad, buyers download a blind zip file and hope the samples are good. On PPR, they can preview every single sound before buying.
+**Hook:** Your sample pack has 200 fire sounds but buyers only hear one demo loop before purchasing. No wonder they request refunds. What if they could preview every single sound first?
+
+> **EDIT NOTE:** Hook rewritten from "On Gumroad blind zip, on PPR preview" (platform comparison) to "200 fire sounds but buyers only hear one demo loop" (the creator's frustration with how their work gets presented).
 
 **Script/Body:**
 I've bought sample packs on Gumroad. You see a product image. Maybe a description that says "50 drum loops, 30 one-shots, 20 FX." You pay $29. You download a zip. You open it. Half the sounds aren't what you expected.
@@ -91,7 +95,9 @@ Screen recording: Open the marketplace sample pack browser. Click into a pack. S
 ### Category 7 — Post 3: Preset Packs (with Plugin-Specific Filtering)
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** You made 200 Serum presets. Gumroad doesn't know what Serum is. PPR was built for this.
+**Hook:** You made 200 Serum presets. You list them online. Someone searching for "Vital presets for Future Bass" never finds them because the platform doesn't know what a synth plugin is. That's broken.
+
+> **EDIT NOTE:** Hook rewritten from "Gumroad doesn't know Serum, PPR was built for this" (platform comparison) to "Someone searching can't find your presets because the platform doesn't understand synth plugins" (the discovery problem creators actually have).
 
 **Script/Body:**
 Try selling preset packs on Gumroad. Your listing says "Serum presets." The buyer has to trust you. There's no filtering by plugin. No DAW compatibility info. No way for someone browsing to say "show me all Vital presets for Future Bass."
@@ -122,7 +128,9 @@ Carousel slides:
 ### Category 7 — Post 4: Effect Chains / Ableton Racks
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** I sell Ableton effect chains. On Gumroad it's a .adg file and a prayer. On PPR, buyers see the DAW, the macro count, and the CPU load before they buy.
+**Hook:** You spent 3 years perfecting your vocal chain. You could sell it for $25. But most producers never do because there's nowhere to properly list a .adg file. Here's the fix.
+
+> **EDIT NOTE:** Hook rewritten from "On Gumroad it's a .adg file and a prayer" (platform comparison) to "You spent 3 years perfecting your vocal chain, you could sell it for $25" (speaking to the untapped value producers are sitting on).
 
 **Script/Body:**
 Effect chains are one of the most underrated things you can sell as a producer. You spent hours dialing in the perfect vocal chain. The perfect master bus. That compression-into-saturation combo that just works.
@@ -148,7 +156,9 @@ Screen recording: Show the chain creation wizard. Select "Ableton" from DAW drop
 ### Category 7 — Post 5: Courses (with Modules, Chapters, and Certificates)
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** Teachable charges $149/month for their pro plan. I built a course platform with modules, lessons, chapters, certificates, and drip content. It's included.
+**Hook:** You know enough about mixing to teach a course. But Teachable costs $149/month and wasn't built for music producers. Here's what a course platform actually designed for us looks like.
+
+> **EDIT NOTE:** Hook rewritten from "Teachable charges $149, I built one included" (price comparison + PPR plug) to "You know enough to teach, but course platforms cost $149 and aren't built for us" (the audience's situation + shared frustration).
 
 **Script/Body:**
 I had a Teachable account for two years. $39/month for the basic plan. Then I needed better analytics. $119/month. Then I wanted to remove their branding. $149/month.
@@ -184,7 +194,9 @@ Carousel slides:
 ### Category 7 — Post 6: Coaching & 1-on-1 Sessions
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** A producer DMs you asking for mixing feedback. You say "sure, $50 for 30 minutes." Then you spend 20 minutes scheduling over DM. I fixed that.
+**Hook:** A producer DMs you: "Can you check my mix?" You want to help. But you also don't want to work for free. Here's the move that turns DM requests into paid sessions without being awkward about it.
+
+> **EDIT NOTE:** Hook kept the relatable DM scenario but reframed from "I fixed that" (PPR announcement) to "here's the move that turns DM requests into paid sessions" (practical advice the audience wants).
 
 **Script/Body:**
 Coaching is one of the best ways to monetize your skills. But the booking process is terrible. Someone DMs you. You go back and forth on times. You send a Calendly link. They book. You send a Stripe invoice. They pay. You jump on a Zoom call. None of these tools talk to each other.
@@ -210,7 +222,9 @@ Screen recording: Show the coaching creation wizard — 5 steps. Set session typ
 ### Category 7 — Post 7: Mixing & Mastering Services
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** You offer mixing services. Right now your workflow is: DM negotiations, PayPal invoices, Google Drive links, and crossed fingers. Here's what a real service workflow looks like.
+**Hook:** You're mixing tracks for people and collecting payment through PayPal invoices. The client sends stems on Google Drive. You lose track of which version they approved. Here's why that workflow is costing you clients.
+
+> **EDIT NOTE:** Hook kept the pain scenario but added "costing you clients" (consequence they care about) instead of "here's what a real workflow looks like" (PPR pitch setup).
 
 **Script/Body:**
 Selling mixing services without a system is chaos.
@@ -244,7 +258,9 @@ Carousel slides:
 ### Category 7 — Post 8: Memberships & Subscriptions
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** Patreon takes 8-12% of your revenue and you still need to pay for email marketing, a course platform, and a storefront separately. Here's the math on why that doesn't make sense.
+**Hook:** You want to sell a monthly membership AND individual products. But Patreon is subscriptions only and Gumroad is one-time only. Why can't one store do both? It can.
+
+> **EDIT NOTE:** Hook rewritten from "Patreon takes 8-12% plus extra tool costs" (math/pricing) to "You want memberships AND individual products but no platform does both" (the flexibility problem creators actually hit).
 
 **Script/Body:**
 Patreon is subscription-only. You can't sell a one-time beat lease. You can't sell an individual sample pack. Everything must be a monthly pledge.
@@ -278,7 +294,9 @@ Carousel slides:
 ### Category 7 — Post 9: Bundles
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** You have a course, a preset pack, and a sample pack. Separately they're $120. As a bundle they're $79. The savings math does itself — here's how to set it up.
+**Hook:** Your average order is $25. Here's the simplest way to push it to $79 without creating a single new product. Bundles. And most producers don't use them.
+
+> **EDIT NOTE:** Hook rewritten from "$120 separately, $79 as bundle" (feature explanation) to "Your average order is $25, here's how to push it to $79" (money problem + promise of a fix).
 
 **Script/Body:**
 Bundles are the easiest way to increase average order value. But try doing this on Gumroad. You'd need to create a separate product, manually calculate the discount, and hope people find it.
@@ -304,7 +322,9 @@ Screen recording: Show the bundle creation wizard. Select 3 products. Set bundle
 ### Category 7 — Post 10: Mixing Templates
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** You have a mixing template that took you 3 years to perfect. On Gumroad it's just a file download. On PPR, buyers can filter by DAW and genre before they buy.
+**Hook:** You've been using the same mixing template for 3 years. It's perfect. Other producers would pay $25 for it. But you've never sold it because you didn't think anyone would care. They do.
+
+> **EDIT NOTE:** Hook rewritten from "On Gumroad it's a file, on PPR buyers filter by DAW" (platform comparison) to "Other producers would pay $25 for your template" (speaking to the value they're sitting on).
 
 **Script/Body:**
 Mixing templates are gold. You spent years building your routing, your bus processing, your reference chain. But selling them is an afterthought on every platform.
@@ -330,7 +350,7 @@ Screen recording: Show mixing template creation wizard. Select "Ableton" as DAW.
 ### Category 7 — Post 11: Project Files
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** Someone just asked you for the project file from that track you posted. Instead of sending it over DM for free, here's how to turn it into a product in 5 minutes.
+**Hook:** Every time you post a track breakdown, someone asks "can I get the project file?" You either ignore them or send it free. Both options leave money on the table.
 
 **Script/Body:**
 Project files are one of the most requested things in music production. Every time you post a track breakdown, someone asks for the .als or .flp.
@@ -354,7 +374,7 @@ Screen recording: Instagram DM asking "can I get the project file?" Cut to PPR �
 ### Category 7 — Post 12: Playlist Curation
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** You curate a playlist with 50K followers. Artists DM you asking for placement. Here's how to turn those DMs into a paid submission system.
+**Hook:** You curate a playlist with 50K followers. Artists flood your DMs begging for placement. You listen to 50 tracks, add 3, and never reply to the other 47. Here's how to stop working for free.
 
 **Script/Body:**
 If you run a playlist — Spotify, Apple Music, SoundCloud — you know the drill. Artists flood your DMs asking for placement. You listen to 50 tracks. You add 3. You never respond to the other 47.
@@ -378,7 +398,9 @@ Screen recording: Show a playlist curation product page. Genre tags displayed. S
 ### Category 7 — Post 13: PDF Guides & Cheat Sheets
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** The fastest product you can create on PPR takes 2 minutes. Upload a PDF. Set it as free with a follow gate. You just built a lead magnet.
+**Hook:** The best lead magnet for music producers isn't a free beat. It's a one-page cheat sheet. An EQ frequency chart. A chord progression reference. Here's why — and how to make one in 2 minutes.
+
+> **EDIT NOTE:** Hook rewritten from "The fastest product on PPR" (about the platform) to "The best lead magnet for producers is a one-page cheat sheet" (educational insight about lead magnets).
 
 **Script/Body:**
 Not every product needs to be a $50 sample pack or a $200 course.
@@ -406,7 +428,7 @@ Screen recording: Create a new PDF product. Title: "Vocal EQ Cheat Sheet." Uploa
 ### Category 7 — Post 14: Music Releases (Pre-save Campaigns)
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** You're dropping a single next month. Instead of just posting the Spotify link, build a pre-save campaign that captures emails and drives Day 1 streams.
+**Hook:** You drop a single. You post the Spotify link. 24 hours later, nobody's listening. Here's the pre-release strategy that turns one track into a list-building machine.
 
 **Script/Body:**
 Most producers announce a release like this: "New track out now" with a Spotify link. Engagement dies after 24 hours. No email capture. No follow-up. No momentum.
@@ -434,7 +456,7 @@ Screen recording: Show the release creation wizard — 4 steps. Fill in track de
 ### Category 7 — Post 15: Tip Jars
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** The easiest product on the platform takes 60 seconds to create. Two fields. Zero files. Your first revenue can happen today.
+**Hook:** Your followers already appreciate your content. Some of them would literally pay you for it if you gave them a way. A tip jar takes 60 seconds to set up and breaks the mental barrier of "I'm not ready to sell yet."
 
 **Script/Body:**
 Here's what nobody tells new creators. Your first product doesn't need to be a masterpiece.
@@ -514,7 +536,7 @@ Carousel slides:
 ### Category 8 — Post 2: What Your First Week as a Creator Looks Like
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** "I want to sell my music stuff online but I don't know where to start." Here's exactly what your first 5 days look like.
+**Hook:** "I want to sell my presets and tutorials but I don't know where to start." Most producers get stuck here for months. Here's exactly what the first 5 days look like when you stop overthinking it.
 
 **Script/Body:**
 Day 1: Sign up. Click "Become Creator." Your store auto-generates from your profile — name, avatar, bio, social links. You're live at pauseplayrepeat.com/your-name in 30 seconds. Connect your Stripe account so you can accept payments.

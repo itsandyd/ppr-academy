@@ -11,113 +11,122 @@
 ### Category 1 — Post 1: The Stack I Killed
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** I was paying for 7 different platforms to run my music production business. Now I use one.
+**Hook:** Every producer selling online is bleeding money on tools that don't talk to each other. Here's the math on what that actually costs.
 
 **Script/Body:**
-I was paying for Kajabi to host my courses. Mailchimp to send emails. Buffer to schedule posts. ManyChat for DM automation. Gumroad for digital products. Patreon for memberships. And Zapier to hold it all together with duct tape.
+If you sell beats, courses, presets — anything online — you probably have a version of this problem.
 
-Seven platforms. Hundreds of dollars a month. And every time one of them updated their API, something broke.
+You've got one tool for email. One for scheduling posts. One for hosting courses. One for taking payments. One for DM automation. Maybe one for your storefront. And Zapier holding it all together with duct tape.
 
-So I built my own.
+I had seven platforms running at the same time. Hundreds of dollars a month. And the worst part? When someone bought my course, it didn't trigger my email sequence because those tools were on different platforms. Every customer handoff was a leak.
 
-One platform. One dashboard. 186 features. 134 database tables. 20 product types.
+That's the real cost — it's not just the money. It's the sales you lose because nothing is connected.
 
-Every feature you just heard? It exists because I personally hit that wall and got tired of paying someone else to not solve it.
+I got frustrated enough to build PausePlayRepeat — one dashboard where the storefront, email marketing, course platform, DM automation, and social scheduling all share the same data. When someone buys, the email sequence fires automatically. When someone downloads a freebie, the follow-up runs on its own.
 
-Link in bio if you want to see it.
+PausePlayRepeat has 186 features because every one of them was a problem I hit personally. I just got tired of duct-taping seven tools together.
 
 **Visual Direction:**
 Screen recording. Start on a desktop with 7 browser tabs open (Kajabi, Mailchimp, Buffer, ManyChat, Gumroad, Patreon, Zapier logos visible). Close each tab one by one. Then open PausePlayRepeat dashboard showing the unified creator view. Quick scroll through email workflows, social scheduler, storefront, courses, DM automations.
 
-**CTA:** Link in bio to pauseplayrepeat.com/creators
+**CTA:** Comment STACK and I'll DM you the full breakdown of what each tool costs
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-REPLACEMENT.md` — Summary table: 7 platforms, 134+ tables, 186+ features, 20 product types. Creator letter: `app/creators/page.tsx` lines 110-125.
+
+> **EDIT NOTE:** Changed hook from "I was paying for 7 platforms" (about Andrew) to "Every producer selling online is bleeding money" (about the audience). Reframed body to lead with the problem of disconnected tools — something anyone selling online feels. PPR introduced as the solution, not the topic. Changed CTA from generic link-in-bio to keyword trigger "STACK."
 
 ---
 
-### Category 1 — Post 2: I Replaced Mailchimp (and it's not even close)
+### Category 1 — Post 2: Why Most Producers Never Follow Up With Their Leads
 
 **Platform:** Instagram Carousel / TikTok
-**Hook:** The email system I built has 50 database tables. Mailchimp charges you $259/month for less.
+**Hook:** Someone downloads your free sample pack. You get their email. Then what? If you're like most producers — nothing. That silence is costing you thousands.
 
 **Script/Body:**
-When I started selling courses, I used Mailchimp. Then I needed automations, so I switched to ActiveCampaign at $49/month. Then I needed better segmentation. Then A/B testing. Then lead scoring.
+Here's what happens for 90% of producers who offer a free download:
 
-Each upgrade cost more money. Each one was a separate tool built for marketers, not music producers.
+Someone grabs your freebie. You get their email address. And then... silence. No welcome email. No follow-up. No "hey, here's my paid stuff." Nothing.
 
-So I built an email marketing system from scratch.
+That person was interested enough to give you their email. They were warm. Ready to hear from you. And you ghosted them — not on purpose, but because setting up email automation is expensive and confusing.
 
-Visual workflow builder with 14 node types. Drip campaigns that run forever. 45+ pre-built email templates organized by funnel stage. A/B testing for subject lines, content, and send times. Lead scoring with letter grades. Dynamic segmentation with AND/OR logic. Send time optimization per subscriber.
+Mailchimp starts free but the moment you need automations? $49/month. ActiveCampaign? Same. And none of them are built for music producers. You're watching tutorials about "B2B SaaS email funnels" trying to figure out how to sell a preset pack.
 
-It processes emails every 30 seconds. Workflows run every 60 seconds. Drip campaigns fire every 15 minutes.
+Here's what should happen instead: Someone downloads your free pack. Day 0 — welcome email with the link. Day 2 — value email showing your best content. Day 4 — behind-the-scenes of how you made the pack. Day 6 — soft pitch for your premium pack with a discount code.
 
-And every new creator gets it included. No extra charge.
+That sequence runs forever. On autopilot. For every single person who downloads your stuff.
+
+That's exactly what I built into PausePlayRepeat. Visual workflow builder. 45+ pre-built templates. A/B testing. Lead scoring. The whole email marketing stack — included for every creator. No extra charge. No Mailchimp subscription.
 
 **Visual Direction:**
 Carousel slides:
 1. Hook text on dark background
-2. Screenshot of visual workflow builder (email node editor)
-3. Template library showing TOFU/MOFU/BOFU organization
-4. Split screen: ActiveCampaign pricing page vs PPR "included"
-5. Stats: "50+ tables, 35 features, 27,000+ lines of code"
+2. "The typical producer email funnel" — person downloads → silence → they forget you exist
+3. "What should happen" — 5-day email sequence diagram
+4. Screenshot of visual workflow builder (email node editor)
+5. Template library showing TOFU/MOFU/BOFU organization
+6. "PausePlayRepeat: Full email marketing. Included."
 
-**CTA:** DM me "EMAIL" and I'll show you the workflow builder
+**CTA:** Comment EMAIL and I'll DM you a walkthrough of the workflow builder
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-REPLACEMENT.md` Section 3: 50+ tables, 35 features, processing every 30s/60s/15min. `CONTENT-RESEARCH-PLATFORM-COMPARISON.md` Section 2: 45+ templates, 15+ triggers, 12 node types. `CONTENT-RESEARCH-FEATURE-PAIN-MAP.md` Section 1.
+
+> **EDIT NOTE:** Changed hook from "50 database tables" (nobody cares about tables) to "Someone downloads your free pack — then what?" (every producer with a freebie has this problem). Body now teaches the 5-day email sequence concept first — educational value even without PPR. PPR introduced in final third. Changed CTA to keyword trigger "EMAIL."
 
 ---
 
-### Category 1 — Post 3: I Replaced ManyChat and Added AI
+### Category 1 — Post 3: The DM Strategy That Turns Comments Into Customers
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** Someone comments "STEMS" on my post and 3 seconds later they get a DM with the download link. No ManyChat. No monthly fee. Built in.
+**Hook:** Every comment on your post is a potential customer telling you they're interested. Most producers reply manually — or worse, they don't reply at all. Here's how to fix that.
 
 **Script/Body:**
-I was paying ManyChat $45 a month for comment-to-DM automation. Keyword triggers. Auto-replies.
+You post a beat, a tutorial, a preset demo. Someone comments "fire" or "how do I get this?" or "STEMS."
 
-Then I built it into PausePlayRepeat.
+If you're fast, you reply in an hour. Most of the time? You don't reply until the next day. By then they've scrolled past 500 other posts and forgotten about you.
 
-Keyword matching with 4 match types — exact, contains, starts with, regex. Attach automations to specific posts or all future posts. Two response modes: send a preset message, or let the AI handle it.
+Here's what the top creators do: when someone comments a keyword — "STEMS," "PRESETS," "LINK" — they get an instant DM with exactly what they asked for. Download link. Product page. Course enrollment. Automatic.
 
-That's right. Smart AI responses. GPT-4o-mini reads the last 10 messages in the conversation, understands context, and replies like a human. ManyChat can't do that. ManyChat sends canned responses.
+This is how you turn passive engagement into actual sales. Comments become DMs. DMs become customers. No manual work.
 
-This sends download links, product pages, course enrollment links. Automatically.
+I used to pay ManyChat $45/month for this. But ManyChat sends canned responses. It doesn't understand context.
 
-And it works on Instagram DMs, Twitter DMs, and Facebook Messenger.
+So I built something smarter into PausePlayRepeat. Same keyword triggers, but with AI that reads the last 10 messages and responds like a human. Works on Instagram DMs, Twitter DMs, and Facebook Messenger. Included for every creator — no extra cost.
 
-Built into every creator plan. Zero extra dollars.
+The difference between a producer who converts followers and one who doesn't? It's not talent. It's follow-up speed.
 
 **Visual Direction:**
 Screen recording of the flow: Show an Instagram post with a comment saying "STEMS." Cut to the Instagram DM showing the auto-reply with a download link. Then show the PPR automation dashboard with the keyword trigger and Smart AI toggle. Show chat history in the backend.
 
-**CTA:** DM me "AUTOMATION" and I'll set one up on your account
+**CTA:** Comment AUTOMATION and I'll DM you how to set this up
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-REPLACEMENT.md` Section 7: 18 features, 4 match types, Smart AI with GPT-4o-mini, 10-message context. `PRODUCTION-READINESS-AUDIT.md` Section E: DM Automation rated 95% production-ready. All features green.
+
+> **EDIT NOTE:** Changed hook from "Someone comments STEMS and gets a DM — no ManyChat" (PPR feature announcement) to "Every comment is a potential customer — most producers don't reply" (audience problem). Body now teaches the DM-to-customer concept first. ManyChat comparison compressed. PPR mentioned naturally as the solution. CTA uses keyword trigger "AUTOMATION."
 
 ---
 
-### Category 1 — Post 4: I Replaced Buffer With an AI Content Engine
+### Category 1 — Post 4: How to Create a Month of Content From One Tutorial
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** Buffer lets you schedule posts. My platform writes them for you.
+**Hook:** You spent 2 hours making a tutorial. Now you need to turn it into posts for TikTok, Instagram, YouTube, and Twitter. That's another 4 hours. Every week. Here's a better way.
 
 **Script/Body:**
-Buffer costs $25-50 a month and all it does is schedule posts you already wrote.
+Content creation is the silent killer for music producers who sell online.
 
-I built something different.
+You know how to make music. You know how to teach. But turning one idea into platform-specific content? That's a full-time job nobody warned you about.
 
-You feed it one course chapter. It generates 3 platform-specific scripts — one for TikTok with viral hooks, one for YouTube with educational structure, one for Instagram with engagement formatting. Then it scores each script for virality on a 1-10 scale.
+Here's the math: one tutorial idea needs a TikTok hook (punchy, under 60 seconds), a YouTube structure (educational, longer), an Instagram caption (engagement-formatted), and images for each. Most producers spend 2 hours per platform adapting. That's 8 hours for one piece of content across 4 platforms.
 
-Then it generates images in an Excalidraw hand-drawn style. Then it generates a voiceover with ElevenLabs. Then it writes platform-specific captions with the right number of hashtags.
+Here's what I do instead. I feed one course chapter into the content engine I built on PausePlayRepeat. It generates 3 platform-specific scripts — TikTok with a viral hook, YouTube with educational structure, Instagram with engagement formatting. It scores each one for virality on a 1-10 scale so you know which ones to prioritize. Then it generates images and a voiceover.
 
-From one piece of content, you get everything you need for 3 platforms.
+One piece of content → everything you need for 3 platforms. And you can batch-process an entire course. 30 chapters = 90 pieces of content. That's 3 months of daily posting from one course.
 
-And you can batch-process an entire course. 30 chapters = 90 pieces of content. Done.
-
-That's not scheduling. That's a content factory.
+The content is still yours. Your voice, your expertise. The AI just handles the reformatting grind so you can spend those hours making music instead.
 
 **Visual Direction:**
 Screen recording of the 6-step pipeline: Step 1 — select a course chapter. Step 2 — show 3 generated scripts side by side (TikTok/YouTube/Instagram). Step 3 — show virality score with breakdown. Step 4 — show generated images. Step 5 — play the generated voiceover. Step 6 — show captions with hashtags. End with the content calendar view.
 
-**CTA:** Link in bio — sign up free and try the content engine
+**CTA:** Comment CONTENT and I'll DM you how the pipeline works
 **SOURCE:** `CONTENT-RESEARCH-EVERGREEN-ENGINE.md` Section 1: Full 8-stage pipeline, Gemini 2.5 Flash + Fal.ai + ElevenLabs, batch processing 5 chapters in parallel. 100+ TikTok hook templates. `PRODUCTION-READINESS-AUDIT.md` Section D: AI Script Generation rated green/production-ready.
+
+> **EDIT NOTE:** Changed hook from "Buffer schedules, my platform writes" (PPR vs competitor) to "You spent 2 hours on a tutorial, now you need 4 more hours adapting it" (the audience's content creation pain). Body teaches the content repurposing concept — educational even without PPR. PPR introduced midway as the tool that solves it. CTA uses keyword trigger "CONTENT."
 
 ---
 
@@ -128,7 +137,7 @@ Screen recording of the 6-step pipeline: Step 1 — select a course chapter. Ste
 ### Category 2 — Post 1: What Producers Actually Pay Per Month
 
 **Platform:** Instagram Carousel
-**Hook:** I added up what producers pay across tools every month. The number made me sick.
+**Hook:** You're spending more on tools to sell your music than you're making from selling it. And you probably don't even realize it.
 
 **Script/Body:**
 Let's do the math. A producer selling on Gumroad or Patreon who wants to actually run their business:
@@ -158,15 +167,17 @@ Carousel slides:
 9. Calculator graphic totaling $210-$583/month
 10. PPR pricing: "$12/month + 10% of sales. Everything included."
 
-**CTA:** Link in bio to see the full pricing breakdown
+**CTA:** Comment TOOLS and I'll DM you the full breakdown with alternatives
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-COMPARISON.md` Section 9: "The Hidden Cost Stack" — exact dollar figures for each tool category, total $210-$583/month.
+
+> **EDIT NOTE:** Changed hook from "I added up what producers pay" (Andrew's POV) to "You're spending more on tools than you're making" (directly addresses audience). CTA changed to keyword trigger "TOOLS."
 
 ---
 
 ### Category 2 — Post 2: The Patreon Tax Nobody Talks About
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** Patreon takes 8-12% of every dollar. That's just the beginning.
+**Hook:** If you're on Patreon, you think you're paying 8-12%. You're actually paying way more. Let me show you the hidden costs nobody talks about.
 
 **Script/Body:**
 Patreon takes 8-12% of your sales depending on your plan. Most producers think that's the only cost.
@@ -188,15 +199,17 @@ There's no hidden cost stack. It's just 10%.
 **Visual Direction:**
 Text on screen with each line appearing one by one. Use a calculator or receipt aesthetic — itemized "bill" showing what Patreon creators actually pay. End with a single line item: "PPR: 10%. Everything included."
 
-**CTA:** DM me "MATH" and I'll send you the full comparison
+**CTA:** Comment MATH and I'll DM you the full Patreon cost comparison
 **SOURCE:** `CONTENT-RESEARCH-MEMBERSHIPS-VS-PATREON.md` Section 4: Fee comparison table (PPR 10% vs Patreon 5-12%) and Section 5: tool replacement costs totaling $181-$1,519/month.
+
+> **EDIT NOTE:** Hook rewritten to address Patreon users directly — "If you're on Patreon, you think you're paying 8-12%." Original was a statement; new version pulls them in with "let me show you." CTA changed to keyword trigger "MATH."
 
 ---
 
 ### Category 2 — Post 3: $600/Month for Kajabi (Built for Life Coaches)
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** I was paying Kajabi $600 a month. It was built for life coaches, not music producers.
+**Hook:** Every course platform is built for life coaches selling "manifest your dream life" programs. None of them know what a beat license is. That's a problem.
 
 **Script/Body:**
 Kajabi starts at $149/month. I was on their higher tier — $600/month. For a course platform.
@@ -212,15 +225,17 @@ And it's just one piece of the platform. Not $600 a month. Not even close.
 **Visual Direction:**
 Split screen or before/after format. Left side: Kajabi pricing page showing $149-$600/month. Right side: PPR course creation wizard showing the 5-step flow, module editor, and drip content settings. End with the PPR pricing.
 
-**CTA:** Link in bio to see the course system
+**CTA:** Comment COURSES and I'll DM you what a music production course platform actually looks like
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-REPLACEMENT.md` Section 1: 14 tables, 32 features. Creator letter `app/creators/page.tsx` line 110: "Kajabi to host my courses — $600 a month for a platform designed for life coaches." `PRODUCTION-READINESS-AUDIT.md` Section A: Course creation wizard functional, student progress tracking green, certificates functional.
+
+> **EDIT NOTE:** Hook changed from "$600/month for Kajabi" (about Andrew's cost) to "Every course platform is built for life coaches" (something music producers relate to — feeling like an afterthought). CTA uses keyword trigger "COURSES."
 
 ---
 
 ### Category 2 — Post 4: What $12/Month Gets You vs. What $210/Month Gets Them
 
 **Platform:** Instagram Carousel
-**Hook:** On the left: $12/month. On the right: $210/month. Same features.
+**Hook:** If you're paying $200+ a month to sell beats, presets, and courses... someone is ripping you off. Here's what that same setup should cost.
 
 **Script/Body:**
 $12/month Starter plan on PausePlayRepeat:
@@ -245,8 +260,10 @@ One of these makes sense. The other one is what most producers are doing right n
 **Visual Direction:**
 Two-column carousel. Left column (green/clean) shows PPR features with "$12/mo" header. Right column (red/cluttered) shows the same features but with different platform logos next to each one and "$210+/mo" header. Final slide: "Same features. 17x less money."
 
-**CTA:** Link in bio — free tier available, no credit card
+**CTA:** Comment PRICING and I'll DM you the full feature-by-feature comparison
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-COMPARISON.md` Section 7: Creator plan pricing table (Starter $12/mo = 15 products, 500 emails). Section 9: Hidden cost stack low estimate $210/month.
+
+> **EDIT NOTE:** Hook changed from "$12 vs $210" (abstract numbers) to "If you're paying $200+ a month to sell beats, presets, and courses, someone is ripping you off" (emotionally resonant, addresses the audience directly). CTA changed to keyword trigger "PRICING."
 
 ---
 
@@ -372,10 +389,10 @@ Quick cuts between 4 different platform dashboards (Gumroad, Teachable, Calendly
 
 ---
 
-### Category 4 — Post 1: Your Buyers Can't Hear the Sounds Before They Buy
+### Category 4 — Post 1: Why Sample Pack Refund Rates Are So High
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** On Gumroad, you buy a sample pack and pray. On PausePlayRepeat, you preview every single sound first.
+**Hook:** You buy a $29 sample pack. You download the zip. You open it. Half the sounds aren't what you expected. This is why refund rates for sample packs are insane — and it's a solvable problem.
 
 **Script/Body:**
 Here's how buying a sample pack works on Gumroad:
@@ -393,15 +410,17 @@ That's not a small difference. That changes how sample packs sell. Good sounds s
 **Visual Direction:**
 Split screen. Left: Gumroad sample pack page — static image, "Add to cart" button, zip file download. Right: PPR samples marketplace — filters, play buttons, waveforms, individual sound metadata. Click play on 3-4 different samples to show the instant preview working.
 
-**CTA:** DM me "SAMPLES" to hear it in action
+**CTA:** Comment SAMPLES and I'll DM you a link to hear the difference
 **SOURCE:** `CONTENT-RESEARCH-SAMPLE-PREVIEW.md` Sections 2-3: Individual sample preview fully implemented. 14 genres, 8 categories. HTML5 audio with play/pause per sample. `getSamplesFromPacks` extracts individual files. Content-Ready Fact #1: "Buyers can preview every individual sound before purchasing."
+
+> **EDIT NOTE:** Hook changed from "On Gumroad you pray, on PPR you preview" (platform comparison) to "You buy a sample pack, half the sounds aren't what you expected" (buyer experience everyone relates to). CTA changed to keyword trigger "SAMPLES."
 
 ---
 
 ### Category 4 — Post 2: Exclusive Beats That Actually Auto-Remove
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** When someone buys your exclusive beat on PPR, it disappears from the marketplace instantly. No manual delisting. Automatic.
+**Hook:** If you sell beats, you've had this nightmare: someone buys the exclusive and you forget to delist it. Now two people think they own it. Here's how that problem gets solved automatically.
 
 **Script/Body:**
 If you sell beats on BeatStars and someone buys the exclusive, you have to manually go in and delist it. If you forget, someone else might try to buy it too. Now you've got a problem.
@@ -420,15 +439,17 @@ The buyer gets true exclusivity, enforced by the system. Not by you remembering 
 **Visual Direction:**
 Screen recording flow: Show a beat listing with all 4 license tiers available (Basic $25, Premium $75, Exclusive $500). Simulate an exclusive purchase. Show the beat page updating to "Exclusively Sold" with Crown icon and all tiers disabled. Show the backend log: `isPublished: false`, `exclusiveSoldAt: Date.now()`.
 
-**CTA:** Link in bio if you sell beats
+**CTA:** Comment BEATS and I'll DM you how the licensing system works
 **SOURCE:** `CONTENT-RESEARCH-SAMPLE-PREVIEW.md` Section 5: Full auto-removal flow at `convex/beatLeases.ts:238-258`. Race condition protection. Content-Ready Fact #7 and #8.
+
+> **EDIT NOTE:** Hook changed from "On PPR, exclusive beats auto-remove" (PPR feature) to "You've had this nightmare — someone buys exclusive, you forget to delist" (the pain beat sellers actually feel). CTA changed to keyword trigger "BEATS."
 
 ---
 
 ### Category 4 — Post 3: Patreon Can't Sell One-Time Products
 
 **Platform:** Instagram Carousel
-**Hook:** On Patreon, if someone wants one preset pack, they have to subscribe to your entire tier. That's broken.
+**Hook:** Someone wants to buy ONE preset pack from you. But your only option is a monthly subscription tier. They leave. You lose the sale. This is the Patreon trap nobody talks about.
 
 **Script/Body:**
 Patreon is subscriptions only. If someone wants to buy one $15 preset pack from you, they have to subscribe to an entire membership tier. Every month. Even if they just wanted one thing.
@@ -452,15 +473,17 @@ Carousel:
 5. Beat licensing tiers (Basic, Premium, Exclusive, Unlimited)
 6. Text: "One-time. Subscription. Licensing tiers. All in one store."
 
-**CTA:** DM me "COMPARE" for the full Patreon comparison
+**CTA:** Comment COMPARE and I'll DM you the full Patreon limitation breakdown
 **SOURCE:** `CONTENT-RESEARCH-MEMBERSHIPS-VS-PATREON.md` Section 2: "PPR has completely separate checkout flows" — 5 different checkout endpoints. "A user can be subscribed to a $15/month membership AND buy a $50 one-time beat lease on the same store."
+
+> **EDIT NOTE:** Hook changed from "On Patreon, they subscribe to your tier — that's broken" (about Patreon) to "Someone wants ONE preset pack, your only option is a subscription, they leave" (the lost sale the creator feels). CTA changed to keyword trigger "COMPARE."
 
 ---
 
 ### Category 4 — Post 4: Built-In Email Marketing (Not a Bolt-On)
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** Gumroad collects emails. That's it. No sequences. No automations. No nurture flows. Just a list.
+**Hook:** You have 500 email addresses from people who downloaded your stuff. You've emailed them exactly zero times. Here's the automation that turns that dead list into money.
 
 **Script/Body:**
 On Gumroad, you get an email list. Congratulations. Now go pay Mailchimp $50 a month to actually DO something with it.
@@ -482,15 +505,17 @@ On Gumroad, you get a CSV file.
 **Visual Direction:**
 Screen recording: Show an email workflow in the visual builder — lead_signup trigger connected to email nodes with delay nodes, a condition node checking "did they purchase?", branching to different paths. Show the template library. Then show a Gumroad email settings page — just a basic list. Contrast is everything.
 
-**CTA:** Link in bio to see the email system
+**CTA:** Comment EMAILS and I'll DM you the 5-day email sequence that converts
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-COMPARISON.md` Section 2: 45+ templates, 15+ trigger types, 12 node types in workflow builder. Section 9: Gumroad has "basic email collection (no automations, no templates, no A/B testing)."
+
+> **EDIT NOTE:** Hook changed from "Gumroad collects emails, that's it" (competitor criticism) to "You have 500 emails, you've emailed them zero times" (the audience's actual situation). CTA changed to keyword trigger "EMAILS."
 
 ---
 
 ### Category 4 — Post 5: 4-Tier Beat Licensing (Gumroad Has Zero)
 
 **Platform:** Instagram Carousel
-**Hook:** Gumroad doesn't know what a beat license is. Neither does Patreon. Neither does Shopify.
+**Hook:** You sell a beat for $25. The buyer puts it on Spotify and gets 10 million streams. You see nothing extra. That's what happens when you sell beats without a licensing system.
 
 **Script/Body:**
 If you sell beats on Gumroad, you upload an MP3 and set a price. That's it. No licensing tiers. No distribution limits. No streaming caps. No contract generation. No exclusive auto-removal.
@@ -516,8 +541,10 @@ Carousel:
 6. Exclusive sold — badge showing "Exclusively Sold" with disabled tiers
 7. "Built for producers. Not for everyone."
 
-**CTA:** Link in bio if you sell beats
+**CTA:** Comment LICENSE and I'll DM you how beat licensing tiers actually work
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-COMPARISON.md` Section 6: 4-tier licensing table with default prices and features. PDF contract generation via `pdf-lib`. `CONTENT-RESEARCH-SAMPLE-PREVIEW.md` Section 4: Beat preview and licensing tier system.
+
+> **EDIT NOTE:** Hook changed from "Gumroad/Patreon/Shopify don't know what a beat license is" (competitor criticism) to "You sell a beat for $25, buyer gets 10M streams, you see nothing" (the money pain beat sellers feel). CTA changed to keyword trigger "LICENSE."
 
 ---
 
@@ -562,7 +589,7 @@ Story-style flow: Show the learning dashboard — enrolled courses with progress
 ### Category 5 — Post 2: Your First Product in Under 2 Minutes
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** Your first digital product in under 2 minutes. I'll prove it.
+**Hook:** "I want to sell something online but I don't know where to start." You can have your first product live in under 2 minutes. I'll prove it.
 
 **Script/Body:**
 Step 1: Sign up. Free. Takes 30 seconds.
@@ -586,8 +613,10 @@ All from one dashboard.
 **Visual Direction:**
 Speed run screen recording. Timer in corner. Sign up -> dashboard -> "Become Creator" button -> one-click setup -> confetti -> create product -> select "Tip Jar" -> fill in 2 fields -> publish -> show the live storefront with the product. Timer shows under 2 minutes. Then slow down to show the cheat sheet creation flow with follow gate.
 
-**CTA:** Try it yourself — link in bio, no credit card
+**CTA:** Comment FIRST and I'll DM you the setup link — takes 2 minutes, no credit card
 **SOURCE:** `CONTENT-RESEARCH-ZERO-TO-PRODUCT.md` Step 3: Tip jar = 2 steps (title + description). Step 4: One-click creator setup at `components/dashboard/one-click-creator-setup.tsx`. Creator letter `app/creators/page.tsx` line 600: "you click one button, your store is live."
+
+> **EDIT NOTE:** Hook now leads with the audience's thought — "I want to sell something but I don't know where to start" — before making the 2-minute promise. CTA changed to keyword trigger "FIRST."
 
 ---
 
@@ -641,7 +670,7 @@ Carousel:
 ### Category 6 — Post 1: 134 Database Tables as a Solo Founder
 
 **Platform:** Instagram Reel / TikTok
-**Hook:** I built a platform with 134 database tables. By myself. I'm not even an engineer.
+**Hook:** I'm a music producer who taught himself to code because every platform built for us sucked. 134 database tables later, here's what happened.
 
 **Script/Body:**
 I'm a music producer who taught himself to code because he was too stubborn to use someone else's platform.
@@ -661,8 +690,10 @@ Every table is a scar from running a music production business on platforms that
 **Visual Direction:**
 Face to camera, casual, sitting at desk with monitor showing code in background. Flash the actual schema.ts file scrolling. Show the cron job list. Show the Stripe webhook handler. Keep it raw and real — no polished graphics, just the actual code scrolling by.
 
-**CTA:** Link in bio to see what came out of it
+**CTA:** Comment BUILD and I'll DM you the behind-the-scenes
 **SOURCE:** `CONTENT-RESEARCH-PLATFORM-REPLACEMENT.md` Summary: 134+ tables, 186+ features, 7,046-line schema, 71KB courses.ts, 63KB storefront, 27,000+ lines email system, 8 cron jobs, 11 checkout endpoints, 26 webhook event types. Creator letter `app/creators/page.tsx` lines 96-100.
+
+> **EDIT NOTE:** Hook changed from "134 database tables, not an engineer" (impressive but abstract) to "music producer who taught himself to code because every platform sucked" (relatable frustration + curiosity). CTA changed to keyword trigger "BUILD."
 
 ---
 

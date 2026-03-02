@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { isCallerAdmin } from "./lib/auth";
 
 async function verifyAdmin(ctx: any, clerkId?: string) {
   if (!clerkId) {
@@ -316,7 +317,7 @@ export const getStoreCopyrightClaims = query({
     }
 
     const store = await ctx.db.get(args.storeId);
-    if (!store || store.userId !== identity.subject) {
+    if (!store || (store.userId !== identity.subject && !(await isCallerAdmin(ctx)))) {
       throw new Error("Unauthorized");
     }
 

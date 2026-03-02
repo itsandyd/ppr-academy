@@ -81,3 +81,20 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
 
   return { identity, user };
 }
+
+/**
+ * Check if the authenticated caller is an admin.
+ * Returns true if the caller has admin privileges, false otherwise.
+ * Does not throw — use this for inline ownership checks that need an admin bypass.
+ */
+export async function isCallerAdmin(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return false;
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+    .first();
+
+  return user?.admin === true;
+}
