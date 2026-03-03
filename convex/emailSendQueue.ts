@@ -367,7 +367,10 @@ export const markEmailsFailed = internalMutation({
       const email = await ctx.db.get(id);
       if (!email) continue;
 
-      if (email.attempts < email.maxAttempts) {
+      // Don't retry quota-exceeded errors — they'll keep failing until the billing cycle resets
+      const isQuotaError = args.error.includes("monthly_quota_exceeded") || args.error.includes("daily_quota_exceeded");
+
+      if (!isQuotaError && email.attempts < email.maxAttempts) {
         // Exponential backoff: 1s, 4s, 16s base + jitter
         const backoffMs = Math.pow(4, email.attempts) * 1000 + Math.floor(Math.random() * 1000);
         await ctx.db.patch(id, {

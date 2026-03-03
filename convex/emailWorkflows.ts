@@ -4207,3 +4207,114 @@ export const getExecutionStatusSummary = query({
     };
   },
 });
+
+/**
+ * Get execution details for a batch of email-node execution IDs.
+ * Returns workflowId, currentNodeId, customerEmail, contactId, storeId
+ * so the caller can group by (workflowId, nodeId) for broadcast detection.
+ */
+export const getEmailNodeExecutionDetails = internalQuery({
+  args: {
+    executionIds: v.array(v.id("workflowExecutions")),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const id of args.executionIds) {
+      const exec = await ctx.db.get(id);
+      if (!exec || exec.status === "completed" || exec.status === "failed") continue;
+      results.push({
+        _id: exec._id,
+        workflowId: exec.workflowId,
+        currentNodeId: exec.currentNodeId,
+        customerEmail: exec.customerEmail,
+        contactId: exec.contactId,
+        storeId: exec.storeId,
+      });
+    }
+    return results;
+  },
+});
+
+/**
+ * Advance a batch of executions to their next node after a broadcast send.
+ * This replaces the per-execution advanceExecution call for broadcast emails.
+ * Looks up the workflow once, finds the next node after the email node,
+ * and patches all executions.
+ */
+export const bulkAdvanceAfterEmailNode = internalMutation({
+  args: {
+    executionIds: v.array(v.id("workflowExecutions")),
+    workflowId: v.id("emailWorkflows"),
+    emailNodeId: v.string(),
+  },
+  returns: v.object({
+    advanced: v.number(),
+    completed: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return { advanced: 0, completed: 0 };
+
+    const emailNode = workflow.nodes?.find((n: any) => n.id === args.emailNodeId);
+    if (!emailNode) return { advanced: 0, completed: 0 };
+
+    // Find the next node (same logic as executeWorkflowNode)
+    const allOutgoingEdges = workflow.edges?.filter((e: any) => e.source === emailNode.id) || [];
+    let connection = allOutgoingEdges[0];
+    if (allOutgoingEdges.length > 1) {
+      const sequenceEdge = allOutgoingEdges.find((e: any) => {
+        const targetNode = workflow.nodes.find((n: any) => n.id === e.target);
+        return targetNode && targetNode.type !== "action";
+      });
+      if (sequenceEdge) connection = sequenceEdge;
+    }
+
+    if (!connection) {
+      // No next node — complete all executions
+      for (const id of args.executionIds) {
+        await ctx.db.patch(id, { status: "completed", completedAt: now });
+      }
+      return { advanced: 0, completed: args.executionIds.length };
+    }
+
+    const nextNode = workflow.nodes.find((n: any) => n.id === connection.target);
+    if (!nextNode) {
+      for (const id of args.executionIds) {
+        await ctx.db.patch(id, { status: "completed", completedAt: now });
+      }
+      return { advanced: 0, completed: args.executionIds.length };
+    }
+
+    // If next node is delay, calculate scheduledFor
+    if (nextNode.type === "delay") {
+      const delayData = nextNode.data || {};
+      const delayValue = delayData.delay || delayData.delayValue || 1;
+      const delayUnit = delayData.delayUnit || delayData.delayType || "days";
+      let delayMs = 0;
+      switch (delayUnit) {
+        case "minutes": delayMs = delayValue * 60 * 1000; break;
+        case "hours": delayMs = delayValue * 60 * 60 * 1000; break;
+        default: delayMs = delayValue * 24 * 60 * 60 * 1000;
+      }
+      for (const id of args.executionIds) {
+        await ctx.db.patch(id, {
+          currentNodeId: nextNode.id,
+          scheduledFor: now + delayMs,
+          status: "pending",
+        });
+      }
+    } else {
+      for (const id of args.executionIds) {
+        await ctx.db.patch(id, {
+          currentNodeId: nextNode.id,
+          scheduledFor: now,
+          status: "pending",
+        });
+      }
+    }
+
+    return { advanced: args.executionIds.length, completed: 0 };
+  },
+});

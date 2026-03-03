@@ -11598,6 +11598,44 @@ export declare const api: {
       any
     >;
   };
+  emailQueueAdmin: {
+    analyzeEmailVolume: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; status?: string },
+      any
+    >;
+    countAllEmails: FunctionReference<
+      "query",
+      "public",
+      { status: string },
+      any
+    >;
+    freezeQueuedEmails: FunctionReference<
+      "mutation",
+      "public",
+      { dryRun?: boolean; limit?: number },
+      { found: number; frozen: number; message: string; skipped: number }
+    >;
+    inspectQueueErrors: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; status?: string },
+      any
+    >;
+    requeueFailedEmails: FunctionReference<
+      "mutation",
+      "public",
+      {
+        dryRun?: boolean;
+        errorFilter?: string;
+        includeStaleQueued?: boolean;
+        limit?: number;
+        subjectFilter?: string;
+      },
+      { found: number; message: string; requeued: number; skipped: number }
+    >;
+  };
   emails: {
     connectAdminResendSecure: FunctionReference<
       "action",
@@ -25334,6 +25372,25 @@ export declare const internal: {
       },
       null
     >;
+    sendWorkflowBroadcast: FunctionReference<
+      "action",
+      "internal",
+      {
+        dryRun?: boolean;
+        emailNodeId: string;
+        executionIds: Array<Id<"workflowExecutions">>;
+        recipientEmails: Array<string>;
+        storeId: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      {
+        error?: string;
+        handledExecutionIds: Array<Id<"workflowExecutions">>;
+        method: string;
+        recipientCount: number;
+        success: boolean;
+      }
+    >;
     sendWorkflowEmail: FunctionReference<
       "action",
       "internal",
@@ -25408,6 +25465,16 @@ export declare const internal: {
         workflowId: Id<"emailWorkflows">;
       },
       { message: string; totalResumed: number }
+    >;
+    bulkAdvanceAfterEmailNode: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        emailNodeId: string;
+        executionIds: Array<Id<"workflowExecutions">>;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { advanced: number; completed: number }
     >;
     bulkAdvanceSimpleNodes: FunctionReference<
       "mutation",
@@ -25528,6 +25595,12 @@ export declare const internal: {
       any
     >;
     getDueExecutions: FunctionReference<"query", "internal", {}, Array<any>>;
+    getEmailNodeExecutionDetails: FunctionReference<
+      "query",
+      "internal",
+      { executionIds: Array<Id<"workflowExecutions">> },
+      Array<any>
+    >;
     getEmailTemplateInternal: FunctionReference<
       "query",
       "internal",
