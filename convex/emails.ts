@@ -6,6 +6,7 @@ import { Resend } from "resend";
 import { internal } from "./_generated/api";
 import crypto from "crypto";
 import { Id } from "./_generated/dataModel";
+import { getMarketingResendClient, ensureMarketingContact } from "./lib/resendClients";
 
 // ============================================================================
 // API KEY ENCRYPTION/DECRYPTION (AES-256-GCM)
@@ -397,6 +398,7 @@ export const processCampaign = internalAction({
 
 /**
  * Send a batch of campaign emails (INTERNAL)
+ * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
  * Now with rate limiting to respect Resend API limits
  */
 export const sendCampaignBatch = internalAction({
@@ -413,7 +415,8 @@ export const sendCampaignBatch = internalAction({
       throw new Error("Campaign not found");
     }
 
-    const resend = getResendClient();
+    // MARKETING: Use marketing Resend client for campaign sends
+    const resend = getMarketingResendClient();
     if (!resend) {
       throw new Error("Resend not configured");
     }
@@ -707,6 +710,7 @@ export const getCampaignProgress = action({
 
 /**
  * Test email configuration by sending a test email
+ * TRANSACTIONAL: Do not move to marketing API.
  */
 export const testStoreEmailConfig = action({
   args: {
@@ -805,7 +809,20 @@ export const testStoreEmailConfig = action({
 });
 
 /**
- * Send a broadcast email to selected contacts (one-time send, not a campaign)
+ * Send a broadcast email to selected contacts (one-time send, not a campaign).
+ *
+ * MARKETING: Uses Resend Broadcasts API (resend.broadcasts.create + send)
+ * when the marketing audience is configured. Falls back to individual sends
+ * via marketing Resend client when Broadcasts API is not available.
+ *
+ * The Broadcasts API handles unsubscribe links automatically and sends
+ * to all contacts in the audience. For targeted sends (subset of contacts),
+ * we ensure contacts exist in the audience, then use the Broadcasts API
+ * which respects each contact's unsubscribe status.
+ *
+ * Note: Broadcasts API has limited personalization (contact properties only,
+ * via {{{PROPERTY_NAME}}} syntax). For rich per-recipient personalization,
+ * individual sends through the marketing client are still used.
  */
 export const sendBroadcastEmail = action({
   args: {
@@ -853,7 +870,8 @@ export const sendBroadcastEmail = action({
       };
     }
 
-    const resend = getResendClient();
+    // MARKETING: Use marketing Resend client for broadcast sends
+    const resend = getMarketingResendClient();
     if (!resend) {
       return {
         success: false,
@@ -889,21 +907,95 @@ export const sendBroadcastEmail = action({
       await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails });
     const suppressionMap = new Map(suppressionResults.map((r) => [r.email.toLowerCase(), r]));
 
-    for (const contact of contacts) {
+    // Filter to eligible contacts (subscribed + not suppressed)
+    const eligibleContacts = contacts.filter((contact) => {
+      if (contact.status !== "subscribed") {
+        skipped++;
+        return false;
+      }
+      const suppression = suppressionMap.get(contact.email.toLowerCase());
+      if (suppression?.suppressed) {
+        skipped++;
+        return false;
+      }
+      return true;
+    });
+
+    if (eligibleContacts.length === 0) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped,
+        message: "No eligible recipients (all unsubscribed or suppressed)",
+      };
+    }
+
+    // --- Broadcasts API path ---
+    // If marketing audience is configured, use the Broadcasts API.
+    // This automatically handles Resend-managed unsubscribe links.
+    const audienceId = process.env.RESEND_MARKETING_AUDIENCE_ID;
+    if (audienceId) {
       try {
-        // Skip unsubscribed contacts
-        if (contact.status !== "subscribed") {
-          skipped++;
-          continue;
+        // Ensure all eligible contacts exist in the marketing audience
+        for (const contact of eligibleContacts) {
+          await ensureMarketingContact(
+            contact.email,
+            contact.firstName,
+            contact.lastName,
+          );
         }
 
-        // Check suppression
-        const suppression = suppressionMap.get(contact.email.toLowerCase());
-        if (suppression?.suppressed) {
-          skipped++;
-          continue;
-        }
+        // Create and immediately send the broadcast via Resend Broadcasts API
+        const { data, error } = await resend.broadcasts.create({
+          audienceId,
+          from: `${fromName} <${fromEmail}>`,
+          subject: args.subject, // Broadcasts have limited personalization
+          html: args.htmlContent,
+          replyTo: replyToEmail,
+          name: `PPR Broadcast ${new Date().toISOString().slice(0, 10)}`,
+        });
 
+        if (error) {
+          console.error(`[Broadcast] Failed to create broadcast:`, error);
+          // Fall through to per-recipient sends below
+        } else if (data?.id) {
+          // Send the broadcast
+          const { error: sendError } = await resend.broadcasts.send(data.id);
+          if (sendError) {
+            console.error(`[Broadcast] Failed to send broadcast ${data.id}:`, sendError);
+          } else {
+            // Update contact sent counts
+            for (const contact of eligibleContacts) {
+              try {
+                await ctx.runMutation(internal.emailQueries.incrementContactEmailsSent, {
+                  contactId: contact._id,
+                });
+              } catch {
+                // Non-critical — don't fail the broadcast for stats
+              }
+            }
+
+            return {
+              success: true,
+              sent: eligibleContacts.length,
+              failed: 0,
+              skipped,
+              message: `Broadcast sent to ${eligibleContacts.length} contact${eligibleContacts.length !== 1 ? "s" : ""} via Resend Broadcasts API${skipped > 0 ? `, ${skipped} skipped` : ""}`,
+            };
+          }
+        }
+      } catch (error) {
+        console.error(`[Broadcast] Broadcasts API failed, falling back to individual sends:`, error);
+        // Fall through to per-recipient sends
+      }
+    }
+
+    // --- Fallback: individual sends via marketing API ---
+    // Used when Broadcasts API is not configured or fails.
+    // Also supports rich per-recipient personalization.
+    for (const contact of eligibleContacts) {
+      try {
         const recipientName =
           contact.firstName || contact.lastName
             ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
@@ -923,6 +1015,7 @@ export const sendBroadcastEmail = action({
           email: contact.email,
         });
 
+        // MARKETING: Send via marketing Resend client (not transactional)
         await resend.emails.send({
           from: `${fromName} <${fromEmail}>`,
           to: contact.email,

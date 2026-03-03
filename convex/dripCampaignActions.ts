@@ -1,5 +1,10 @@
 "use node";
 
+// MARKETING: All drip campaign emails route through RESEND_MARKETING_API_KEY.
+// These are automated nurture/promotional sequences, not user-initiated transactional emails.
+// Emails are enqueued with source="drip" and sent via the marketing Resend client in the
+// email send queue processor (emailSendQueueActions.ts).
+
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -81,6 +86,11 @@ export const processDueDripEmails = internalAction({
 /**
  * Resolve drip email content and enqueue for batch sending.
  * Replaces the old inline-send pattern for drip campaign emails.
+ *
+ * MARKETING: Enqueues with source="drip" which routes through the marketing
+ * Resend client (RESEND_MARKETING_API_KEY). These are automated nurture/promo
+ * sequences, not user-initiated transactional emails. Ensures contact exists
+ * in the Resend marketing audience before enqueuing.
  */
 export const resolveAndEnqueueDripEmail = internalAction({
   args: {
@@ -93,7 +103,12 @@ export const resolveAndEnqueueDripEmail = internalAction({
     textContent: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const { ensureMarketingContact } = await import("./lib/resendClients");
     const crypto = await import("crypto");
+
+    // MARKETING: Ensure contact exists in Resend marketing audience before sending
+    const firstName = args.name.split(" ")[0] || "there";
+    await ensureMarketingContact(args.email, firstName !== "there" ? firstName : undefined);
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
@@ -103,8 +118,6 @@ export const resolveAndEnqueueDripEmail = internalAction({
     const token = `${emailBase64}.${storeBase64}.${signature}`;
     const unsubscribeUrl = `${baseUrl}/unsubscribe/${token}`;
     const apiUnsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${token}`;
-
-    const firstName = args.name.split(" ")[0] || "there";
     const personalizedHtml = args.htmlContent
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
@@ -152,6 +165,7 @@ export const resolveAndEnqueueDripEmail = internalAction({
 /**
  * Send a drip email directly via Resend.
  * LEGACY: Kept for backwards compatibility. New code uses resolveAndEnqueueDripEmail.
+ * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
  */
 export const sendDripEmail = internalAction({
   args: {
@@ -163,10 +177,11 @@ export const sendDripEmail = internalAction({
     textContent: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { Resend } = await import("resend");
+    const { getMarketingResendClient } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    // MARKETING: Use marketing Resend client for drip campaign sends
+    const resend = getMarketingResendClient();
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";

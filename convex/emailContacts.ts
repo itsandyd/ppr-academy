@@ -52,7 +52,7 @@ export const createContact = mutation({
       }
     }
 
-    return await ctx.db.insert("emailContacts", {
+    const contactId = await ctx.db.insert("emailContacts", {
       storeId: args.storeId,
       email: args.email.toLowerCase(),
       firstName: args.firstName,
@@ -70,6 +70,16 @@ export const createContact = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    // Sync new contact to Resend marketing audience (fire-and-forget)
+    await ctx.scheduler.runAfter(0, internal.resendMarketingSync.syncContactToMarketing, {
+      email: args.email.toLowerCase(),
+      firstName: args.firstName,
+      lastName: args.lastName,
+      unsubscribed: false,
+    });
+
+    return contactId;
   },
 });
 
@@ -2214,5 +2224,54 @@ export const removeTagFromContactWithJunction = mutation({
     }
 
     return true;
+  },
+});
+
+/**
+ * Get a batch of contacts for bulk sync to Resend marketing.
+ * Used by resendMarketingSync.syncExistingContacts.
+ */
+export const getContactBatchForMarketingSync = internalQuery({
+  args: {
+    limit: v.number(),
+    cursor: v.optional(v.string()),
+  },
+  returns: v.object({
+    items: v.array(
+      v.object({
+        email: v.string(),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        status: v.string(),
+      })
+    ),
+    hasMore: v.boolean(),
+    nextCursor: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    // Use _creationTime-based pagination
+    const minTime = args.cursor ? Number(args.cursor) : 0;
+
+    const contacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_creation_time")
+      .filter((q) => q.gt(q.field("_creationTime"), minTime))
+      .take(args.limit + 1);
+
+    const hasMore = contacts.length > args.limit;
+    const items = contacts.slice(0, args.limit);
+
+    return {
+      items: items.map((c) => ({
+        email: c.email,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        status: c.status,
+      })),
+      hasMore,
+      nextCursor: hasMore
+        ? String(items[items.length - 1]._creationTime)
+        : undefined,
+    };
   },
 });

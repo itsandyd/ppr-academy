@@ -24,6 +24,14 @@ import { CampaignDay3 } from "./CampaignDay3";
 import { CampaignDay5 } from "./CampaignDay5";
 import { CampaignDay7 } from "./CampaignDay7";
 import { CampaignDay10 } from "./CampaignDay10";
+import { BeatTapeRevenueVideo } from "./BeatTapeRevenueVideo";
+import { EmailSequenceVideo } from "./EmailSequenceVideo";
+import { SceneHook } from "./SceneHook";
+import { SceneLeak } from "./SceneLeak";
+import { SceneThreeEmails } from "./SceneThreeEmails";
+import { SceneProblem } from "./SceneProblem";
+import { ScenePPR } from "./ScenePPR";
+import { SceneCTA } from "./SceneCTA";
 
 type DynamicVideoProps = {
   generatedCode: string;
@@ -242,6 +250,72 @@ export const RemotionRoot: React.FC = () => {
         id="CampaignDay10"
         component={CampaignDay10}
         durationInFrames={900}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── CONTENT VIDEOS: Educational Social Media Content ─── */}
+      <Composition
+        id="BeatTapeRevenue"
+        component={BeatTapeRevenueVideo}
+        durationInFrames={1800}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="SceneHook"
+        component={SceneHook}
+        durationInFrames={150}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="SceneLeak"
+        component={SceneLeak}
+        durationInFrames={210}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="SceneThreeEmails"
+        component={SceneThreeEmails}
+        durationInFrames={540}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="SceneProblem"
+        component={SceneProblem}
+        durationInFrames={300}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="ScenePPR"
+        component={ScenePPR}
+        durationInFrames={300}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="SceneCTA"
+        component={SceneCTA}
+        durationInFrames={300}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── FULL EMAIL SEQUENCE: All 6 scenes composed ─── */}
+      <Composition
+        id="EmailSequenceVideo"
+        component={EmailSequenceVideo}
+        durationInFrames={1800}
         fps={30}
         width={1080}
         height={1920}

@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
 import { generateUnsubscribeUrl, generateListUnsubscribeHeader } from './unsubscribe';
 
+// TRANSACTIONAL: All functions in this file send through the transactional Resend API.
+// Do not move these to the marketing API — they are purchase confirmations, enrollment
+// notifications, payment alerts, and other emails the recipient explicitly triggered.
 // Initialize Resend only when needed
 const getResendClient = () => {
   if (!process.env.RESEND_API_KEY) {

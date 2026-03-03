@@ -24611,6 +24611,21 @@ export declare const internal: {
       { contactIds: Array<Id<"emailContacts">> },
       { deleted: number; errors: number }
     >;
+    getContactBatchForMarketingSync: FunctionReference<
+      "query",
+      "internal",
+      { cursor?: string; limit: number },
+      {
+        hasMore: boolean;
+        items: Array<{
+          email: string;
+          firstName?: string;
+          lastName?: string;
+          status: string;
+        }>;
+        nextCursor?: string;
+      }
+    >;
     importContactsBatchInternal: FunctionReference<
       "mutation",
       "internal",
@@ -29402,6 +29417,32 @@ export declare const internal: {
         resendDomainId: string;
         status: string;
       },
+      null
+    >;
+  };
+  resendMarketingSync: {
+    syncContactToMarketing: FunctionReference<
+      "action",
+      "internal",
+      {
+        email: string;
+        firstName?: string;
+        lastName?: string;
+        properties?: any;
+        unsubscribed?: boolean;
+      },
+      null
+    >;
+    syncExistingContacts: FunctionReference<
+      "action",
+      "internal",
+      { batchSize?: number; cursor?: string },
+      { failed: number; hasMore: boolean; nextCursor?: string; synced: number }
+    >;
+    updateContactUnsubscribe: FunctionReference<
+      "action",
+      "internal",
+      { email: string; unsubscribed: boolean },
       null
     >;
   };

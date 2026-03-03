@@ -678,6 +678,11 @@ export const executeWorkflowNode = internalAction({
 /**
  * Resolve custom email content (personalization, variables) and enqueue for batch sending.
  * Replaces the old inline-send pattern for custom workflow emails.
+ *
+ * MARKETING: Enqueues with source="workflow" which routes through the marketing
+ * Resend client (RESEND_MARKETING_API_KEY). These are promotional/nurture sequences
+ * triggered by workflow automations, not user-initiated transactional emails.
+ * Ensures contact exists in the Resend marketing audience before enqueuing.
  */
 export const resolveAndEnqueueCustomEmail = internalAction({
   args: {
@@ -702,6 +707,7 @@ export const resolveAndEnqueueCustomEmail = internalAction({
       return null;
     }
 
+    const { ensureMarketingContact } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get contact info if available
@@ -718,6 +724,9 @@ export const resolveAndEnqueueCustomEmail = internalAction({
           : contact.firstName || "";
       }
     }
+
+    // MARKETING: Ensure contact exists in Resend marketing audience before sending
+    await ensureMarketingContact(args.customerEmail, firstName !== "there" ? firstName : undefined);
 
     // Get store name for {{senderName}} variable
     let senderName = "";
@@ -870,6 +879,10 @@ ${bodyContent}
 /**
  * Resolve template email content and enqueue for batch sending.
  * Replaces the old inline-send pattern for template workflow emails.
+ *
+ * MARKETING: Enqueues with source="workflow" which routes through the marketing
+ * Resend client (RESEND_MARKETING_API_KEY). Ensures contact exists in the
+ * Resend marketing audience before enqueuing.
  */
 export const resolveAndEnqueueTemplateEmail = internalAction({
   args: {
@@ -890,6 +903,7 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
       return null;
     }
 
+    const { ensureMarketingContact } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get the template
@@ -916,6 +930,9 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
           : contact.firstName || "";
       }
     }
+
+    // MARKETING: Ensure contact exists in Resend marketing audience before sending
+    await ensureMarketingContact(args.customerEmail, firstName !== "there" ? firstName : undefined);
 
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
@@ -968,6 +985,7 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
 /**
  * Send a custom email (not from template) from workflow.
  * LEGACY: Kept for backwards compatibility. New code should use resolveAndEnqueueCustomEmail.
+ * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
  */
 export const sendCustomWorkflowEmail = internalAction({
   args: {
@@ -988,7 +1006,7 @@ export const sendCustomWorkflowEmail = internalAction({
       return null;
     }
 
-    const { Resend } = await import("resend");
+    const { getMarketingResendClient } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get contact info if available
@@ -1075,7 +1093,8 @@ export const sendCustomWorkflowEmail = internalAction({
       console.error(`[WorkflowEmail] Could not fetch platform stats:`, e);
     }
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    // MARKETING: Use marketing Resend client for workflow sends
+    const resend = getMarketingResendClient();
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "PPR Academy";
@@ -1162,6 +1181,7 @@ ${bodyContent}
 /**
  * Send email from a workflow using a template
  * Used by the durable workflow system
+ * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
  */
 export const sendWorkflowEmail = internalAction({
   args: {
@@ -1172,7 +1192,7 @@ export const sendWorkflowEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { Resend } = await import("resend");
+    const { getMarketingResendClient } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get the template
@@ -1200,7 +1220,8 @@ export const sendWorkflowEmail = internalAction({
       }
     }
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    // MARKETING: Use marketing Resend client for workflow template sends
+    const resend = getMarketingResendClient();
 
     // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
@@ -1254,6 +1275,7 @@ export const sendWorkflowEmail = internalAction({
 /**
  * Send team notification via email, Slack, or Discord
  * Used by notify workflow nodes
+ * TRANSACTIONAL: Do not move to marketing API — admin/system notifications.
  */
 export const sendTeamNotification = internalAction({
   args: {

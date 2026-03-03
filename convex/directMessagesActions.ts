@@ -7,6 +7,7 @@ import { Resend } from "resend";
 
 // ============================================================================
 // RESEND CLIENT
+// TRANSACTIONAL: Do not move to marketing API — these are DM notifications.
 // ============================================================================
 
 let resendClient: Resend | null = null;

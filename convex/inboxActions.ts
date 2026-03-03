@@ -6,6 +6,7 @@ import { Resend } from "resend";
 
 /**
  * Email reply sending actions
+ * TRANSACTIONAL: Do not move to marketing API — these are customer support replies.
  */
 
 let resendClient: Resend | null = null;

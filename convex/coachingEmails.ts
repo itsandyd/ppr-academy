@@ -1,5 +1,9 @@
 "use node";
 
+// TRANSACTIONAL: All functions in this file send through the transactional Resend API.
+// Do not move to marketing — these are booking confirmations, session reminders, and
+// coaching-related notifications the recipient explicitly triggered.
+
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";

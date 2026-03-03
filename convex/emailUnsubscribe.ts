@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const unsubscribeByEmail = mutation({
   args: {
@@ -96,6 +97,12 @@ export const unsubscribeByEmail = mutation({
         status: "cancelled" as const,
       });
     }
+
+    // Sync unsubscribe to Resend marketing audience (fire-and-forget)
+    await ctx.scheduler.runAfter(0, internal.resendMarketingSync.updateContactUnsubscribe, {
+      email,
+      unsubscribed: true,
+    });
 
     return { success: true, message: "Successfully unsubscribed" };
   },
