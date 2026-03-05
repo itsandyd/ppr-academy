@@ -196,7 +196,7 @@ function personalizeContent(
   const unsubscribeUrl = recipient.unsubscribeUrl || generateUnsubscribeUrl(recipient.email);
   const stats = recipient.userStats || {};
 
-  return content
+  let result = content
     // Basic info
     .replace(/\{\{firstName\}\}/g, firstName)
     .replace(/\{\{first_name\}\}/g, firstName)
@@ -253,6 +253,14 @@ function personalizeContent(
     .replace(/\{\{last_active_date\}\}/g, stats.lastActiveDate || "")
     .replace(/\{\{daysSinceLastActive\}\}/g, String(stats.daysSinceLastActive ?? 0))
     .replace(/\{\{days_since_last_active\}\}/g, String(stats.daysSinceLastActive ?? 0));
+
+  // Clean up trailing space before punctuation when firstName/name was empty
+  // e.g. "Hey ," → "Hey," and "Hi !" → "Hi!"
+  if (!firstName) {
+    result = result.replace(/ ([,!?;:])/g, "$1");
+  }
+
+  return result;
 }
 
 // ============================================================================

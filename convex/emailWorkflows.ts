@@ -2629,6 +2629,22 @@ export const getStoreByClerkId = internalQuery({
 });
 
 /**
+ * Get the creator's first name from the users table by their Clerk user ID.
+ * Used to resolve {{senderName}} to a real person name instead of the store brand name.
+ */
+export const getCreatorFirstNameByClerkId = internalQuery({
+  args: { clerkId: v.string() },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    return user?.firstName || user?.name?.split(" ")[0] || null;
+  },
+});
+
+/**
  * Get executions that are due to run
  * Reduced batch size to avoid OCC contention with large backlogs
  */

@@ -25638,6 +25638,12 @@ export declare const internal: {
       { contactId: Id<"emailContacts"> },
       any
     >;
+    getCreatorFirstNameByClerkId: FunctionReference<
+      "query",
+      "internal",
+      { clerkId: string },
+      string | null
+    >;
     getDueExecutions: FunctionReference<"query", "internal", {}, Array<any>>;
     getEmailNodeExecutionDetails: FunctionReference<
       "query",

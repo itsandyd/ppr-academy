@@ -448,7 +448,7 @@ STORE/BRAND INFORMATION:
     }
 
     const tone = args.tone || "friendly";
-    const sequenceLength = args.sequenceLength || 5;
+    const sequenceLength = args.sequenceLength || 7;
 
     // Create a URL-safe slug from the product name for use in tags
     const productSlug = productName
@@ -588,14 +588,24 @@ STORE/BRAND INFORMATION:
     const emailTemplates: Record<string, { purpose: string; structure: string; focus: string }[]> = {
       course_launch: [
         {
-          purpose: "welcome",
-          structure: "Personal story of why you created this course. What problem did YOU face that led to creating it?",
-          focus: "Connection - make them feel you understand their struggle",
+          purpose: "personal_story",
+          structure: "Share a personal struggle or breakthrough moment that led you to create this. NO product links. Pure story.",
+          focus: "Connection - make them feel you understand their struggle. NO CTA, no product link.",
+        },
+        {
+          purpose: "behind_scenes",
+          structure: "Take them behind the scenes of your creative process or teaching journey. Hint at something you've been building. NO product links.",
+          focus: "Build curiosity and intimacy. NO CTA, no product link. End with P.S. teasing what's coming.",
         },
         {
           purpose: "value",
-          structure: "Share ONE powerful insight from the course. Teach something they can use TODAY without buying.",
-          focus: "Demonstrate expertise - give real value upfront",
+          structure: "Share ONE powerful insight from the course. Teach something they can use TODAY without buying. NO product links.",
+          focus: "Demonstrate expertise - give real value upfront. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the course link appears. Introduce the course through a story about why you built it. Include ONE casual link in the middle.",
+          focus: "The big reveal - first product link. Wrap the pitch in a story. Include pressure release after the CTA.",
         },
         {
           purpose: "social_proof",
@@ -603,7 +613,7 @@ STORE/BRAND INFORMATION:
           focus: "Build belief - show what's possible",
         },
         {
-          purpose: "behind_scenes",
+          purpose: "whats_inside",
           structure: "Walk them through what's inside. Highlight 2-3 specific modules/lessons and what they'll learn.",
           focus: "Make the course tangible - show them the goods",
         },
@@ -618,16 +628,6 @@ STORE/BRAND INFORMATION:
           focus: "Stack value - make it a no-brainer",
         },
         {
-          purpose: "faq",
-          structure: "Answer 3 real questions people ask before buying. Be direct and honest.",
-          focus: "Remove uncertainty - handle the 'but what about...'",
-        },
-        {
-          purpose: "personal_story",
-          structure: "Share another struggle or breakthrough moment. Different angle than email 1.",
-          focus: "Deepen connection - show you're human",
-        },
-        {
           purpose: "urgency",
           structure: "Why NOW matters. Cost of waiting. What they're missing each day they delay.",
           focus: "Create urgency - authentic, not fake scarcity",
@@ -640,14 +640,24 @@ STORE/BRAND INFORMATION:
       ],
       product_launch: [
         {
-          purpose: "announcement",
-          structure: "Big reveal moment. What's new and why you're excited to share it.",
-          focus: "Generate curiosity and excitement",
+          purpose: "personal_story",
+          structure: "Share the personal moment or frustration that led you to create this product. NO product links. Pure story and connection.",
+          focus: "Connection - make them feel your journey. NO CTA, no product link.",
         },
         {
-          purpose: "value",
-          structure: "Deep dive into ONE feature/benefit. Show exactly how it solves their problem.",
-          focus: "Demonstrate value through specifics",
+          purpose: "tease",
+          structure: "Write a curiosity-building email that hints at something you've been working on. Do NOT include any product links, pricing, or direct CTAs. Build anticipation through storytelling.",
+          focus: "Build anticipation - NO CTA, no product link. End with P.S. teasing the next email.",
+        },
+        {
+          purpose: "behind_scenes",
+          structure: "Take them behind the scenes of building this product. What decisions you made. What you tested. NO product links.",
+          focus: "Show craft and authenticity. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the product link appears. Introduce the product through a story about why you built it. Include ONE casual link in the middle. Never mention price in this email.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "social_proof",
@@ -665,19 +675,9 @@ STORE/BRAND INFORMATION:
           focus: "Remove friction from the decision",
         },
         {
-          purpose: "comparison",
-          structure: "Why this vs alternatives? What makes your approach different?",
-          focus: "Position against competition",
-        },
-        {
           purpose: "bonus_reveal",
           structure: "Reveal an extra bonus or feature they didn't know about.",
           focus: "Surprise and delight",
-        },
-        {
-          purpose: "personal_use",
-          structure: "How YOU use this product in your own workflow. Real examples.",
-          focus: "Authenticity - you believe in it",
         },
         {
           purpose: "urgency",
@@ -692,24 +692,19 @@ STORE/BRAND INFORMATION:
       ],
       lead_nurture: [
         {
-          purpose: "value",
-          structure: "Teach something valuable with zero pitch. Pure helpfulness.",
-          focus: "Build trust by giving first",
+          purpose: "welcome",
+          structure: "Welcome them to the list. Set expectations for what they'll receive. Share a personal anecdote. NO product links.",
+          focus: "First impression - warm, authentic, no selling. NO CTA, no product link.",
         },
         {
           purpose: "story",
-          structure: "Share a failure or lesson learned. Be vulnerable and relatable.",
-          focus: "Build connection through authenticity",
+          structure: "Share a failure or lesson learned. Be vulnerable and relatable. NO product links.",
+          focus: "Build connection through authenticity. NO CTA, no product link.",
         },
         {
-          purpose: "insight",
-          structure: "Share a counterintuitive insight that challenges common thinking.",
-          focus: "Position as thought leader",
-        },
-        {
-          purpose: "case_study",
-          structure: "Walk through a detailed example or transformation. Show the process.",
-          focus: "Prove your methods work",
+          purpose: "tip",
+          structure: "Share ONE actionable production tip they can use today. Teach something valuable with zero pitch.",
+          focus: "Build trust by giving first - pure value",
         },
         {
           purpose: "resource",
@@ -717,14 +712,9 @@ STORE/BRAND INFORMATION:
           focus: "Deliver tangible value",
         },
         {
-          purpose: "myth_bust",
-          structure: "Call out a common misconception in your space. Set the record straight.",
-          focus: "Build authority by challenging norms",
-        },
-        {
-          purpose: "behind_scenes",
-          structure: "Show your process, your setup, how you work. Make them feel like an insider.",
-          focus: "Build intimacy and trust",
+          purpose: "deep_dive",
+          structure: "Walk through a detailed example or transformation. Show the process step by step.",
+          focus: "Prove your methods work through depth",
         },
         {
           purpose: "engagement",
@@ -732,42 +722,52 @@ STORE/BRAND INFORMATION:
           focus: "Two-way relationship, not broadcast",
         },
         {
-          purpose: "bridge",
-          structure: "Connect the value you've given to what you offer. Natural transition.",
+          purpose: "community",
+          structure: "Show your process, your setup, how you work. Make them feel like an insider in your world.",
+          focus: "Build intimacy and trust",
+        },
+        {
+          purpose: "transformation",
+          structure: "Share a counterintuitive insight or a student/client transformation. Challenge common thinking.",
+          focus: "Position as thought leader",
+        },
+        {
+          purpose: "preview",
+          structure: "Connect the value you've given to what you offer. Natural transition. Soft mention of products/services.",
           focus: "Plant seeds for eventual offer",
         },
         {
-          purpose: "soft_pitch",
-          structure: "Mention what you offer as a natural extension of the value you've given.",
+          purpose: "invitation",
+          structure: "Mention what you offer as a natural extension of the value you've given. Casual, no-pressure pitch.",
           focus: "Offer without pressure",
         },
       ],
       // SAMPLE PACK LAUNCH TEMPLATES
       sample_pack_launch: [
         {
+          purpose: "personal_story",
+          structure: "Share what inspired these sounds. A session, a place, a vibe that wouldn't leave your head. NO product links. Pure story.",
+          focus: "Connection - your creative journey. NO CTA, no product link.",
+        },
+        {
           purpose: "vibe_tease",
-          structure: "Describe the sonic aesthetic. What genre? What mood? What will they FEEL when they drop these samples in?",
-          focus: "Create anticipation with vivid sound descriptions",
+          structure: "Describe the sonic aesthetic. What genre? What mood? What will they FEEL when they drop these samples in? NO product links.",
+          focus: "Create anticipation with vivid sound descriptions. NO CTA, no product link.",
         },
         {
           purpose: "behind_scenes",
-          structure: "How you created these sounds. What gear/software? What inspired the vibe? Recording process.",
-          focus: "Show craft and authenticity",
+          structure: "How you created these sounds. What gear/software? What inspired the vibe? Recording process. NO product links.",
+          focus: "Show craft and authenticity. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the product link appears. Reveal the sample pack through a story about making it. Include ONE casual link in the middle.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "use_case",
           structure: "Paint a picture of a producer using these samples. What track comes out? What elements work together?",
           focus: "Help them visualize making heat with these",
-        },
-        {
-          purpose: "specs_faq",
-          structure: "File formats, sample count, BPM range, key info. DAW compatibility. License terms (royalty-free?).",
-          focus: "Remove technical uncertainty",
-        },
-        {
-          purpose: "bonus_reveal",
-          structure: "Extra one-shots, bonus loops, or MIDI files for email subscribers only.",
-          focus: "Reward subscribers with exclusivity",
         },
         {
           purpose: "social_proof",
@@ -780,9 +780,9 @@ STORE/BRAND INFORMATION:
           focus: "Expand perceived value",
         },
         {
-          purpose: "comparison",
-          structure: "Why these samples vs free packs online? Quality difference. Unique sounds.",
-          focus: "Justify the investment",
+          purpose: "bonus_reveal",
+          structure: "Extra one-shots, bonus loops, or MIDI files for email subscribers only.",
+          focus: "Reward subscribers with exclusivity",
         },
         {
           purpose: "urgency",
@@ -798,9 +798,24 @@ STORE/BRAND INFORMATION:
       // PRESET PACK LAUNCH TEMPLATES
       preset_pack_launch: [
         {
-          purpose: "before_after",
-          structure: "Describe the sound transformation. Dry synth to massive lead. Weak bass to earth-shaking sub.",
-          focus: "Show dramatic difference presets make",
+          purpose: "personal_story",
+          structure: "Share your sound design journey. What frustrated you about stock presets? What sound were you chasing? NO product links.",
+          focus: "Connection - your creative frustration. NO CTA, no product link.",
+        },
+        {
+          purpose: "tease",
+          structure: "Describe the sound transformation without revealing the product. Dry synth to massive lead. Hint at something coming. NO product links.",
+          focus: "Build anticipation. NO CTA, no product link. End with P.S. teasing the next email.",
+        },
+        {
+          purpose: "behind_scenes",
+          structure: "Your sound design philosophy. What makes your presets different from stock sounds. How you crafted each one. NO product links.",
+          focus: "Show craft and expertise. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the product link appears. Introduce the preset pack through a story about the sounds you created. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "preset_spotlight",
@@ -813,16 +828,6 @@ STORE/BRAND INFORMATION:
           focus: "Remove intimidation factor",
         },
         {
-          purpose: "compatibility",
-          structure: "Which synth versions work. DAW compatibility. Installation walkthrough.",
-          focus: "Technical clarity",
-        },
-        {
-          purpose: "sound_design",
-          structure: "Your sound design philosophy. What makes your presets different from stock sounds.",
-          focus: "Establish expertise",
-        },
-        {
           purpose: "genre_use",
           structure: "Show same preset in different genres. Versatility demonstration.",
           focus: "Expand use cases",
@@ -831,11 +836,6 @@ STORE/BRAND INFORMATION:
           purpose: "tutorial_bonus",
           structure: "Free preset-making tutorial or macro walkthrough included.",
           focus: "Add educational value",
-        },
-        {
-          purpose: "value_comparison",
-          structure: "Price vs other preset packs. What you get per dollar. Quality per preset.",
-          focus: "Justify investment",
         },
         {
           purpose: "urgency",
@@ -851,24 +851,29 @@ STORE/BRAND INFORMATION:
       // MIDI PACK LAUNCH TEMPLATES
       midi_pack_launch: [
         {
+          purpose: "personal_story",
+          structure: "Share a moment when a melody or chord progression changed everything for you. What drives your musical creativity? NO product links.",
+          focus: "Connection - your musical journey. NO CTA, no product link.",
+        },
+        {
           purpose: "melody_tease",
-          structure: "Describe the melodies and progressions. Emotional? Hard-hitting? Chill?",
-          focus: "Paint the musical picture",
+          structure: "Describe the melodies and progressions without revealing the product. Emotional? Hard-hitting? Chill? Build curiosity. NO product links.",
+          focus: "Paint the musical picture. NO CTA, no product link. End with P.S. teasing what's coming.",
         },
         {
           purpose: "theory_breakdown",
-          structure: "Why these progressions work. Music theory made simple. Keys and modes used.",
-          focus: "Educational angle that builds value",
+          structure: "Why certain progressions work. Music theory made simple. Share one insight they can use today. NO product links.",
+          focus: "Educational value that builds trust. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the product link appears. Introduce the MIDI pack through a story about creating these melodies. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "customization",
           structure: "How to flip MIDIs for unique tracks. Change instruments, velocity, timing.",
           focus: "Show creative possibilities",
-        },
-        {
-          purpose: "compatibility",
-          structure: "DAW compatibility. Best instruments to use. Piano roll vs external synths.",
-          focus: "Technical clarity",
         },
         {
           purpose: "genre_versatility",
@@ -886,11 +891,6 @@ STORE/BRAND INFORMATION:
           focus: "Exclusive incentive",
         },
         {
-          purpose: "comparison",
-          structure: "Hand-crafted vs AI-generated. Why these hit different. Original compositions.",
-          focus: "Quality differentiation",
-        },
-        {
           purpose: "urgency",
           structure: "Intro price ending. Bundle deal expiring.",
           focus: "Push to action",
@@ -904,9 +904,24 @@ STORE/BRAND INFORMATION:
       // BEAT LEASE LAUNCH TEMPLATES
       beat_lease_launch: [
         {
-          purpose: "new_beat_drop",
-          structure: "New beat announcement. Vibe, mood, who it's for. What artist would kill this?",
-          focus: "Generate excitement",
+          purpose: "personal_story",
+          structure: "Share the session or moment that inspired these beats. What vibe were you chasing? What was the creative spark? NO product links.",
+          focus: "Connection - your creative process. NO CTA, no product link.",
+        },
+        {
+          purpose: "tease",
+          structure: "Describe the vibe, mood, who these beats are for. What artist would kill this? Build anticipation without revealing the product. NO product links.",
+          focus: "Build excitement. NO CTA, no product link. End with P.S. teasing what's dropping.",
+        },
+        {
+          purpose: "behind_scenes",
+          structure: "How you made these beats. What sounds, what gear, what approach. Share the creative process. NO product links.",
+          focus: "Show craft and authenticity. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the product link appears. Drop the beats with a story about creating them. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "license_breakdown",
@@ -919,11 +934,6 @@ STORE/BRAND INFORMATION:
           focus: "Social proof that converts",
         },
         {
-          purpose: "rights_faq",
-          structure: "Streaming limits. Distribution rights. Credits required. No legal confusion.",
-          focus: "Remove legal fear",
-        },
-        {
           purpose: "free_beat",
           structure: "Free tagged beat for email subscribers. Show quality before they pay.",
           focus: "Build trust with free value",
@@ -932,16 +942,6 @@ STORE/BRAND INFORMATION:
           purpose: "exclusive_pitch",
           structure: "Why exclusives are worth it. Own the beat. No competition. Serious artists.",
           focus: "Upsell premium tier",
-        },
-        {
-          purpose: "discography",
-          structure: "Your beat catalog overview. Different vibes available. Something for everyone.",
-          focus: "Show range and options",
-        },
-        {
-          purpose: "collab_offer",
-          structure: "Custom beat offer. Work directly with you. Tailored to their sound.",
-          focus: "Premium personalized service",
         },
         {
           purpose: "urgency",
@@ -957,14 +957,24 @@ STORE/BRAND INFORMATION:
       // COACHING LAUNCH TEMPLATES
       coaching_launch: [
         {
-          purpose: "credentials",
-          structure: "Your background. What qualifies you. Your results and experience.",
-          focus: "Establish authority",
+          purpose: "personal_story",
+          structure: "Share your journey as a producer and what led you to coaching. A breakthrough moment that changed everything. NO product links.",
+          focus: "Connection - your teaching origin story. NO CTA, no product link.",
         },
         {
           purpose: "common_mistakes",
-          structure: "Mistakes you see producers make. Problems you fix in sessions.",
-          focus: "Show expertise through diagnosis",
+          structure: "Mistakes you see producers make. Problems you fix in sessions. Share a real insight they can apply now. NO product links.",
+          focus: "Show expertise through diagnosis. NO CTA, no product link.",
+        },
+        {
+          purpose: "tease",
+          structure: "Hint at the coaching program without revealing details. Share a student transformation teaser. Build curiosity about what's possible. NO product links.",
+          focus: "Build anticipation. NO CTA, no product link. End with P.S. teasing the next email.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the coaching link appears. Introduce coaching through a story about why you started teaching. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "session_format",
@@ -975,16 +985,6 @@ STORE/BRAND INFORMATION:
           purpose: "transformation",
           structure: "Student success story. Where they started. Where they are now. Specific results.",
           focus: "Proof it works",
-        },
-        {
-          purpose: "faq",
-          structure: "Scheduling. Time zones. Cancellation. What to prepare. Tech requirements.",
-          focus: "Remove logistical friction",
-        },
-        {
-          purpose: "value_breakdown",
-          structure: "Cost of mistakes vs cost of coaching. ROI of learning faster.",
-          focus: "Justify the investment",
         },
         {
           purpose: "philosophy",
@@ -1010,24 +1010,24 @@ STORE/BRAND INFORMATION:
       // MIXING/MASTERING SERVICE TEMPLATES
       mixing_service_launch: [
         {
-          purpose: "before_after",
-          structure: "Describe the transformation. Muddy to clean. Flat to punchy. Night and day.",
-          focus: "Showcase your impact",
+          purpose: "personal_story",
+          structure: "Share your mixing/mastering journey. What made you obsessed with making tracks sound right? A breakthrough moment. NO product links.",
+          focus: "Connection - your engineering origin story. NO CTA, no product link.",
+        },
+        {
+          purpose: "tease",
+          structure: "Describe a dramatic before/after transformation without linking to anything. Build curiosity about what's possible. NO product links.",
+          focus: "Build anticipation with vivid descriptions. NO CTA, no product link. End with P.S. teasing the next email.",
         },
         {
           purpose: "process_reveal",
-          structure: "Your signal chain. Key plugins. Approach to mixing. What makes you different.",
-          focus: "Demonstrate expertise",
+          structure: "Your signal chain. Key plugins. Approach to mixing. What makes you different. Share a real technique. NO product links.",
+          focus: "Demonstrate expertise and give value. NO CTA, no product link.",
         },
         {
-          purpose: "requirements",
-          structure: "What you need from them. Stems. Reference tracks. Notes on their vision.",
-          focus: "Set expectations",
-        },
-        {
-          purpose: "turnaround",
-          structure: "Delivery timeline. Revision policy. Communication during process.",
-          focus: "Clarity on logistics",
+          purpose: "reveal",
+          structure: "This is the first email where the service link appears. Introduce your mixing service through a story about a track you transformed. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "testimonial",
@@ -1063,14 +1063,24 @@ STORE/BRAND INFORMATION:
       // PDF/GUIDE LAUNCH TEMPLATES
       pdf_guide_launch: [
         {
+          purpose: "personal_story",
+          structure: "Share the struggle that led you to write this guide. What you wish someone had told you. NO product links.",
+          focus: "Connection - your learning journey. NO CTA, no product link.",
+        },
+        {
           purpose: "problem_agitation",
-          structure: "The frustration this guide solves. The struggle they're facing right now.",
-          focus: "Connect through shared pain",
+          structure: "The frustration this guide solves. The struggle they're facing right now. NO product links.",
+          focus: "Connect through shared pain. NO CTA, no product link.",
         },
         {
           purpose: "insight_preview",
-          structure: "Share one key insight from the guide. Prove the value before they buy.",
-          focus: "Demonstrate quality",
+          structure: "Share one key insight from the guide. Prove the value before they buy. Teach something real. NO product links.",
+          focus: "Demonstrate quality with free value. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the guide link appears. Introduce the guide through a story about why you created it. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "table_of_contents",
@@ -1083,24 +1093,14 @@ STORE/BRAND INFORMATION:
           focus: "Qualify the right buyers",
         },
         {
-          purpose: "bonus_resources",
-          structure: "Templates, checklists, worksheets included. Actionable extras.",
-          focus: "Stack the value",
-        },
-        {
-          purpose: "author_story",
-          structure: "Why you wrote this. Your journey learning this. Credibility.",
-          focus: "Personal connection",
-        },
-        {
           purpose: "testimonials",
           structure: "Reader feedback. Specific results from applying the guide.",
           focus: "Social proof",
         },
         {
-          purpose: "comparison",
-          structure: "This guide vs free YouTube videos. Organized, comprehensive, saves time.",
-          focus: "Justify paid content",
+          purpose: "bonus_resources",
+          structure: "Templates, checklists, worksheets included. Actionable extras.",
+          focus: "Stack the value",
         },
         {
           purpose: "urgency",
@@ -1116,9 +1116,24 @@ STORE/BRAND INFORMATION:
       // COMMUNITY/MEMBERSHIP LAUNCH TEMPLATES
       community_launch: [
         {
-          purpose: "vision",
-          structure: "Why you built this community. What void it fills. Your mission.",
-          focus: "Inspire with purpose",
+          purpose: "personal_story",
+          structure: "Share why community matters to you. A moment of isolation in your creative journey. What you wished existed. NO product links.",
+          focus: "Connection - your vision for community. NO CTA, no product link.",
+        },
+        {
+          purpose: "tease",
+          structure: "Hint at something you've been building for creators like them. Share what you've been hearing from people. Build curiosity. NO product links.",
+          focus: "Build anticipation. NO CTA, no product link. End with P.S. teasing the reveal.",
+        },
+        {
+          purpose: "behind_scenes",
+          structure: "Take them inside the community without revealing how to join. Share what conversations look like. The vibe. NO product links.",
+          focus: "Make them feel the FOMO. NO CTA, no product link.",
+        },
+        {
+          purpose: "reveal",
+          structure: "This is the first email where the community link appears. Introduce the community through a story about why you built it. Include ONE casual link.",
+          focus: "The big reveal - first product link. Include pressure release after the CTA.",
         },
         {
           purpose: "whats_inside",
@@ -1129,21 +1144,6 @@ STORE/BRAND INFORMATION:
           purpose: "member_spotlight",
           structure: "Member success story. What they achieved. How community helped.",
           focus: "Show real results",
-        },
-        {
-          purpose: "vibe_check",
-          structure: "How active is it? What's the culture? Screenshots of conversations.",
-          focus: "Show it's not a ghost town",
-        },
-        {
-          purpose: "faq",
-          structure: "Cancellation policy. Access levels. Private vs public. What's expected.",
-          focus: "Remove commitment fear",
-        },
-        {
-          purpose: "comparison",
-          structure: "Facebook groups vs this. Discord servers vs this. What's different.",
-          focus: "Differentiate from free",
         },
         {
           purpose: "founder_access",
@@ -1169,14 +1169,24 @@ STORE/BRAND INFORMATION:
       // MEMBERSHIP/SUBSCRIPTION LAUNCH TEMPLATES
       membership_launch: [
         {
+          purpose: "personal_story",
+          structure: "Share why you decided to create a membership. What frustrated you about how people learn production? NO product links. Pure story.",
+          focus: "Connection - your motivation for building this. NO CTA, no product link.",
+        },
+        {
           purpose: "problem",
-          structure: "The frustration of buying courses one-by-one. Expensive. Overwhelming. Not knowing which one to pick.",
-          focus: "Agitate the pain of the current model",
+          structure: "The frustration of buying courses one-by-one. Expensive. Overwhelming. Not knowing which one to pick. NO product links.",
+          focus: "Agitate the pain of the current model. NO CTA, no product link.",
+        },
+        {
+          purpose: "tease",
+          structure: "Hint at the solution you've been building. Do NOT include any product links, pricing, or direct CTAs. Build anticipation through storytelling about what's coming.",
+          focus: "Build anticipation - NO CTA, no product link. End with P.S. teasing the next email.",
         },
         {
           purpose: "introduction",
-          structure: "Introduce the membership. One monthly price, access to everything. Simple. No more guessing.",
-          focus: "Position membership as the obvious solution",
+          structure: "This is the first email where the membership link appears. Introduce the membership through a story about why you built it. One monthly price, access to everything. Include ONE casual link.",
+          focus: "The big reveal - first product link. Position membership as the obvious solution. Include pressure release.",
         },
         {
           purpose: "whats_included",
@@ -1194,19 +1204,9 @@ STORE/BRAND INFORMATION:
           focus: "Make the financial case undeniable",
         },
         {
-          purpose: "faq",
-          structure: "Cancel anytime. What happens to progress if you cancel. How billing works. When new content drops.",
-          focus: "Remove commitment fear and uncertainty",
-        },
-        {
           purpose: "risk_reversal",
           structure: "Try it for a month. If it's not for you, cancel. No questions. No hassle. You keep everything you learned.",
           focus: "Make saying yes feel risk-free",
-        },
-        {
-          purpose: "new_content",
-          structure: "Preview what's coming next. New courses in the pipeline. The membership keeps getting more valuable.",
-          focus: "Show ongoing value and growth",
         },
         {
           purpose: "urgency",
@@ -1255,13 +1255,24 @@ STRUCTURE:
 - Always sign off with "Talk soon," followed by {{senderName}}
 - For emails 1 to N-1: Use P.S. to tease the next email or add something personal
 
-CTA STYLE:
+LINK RULES BY EMAIL POSITION (CRITICAL):
+- Emails 1-3 (positions 0-2 in the sequence): These are the TEASE/STORY phase. MUST NOT contain any product links, pricing, or CTAs. Value links (blog posts, free resources) are OK but not required. Build curiosity and connection only.
+- Email 4 (position 3): This is the REVEAL email. The first time the product link appears. Include ONE casual link wrapped in a story. Never mention price in the reveal email.
+- Emails 5+ (position 4+): May contain ONE product link per email, framed casually. Include price only after the reveal.
+- The email position number will be provided for each email so you know whether to include a link or not.
+
+CTA STYLE (for emails that HAVE links - position 3+):
 - NEVER: "Grab it here" / "Click here to buy" / "Get it now" / "Check it out here →"
 - ALWAYS: "You can take a look right here." / "You can check it out here if you're curious." / "Here's the link if you want to dive in."
 - The CTA should feel like a suggestion, not a command
 - Only ONE link per email: <a href="${productUrl}">soft CTA text</a>
 
-SALES PRESSURE DEFLECTION (include near EVERY CTA):
+FOR LINKLESS EMAILS (positions 0-2):
+- End with a personal sign-off and P.S. that teases the next email
+- Focus entirely on story, value, and building curiosity
+- Do NOT say "I'll share a link tomorrow" or reference future selling directly
+
+SALES PRESSURE DEFLECTION (include near EVERY CTA in emails that have links):
 - "And hey, if it's not for you, totally fine."
 - "No pressure at all, just wanted to share it."
 - "If the timing isn't right, no worries."
@@ -1295,7 +1306,7 @@ CRITICAL RULES:
 2. ONLY reference modules/lessons/features that appear in the curriculum below. Nothing else.
 3. NEVER use em-dashes (—) or double hyphens. Use periods or commas.
 4. Write as {{senderName}} talking directly to {{firstName}}.
-5. EVERY email needs ONE CTA link in the middle: <p><a href="${productUrl}">soft CTA text</a></p>
+5. Emails at positions 0-2 (first 3 emails): NO product links. Emails at position 3+: ONE CTA link in the middle: <p><a href="${productUrl}">soft CTA text</a></p>
 6. EVERY email MUST end with the signature - no exceptions.
 7. When describing what's included, use ONLY what's in the provided curriculum. Do not embellish.
 
@@ -1330,14 +1341,22 @@ RESPONSE FORMAT (strict JSON):
   ]
 }`;
 
-    // Build the user prompt with specific email requirements
+    // Build the user prompt with specific email requirements including position-based link rules
     let emailRequirements = "";
     for (let i = 0; i < actualSequenceLength; i++) {
       const template = templates[i];
+      const isLinkless = i < 3; // Positions 0-2 are linkless tease/story emails
+      const isReveal = i === 3; // Position 3 is the reveal
+      const linkInstruction = isLinkless
+        ? "⚠️ NO PRODUCT LINKS in this email. No pricing. No CTAs. Pure story/value only."
+        : isReveal
+          ? "🔗 FIRST product link appears here. ONE casual link in the middle. Do NOT mention price yet."
+          : "🔗 Include ONE product link, framed casually. Price OK to mention.";
       emailRequirements += `
-EMAIL ${i + 1} - ${template.purpose.toUpperCase()}:
+EMAIL ${i + 1} (Position ${i}) - ${template.purpose.toUpperCase()}:
 - Purpose: ${template.structure}
 - Focus: ${template.focus}
+- Link rule: ${linkInstruction}
 - Must reference specific content from the curriculum
 `;
     }
@@ -1353,13 +1372,13 @@ STYLE CHECKLIST:
 1. Subject lines: all lowercase or sentence case, emoji at END only, read like a text message
 2. Write like you're texting a friend. Use "honestly," "haha," "tbh," ellipsis, parenthetical asides.
 3. One thought per paragraph, max 2 sentences. Double spacing between paragraphs.
-4. CTA link in the MIDDLE of the email (not top or bottom). Use soft CTA language: "You can check it out here if you're curious."
+4. For emails WITH links (position 3+): CTA link in the MIDDLE (not top or bottom). Use soft CTA language: "You can check it out here if you're curious."
 5. Include a pressure release near every CTA: "No pressure at all" / "If it's not for you, totally fine"
 6. NO em-dashes (—). NO numbered lists. NO bullet points. Write conversationally.
-7. Emails 1-${actualSequenceLength - 1}: Use P.S. to tease next email or add something personal.
+7. Use P.S. to tease next email or add something personal (especially important for linkless emails 1-3).
 8. EVERY email MUST end with: <p>Talk soon,<br/>{{senderName}}</p>
 9. Each email: 150-250 words. Conversational. No fluff.
-10. ONE link per email: ${productUrl}
+10. Emails at position 0-2: NO product links at all. Emails at position 3+: ONE link per email: ${productUrl}
 11. NEVER use: "Here's the thing" / "It's not your fault" / "Grab it here" / "Click here to buy" / Title Case subjects
 
 ⚠️ REMINDER: ONLY mention what's in the curriculum above. Do NOT invent bonuses, communities, cheat sheets, or extras that aren't listed. This is critical.`;
@@ -1400,8 +1419,19 @@ STYLE CHECKLIST:
     const nodeSpacing = 180;
     let previousNodeId = "";
 
-    // Define delays between emails (in hours) - 24 hours = 1 day
-    const delaySchedule = [0, 24, 48, 24, 48]; // Day 0, Day 1, Day 3, Day 4, Day 6
+    // Define delays between emails (in hours) based on sequence length
+    // Tease phase has longer gaps (2 days), post-reveal phase is tighter (1 day)
+    const delaySchedules: Record<number, number[]> = {
+      3: [0, 72, 72],                               // Day 0 → Day 3 → Day 6
+      5: [0, 48, 48, 48, 48],                       // Day 0 → Day 2 → Day 4 → Day 6 → Day 8
+      7: [0, 48, 48, 24, 24, 48, 48],               // Day 0 → Day 2 → Day 4 → Day 5 → Day 6 → Day 8 → Day 10
+      10: [0, 24, 48, 24, 24, 24, 48, 24, 48, 48],  // Day 0 → Day 1 → Day 3 → Day 4 → Day 5 → Day 6 → Day 8 → Day 9 → Day 11 → Day 13
+    };
+    // Find the closest matching schedule, fallback to 7-email schedule
+    const closestLength = Object.keys(delaySchedules)
+      .map(Number)
+      .sort((a, b) => Math.abs(a - sequenceLength) - Math.abs(b - sequenceLength))[0];
+    const delaySchedule = delaySchedules[closestLength] || delaySchedules[7];
 
     // Add trigger node
     const triggerId = `trigger-${Date.now()}`;

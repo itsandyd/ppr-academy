@@ -830,17 +830,23 @@ export const resolveAndEnqueueCustomEmail = internalAction({
       await ensureMarketingContact(args.customerEmail, firstName || undefined);
     }
 
-    // Get store name for {{senderName}} variable
+    // Get creator's first name for {{senderName}} and store name for {{storeName}}
     let senderName = "";
+    let creatorStoreName = "";
     try {
       const store = await ctx.runQuery(internal.emailWorkflows.getStoreByClerkId, {
         userId: args.storeId,
       });
       if (store) {
-        senderName = store.name || "";
+        creatorStoreName = store.name || "";
       }
+      // Look up the creator's actual first name from users table
+      const creatorFirstName = await ctx.runQuery(internal.emailWorkflows.getCreatorFirstNameByClerkId, {
+        clerkId: args.storeId,
+      });
+      senderName = creatorFirstName || "";
     } catch (e) {
-      console.error(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
+      console.error(`[WorkflowEmail] Could not fetch store/creator for ${args.storeId}:`, e);
     }
 
     // Get user stats for personalization
@@ -900,8 +906,11 @@ export const resolveAndEnqueueCustomEmail = internalAction({
     const apiUnsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${token}`;
 
     // Replace all template variables
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
+
     const replaceAllVariables = (text: string): string => {
-      return text
+      let result = text
         .replace(/\{\{firstName\}\}/g, firstName)
         .replace(/\{\{first_name\}\}/g, firstName)
         .replace(/\{\{name\}\}/g, name)
@@ -912,7 +921,8 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         .replace(/\{\{xp\}\}/g, userStats.xp)
         .replace(/\{\{coursesEnrolled\}\}/g, userStats.coursesEnrolled)
         .replace(/\{\{lessonsCompleted\}\}/g, userStats.lessonsCompleted)
-        .replace(/\{\{storeName\}\}/g, userStats.storeName)
+        .replace(/\{\{storeName\}\}/g, creatorStoreName || userStats.storeName)
+        .replace(/\{\{store_name\}\}/g, creatorStoreName || userStats.storeName)
         .replace(/\{\{memberSince\}\}/g, userStats.memberSince)
         .replace(/\{\{daysSinceJoined\}\}/g, userStats.daysSinceJoined)
         .replace(/\{\{totalSpent\}\}/g, userStats.totalSpent)
@@ -927,10 +937,13 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         // Replace Resend-specific merge tags with PPR's own unsubscribe URL
         .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl)
         .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+      // Clean up trailing space before punctuation when firstName was empty
+      // e.g. "Hey ," → "Hey," and "Hi !" → "Hi!"
+      if (!firstName) {
+        result = result.replace(/ ([,!?;:])/g, "$1");
+      }
+      return result;
     };
-
-    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
-    const fromName = process.env.FROM_NAME || "Andrew";
 
     const bodyContent = replaceAllVariables(args.content);
     const finalSubject = replaceAllVariables(args.subject);
@@ -1251,13 +1264,13 @@ export const sendWorkflowBroadcast = internalAction({
       return { success: false, handledExecutionIds: [], recipientCount: 0, method: "individual", error: "Per-recipient variables detected" };
     }
 
-    // 4. Get global variables (platform stats, store name)
+    // 4. Get global variables (platform stats, creator name, store name)
     let senderName = "";
     try {
-      const store = await ctx.runQuery(internal.emailWorkflows.getStoreByClerkId, {
-        userId: args.storeId,
+      const creatorFirstName = await ctx.runQuery(internal.emailWorkflows.getCreatorFirstNameByClerkId, {
+        clerkId: args.storeId,
       });
-      if (store) senderName = store.name || "";
+      senderName = creatorFirstName || "";
     } catch (e) {
       // Non-critical
     }
@@ -1446,17 +1459,23 @@ export const sendCustomWorkflowEmail = internalAction({
       }
     }
 
-    // Get store name for {{senderName}} variable
+    // Get creator's first name for {{senderName}} and store name for {{storeName}}
     let senderName = "";
+    let creatorStoreName = "";
     try {
       const store = await ctx.runQuery(internal.emailWorkflows.getStoreByClerkId, {
         userId: args.storeId,
       });
       if (store) {
-        senderName = store.name || "";
+        creatorStoreName = store.name || "";
       }
+      // Look up the creator's actual first name from users table
+      const creatorFirstName = await ctx.runQuery(internal.emailWorkflows.getCreatorFirstNameByClerkId, {
+        clerkId: args.storeId,
+      });
+      senderName = creatorFirstName || "";
     } catch (e) {
-      console.error(`[WorkflowEmail] Could not fetch store for ${args.storeId}:`, e);
+      console.error(`[WorkflowEmail] Could not fetch store/creator for ${args.storeId}:`, e);
     }
 
     // Get user stats for personalization (level, XP, courses, etc.)
@@ -1532,7 +1551,7 @@ export const sendCustomWorkflowEmail = internalAction({
 
     // Replace all template variables
     const replaceAllVariables = (text: string): string => {
-      return text
+      let result = text
         // User variables
         .replace(/\{\{firstName\}\}/g, firstName)
         .replace(/\{\{first_name\}\}/g, firstName)
@@ -1544,7 +1563,8 @@ export const sendCustomWorkflowEmail = internalAction({
         .replace(/\{\{xp\}\}/g, userStats.xp)
         .replace(/\{\{coursesEnrolled\}\}/g, userStats.coursesEnrolled)
         .replace(/\{\{lessonsCompleted\}\}/g, userStats.lessonsCompleted)
-        .replace(/\{\{storeName\}\}/g, userStats.storeName)
+        .replace(/\{\{storeName\}\}/g, creatorStoreName || userStats.storeName)
+        .replace(/\{\{store_name\}\}/g, creatorStoreName || userStats.storeName)
         .replace(/\{\{memberSince\}\}/g, userStats.memberSince)
         .replace(/\{\{daysSinceJoined\}\}/g, userStats.daysSinceJoined)
         .replace(/\{\{totalSpent\}\}/g, userStats.totalSpent)
@@ -1560,6 +1580,11 @@ export const sendCustomWorkflowEmail = internalAction({
         .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
         // Clean up any Handlebars conditionals (basic support)
         .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+      // Clean up trailing space before punctuation when firstName was empty
+      if (!firstName) {
+        result = result.replace(/ ([,!?;:])/g, "$1");
+      }
+      return result;
     };
 
     const bodyContent = replaceAllVariables(args.content);
