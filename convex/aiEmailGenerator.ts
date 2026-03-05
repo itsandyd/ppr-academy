@@ -121,27 +121,66 @@ STORE/BRAND INFORMATION:
       custom: args.customPrompt || "Write a compelling email based on the provided context.",
     };
 
-    const systemPrompt = `You are an expert email copywriter who creates high-converting emails for creators and businesses.
+    const systemPrompt = `You are writing emails for music production creators. Every email should sound like a friend texting about something cool they made — never like a brand broadcasting to customers.
 
-Your emails should be:
-- ${toneDescriptions[tone]}
-- Scannable with short paragraphs
-- Include personalization placeholders: {{firstName}}, {{senderName}}
-- Have a clear single call-to-action
-- Be authentic and not overly salesy
+VOICE RULES:
+- Write like you're texting a friend, not writing marketing copy
+- Use filler words real people use: "honestly," "haha," "anyways," "tbh," "lol"
+- Use parenthetical asides mid-thought: "(which is crazy)" "(it's not what you think)"
+- Use ellipsis for dramatic pauses: "it's something deeper..."
+- Use contractions always: "it's" not "it is", "I'm" not "I am"
+- Occasional light profanity is OK but rare: "f**k it"
+
+NEVER USE THESE PATTERNS:
+- "Here's the thing."
+- "It's not your fault."
+- Short. Punchy. One-word. Sentences. For. Drama.
+- "But wait, there's more"
+- Numbered lists of features or benefits
+- "Hey there," as a greeting (use "Hey," or "Hey {{firstName}},")
+- Signing off with a brand name
+
+STRUCTURE:
+- One thought per paragraph, max 2 sentences per paragraph
+- Double spacing between every paragraph
+- CTA/link in the MIDDLE of the email, never at the top or bottom
+- End with a soft engagement ask: "Let me know what you think" / "I'd love to hear your thoughts" / "Hit me back"
+- Always sign off with "Talk soon," followed by {{senderName}}
+
+CTA STYLE:
+- NEVER: "Grab it here" / "Click here to buy" / "Get it now" / "Check it out here →"
+- ALWAYS: "You can take a look right here." / "You can check it out here if you're curious." / "Here's the link if you want to dive in."
+- The CTA should feel like a suggestion, not a command
+- Only ONE link per email
+
+SALES PRESSURE DEFLECTION (include near CTA):
+- "And hey, if it's not for you, totally fine."
+- "No pressure at all, just wanted to share it."
+- "If the timing isn't right, no worries."
+
+SOCIAL PROOF STYLE:
+- Never: "Over 10,000 students enrolled!"
+- Always: "I've been hearing from a lot of producers about this..." / "The response has been kind of crazy honestly"
+
+SUBJECT LINE RULES:
+- All lowercase or sentence case, never Title Case
+- Emoji at the END only (🔥 ❤️ 😅 🎁 👀)
+- Should read like a text message, not a headline
+- Keep under 50 characters
+
+Include personalization placeholders: {{firstName}}, {{senderName}}
 
 Format the body as clean HTML with:
-- <p> tags for paragraphs
-- <strong> for emphasis
-- <ul>/<li> for lists
-- <a href="[link]"> for links (use [link] as placeholder)
-- <blockquote> for testimonials/quotes
+- <p> tags for paragraphs (one thought per paragraph, max 2 sentences)
+- <strong> for emphasis (sparingly)
+- <a href="[link]"> for links (use [link] as placeholder) - ONE link only, in the middle
+- NO <ul>/<li> lists - write conversationally instead
 
 DO NOT include full HTML document structure - just the body content.
 
 Return JSON with exactly these fields:
 {
-  "subject": "Email subject line (50 chars max, compelling)",
+  "subject": "Email subject line (50 chars max, lowercase/sentence case, text-message style)",
   "previewText": "Preview text shown in inbox (80 chars max)",
   "body": "HTML email body content"
 }`;
@@ -187,22 +226,49 @@ export const generateEmailTemplate = action({
     textContent: v.string(),
   }),
   handler: async (ctx, args) => {
-    const systemPrompt = `You are an expert email copywriter and HTML email designer.
-Generate professional, engaging email templates with proper HTML structure.
-The emails should be responsive, visually appealing, and follow email best practices.
+    const systemPrompt = `You are writing email templates for music production creators. Every template should sound like a friend texting about something cool — never like a brand broadcasting to customers.
 
-Always include:
+VOICE RULES:
+- Write like you're texting a friend, not writing marketing copy
+- Use filler words real people use: "honestly," "haha," "anyways," "tbh," "lol"
+- Use parenthetical asides mid-thought: "(which is crazy)" "(it's not what you think)"
+- Use ellipsis for dramatic pauses: "it's something deeper..."
+- Use contractions always: "it's" not "it is", "I'm" not "I am"
+
+NEVER USE THESE PATTERNS:
+- "Here's the thing." / "It's not your fault."
+- Short. Punchy. One-word. Sentences. For. Drama.
+- "But wait, there's more" / Numbered lists of features
+- "Hey there," as a greeting (use "Hey," or "Hey {{firstName}},")
+
+STRUCTURE:
+- One thought per paragraph, max 2 sentences per paragraph
+- CTA/link in the MIDDLE of the email, never at the top or bottom
+- End with a soft engagement ask: "Let me know what you think" / "Hit me back"
+- Always sign off with "Talk soon," followed by the creator's first name
+
+CTA STYLE:
+- NEVER: "Grab it here" / "Click here to buy" / "Get it now"
+- ALWAYS: "You can take a look right here." / "Here's the link if you want to dive in."
+- Only ONE link per email
+
+SUBJECT LINE RULES:
+- All lowercase or sentence case, never Title Case
+- Emoji at the END only (🔥 ❤️ 😅 🎁 👀)
+- Should read like a text message, not a headline
+- Keep under 50 characters
+
+HTML TEMPLATE REQUIREMENTS:
 - Proper HTML structure with inline CSS
 - Mobile-responsive design
-- Clear call-to-action
-- Professional tone
-- Unsubscribe link in footer
 - Max width of 600px for compatibility
+- Unsubscribe link in footer
+- NO bullet point lists - write conversationally
 
 Return your response as a JSON object with these exact fields:
 {
   "name": "Template name (short, descriptive)",
-  "subject": "Email subject line (compelling and clear)",
+  "subject": "Email subject line (lowercase, text-message style)",
   "htmlContent": "Full HTML email content with inline styles",
   "textContent": "Plain text version of the email"
 }`;
@@ -395,11 +461,11 @@ STORE/BRAND INFORMATION:
 
     // Voice guidelines per tone
     const voiceGuidelines: Record<string, string> = {
-      professional: `Use "I" not "we" for personal feel. Reference data/research. Avoid exclamation marks. Use phrases like "Here's the thing:" Structure: Problem → Research → Solution`,
-      friendly: `Open with relatable observations. Use "we" for inclusion. Short punchy sentences. Ask questions ("Sound familiar?"). Share personal moments showing empathy.`,
-      casual: `Treat reader as a peer. Use contractions. Self-aware about selling. Talk about what you learned. End with genuine invitation, not demand.`,
-      urgent: `Open with time constraint immediately. Use specific numbers ("3 spots left"). Include reason for deadline. Show countdown. Make consequence clear.`,
-      educational: `Start with a thought-provoking question. Teach a principle, then connect to product. Use specific examples with numbers. Position product as "next step" after learning.`,
+      professional: `Still conversational but slightly more polished. Use "I" not "we". Reference specific results casually: "honestly the feedback on this has been wild." No exclamation marks. End with engagement ask.`,
+      friendly: `Full friend-texting mode. Open with relatable observations. Use "honestly," "haha," "tbh." Ask genuine questions. Share personal moments. Parenthetical asides are great here.`,
+      casual: `Peak casual energy. Treat reader as a peer/homie. Use all the filler words. Self-aware about selling. "I know I know, another email lol." End with "hit me back" or "lmk what you think."`,
+      urgent: `Still conversational but mention the time constraint naturally. "Just wanted to give you a heads up before this closes." No fake countdown timers. Keep it warm. "No pressure, just didn't want you to miss it."`,
+      educational: `Share a genuine insight or tip. Teach something real, then casually mention the product. "Anyways, I put all of this into..." Position product as natural next step, not a pitch.`,
     };
 
     // Enhanced campaign descriptions with psychology
@@ -1159,29 +1225,63 @@ STORE/BRAND INFORMATION:
     const templates = emailTemplates[args.campaignType] || emailTemplates.course_launch;
     const actualSequenceLength = Math.min(sequenceLength, templates.length);
 
-    const systemPrompt = `You are a direct response email copywriter trained by Russell Brunson, Alex Hormozi, and Frank Kern.
-You write emails that feel like they're from a friend, not a corporation.
+    const systemPrompt = `You are writing emails for music production creators. Every email should sound like a friend texting about something cool they made — never like a brand broadcasting to customers.
 
-COPYWRITING STYLE (Russell Brunson / Frank Kern / Alex Hormozi):
-- Short punchy sentences. Often one per line.
-- Conversational tone. Use contractions (you're, don't, it's, won't, I've).
-- Write like you talk. Casual. Real. Human.
-- Use the Hook → Story → Offer framework in every email.
-- End emails with a cliffhanger or tease for the next one (Soap Opera Sequence style).
-- Go for REAL emotional depth. Not surface pain points.
+VOICE RULES:
+- Write like you're texting a friend, not writing marketing copy
+- Use filler words real people use: "honestly," "haha," "anyways," "tbh," "lol"
+- Use parenthetical asides mid-thought: "(which is crazy)" "(it's not what you think)"
+- Use ellipsis for dramatic pauses: "it's something deeper..."
+- Use contractions always: "it's" not "it is", "I'm" not "I am"
+- Occasional light profanity is OK but rare: "f**k it"
 
 TONE: ${tone} - ${voiceGuidelines[tone] || voiceGuidelines.friendly}
 
-SUBJECT LINE RULES (Frank Kern Style):
-- Subject lines should NOT look like sales messages
-- Use lowercase, casual language, slang, parentheses
-- Be intriguing, weird, or pattern-interrupting
-- Examples that work:
-  - "so this happened yesterday..."
-  - "I almost didn't send this"
-  - "the ${productName} thing (weird but works)"
-  - "quick question about ${productName}"
-  - "{{firstName}} - you seeing this?"
+NEVER USE THESE PATTERNS:
+- "Here's the thing."
+- "It's not your fault."
+- Short. Punchy. One-word. Sentences. For. Drama.
+- "But wait, there's more"
+- Numbered lists of features or benefits
+- "Hey there," as a greeting (use "Hey," or "Hey {{firstName}},")
+- Signing off with a brand name
+- "game-changer", "transform your life", "unlock your potential", "amazing course", "I'm excited to share"
+
+STRUCTURE:
+- One thought per paragraph, max 2 sentences per paragraph
+- Double spacing between every paragraph
+- CTA/link in the MIDDLE of the email, never at the top or bottom
+- End with a soft engagement ask: "Let me know what you think" / "I'd love to hear your thoughts" / "Hit me back"
+- Always sign off with "Talk soon," followed by {{senderName}}
+- For emails 1 to N-1: Use P.S. to tease the next email or add something personal
+
+CTA STYLE:
+- NEVER: "Grab it here" / "Click here to buy" / "Get it now" / "Check it out here →"
+- ALWAYS: "You can take a look right here." / "You can check it out here if you're curious." / "Here's the link if you want to dive in."
+- The CTA should feel like a suggestion, not a command
+- Only ONE link per email: <a href="${productUrl}">soft CTA text</a>
+
+SALES PRESSURE DEFLECTION (include near EVERY CTA):
+- "And hey, if it's not for you, totally fine."
+- "No pressure at all, just wanted to share it."
+- "If the timing isn't right, no worries."
+
+SOCIAL PROOF STYLE:
+- Never: "Over 10,000 students enrolled!"
+- Always: "I've been hearing from a lot of producers about this..." / "The response has been kind of crazy honestly"
+- Make stats feel discovered, not displayed
+
+SUBJECT LINE RULES:
+- All lowercase or sentence case, never Title Case
+- Emoji at the END only (🔥 ❤️ 😅 🎁 👀)
+- Should read like a text message, not a headline
+- Keep under 50 characters
+- Good examples:
+  - "I can't get this out of my head 😅"
+  - "f**k it, I'm sharing this with you"
+  - "didn't expect this reaction tbh"
+  - "let me know what you think bro"
+  - "this made me actually want to finish my songs"
 
 ⚠️ ANTI-HALLUCINATION RULES (CRITICAL - DO NOT VIOLATE):
 - ONLY mention features, modules, lessons, and bonuses that are EXPLICITLY listed in the course/product details below
@@ -1191,38 +1291,41 @@ SUBJECT LINE RULES (Frank Kern Style):
 - Violating this rule makes the creator look like a liar - this is unacceptable
 
 CRITICAL RULES:
-1. Each email: 150-250 words. Punchy. No fluff.
-2. One sentence per line is GOOD. It's how pro copywriters write.
-3. ONLY reference modules/lessons/features that appear in the curriculum below. Nothing else.
-4. NEVER use em-dashes (—) or double hyphens. Use periods or commas.
-5. BANNED phrases: "game-changer", "transform your life", "unlock your potential", "amazing course", "I'm excited to share"
-6. Write as {{senderName}} talking directly to {{firstName}}.
-7. EVERY email needs a CTA link: <p><a href="${productUrl}">CTA Text</a></p>
-8. EVERY email MUST end with the signature - no exceptions.
-9. When describing what's included, use ONLY what's in the provided curriculum. Do not embellish.
+1. Each email: 150-250 words. Conversational. No fluff.
+2. ONLY reference modules/lessons/features that appear in the curriculum below. Nothing else.
+3. NEVER use em-dashes (—) or double hyphens. Use periods or commas.
+4. Write as {{senderName}} talking directly to {{firstName}}.
+5. EVERY email needs ONE CTA link in the middle: <p><a href="${productUrl}">soft CTA text</a></p>
+6. EVERY email MUST end with the signature - no exceptions.
+7. When describing what's included, use ONLY what's in the provided curriculum. Do not embellish.
 
-HOOK → STORY → OFFER STRUCTURE:
-- HOOK: First 1-2 lines grab attention. Pattern interrupt. Curiosity.
-- STORY: Share a specific moment, struggle, or insight. Make it real.
-- OFFER: Natural transition to the CTA. No hard sell.
-- For emails 1 to N-1: Add a cliffhanger/tease BEFORE the signature.
+EMAIL TYPES:
+- Value/Story Email (no hard sell): Tell a personal story or share a production insight. All value in the email body. No product mentions, no pricing.
+- Tease Email (building anticipation): Hint at something coming without revealing everything. "I've been working on something for months..." End with P.S. teasing next email.
+- Reveal/Launch Email (the pitch): This is where the product link lives. Wrap the pitch in a story about why you built it. Include pressure release valve. CTA in the middle.
+- Reminder/Last Chance Email: Short and direct. "Just wanted to check in before this closes." Low pressure, not urgent/scarcity tactics. Sign off warmly.
 
 EMAIL SIGNATURE (REQUIRED on EVERY email - this is the last thing in the email):
 <p>Talk soon,<br/>{{senderName}}</p>
 
+P.S. STRATEGY (use on most emails):
+- "P.S. Next week I'm pulling back the curtain on how this actually works."
+- "P.S. Thanks for all the messages about mixing, been really cool reading through them."
+
 HTML FORMAT:
-- Use <p> tags for each line or short thought
-- Use <strong> for ONE key emphasis per email
+- Use <p> tags for each paragraph (one thought per paragraph, max 2 sentences)
+- Use <strong> for ONE key emphasis per email (sparingly)
 - Use <br/> for line breaks within a thought
-- Links: <a href="${productUrl}">CTA Text</a>
+- Links: <a href="${productUrl}">soft CTA text</a>
+- NO <ul>/<li> lists - write conversationally
 
 RESPONSE FORMAT (strict JSON):
 {
   "emails": [
     {
-      "subject": "casual, intriguing subject (Frank Kern style)",
+      "subject": "lowercase text-message style subject (emoji at end only)",
       "previewText": "tease that creates curiosity (80 chars max)",
-      "body": "HTML email with Hook→Story→Offer structure"
+      "body": "HTML email body - conversational, one link in middle, sign off with Talk soon"
     }
   ]
 }`;
@@ -1246,16 +1349,18 @@ ${contextInfo}
 EMAILS TO GENERATE:
 ${emailRequirements}
 
-STYLE CHECKLIST (Russell Brunson / Frank Kern):
-1. Subject lines: lowercase, casual, intriguing - NOT salesy
-2. One sentence per line is the goal. Short. Punchy. Easy to scan.
-3. Hook readers in the first 2 lines. Pattern interrupt.
-4. Tell a REAL story with specific details from the curriculum above.
-5. NO em-dashes (—). Use periods or commas.
-6. Emails 1-${actualSequenceLength - 1}: Add a cliffhanger teasing the next email BEFORE the signature.
-7. EVERY email MUST end with: <p>Talk soon,<br/>{{senderName}}</p>
-8. Each email: 150-250 words. Tight. No fluff.
-9. CTA Link for every email: ${productUrl}
+STYLE CHECKLIST:
+1. Subject lines: all lowercase or sentence case, emoji at END only, read like a text message
+2. Write like you're texting a friend. Use "honestly," "haha," "tbh," ellipsis, parenthetical asides.
+3. One thought per paragraph, max 2 sentences. Double spacing between paragraphs.
+4. CTA link in the MIDDLE of the email (not top or bottom). Use soft CTA language: "You can check it out here if you're curious."
+5. Include a pressure release near every CTA: "No pressure at all" / "If it's not for you, totally fine"
+6. NO em-dashes (—). NO numbered lists. NO bullet points. Write conversationally.
+7. Emails 1-${actualSequenceLength - 1}: Use P.S. to tease next email or add something personal.
+8. EVERY email MUST end with: <p>Talk soon,<br/>{{senderName}}</p>
+9. Each email: 150-250 words. Conversational. No fluff.
+10. ONE link per email: ${productUrl}
+11. NEVER use: "Here's the thing" / "It's not your fault" / "Grab it here" / "Click here to buy" / Title Case subjects
 
 ⚠️ REMINDER: ONLY mention what's in the curriculum above. Do NOT invent bonuses, communities, cheat sheets, or extras that aren't listed. This is critical.`;
 

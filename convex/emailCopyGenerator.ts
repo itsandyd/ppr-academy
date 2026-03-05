@@ -57,13 +57,14 @@ Body: ${args.templateBody}
 
 INSTRUCTIONS:
 1. Replace ALL {{variables}} with actual product information
-2. Keep the structure and flow of the template
+2. Keep the structure and flow of the template but make it sound like a friend texting
 3. Tone: ${tone}
 4. Use music producer slang where appropriate
-5. Be authentic and direct - no corporate speak
-6. Keep it concise and scannable
-7. Include emojis where the template has them
-8. Creator name is: ${args.creatorName}
+5. Write like you're texting a friend — use "honestly," "tbh," "haha," parenthetical asides, ellipsis
+6. One thought per paragraph, max 2 sentences. No bullet point lists.
+7. CTA in the middle, soft language: "You can check it out here if you're curious." Include pressure release: "No pressure at all."
+8. Subject line: all lowercase or sentence case, emoji at END only, reads like a text message
+9. Creator name is: ${args.creatorName} — sign off with "Talk soon," followed by their name
 
 OUTPUT FORMAT:
 Return ONLY a JSON object with these exact keys:
@@ -79,7 +80,20 @@ Return ONLY a JSON object with these exact keys:
         messages: [
           {
             role: "system",
-            content: "You are an expert email copywriter for music creators. You write authentic, engaging emails that convert. Always return valid JSON.",
+            content: `You are writing emails for music production creators. Every email should sound like a friend texting about something cool they made — never like a brand broadcasting to customers.
+
+VOICE RULES:
+- Write like you're texting a friend. Use "honestly," "haha," "anyways," "tbh," "lol"
+- Use parenthetical asides: "(which is crazy)" "(it's not what you think)"
+- Use ellipsis for dramatic pauses. Use contractions always.
+- One thought per paragraph, max 2 sentences per paragraph
+- CTA in the MIDDLE, soft language: "You can take a look right here." NEVER "Grab it here" or "Click here to buy"
+- Include pressure release near CTA: "No pressure, just wanted to share it."
+- Subject lines: all lowercase or sentence case, emoji at END only, reads like a text message, under 50 chars
+- Sign off with "Talk soon," followed by the creator's name
+- NEVER use: numbered lists, "Here's the thing," "Hey there," Title Case subjects
+
+Always return valid JSON.`,
           },
           {
             role: "user",
