@@ -2,8 +2,6 @@ import {
   Body,
   Container,
   Head,
-  Heading,
-  Hr,
   Html,
   Link,
   Preview,
@@ -21,7 +19,7 @@ interface EmailLayoutProps {
 export default function EmailLayout({
   preview,
   children,
-  footerText = "You're receiving this email because you're a student at PPR Academy.",
+  footerText,
   unsubscribeUrl = "{{unsubscribeLink}}",
 }: EmailLayoutProps) {
   return (
@@ -30,26 +28,15 @@ export default function EmailLayout({
       <Preview>{preview}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Section style={header}>
-            <Heading style={h1}>PPR Academy</Heading>
-          </Section>
-
           <Section style={content}>{children}</Section>
 
-          <Hr style={hr} />
           <Section style={footer}>
-            <Text style={footerTextStyle}>{footerText}</Text>
-            <Text style={footerTextStyle}>
-              <Link href={unsubscribeUrl} style={link}>
+            <Text style={spacer}>
+              <br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+            </Text>
+            <Text style={unsubscribeStyle}>
+              <Link href={unsubscribeUrl} style={unsubscribeLink}>
                 Unsubscribe
-              </Link>
-              {" • "}
-              <Link href="https://ppracademy.com" style={link}>
-                Website
-              </Link>
-              {" • "}
-              <Link href="mailto:support@ppracademy.com" style={link}>
-                Help
               </Link>
             </Text>
             <Text style={addressStyle}>
@@ -63,62 +50,50 @@ export default function EmailLayout({
 }
 
 const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
+  backgroundColor: "#ffffff",
+  fontFamily: "Arial, Helvetica, sans-serif",
 };
 
 const container = {
   backgroundColor: "#ffffff",
   margin: "0 auto",
   padding: "20px 0 48px",
-  marginBottom: "64px",
   maxWidth: "600px",
-};
-
-const header = {
-  padding: "32px 48px",
-  textAlign: "center" as const,
-  backgroundColor: "#2563eb",
-};
-
-const h1 = {
-  color: "#ffffff",
-  fontSize: "24px",
-  fontWeight: "bold",
-  margin: "0",
 };
 
 const content = {
   padding: "0 48px",
-};
-
-const hr = {
-  borderColor: "#e6ebf1",
-  margin: "32px 0",
+  fontSize: "18px",
+  lineHeight: "200%",
 };
 
 const footer = {
   padding: "0 48px",
 };
 
-const footerTextStyle = {
-  color: "#8898aa",
+const spacer = {
+  margin: "0",
+  padding: "0",
+  lineHeight: "100%",
+};
+
+const unsubscribeStyle = {
+  color: "#888888",
   fontSize: "12px",
   lineHeight: "16px",
-  margin: "8px 0",
+  margin: "0",
   textAlign: "center" as const,
+};
+
+const unsubscribeLink = {
+  color: "#888888",
+  textDecoration: "underline",
 };
 
 const addressStyle = {
-  color: "#a0aec0",
-  fontSize: "11px",
+  color: "#888888",
+  fontSize: "12px",
   lineHeight: "14px",
-  margin: "16px 0 0 0",
+  margin: "4px 0 0 0",
   textAlign: "center" as const,
-};
-
-const link = {
-  color: "#2563eb",
-  textDecoration: "none",
 };

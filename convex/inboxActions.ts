@@ -55,8 +55,9 @@ export const sendReplyEmail = internalAction({
     const resend = getResendClient();
     
     try {
-      await resend.emails.send({
-        from: store.emailConfig.fromName 
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
+        from: store.emailConfig.fromName
           ? `${store.emailConfig.fromName} <${store.emailConfig.fromEmail}>`
           : store.emailConfig.fromEmail,
         to: reply.fromEmail,

@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { generateUnsubscribeUrl, generateListUnsubscribeHeader } from './unsubscribe';
+import { sendViaProvider } from './email-provider';
 
 // TRANSACTIONAL: All functions in this file send through the transactional Resend API.
 // Do not move these to the marketing API — they are purchase confirmations, enrollment
@@ -13,25 +14,20 @@ const getResendClient = () => {
 };
 
 // Email configuration
-const FROM_EMAIL = 'PPR Academy <no-reply@pauseplayrepeat.com>';
-const DEFAULT_REPLY_TO = 'no-reply@pauseplayrepeat.com';
+const FROM_EMAIL = 'Andrew <andrew@pauseplayrepeat.com>';
+const DEFAULT_REPLY_TO = 'andrew@pauseplayrepeat.com';
 
 // CAN-SPAM compliant footer with unsubscribe link and physical address
 function getEmailFooter(recipientEmail: string): string {
   const unsubscribeUrl = generateUnsubscribeUrl(recipientEmail);
   return `
-    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-      <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 8px 0;">
-        <a href="${unsubscribeUrl}" style="color: #6366f1; text-decoration: underline;">Unsubscribe</a>
-        &nbsp;•&nbsp;
-        <a href="https://pauseplayrepeat.com" style="color: #6366f1; text-decoration: underline;">Website</a>
-        &nbsp;•&nbsp;
-        <a href="mailto:support@pauseplayrepeat.com" style="color: #6366f1; text-decoration: underline;">Help</a>
-      </p>
-      <p style="font-size: 11px; color: #a0aec0; text-align: center; margin: 8px 0;">
-        PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709
-      </p>
-    </div>`;
+    <br><br><br><br><br><br><br><br><br><br>
+    <p style="text-align: center; font-size: 12px; color: #888; margin: 0;">
+      <a href="${unsubscribeUrl}" style="color: #888; text-decoration: underline;">Unsubscribe</a>
+    </p>
+    <p style="text-align: center; font-size: 12px; color: #888; margin: 4px 0 0;">
+      PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709
+    </p>`;
 }
 
 // Email templates
@@ -177,7 +173,7 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: data.adminEmail || DEFAULT_REPLY_TO,
@@ -186,7 +182,7 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send lead magnet email:', error);
     throw new Error(`Email sending failed: ${error}`);
@@ -202,7 +198,7 @@ export async function sendAdminNotification(data: AdminNotificationData) {
 
   try {
     const resend = getResendClient();
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.adminName.includes('@') ? data.adminName : `admin@yourdomain.com`, // Fallback if adminName isn't email
       replyTo: DEFAULT_REPLY_TO,
@@ -211,7 +207,7 @@ export async function sendAdminNotification(data: AdminNotificationData) {
     });
 
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send admin notification:', error);
     throw new Error(`Admin notification failed: ${error}`);
@@ -229,7 +225,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
     const resend = getResendClient();
     const recipientEmail = data.customerName.includes('@') ? data.customerName : `customer@example.com`;
     const listHeaders = generateListUnsubscribeHeader(recipientEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: recipientEmail,
       replyTo: data.adminEmail || DEFAULT_REPLY_TO,
@@ -243,7 +239,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send welcome email:', error);
     throw new Error(`Welcome email failed: ${error}`);
@@ -338,7 +334,7 @@ export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -347,7 +343,7 @@ export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send payment failure email:', error);
     throw new Error(`Payment failure email failed: ${error}`);
@@ -451,7 +447,7 @@ export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData)
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -460,7 +456,7 @@ export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData)
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send course enrollment email:', error);
     throw new Error(`Course enrollment email failed: ${error}`);
@@ -547,7 +543,7 @@ export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -556,7 +552,7 @@ export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send tip confirmation email:', error);
     throw new Error(`Tip confirmation email failed: ${error}`);
@@ -661,7 +657,7 @@ export async function sendMembershipConfirmationEmail(data: MembershipConfirmati
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -670,7 +666,7 @@ export async function sendMembershipConfirmationEmail(data: MembershipConfirmati
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send membership confirmation email:', error);
     throw new Error(`Membership confirmation email failed: ${error}`);
@@ -767,7 +763,7 @@ export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -776,7 +772,7 @@ export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send beat purchase email:', error);
     throw new Error(`Beat purchase email failed: ${error}`);
@@ -862,7 +858,7 @@ export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurcha
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -871,7 +867,7 @@ export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurcha
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send digital product purchase email:', error);
     throw new Error(`Digital product purchase email failed: ${error}`);
@@ -961,7 +957,7 @@ export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -970,7 +966,7 @@ export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send bundle purchase email:', error);
     throw new Error(`Bundle purchase email failed: ${error}`);
@@ -1080,7 +1076,7 @@ export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEm
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1089,7 +1085,7 @@ export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEm
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send coaching confirmation email:', error);
     throw new Error(`Coaching confirmation email failed: ${error}`);
@@ -1181,7 +1177,7 @@ export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1190,7 +1186,7 @@ export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send credits purchase email:', error);
     throw new Error(`Credits purchase email failed: ${error}`);
@@ -1320,7 +1316,7 @@ export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1329,7 +1325,7 @@ export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send mixing service email:', error);
     throw new Error(`Mixing service email failed: ${error}`);
@@ -1436,7 +1432,7 @@ export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailD
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1445,7 +1441,7 @@ export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailD
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send playlist submission email:', error);
     throw new Error(`Playlist submission email failed: ${error}`);
@@ -1558,7 +1554,7 @@ export async function sendCoachingReminderEmail(data: CoachingReminderEmailData)
     const resend = getResendClient();
     const urgency = data.hoursUntilSession <= 1 ? '⚡ STARTING SOON' : `⏰ In ${data.hoursUntilSession}h`;
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1567,7 +1563,7 @@ export async function sendCoachingReminderEmail(data: CoachingReminderEmailData)
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send coaching reminder email:', error);
     throw new Error(`Coaching reminder email failed: ${error}`);
@@ -1657,7 +1653,7 @@ export async function sendPprProWelcomeEmail(data: PprProWelcomeEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1666,7 +1662,7 @@ export async function sendPprProWelcomeEmail(data: PprProWelcomeEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send PPR Pro welcome email:', error);
     throw new Error(`PPR Pro welcome email failed: ${error}`);
@@ -1743,7 +1739,7 @@ export async function sendPprProCancelledEmail(data: PprProCancelledEmailData) {
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1752,7 +1748,7 @@ export async function sendPprProCancelledEmail(data: PprProCancelledEmailData) {
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send PPR Pro cancelled email:', error);
     throw new Error(`PPR Pro cancelled email failed: ${error}`);
@@ -1823,7 +1819,7 @@ export async function sendPprProPaymentFailedEmail(data: PprProPaymentFailedEmai
   try {
     const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await resend.emails.send({
+    const result = await sendViaProvider(resend, {
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1832,7 +1828,7 @@ export async function sendPprProPaymentFailedEmail(data: PprProPaymentFailedEmai
       headers: listHeaders,
     });
 
-    return { success: true, messageId: result.data?.id };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('Failed to send PPR Pro payment failed email:', error);
     throw new Error(`PPR Pro payment failed email failed: ${error}`);

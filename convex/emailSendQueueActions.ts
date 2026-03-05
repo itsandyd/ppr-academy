@@ -8,6 +8,10 @@ import {
   getTransactionalResendClient,
   getMarketingResendClient,
 } from "./lib/resendClients";
+import {
+  getEmailProvider,
+  sendBatchViaProvider,
+} from "./lib/emailProvider";
 
 type ClaimedEmail = {
   _id: Id<"emailSendQueue">;
@@ -130,6 +134,7 @@ export const processEmailSendQueue = internalAction({
 
 /**
  * Send a group of emails through a specific Resend client in batches of 100.
+ * When EMAIL_PROVIDER=ses, routes through AWS SES instead of Resend.
  */
 async function sendBatchesWithClient(
   ctx: any,
@@ -141,6 +146,8 @@ async function sendBatchesWithClient(
     return { sent: 0, failed: 0 };
   }
 
+  const provider = getEmailProvider();
+  console.log(`[SendQueue][${label}] EMAIL_PROVIDER=${provider}, batch of ${emails.length}`);
   const BATCH_SIZE = 100;
   const batches: ClaimedEmail[][] = [];
   for (let i = 0; i < emails.length; i += BATCH_SIZE) {
@@ -165,13 +172,13 @@ async function sendBatchesWithClient(
     const batchIds = batch.map((e) => e._id);
 
     try {
-      const { data, error } = await resend.batch.send(emailPayloads);
+      const result = await sendBatchViaProvider(resend, emailPayloads);
 
-      if (error) {
-        console.error(`[SendQueue][${label}] Batch ${batchIndex + 1}/${batches.length} error:`, error);
+      if (!result.success) {
+        console.error(`[SendQueue][${label}][${result.provider}] Batch ${batchIndex + 1}/${batches.length} error:`, result.error);
         await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
           emailIds: batchIds,
-          error: JSON.stringify(error),
+          error: result.error || "Unknown error",
         });
         totalFailed += batch.length;
       } else {
@@ -181,20 +188,20 @@ async function sendBatchesWithClient(
         totalSent += batch.length;
       }
     } catch (error: any) {
-      console.error(`[SendQueue][${label}] Batch ${batchIndex + 1}/${batches.length} exception:`, error);
+      console.error(`[SendQueue][${label}][${provider}] Batch ${batchIndex + 1}/${batches.length} exception:`, error);
 
-      // Check for rate limit
+      // Check for rate limit (Resend-specific, but handle generically)
       if (error?.statusCode === 429) {
         const retryAfter = error?.headers?.["retry-after"] || 2;
         await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
 
         // Retry this batch once
         try {
-          const { data, error: retryError } = await resend.batch.send(emailPayloads);
-          if (retryError) {
+          const retryResult = await sendBatchViaProvider(resend, emailPayloads);
+          if (!retryResult.success) {
             await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
               emailIds: batchIds,
-              error: JSON.stringify(retryError),
+              error: retryResult.error || "Retry failed",
             });
             totalFailed += batch.length;
           } else {
@@ -219,7 +226,7 @@ async function sendBatchesWithClient(
       }
     }
 
-    // Rate limit: stay under 2 req/s to Resend
+    // Rate limit: stay under 2 req/s to Resend (or SES rate limits)
     // Wait 600ms between batch requests
     if (batchIndex < batches.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 600));

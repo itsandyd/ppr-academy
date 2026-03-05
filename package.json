@@ -25,6 +25,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1001.0",
     "@clerk/nextjs": "^6.21.0",
     "@convex-dev/action-cache": "^0.3.0",
     "@convex-dev/action-retrier": "^0.3.0",

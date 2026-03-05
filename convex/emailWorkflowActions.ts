@@ -73,42 +73,52 @@ export const processEmailWorkflowExecutions = internalAction({
     const broadcastHandled = new Set<string>();
 
     // Phase 2a: Try broadcast for groups with >1 recipient
-    for (const [key, group] of groups) {
-      if (group.execIds.length <= 1) continue; // Single recipient — use individual send
+    // SKIPPED when EMAIL_PROVIDER=ses — SES treats every email the same,
+    // so there's no cost benefit to the Resend Broadcasts API path.
+    // All emails go through the same individual send path (Phase 2b).
+    const { getEmailProvider } = await import("./lib/emailProvider");
+    const emailProvider = getEmailProvider();
 
-      try {
-        const result = await ctx.runAction(
-          internal.emailWorkflowActions.sendWorkflowBroadcast,
-          {
-            workflowId: group.workflowId,
-            emailNodeId: group.nodeId,
-            executionIds: group.execIds,
-            recipientEmails: group.emails,
-            storeId: group.storeId,
-          }
-        );
+    if (emailProvider === "resend") {
+      for (const [key, group] of groups) {
+        if (group.execIds.length <= 1) continue; // Single recipient — use individual send
 
-        if (result.success) {
-          console.log(
-            `[EmailWorkflows] Broadcast sent: ${result.recipientCount} recipients via ${result.method} ` +
-            `(workflow ${group.workflowId}, node ${group.nodeId})`
+        try {
+          const result = await ctx.runAction(
+            internal.emailWorkflowActions.sendWorkflowBroadcast,
+            {
+              workflowId: group.workflowId,
+              emailNodeId: group.nodeId,
+              executionIds: group.execIds,
+              recipientEmails: group.emails,
+              storeId: group.storeId,
+            }
           );
-          for (const id of result.handledExecutionIds) {
-            broadcastHandled.add(id);
+
+          if (result.success) {
+            console.log(
+              `[EmailWorkflows] Broadcast sent: ${result.recipientCount} recipients via ${result.method} ` +
+              `(workflow ${group.workflowId}, node ${group.nodeId})`
+            );
+            for (const id of result.handledExecutionIds) {
+              broadcastHandled.add(id);
+            }
+          } else {
+            console.log(
+              `[EmailWorkflows] Broadcast not applicable for ${key}: ${result.error}. ` +
+              `Falling back to individual sends for ${group.execIds.length} executions.`
+            );
           }
-        } else {
-          console.log(
-            `[EmailWorkflows] Broadcast not applicable for ${key}: ${result.error}. ` +
-            `Falling back to individual sends for ${group.execIds.length} executions.`
-          );
+        } catch (error) {
+          console.error(`[EmailWorkflows] Broadcast failed for ${key}:`, error);
+          // Fall through — these will be processed individually below
         }
-      } catch (error) {
-        console.error(`[EmailWorkflows] Broadcast failed for ${key}:`, error);
-        // Fall through — these will be processed individually below
       }
+    } else {
+      console.log(`[EmailWorkflows] Provider=${emailProvider}, skipping broadcast detection for ${bulkResult.emailNodeIds.length} email nodes`);
     }
 
-    // Phase 2b: Process remaining email nodes individually (broadcast-ineligible or failed)
+    // Phase 2b: Process remaining email nodes individually (broadcast-ineligible, failed, or SES)
     let emailProcessed = 0;
     let emailFailed = 0;
 
@@ -799,14 +809,14 @@ export const resolveAndEnqueueCustomEmail = internalAction({
     const crypto = await import("crypto");
 
     // Get contact info if available
-    let firstName = "there";
+    let firstName = "";
     let name = "";
     if (args.contactId) {
       const contact = await ctx.runQuery(internal.emailWorkflows.getContactInternal, {
         contactId: args.contactId,
       });
       if (contact) {
-        firstName = contact.firstName || contact.email.split("@")[0];
+        firstName = contact.firstName || "";
         name = contact.firstName && contact.lastName
           ? `${contact.firstName} ${contact.lastName}`
           : contact.firstName || "";
@@ -814,7 +824,11 @@ export const resolveAndEnqueueCustomEmail = internalAction({
     }
 
     // MARKETING: Ensure contact exists in Resend marketing audience before sending
-    await ensureMarketingContact(args.customerEmail, firstName !== "there" ? firstName : undefined);
+    // Skip when SES — Resend audience sync is unnecessary
+    const { getEmailProvider: getProvider } = await import("./lib/emailProvider");
+    if (getProvider() === "resend") {
+      await ensureMarketingContact(args.customerEmail, firstName || undefined);
+    }
 
     // Get store name for {{senderName}} variable
     let senderName = "";
@@ -890,7 +904,7 @@ export const resolveAndEnqueueCustomEmail = internalAction({
       return text
         .replace(/\{\{firstName\}\}/g, firstName)
         .replace(/\{\{first_name\}\}/g, firstName)
-        .replace(/\{\{name\}\}/g, name || "there")
+        .replace(/\{\{name\}\}/g, name)
         .replace(/\{\{email\}\}/g, args.customerEmail)
         .replace(/\{\{senderName\}\}/g, senderName || fromName)
         .replace(/\{\{sender_name\}\}/g, senderName || fromName)
@@ -910,11 +924,13 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         .replace(/\{\{topCourseThisWeek\}\}/g, platformStats.topCourseThisWeek)
         .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
         .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
+        // Replace Resend-specific merge tags with PPR's own unsubscribe URL
+        .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl)
         .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
     };
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     const bodyContent = replaceAllVariables(args.content);
     const finalSubject = replaceAllVariables(args.subject);
@@ -926,13 +942,12 @@ export const resolveAndEnqueueCustomEmail = internalAction({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1a1a1a;background-color:#ffffff;">
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:200%;color:#1a1a1a;background-color:#ffffff;">
 <div style="max-width:600px;margin:0 auto;padding:20px;">
 ${bodyContent}
-</div>
-<div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
-<a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
-<p style="margin:8px 0 0;font-size:11px;color:#bbb;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
+<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
 </div>
 </body>
 </html>`;
@@ -943,13 +958,18 @@ ${bodyContent}
       : args.source === "transactional" ? "transactional" as const
       : "workflow" as const;
 
+    // Format "to" with recipient name if available
+    const toEmail = name
+      ? `${name} <${args.customerEmail}>`
+      : args.customerEmail;
+
     // Enqueue instead of sending
     await ctx.runMutation(internal.emailSendQueue.enqueueEmail, {
       storeId: args.storeId,
       source,
       workflowExecutionId: args.workflowExecutionId,
       dripEnrollmentId: args.dripEnrollmentId,
-      toEmail: args.customerEmail,
+      toEmail,
       fromName,
       fromEmail,
       subject: finalSubject,
@@ -1005,14 +1025,14 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
     }
 
     // Get contact info if available
-    let firstName = "there";
+    let firstName = "";
     let name = "";
     if (args.contactId) {
       const contact = await ctx.runQuery(internal.emailWorkflows.getContactInternal, {
         contactId: args.contactId,
       });
       if (contact) {
-        firstName = contact.firstName || contact.email.split("@")[0];
+        firstName = contact.firstName || "";
         name = contact.firstName && contact.lastName
           ? `${contact.firstName} ${contact.lastName}`
           : contact.firstName || "";
@@ -1020,7 +1040,11 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
     }
 
     // MARKETING: Ensure contact exists in Resend marketing audience before sending
-    await ensureMarketingContact(args.customerEmail, firstName !== "there" ? firstName : undefined);
+    // Skip when SES — Resend audience sync is unnecessary
+    const { getEmailProvider: getProviderForTemplate } = await import("./lib/emailProvider");
+    if (getProviderForTemplate() === "resend") {
+      await ensureMarketingContact(args.customerEmail, firstName || undefined);
+    }
 
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
@@ -1037,29 +1061,46 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
     const htmlContent = (template.htmlContent || template.content || "")
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, name || "there")
+      .replace(/\{\{name\}\}/g, name)
       .replace(/\{\{email\}\}/g, args.customerEmail)
       .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
-      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
+      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
+      // Replace Resend-specific merge tags with PPR's own unsubscribe URL
+      .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl);
 
     const subject = template.subject
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, name || "there");
+      .replace(/\{\{name\}\}/g, name);
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
+
+    // CAN-SPAM safety net: if the personalized HTML doesn't contain an
+    // unsubscribe link, append a minimal footer. This catches templates
+    // that were created before unsubscribe footers were standard.
+    let finalHtml = htmlContent;
+    if (!finalHtml.includes("unsubscribe")) {
+      finalHtml += `<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
+    }
+
+    // Format "to" with recipient name if available
+    const toEmail = name
+      ? `${name} <${args.customerEmail}>`
+      : args.customerEmail;
 
     // Enqueue instead of sending
     await ctx.runMutation(internal.emailSendQueue.enqueueEmail, {
       storeId: args.storeId,
       source: "workflow",
       workflowExecutionId: args.workflowExecutionId,
-      toEmail: args.customerEmail,
+      toEmail,
       fromName,
       fromEmail,
       subject,
-      htmlContent,
+      htmlContent: finalHtml,
       headers: {
         "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -1110,11 +1151,11 @@ function convertToBroadcastHtml(
     topCourseThisWeek: string;
   }
 ): string {
-  return html
+  let result = html
     // Per-contact → Resend merge tags (triple curly braces)
-    .replace(/\{\{firstName\}\}/g, "{{{first_name|there}}}")
-    .replace(/\{\{first_name\}\}/g, "{{{first_name|there}}}")
-    .replace(/\{\{name\}\}/g, "{{{first_name|there}}}")
+    .replace(/\{\{firstName\}\}/g, "{{{first_name}}}")
+    .replace(/\{\{first_name\}\}/g, "{{{first_name}}}")
+    .replace(/\{\{name\}\}/g, "{{{first_name}}}")
     .replace(/\{\{email\}\}/g, "{{{email}}}")
     // Unsubscribe → Resend built-in
     .replace(/\{\{unsubscribeLink\}\}/g, "{{{RESEND_UNSUBSCRIBE_URL}}}")
@@ -1130,6 +1171,16 @@ function convertToBroadcastHtml(
     .replace(/\{\{topCourseThisWeek\}\}/g, globals.topCourseThisWeek)
     // Clean up Handlebars conditionals
     .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+
+  // CAN-SPAM safety net for broadcasts: if no unsubscribe link is present
+  // after all replacements, append one using Resend's built-in merge tag.
+  if (!result.includes("unsubscribe") && !result.includes("RESEND_UNSUBSCRIBE_URL")) {
+    result += `<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
+  }
+
+  return result;
 }
 
 /**
@@ -1231,8 +1282,8 @@ export const sendWorkflowBroadcast = internalAction({
     }
 
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     // 5. Convert template to broadcast format
     const broadcastSubject = convertToBroadcastHtml(subject, {
@@ -1251,13 +1302,12 @@ export const sendWorkflowBroadcast = internalAction({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1a1a1a;background-color:#ffffff;">
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:200%;color:#1a1a1a;background-color:#ffffff;">
 <div style="max-width:600px;margin:0 auto;padding:20px;">
 ${bodyContent}
-</div>
-<div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
-<a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
-<p style="margin:8px 0 0;font-size:11px;color:#bbb;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
+<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
 </div>
 </body>
 </html>`;
@@ -1382,14 +1432,14 @@ export const sendCustomWorkflowEmail = internalAction({
     const crypto = await import("crypto");
 
     // Get contact info if available
-    let firstName = "there";
+    let firstName = "";
     let name = "";
     if (args.contactId) {
       const contact = await ctx.runQuery(internal.emailWorkflows.getContactInternal, {
         contactId: args.contactId,
       });
       if (contact) {
-        firstName = contact.firstName || contact.email.split("@")[0];
+        firstName = contact.firstName || "";
         name = contact.firstName && contact.lastName
           ? `${contact.firstName} ${contact.lastName}`
           : contact.firstName || "";
@@ -1468,8 +1518,8 @@ export const sendCustomWorkflowEmail = internalAction({
     // MARKETING: Use marketing Resend client for workflow sends
     const resend = getMarketingResendClient();
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
@@ -1486,7 +1536,7 @@ export const sendCustomWorkflowEmail = internalAction({
         // User variables
         .replace(/\{\{firstName\}\}/g, firstName)
         .replace(/\{\{first_name\}\}/g, firstName)
-        .replace(/\{\{name\}\}/g, name || "there")
+        .replace(/\{\{name\}\}/g, name)
         .replace(/\{\{email\}\}/g, args.customerEmail)
         .replace(/\{\{senderName\}\}/g, senderName || fromName)
         .replace(/\{\{sender_name\}\}/g, senderName || fromName)
@@ -1522,19 +1572,19 @@ export const sendCustomWorkflowEmail = internalAction({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1a1a1a;background-color:#ffffff;">
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:200%;color:#1a1a1a;background-color:#ffffff;">
 <div style="max-width:600px;margin:0 auto;padding:20px;">
 ${bodyContent}
-</div>
-<div style="max-width:600px;margin:0 auto;padding:20px 20px 40px;text-align:center;font-size:12px;color:#999;">
-<a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
-<p style="margin:8px 0 0;font-size:11px;color:#bbb;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
+<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
 </div>
 </body>
 </html>`;
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: `${fromName} <${fromEmail}>`,
         to: args.customerEmail,
         subject: finalSubject,
@@ -1578,14 +1628,14 @@ export const sendWorkflowEmail = internalAction({
     }
 
     // Get contact info if available
-    let firstName = "there";
+    let firstName = "";
     let name = "";
     if (args.contactId) {
       const contact = await ctx.runQuery(internal.emailWorkflows.getContactInternal, {
         contactId: args.contactId,
       });
       if (contact) {
-        firstName = contact.firstName || contact.email.split("@")[0];
+        firstName = contact.firstName || "";
         name = contact.firstName && contact.lastName
           ? `${contact.firstName} ${contact.lastName}`
           : contact.firstName || "";
@@ -1608,7 +1658,7 @@ export const sendWorkflowEmail = internalAction({
     const htmlContent = (template.htmlContent || template.content || "")
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, name || "there")
+      .replace(/\{\{name\}\}/g, name)
       .replace(/\{\{email\}\}/g, args.customerEmail)
       .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
       .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
@@ -1616,19 +1666,28 @@ export const sendWorkflowEmail = internalAction({
     const subject = template.subject
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, name || "there");
+      .replace(/\{\{name\}\}/g, name);
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     const apiUnsubscribeUrl = `${platformUrl}/api/unsubscribe?token=${token}`;
 
+    // CAN-SPAM safety net: append unsubscribe footer if missing
+    let finalHtml = htmlContent;
+    if (!finalHtml.includes("unsubscribe")) {
+      finalHtml += `<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
+    }
+
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: `${fromName} <${fromEmail}>`,
         to: args.customerEmail,
         subject,
-        html: htmlContent,
+        html: finalHtml,
         headers: {
           "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -1804,6 +1863,7 @@ export const sendTeamNotification = internalAction({
       // Default: email notification to store owner
       const { Resend } = await import("resend");
       const resend = new Resend(process.env.RESEND_API_KEY);
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
 
       // Get store owner email from store config or default
       const ownerEmail =
@@ -1815,11 +1875,11 @@ export const sendTeamNotification = internalAction({
         return null;
       }
 
-      const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-      const fromName = process.env.FROM_NAME || "PPR Academy";
+      const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+      const fromName = process.env.FROM_NAME || "Andrew";
 
       try {
-        await resend.emails.send({
+        await sendEmailViaProvider(resend, {
           from: `${fromName} <${fromEmail}>`,
           to: ownerEmail,
           subject: `[Workflow] ${args.message}`,

@@ -526,7 +526,8 @@ export const sendWorkflowEmail = internalAction({
       </div>`;
     }
 
-    await resend.emails.send({
+    const { sendEmailViaProvider } = await import("./lib/emailProvider");
+    await sendEmailViaProvider(resend, {
       from: `${fromName} <${fromEmail}>`,
       to: args.email,
       subject: personalizedSubject,
@@ -574,7 +575,8 @@ export const sendNotificationEmail = internalAction({
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "PPR Academy";
 
-    await resend.emails.send({
+    const { sendEmailViaProvider } = await import("./lib/emailProvider");
+    await sendEmailViaProvider(resend, {
       from: `${fromName} <${fromEmail}>`,
       to: args.to,
       subject: args.subject,

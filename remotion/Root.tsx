@@ -32,6 +32,7 @@ import { SceneThreeEmails } from "./SceneThreeEmails";
 import { SceneProblem } from "./SceneProblem";
 import { ScenePPR } from "./ScenePPR";
 import { SceneCTA } from "./SceneCTA";
+import { EmailWorkflowVideo } from "./workflow-video/EmailWorkflowVideo";
 
 type DynamicVideoProps = {
   generatedCode: string;
@@ -315,6 +316,15 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="EmailSequenceVideo"
         component={EmailSequenceVideo}
+        durationInFrames={1800}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── EMAIL WORKFLOW ENGINE: Codebase-Driven Video ─── */}
+      <Composition
+        id="EmailWorkflowVideo"
+        component={EmailWorkflowVideo}
         durationInFrames={1800}
         fps={30}
         width={1080}

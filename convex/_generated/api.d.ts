@@ -11635,6 +11635,50 @@ export declare const api: {
       },
       { found: number; message: string; requeued: number; skipped: number }
     >;
+    requeueQuotaFailed: FunctionReference<
+      "mutation",
+      "public",
+      { batchSize?: number; dryRun?: boolean; errorFilter?: string },
+      any
+    >;
+  };
+  emailRetrigger: {
+    checkPendingSchedule: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
+    countQueueByStatus: FunctionReference<"query", "public", {}, any>;
+    crossRefQueue: FunctionReference<
+      "query",
+      "public",
+      { limit?: number },
+      any
+    >;
+    diagnoseExecutions: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; status?: string },
+      any
+    >;
+    getSentRecipients: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; subject: string },
+      any
+    >;
+    retriggerFailedBatch: FunctionReference<
+      "mutation",
+      "public",
+      {
+        alreadySentEmails?: Array<string>;
+        batchSize?: number;
+        dryRun?: boolean;
+        subjectFilter?: string;
+      },
+      any
+    >;
   };
   emails: {
     connectAdminResendSecure: FunctionReference<
@@ -29923,6 +29967,14 @@ export declare const internal: {
         sourceId?: string;
         title?: string;
       }>
+    >;
+  };
+  testSesEmail: {
+    sendTestEmail: FunctionReference<
+      "action",
+      "internal",
+      { from?: string; to: string },
+      { error?: string; messageId?: string; provider: string; success: boolean }
     >;
   };
   universalProductsExamples: {

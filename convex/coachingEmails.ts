@@ -130,16 +130,11 @@ export const sendBookingConfirmationEmail = internalAction({
         });
       }
 
-      await resend.emails.send({
+      const { sendEmailViaProvider, sendEmailWithAttachmentsViaProvider } = await import("./lib/emailProvider");
+      const emailParams = {
         from: FROM_EMAIL,
         to: args.studentEmail,
         subject: `Session Confirmed with ${args.coachName} - ${PLATFORM_NAME}`,
-        ...(attachments.length > 0 && {
-          attachments: attachments.map((a) => ({
-            filename: a.filename,
-            content: a.content,
-          })),
-        }),
         html: `
 <!DOCTYPE html>
 <html>
@@ -167,7 +162,13 @@ export const sendBookingConfirmationEmail = internalAction({
   </div>
 </body>
 </html>`,
-      });
+      };
+
+      if (attachments.length > 0) {
+        await sendEmailWithAttachmentsViaProvider(resend, { ...emailParams, attachments });
+      } else {
+        await sendEmailViaProvider(resend, emailParams);
+      }
       return { success: true };
     } catch (error: any) {
       console.error("Failed to send booking confirmation email:", error);
@@ -232,16 +233,11 @@ export const sendNewBookingNotificationEmail = internalAction({
         args.sessionPlatform === "facetime" ? "FaceTime" :
         args.sessionPlatform === "custom" ? "Custom Link" : "Discord";
 
-      await resend.emails.send({
+      const { sendEmailViaProvider, sendEmailWithAttachmentsViaProvider } = await import("./lib/emailProvider");
+      const emailParams = {
         from: FROM_EMAIL,
         to: args.coachEmail,
         subject: `New Booking: ${args.studentName} - ${PLATFORM_NAME}`,
-        ...(attachments.length > 0 && {
-          attachments: attachments.map((a) => ({
-            filename: a.filename,
-            content: a.content,
-          })),
-        }),
         html: `
 <!DOCTYPE html>
 <html>
@@ -271,7 +267,13 @@ export const sendNewBookingNotificationEmail = internalAction({
   </div>
 </body>
 </html>`,
-      });
+      };
+
+      if (attachments.length > 0) {
+        await sendEmailWithAttachmentsViaProvider(resend, { ...emailParams, attachments });
+      } else {
+        await sendEmailViaProvider(resend, emailParams);
+      }
       return { success: true };
     } catch (error: any) {
       console.error("Failed to send new booking notification email:", error);
@@ -308,7 +310,8 @@ export const sendSessionReminderEmail = internalAction({
       : `${BASE_URL}/library/coaching`;
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.recipientEmail,
         subject: `Reminder: Session in ${timeLabel} - ${PLATFORM_NAME}`,
@@ -384,7 +387,8 @@ export const sendSessionConfirmationRequestEmail = internalAction({
     const noShowUrl = `${BASE_URL}/${args.isCoach ? "dashboard/coaching/sessions" : "library/coaching"}?noshow=${args.sessionId}`;
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.recipientEmail,
         subject: `Did your session happen? — ${PLATFORM_NAME}`,
@@ -443,7 +447,8 @@ export const sendNoShowWarningEmail = internalAction({
     if (!resend) return { success: true };
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.coachEmail,
         subject: `Important: No-Show Warning - ${PLATFORM_NAME}`,
@@ -497,7 +502,8 @@ export const sendCoachingPausedEmail = internalAction({
     if (!resend) return { success: true };
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.coachEmail,
         subject: `Coaching Paused - Action Required - ${PLATFORM_NAME}`,

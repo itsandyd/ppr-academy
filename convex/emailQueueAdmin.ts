@@ -270,6 +270,68 @@ export const countAllEmails = query({
 });
 
 /**
+ * Lean requeue: reset failed send queue items back to queued (v2).
+ * Filters by lastError containing errorFilter string.
+ * Does NOT do double-send checks (use inspectQueueErrors first to verify).
+ * Designed for small batches to stay under Convex mutation limits.
+ *
+ * Usage:
+ *   npx convex run emailQueueAdmin:requeueQuotaFailed '{"dryRun":true}'
+ *   npx convex run emailQueueAdmin:requeueQuotaFailed '{"dryRun":false,"batchSize":300}'
+ */
+export const requeueQuotaFailed = mutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    batchSize: v.optional(v.number()),
+    errorFilter: v.optional(v.string()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? true;
+    const batchSize = args.batchSize ?? 300;
+    const errorFilter = (args.errorFilter ?? "quota").toLowerCase();
+
+    const failed = await ctx.db
+      .query("emailSendQueue")
+      .withIndex("by_status_priority_queuedAt", (q) => q.eq("status", "failed"))
+      .take(batchSize);
+
+    let requeued = 0;
+    let skipped = 0;
+
+    for (const item of failed) {
+      const err = (item.lastError ?? "").toLowerCase();
+      if (!err.includes(errorFilter)) {
+        skipped++;
+        continue;
+      }
+
+      if (!dryRun) {
+        await ctx.db.patch(item._id, {
+          status: "queued" as const,
+          attempts: 0,
+          maxAttempts: 3,
+          lastError: undefined,
+          nextRetryAt: undefined,
+        });
+      }
+      requeued++;
+    }
+
+    return {
+      dryRun,
+      fetched: failed.length,
+      requeued,
+      skipped,
+      hasMore: failed.length === batchSize,
+      message: dryRun
+        ? `DRY RUN: would requeue ${requeued} of ${failed.length} (skipped ${skipped}). Run with dryRun:false to execute.`
+        : `Requeued ${requeued} of ${failed.length} items. ${failed.length === batchSize ? "More remain — run again." : "All done."}`,
+    };
+  },
+});
+
+/**
  * Analyze email volume to classify broadcast vs personalized sends.
  * Scans sent emails and groups by source + subject to identify:
  * - Broadcasts: same subject sent to many recipients (could use Broadcasts API)

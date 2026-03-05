@@ -3,6 +3,15 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
+ * Extract the bare email address from a "Name <email>" formatted string.
+ * Returns the input as-is if it's already a plain email address.
+ */
+function extractEmail(toField: string): string {
+  const match = toField.match(/<([^>]+)>/);
+  return match ? match[1].toLowerCase().trim() : toField.toLowerCase().trim();
+}
+
+/**
  * Enqueue an email for sending via the batch queue.
  * Content must be fully resolved (personalized, variables replaced) before enqueueing.
  */
@@ -31,7 +40,7 @@ export const enqueueEmail = internalMutation({
   handler: async (ctx, args) => {
     // CAN-SPAM compliance: check suppression before enqueueing any non-transactional email
     if (args.source !== "transactional") {
-      const emailLower = args.toEmail.toLowerCase().trim();
+      const emailLower = extractEmail(args.toEmail);
 
       // Check resendPreferences (global unsubscribe)
       const pref = await ctx.db
@@ -147,7 +156,7 @@ export const enqueueEmailBatch = internalMutation({
     // Build suppression set for non-transactional emails
     const nonTransactionalEmails = args.emails
       .filter((e) => e.source !== "transactional")
-      .map((e) => e.toEmail.toLowerCase().trim());
+      .map((e) => extractEmail(e.toEmail));
     const uniqueEmails = [...new Set(nonTransactionalEmails)];
 
     const suppressedSet = new Set<string>();
@@ -174,7 +183,7 @@ export const enqueueEmailBatch = internalMutation({
     const ids: Id<"emailSendQueue">[] = [];
     for (const email of args.emails) {
       // Block suppressed non-transactional emails
-      if (email.source !== "transactional" && suppressedSet.has(email.toEmail.toLowerCase().trim())) {
+      if (email.source !== "transactional" && suppressedSet.has(extractEmail(email.toEmail))) {
         const blockedId = await ctx.db.insert("emailSendQueue", {
           storeId: email.storeId,
           source: email.source,
@@ -290,7 +299,7 @@ export const claimBatchForStore = internalMutation({
 
       // Transactional emails (receipts, password resets) bypass suppression per CAN-SPAM
       if (email.source !== "transactional") {
-        const emailLower = email.toEmail.toLowerCase().trim();
+        const emailLower = extractEmail(email.toEmail);
 
         // Check resendPreferences (global unsubscribe)
         const pref = await ctx.db

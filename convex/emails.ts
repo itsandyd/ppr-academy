@@ -7,6 +7,7 @@ import { internal } from "./_generated/api";
 import crypto from "crypto";
 import { Id } from "./_generated/dataModel";
 import { getMarketingResendClient, ensureMarketingContact } from "./lib/resendClients";
+import { sendEmailViaProvider, getEmailProvider } from "./lib/emailProvider";
 
 // ============================================================================
 // API KEY ENCRYPTION/DECRYPTION (AES-256-GCM)
@@ -217,6 +218,8 @@ function personalizeContent(
     .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl)
+    // Replace Resend-specific merge tags with PPR's own unsubscribe URL
+    .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl)
     // Learning stats
     .replace(/\{\{coursesEnrolled\}\}/g, String(stats.coursesEnrolled ?? 0))
     .replace(/\{\{courses_enrolled\}\}/g, String(stats.coursesEnrolled ?? 0))
@@ -433,11 +436,11 @@ export const sendCampaignBatch = internalAction({
     if (isEmailCampaign) {
       const emailCampaign = campaign as any;
       fromEmail = emailCampaign.fromEmail;
-      fromName = "PPR Academy";
+      fromName = "Andrew";
       replyToEmail = emailCampaign.replyToEmail || emailCampaign.fromEmail;
     } else {
-      fromEmail = "no-reply@pauseplayrepeat.com";
-      fromName = "PPR Academy";
+      fromEmail = "andrew@pauseplayrepeat.com";
+      fromName = "Andrew";
       replyToEmail = fromEmail;
     }
 
@@ -519,7 +522,7 @@ export const sendCampaignBatch = internalAction({
         const userStats = recipient.userId ? userStatsMap.get?.(recipient.userId) : undefined;
 
         const personalizedHtml = personalizeContent(htmlContent, {
-          name: recipient.name || "there",
+          name: recipient.name || "",
           email: recipient.email,
           musicAlias: recipient.musicAlias,
           daw: recipient.daw,
@@ -534,7 +537,7 @@ export const sendCampaignBatch = internalAction({
         });
 
         const personalizedSubject = personalizeContent(campaign.subject, {
-          name: recipient.name || "there",
+          name: recipient.name || "",
           email: recipient.email,
           musicAlias: recipient.musicAlias,
           daw: recipient.daw,
@@ -547,11 +550,24 @@ export const sendCampaignBatch = internalAction({
           userStats,
         });
 
-        await resend.emails.send({
+        // CAN-SPAM safety net: append unsubscribe footer if missing
+        let finalHtml = personalizedHtml;
+        if (!finalHtml.includes("unsubscribe")) {
+          finalHtml += `<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
+        }
+
+        // Format "to" header with recipient name if available
+        const toHeader = recipient.name
+          ? `${recipient.name} <${recipient.email}>`
+          : recipient.email;
+
+        await sendEmailViaProvider(resend, {
           from: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
-          to: recipient.email,
+          to: toHeader,
           subject: personalizedSubject,
-          html: personalizedHtml,
+          html: finalHtml,
           text: textContent,
           replyTo: replyToEmail,
           headers: listUnsubscribeHeaders,
@@ -735,7 +751,7 @@ export const testStoreEmailConfig = action({
       }
 
       // Send test email
-      const result = await resend.emails.send({
+      const result = await sendEmailViaProvider(resend, {
         from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
         to: args.testEmail,
         replyTo: args.replyToEmail || args.fromEmail,
@@ -775,15 +791,15 @@ export const testStoreEmailConfig = action({
         `,
       });
 
-      if (result.data?.id) {
+      if (result.success) {
         return {
           success: true,
-          message: "Test email sent successfully! Check your inbox.",
+          message: `Test email sent successfully via ${result.provider}! Check your inbox.`,
         };
       } else {
         return {
           success: false,
-          message: "Failed to send test email. Please check your configuration.",
+          message: result.error || "Failed to send test email. Please check your configuration.",
         };
       }
     } catch (error: any) {
@@ -882,8 +898,8 @@ export const sendBroadcastEmail = action({
       };
     }
 
-    const fromEmail = "no-reply@pauseplayrepeat.com";
-    const fromName = args.fromName || "PPR Academy";
+    const fromEmail = "andrew@pauseplayrepeat.com";
+    const fromName = args.fromName || "Andrew";
     const replyToEmail = fromEmail;
 
     let sent = 0;
@@ -931,63 +947,73 @@ export const sendBroadcastEmail = action({
       };
     }
 
-    // --- Broadcasts API path ---
-    // If marketing audience is configured, use the Broadcasts API.
-    // This automatically handles Resend-managed unsubscribe links.
-    const audienceId = process.env.RESEND_MARKETING_AUDIENCE_ID;
-    if (audienceId) {
-      try {
-        // Ensure all eligible contacts exist in the marketing audience
-        for (const contact of eligibleContacts) {
-          await ensureMarketingContact(
-            contact.email,
-            contact.firstName,
-            contact.lastName,
-          );
-        }
+    const provider = getEmailProvider();
 
-        // Create and immediately send the broadcast via Resend Broadcasts API
-        const { data, error } = await resend.broadcasts.create({
-          audienceId,
-          from: `${fromName} <${fromEmail}>`,
-          subject: args.subject, // Broadcasts have limited personalization
-          html: args.htmlContent,
-          replyTo: replyToEmail,
-          name: `PPR Broadcast ${new Date().toISOString().slice(0, 10)}`,
-        });
-
-        if (error) {
-          console.error(`[Broadcast] Failed to create broadcast:`, error);
-          // Fall through to per-recipient sends below
-        } else if (data?.id) {
-          // Send the broadcast
-          const { error: sendError } = await resend.broadcasts.send(data.id);
-          if (sendError) {
-            console.error(`[Broadcast] Failed to send broadcast ${data.id}:`, sendError);
-          } else {
-            // Update contact sent counts
-            for (const contact of eligibleContacts) {
-              try {
-                await ctx.runMutation(internal.emailQueries.incrementContactEmailsSent, {
-                  contactId: contact._id,
-                });
-              } catch {
-                // Non-critical — don't fail the broadcast for stats
-              }
-            }
-
-            return {
-              success: true,
-              sent: eligibleContacts.length,
-              failed: 0,
-              skipped,
-              message: `Broadcast sent to ${eligibleContacts.length} contact${eligibleContacts.length !== 1 ? "s" : ""} via Resend Broadcasts API${skipped > 0 ? `, ${skipped} skipped` : ""}`,
-            };
+    // --- Resend Broadcasts API path ---
+    // Only used when EMAIL_PROVIDER=resend and marketing audience is configured.
+    // SES doesn't need broadcast routing — every email is the same API call.
+    if (provider === "resend") {
+      const audienceId = process.env.RESEND_MARKETING_AUDIENCE_ID;
+      if (audienceId) {
+        try {
+          // Ensure all eligible contacts exist in the marketing audience
+          for (const contact of eligibleContacts) {
+            await ensureMarketingContact(
+              contact.email,
+              contact.firstName,
+              contact.lastName,
+            );
           }
+
+          // CAN-SPAM safety net: ensure broadcast HTML has an unsubscribe link
+          let broadcastHtml = args.htmlContent;
+          if (!broadcastHtml.includes("unsubscribe") && !broadcastHtml.includes("RESEND_UNSUBSCRIBE_URL")) {
+            broadcastHtml += `<br><br><br><br><br><br><br><br><br><br>
+<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
+<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
+          }
+
+          // Create and immediately send the broadcast via Resend Broadcasts API
+          const { data, error } = await resend.broadcasts.create({
+            audienceId,
+            from: `${fromName} <${fromEmail}>`,
+            subject: args.subject,
+            html: broadcastHtml,
+            replyTo: replyToEmail,
+            name: `PPR Broadcast ${new Date().toISOString().slice(0, 10)}`,
+          });
+
+          if (error) {
+            console.error(`[Broadcast] Failed to create broadcast:`, error);
+            // Fall through to per-recipient sends below
+          } else if (data?.id) {
+            const { error: sendError } = await resend.broadcasts.send(data.id);
+            if (sendError) {
+              console.error(`[Broadcast] Failed to send broadcast ${data.id}:`, sendError);
+            } else {
+              for (const contact of eligibleContacts) {
+                try {
+                  await ctx.runMutation(internal.emailQueries.incrementContactEmailsSent, {
+                    contactId: contact._id,
+                  });
+                } catch {
+                  // Non-critical — don't fail the broadcast for stats
+                }
+              }
+
+              return {
+                success: true,
+                sent: eligibleContacts.length,
+                failed: 0,
+                skipped,
+                message: `Broadcast sent to ${eligibleContacts.length} contact${eligibleContacts.length !== 1 ? "s" : ""} via Resend Broadcasts API${skipped > 0 ? `, ${skipped} skipped` : ""}`,
+              };
+            }
+          }
+        } catch (error) {
+          console.error(`[Broadcast] Broadcasts API failed, falling back to individual sends:`, error);
+          // Fall through to per-recipient sends
         }
-      } catch (error) {
-        console.error(`[Broadcast] Broadcasts API failed, falling back to individual sends:`, error);
-        // Fall through to per-recipient sends
       }
     }
 
@@ -999,7 +1025,7 @@ export const sendBroadcastEmail = action({
         const recipientName =
           contact.firstName || contact.lastName
             ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
-            : "there";
+            : "";
 
         const unsubscribeUrl = generateUnsubscribeUrl(contact.email, args.storeId);
         const listUnsubscribeHeaders = getListUnsubscribeHeaders(contact.email, args.storeId);
@@ -1015,10 +1041,15 @@ export const sendBroadcastEmail = action({
           email: contact.email,
         });
 
-        // MARKETING: Send via marketing Resend client (not transactional)
-        await resend.emails.send({
+        // Format "to" header with recipient name if available
+        const toHeader = recipientName
+          ? `${recipientName} <${contact.email}>`
+          : contact.email;
+
+        // MARKETING: Send via configured provider (Resend or SES)
+        await sendEmailViaProvider(resend, {
           from: `${fromName} <${fromEmail}>`,
-          to: contact.email,
+          to: toHeader,
           subject: personalizedSubject,
           html: personalizedHtml,
           replyTo: replyToEmail,
@@ -1281,7 +1312,7 @@ export const resendEnrollmentEmails = action({
 </body>
 </html>`;
 
-        const result = await resend!.emails.send({
+        const result = await sendEmailViaProvider(resend!, {
           from: "PPR Academy <no-reply@pauseplayrepeat.com>",
           to: purchase.userEmail,
           replyTo: "no-reply@pauseplayrepeat.com",
@@ -1292,8 +1323,8 @@ export const resendEnrollmentEmails = action({
         results.push({
           email: purchase.userEmail,
           course: purchase.courseTitle || "unknown",
-          status: "sent",
-          messageId: result.data?.id,
+          status: result.success ? "sent" : `error: ${result.error}`,
+          messageId: result.messageId,
         });
 
         // Small delay between sends to avoid rate limits

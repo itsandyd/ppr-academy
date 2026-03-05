@@ -56,7 +56,8 @@ export const sendNewMessageEmail = internalAction({
     const messageUrl = `${BASE_URL}/dashboard/messages/${args.conversationId}`;
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: FROM_EMAIL,
         to: recipient.email,
         subject: `New message from ${args.senderName} - ${PLATFORM_NAME}`,

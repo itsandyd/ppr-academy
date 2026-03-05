@@ -104,11 +104,15 @@ export const resolveAndEnqueueDripEmail = internalAction({
   },
   handler: async (ctx, args) => {
     const { ensureMarketingContact } = await import("./lib/resendClients");
+    const { getEmailProvider } = await import("./lib/emailProvider");
     const crypto = await import("crypto");
 
     // MARKETING: Ensure contact exists in Resend marketing audience before sending
-    const firstName = args.name.split(" ")[0] || "there";
-    await ensureMarketingContact(args.email, firstName !== "there" ? firstName : undefined);
+    // Skip when SES — Resend audience sync is unnecessary
+    const firstName = args.name.split(" ")[0] || "";
+    if (getEmailProvider() === "resend") {
+      await ensureMarketingContact(args.email, firstName || undefined);
+    }
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
@@ -121,7 +125,7 @@ export const resolveAndEnqueueDripEmail = internalAction({
     const personalizedHtml = args.htmlContent
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "there")
+      .replace(/\{\{name\}\}/g, args.name || "")
       .replace(/\{\{email\}\}/g, args.email)
       .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
       .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
@@ -129,25 +133,30 @@ export const resolveAndEnqueueDripEmail = internalAction({
     const personalizedSubject = args.subject
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "there");
+      .replace(/\{\{name\}\}/g, args.name || "");
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     const personalizedText = args.textContent
       ?.replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "there")
+      .replace(/\{\{name\}\}/g, args.name || "")
       .replace(/\{\{email\}\}/g, args.email)
       .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
       .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
+
+    // Format "to" with recipient name if available
+    const toEmail = args.name
+      ? `${args.name} <${args.email}>`
+      : args.email;
 
     // Enqueue instead of sending
     await ctx.runMutation(internal.emailSendQueue.enqueueEmail, {
       storeId: args.storeId,
       source: "drip",
       dripEnrollmentId: args.enrollmentId,
-      toEmail: args.email,
+      toEmail,
       fromName,
       fromEmail,
       subject: personalizedSubject,
@@ -191,11 +200,11 @@ export const sendDripEmail = internalAction({
     const unsubscribeUrl = `${baseUrl}/unsubscribe/${token}`;
     const apiUnsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${token}`;
 
-    const firstName = args.name.split(" ")[0] || "there";
+    const firstName = args.name.split(" ")[0] || "";
     const personalizedHtml = args.htmlContent
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "there")
+      .replace(/\{\{name\}\}/g, args.name || "")
       .replace(/\{\{email\}\}/g, args.email)
       .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
       .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
@@ -203,12 +212,13 @@ export const sendDripEmail = internalAction({
     const personalizedSubject = args.subject
       .replace(/\{\{firstName\}\}/g, firstName)
       .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "there");
+      .replace(/\{\{name\}\}/g, args.name || "");
 
-    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
-    await resend.emails.send({
+    const { sendEmailViaProvider } = await import("./lib/emailProvider");
+    await sendEmailViaProvider(resend, {
       from: `${fromName} <${fromEmail}>`,
       to: args.email,
       subject: personalizedSubject,

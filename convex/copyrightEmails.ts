@@ -41,7 +41,8 @@ export const sendClaimReceivedEmail = internalAction({
     }
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider } = await import("./lib/emailProvider");
+      await sendEmailViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.claimantEmail,
         subject: `Copyright Claim Received - ${PLATFORM_NAME}`,
@@ -125,7 +126,8 @@ export const sendClaimNoticeEmail = internalAction({
     });
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider: sendViaProvider } = await import("./lib/emailProvider");
+      await sendViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.creatorEmail,
         subject: `DMCA Copyright Claim Notice - Action Required - ${PLATFORM_NAME}`,
@@ -236,7 +238,8 @@ export const sendStrikeEmail = internalAction({
           : "Your account has been suspended.";
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider: sendStrikeViaProvider } = await import("./lib/emailProvider");
+      await sendStrikeViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.creatorEmail,
         subject,
@@ -340,7 +343,8 @@ export const sendClaimResolvedEmail = internalAction({
     const title = resolutionTitles[args.resolution];
 
     try {
-      await resend.emails.send({
+      const { sendEmailViaProvider: sendResolutionViaProvider } = await import("./lib/emailProvider");
+      await sendResolutionViaProvider(resend, {
         from: FROM_EMAIL,
         to: args.recipientEmail,
         subject: `Copyright Claim Update: ${title} - ${PLATFORM_NAME}`,

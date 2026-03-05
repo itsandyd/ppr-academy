@@ -624,7 +624,7 @@ Stuck on something? Just reply to this email.</p>
   {
     id: "mixing-inquiry-response",
     name: "Mixing Service Inquiry Response",
-    subject: "Re: Mixing inquiry - let's make your track shine",
+    subject: "Mixing inquiry - let's make your track shine",
     category: "services",
     description: "Respond to a mixing service inquiry",
     body: `<p>Hey {{firstName}},</p>
@@ -1414,6 +1414,31 @@ Our course builder makes it easy to organize and sell your content.</p>
 <p>Excited to see what you create!<br>The PPR Academy Team</p>`,
   },
 ];
+
+// CAN-SPAM compliant unsubscribe footer for marketing emails.
+// Uses {{unsubscribeLink}} which gets resolved to a real URL at send time
+// (individual sends) or converted to {{{RESEND_UNSUBSCRIBE_URL}}} (broadcasts).
+const MARKETING_EMAIL_FOOTER = `
+<div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+  <p style="font-size: 12px; color: #9ca3af; margin: 0 0 8px 0;">
+    You're receiving this because you signed up at PausePlayRepeat.
+  </p>
+  <p style="font-size: 12px; margin: 0 0 8px 0;">
+    <a href="{{unsubscribeLink}}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
+  </p>
+  <p style="font-size: 11px; color: #a0aec0; margin: 0;">
+    PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709
+  </p>
+</div>`;
+
+// Append unsubscribe footer to all non-transactional prebuilt templates.
+// Transactional templates (purchase confirmations, download reminders) are
+// exempt from CAN-SPAM unsubscribe requirements.
+for (const template of prebuiltEmailTemplates) {
+  if (template.category !== "transactional") {
+    template.body += MARKETING_EMAIL_FOOTER;
+  }
+}
 
 export const emailTemplateCategories = [
   { id: "all", label: "All Templates" },
