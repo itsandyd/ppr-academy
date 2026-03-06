@@ -542,7 +542,7 @@ Example format:
 
 const CONCEPT_CHUNKER = `You are a content director preparing a video script for visual production.
 
-Given a video script, divide it into 6-8 visual concept blocks. Each block represents ONE distinct idea, argument, or scene that would be shown as a single visual in a video.
+Given a video script, divide it into 6-8 visual concept blocks. Each block represents ONE distinct idea, argument, or scene that would be shown as a single visual in a video. Blocks MUST be in chronological order matching the script.
 
 # RULES
 - Group consecutive sentences that support the same point into one block
@@ -555,13 +555,15 @@ Given a video script, divide it into 6-8 visual concept blocks. Each block repre
 - If the script has fewer than 6 natural concepts, use fewer blocks (minimum 3)
 - If the script naturally has more than 8 concepts, merge only the least visually distinct ones
 - You MUST produce at least 6 blocks for any script with 6 or more paragraphs or distinct ideas
+- Each block MUST include a "keyQuote" — the single most vivid or important sentence from that section, quoted exactly as it appears in the script
 
 # OUTPUT FORMAT (JSON)
 {
   "blocks": [
     {
       "sentences": "Full text of all grouped sentences in this block...",
-      "concept": "Short label for the visual concept (e.g., 'The follower count myth', 'Conversion rate math')"
+      "concept": "Short label for the visual concept (e.g., 'The follower count myth', 'Conversion rate math')",
+      "keyQuote": "The single most important or vivid sentence from this block, copied verbatim from the script"
     }
   ]
 }
@@ -572,7 +574,7 @@ IMPORTANT: Output ONLY valid JSON, no markdown fences or extra text.
 const IMAGE_PROMPT_GENERATOR = `You are an expert at creating image prompts for educational content illustrations.
 
 # TASK
-You will be given a set of concept blocks from a video script. Each block has a concept label and the full text of that section. Create ONE image prompt per concept block.
+You will be given a set of concept blocks from a video script. Each block has a concept label, timing info, a key quote from the script, and the full text of that section. Create ONE image prompt per concept block. The image must visually represent the SPECIFIC content of that script section, not the general theme.
 
 # MANDATORY VISUAL STYLE: Excalidraw Hand-Drawn Aesthetic
 
@@ -597,8 +599,8 @@ You will be given a set of concept blocks from a video script. Each block has a 
 {
   "imagePrompts": [
     {
-      "sentence": "The concept label and a brief summary of the block text",
-      "prompt": "Excalidraw-style hand-drawn illustration showing [detailed description]. White background, flat indigo and purple colors, wobbly sketch lines, simple icons and shapes. Educational diagram style.",
+      "sentence": "Image 1 of N | Timing: 0:00 - 0:15 | Script: \\"Exact key quote from this section.\\"",
+      "prompt": "Excalidraw-style hand-drawn illustration showing [detailed description that visually represents the specific content of this script section]. White background, flat indigo and purple colors, wobbly sketch lines, simple icons and shapes. Educational diagram style.",
       "aspectRatio": "9:16"
     }
   ]
@@ -606,7 +608,14 @@ You will be given a set of concept blocks from a video script. Each block has a 
 
 IMPORTANT:
 - Create exactly ONE entry per concept block — do NOT split a block into multiple prompts
-- The "sentence" field should contain the concept label followed by the first sentence of the block
+- The "sentence" field MUST follow this format exactly: "Image X of N | Timing: M:SS - M:SS | Script: \\"[key quote from this section]\\""
+  - X = the image number (1, 2, 3...)
+  - N = total number of images
+  - Timing = the time range provided in the block header
+  - Script quote = the key quote provided in the block header, copied exactly
+- The "prompt" field must describe a visual that is SPECIFIC to what the script says in this section — NOT a generic theme image
+  - BAD: "Studio vibes, warm lighting, creative atmosphere"
+  - GOOD: "Hand-drawn Excalidraw-style diagram showing a compressor knob with labels for attack and release, with arrows indicating fast vs slow settings"
 - Focus each prompt on the MAIN IDEA of the block, not individual sentences
 - If a block contains math or numbers, show the key comparison or result, not every step
 - If a block describes a feature, show the feature in action, not each sub-detail
@@ -836,7 +845,7 @@ export const generateImagePrompts = action({
       console.log(`[generateImagePrompts] chunk attempt=${chunkAttempt} finishReason=${chunkResponse.finishReason} contentLen=${chunkResponse.content?.length ?? 0}`);
 
       const parsedChunks = safeParseJson<{
-        blocks: Array<{ sentences: string; concept: string }>;
+        blocks: Array<{ sentences: string; concept: string; keyQuote?: string }>;
       }>(chunkResponse.content, { blocks: [] });
 
       console.log(`[generateImagePrompts] parsed ${parsedChunks.blocks?.length ?? 0} concept blocks`);
@@ -922,11 +931,41 @@ export const generateImagePrompts = action({
 
     console.log(`[generateImagePrompts] Final block count: ${conceptBlocks.length}`);
 
+    // ── Step 1.5: Compute timing for each block based on word count ──
+    // Average speaking rate: ~150 words per minute
+    const WORDS_PER_MINUTE = 150;
+    const totalWords = script.split(/\s+/).filter((w) => w.length > 0).length;
+    const totalDurationSeconds = Math.round((totalWords / WORDS_PER_MINUTE) * 60);
+
+    // Calculate cumulative word counts for each block to assign time ranges
+    let cumulativeWords = 0;
+    const blocksWithTiming = conceptBlocks.map((block, i) => {
+      const blockWords = block.sentences.split(/\s+/).filter((w: string) => w.length > 0).length;
+      const startSeconds = Math.round((cumulativeWords / totalWords) * totalDurationSeconds);
+      cumulativeWords += blockWords;
+      const endSeconds = Math.round((cumulativeWords / totalWords) * totalDurationSeconds);
+
+      const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      const keyQuote = (block as { keyQuote?: string }).keyQuote ||
+        block.sentences.split(/[.!?]/).filter((s: string) => s.trim().length > 10)[0]?.trim() + "." ||
+        block.sentences.substring(0, 80);
+
+      return {
+        ...block,
+        blockNumber: i + 1,
+        totalBlocks: conceptBlocks.length,
+        timing: `${formatTime(startSeconds)} - ${formatTime(endSeconds)}`,
+        keyQuote,
+      };
+    });
+
+    console.log(`[generateImagePrompts] Script: ~${totalWords} words, ~${totalDurationSeconds}s total duration`);
+
     // ── Step 2: Generate one image prompt per concept block ──
     console.log("[generateImagePrompts] Step 2: Generating image prompts for concept blocks...");
 
-    const blocksPayload = conceptBlocks
-      .map((b, i) => `--- Block ${i + 1}: ${b.concept} ---\n${b.sentences}`)
+    const blocksPayload = blocksWithTiming
+      .map((b) => `--- Block ${b.blockNumber} of ${b.totalBlocks}: ${b.concept} ---\nTiming: ${b.timing}\nKey quote: "${b.keyQuote}"\nFull text: ${b.sentences}`)
       .join("\n\n");
 
     // Token budget: ~600 tokens per block for detailed Excalidraw prompts + JSON overhead
@@ -941,7 +980,7 @@ export const generateImagePrompts = action({
         },
         {
           role: "user" as const,
-          content: `Aspect ratio to use: ${aspectRatio}\n\nCreate ONE image prompt per concept block below. There are ${conceptBlocks.length} blocks — output exactly ${conceptBlocks.length} image prompts.\n\n${blocksPayload}`,
+          content: `Aspect ratio to use: ${aspectRatio}\n\nCreate ONE image prompt per concept block below. There are ${conceptBlocks.length} blocks — output exactly ${conceptBlocks.length} image prompts. Each block includes its timing and key quote — use these in the "sentence" field.\n\n${blocksPayload}`,
         },
       ],
       temperature: 0.7,

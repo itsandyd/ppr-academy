@@ -70,15 +70,16 @@ export const enqueueEmail = internalMutation({
         return blockedId;
       }
 
-      // Check emailContacts status across all stores
+      // Check emailContacts status for THIS store only (per-creator unsubscribe)
       const contacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_email", (q) => q.eq("email", emailLower))
         .take(5000);
-      const isContactUnsubscribed = contacts.some(
-        (c) => c.status === "unsubscribed" || c.status === "complained"
+      const storeContact = contacts.find(
+        (c) => c.storeId === args.storeId &&
+               (c.status === "unsubscribed" || c.status === "complained")
       );
-      if (isContactUnsubscribed) {
+      if (storeContact) {
         const blockedId = await ctx.db.insert("emailSendQueue", {
           storeId: args.storeId,
           source: args.source,
@@ -94,7 +95,7 @@ export const enqueueEmail = internalMutation({
           attempts: 0,
           maxAttempts: 0,
           queuedAt: Date.now(),
-          lastError: "Blocked: contact is unsubscribed",
+          lastError: "Blocked: contact is unsubscribed from this store",
         });
         return blockedId;
       }
@@ -170,19 +171,13 @@ export const enqueueEmailBatch = internalMutation({
         suppressedSet.add(emailAddr);
         continue;
       }
-      // Check emailContacts
-      const contacts = await ctx.db
-        .query("emailContacts")
-        .withIndex("by_email", (q) => q.eq("email", emailAddr))
-        .take(5000);
-      if (contacts.some((c) => c.status === "unsubscribed" || c.status === "complained")) {
-        suppressedSet.add(emailAddr);
-      }
+      // Check emailContacts — need to check per-email per-store below
+      // (handled in the per-email loop since each email may have a different storeId)
     }
 
     const ids: Id<"emailSendQueue">[] = [];
     for (const email of args.emails) {
-      // Block suppressed non-transactional emails
+      // Block globally suppressed non-transactional emails (resendPreferences)
       if (email.source !== "transactional" && suppressedSet.has(extractEmail(email.toEmail))) {
         const blockedId = await ctx.db.insert("emailSendQueue", {
           storeId: email.storeId,
@@ -203,6 +198,40 @@ export const enqueueEmailBatch = internalMutation({
         });
         ids.push(blockedId);
         continue;
+      }
+
+      // Per-store emailContacts suppression check
+      if (email.source !== "transactional") {
+        const emailAddr = extractEmail(email.toEmail);
+        const contacts = await ctx.db
+          .query("emailContacts")
+          .withIndex("by_email", (q) => q.eq("email", emailAddr))
+          .take(5000);
+        const storeContact = contacts.find(
+          (c) => c.storeId === email.storeId &&
+                 (c.status === "unsubscribed" || c.status === "complained")
+        );
+        if (storeContact) {
+          const blockedId = await ctx.db.insert("emailSendQueue", {
+            storeId: email.storeId,
+            source: email.source,
+            workflowExecutionId: email.workflowExecutionId,
+            dripEnrollmentId: email.dripEnrollmentId,
+            toEmail: email.toEmail,
+            fromName: email.fromName,
+            fromEmail: email.fromEmail,
+            subject: email.subject,
+            htmlContent: "",
+            status: "failed" as const,
+            priority: email.priority ?? 5,
+            attempts: 0,
+            maxAttempts: 0,
+            queuedAt: Date.now(),
+            lastError: "Blocked: contact is unsubscribed from this store",
+          });
+          ids.push(blockedId);
+          continue;
+        }
       }
 
       const id = await ctx.db.insert("emailSendQueue", {
@@ -314,15 +343,19 @@ export const claimBatchForStore = internalMutation({
           continue;
         }
 
-        // Check emailContacts status
+        // Check emailContacts status for THIS store only (per-creator unsubscribe)
         const contacts = await ctx.db
           .query("emailContacts")
           .withIndex("by_email", (q) => q.eq("email", emailLower))
           .take(10);
-        if (contacts.some((c) => c.status === "unsubscribed" || c.status === "complained")) {
+        const storeContact = contacts.find(
+          (c) => c.storeId === email.storeId &&
+                 (c.status === "unsubscribed" || c.status === "complained")
+        );
+        if (storeContact) {
           await ctx.db.patch(email._id, {
             status: "failed",
-            lastError: "Blocked at send time: contact unsubscribed",
+            lastError: "Blocked at send time: contact unsubscribed from this store",
           });
           continue;
         }

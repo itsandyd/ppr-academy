@@ -24551,19 +24551,6 @@ export declare const internal: {
       },
       any
     >;
-    sendDripEmail: FunctionReference<
-      "action",
-      "internal",
-      {
-        email: string;
-        enrollmentId: Id<"dripCampaignEnrollments">;
-        htmlContent: string;
-        name: string;
-        subject: string;
-        textContent?: string;
-      },
-      any
-    >;
     triggerCampaignsForEvent: FunctionReference<
       "action",
       "internal",
@@ -25304,7 +25291,7 @@ export declare const internal: {
     checkSuppressionBatch: FunctionReference<
       "query",
       "internal",
-      { emails: Array<string> },
+      { emails: Array<string>; storeId?: string },
       Array<{ email: string; reason?: string; suppressed: boolean }>
     >;
     markBounced: FunctionReference<

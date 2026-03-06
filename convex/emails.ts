@@ -490,8 +490,9 @@ export const sendCampaignBatch = internalAction({
     let skipped = 0;
 
     const emails = args.recipients.map((r: any) => r.email);
+    const campaignStoreId = (campaign as any).storeId;
     const suppressionResults: Array<{ email: string; suppressed: boolean; reason?: string }> =
-      await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails });
+      await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails, storeId: campaignStoreId });
     const suppressionMap = new Map<string, { email: string; suppressed: boolean; reason?: string }>(
       suppressionResults.map((r) => [r.email.toLowerCase(), r])
     );
@@ -925,10 +926,10 @@ export const sendBroadcastEmail = action({
       contactIds: args.contactIds,
     });
 
-    // Check suppression for all emails
+    // Check suppression for all emails (store-aware)
     const emails = contacts.map((c) => c.email);
     const suppressionResults: Array<{ email: string; suppressed: boolean; reason?: string }> =
-      await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails });
+      await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails, storeId: args.storeId });
     const suppressionMap = new Map(suppressionResults.map((r) => [r.email.toLowerCase(), r]));
 
     // Filter to eligible contacts (subscribed + not suppressed)

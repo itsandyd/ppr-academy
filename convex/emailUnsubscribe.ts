@@ -253,6 +253,7 @@ export const checkSuppression = query({
 export const checkSuppressionBatch = internalQuery({
   args: {
     emails: v.array(v.string()),
+    storeId: v.optional(v.string()),
   },
   returns: v.array(
     v.object({
@@ -268,7 +269,7 @@ export const checkSuppressionBatch = internalQuery({
     for (const email of args.emails) {
       const emailLower = email.toLowerCase().trim();
 
-      // Check resendPreferences by userId index
+      // Check resendPreferences by userId index (global unsubscribe — blocks ALL creators)
       const pref = await ctx.db
         .query("resendPreferences")
         .withIndex("by_user", (q) => q.eq("userId", emailLower))
@@ -278,7 +279,7 @@ export const checkSuppressionBatch = internalQuery({
         continue;
       }
 
-      // Check resendLogs for bounces/complaints by recipient index
+      // Check resendLogs for bounces/complaints by recipient index (global — bad address regardless of creator)
       const bouncedLog = await ctx.db
         .query("resendLogs")
         .withIndex("by_recipient", (q) => q.eq("recipientEmail", emailLower))
@@ -299,18 +300,33 @@ export const checkSuppressionBatch = internalQuery({
         continue;
       }
 
-      // Check emailContacts table for unsubscribed/complained status
+      // Check emailContacts table — per-creator unsubscribe (only block for the specific store)
       const contacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_email", (q) => q.eq("email", emailLower))
         .take(5000);
-      const contactSuppressed = contacts.some(
-        (c) => c.status === "unsubscribed" || c.status === "complained"
-      );
-      if (contactSuppressed) {
-        results.push({ email, suppressed: true, reason: "contact_unsubscribed" });
+
+      if (args.storeId) {
+        // Store-aware: only suppress if THIS store's contact record is unsubscribed/complained
+        const storeContact = contacts.find(
+          (c) => c.storeId === args.storeId &&
+                 (c.status === "unsubscribed" || c.status === "complained")
+        );
+        if (storeContact) {
+          results.push({ email, suppressed: true, reason: "contact_unsubscribed" });
+        } else {
+          results.push({ email, suppressed: false });
+        }
       } else {
-        results.push({ email, suppressed: false });
+        // No storeId provided — legacy behavior: suppress if ANY store's contact is unsubscribed
+        const contactSuppressed = contacts.some(
+          (c) => c.status === "unsubscribed" || c.status === "complained"
+        );
+        if (contactSuppressed) {
+          results.push({ email, suppressed: true, reason: "contact_unsubscribed" });
+        } else {
+          results.push({ email, suppressed: false });
+        }
       }
     }
 

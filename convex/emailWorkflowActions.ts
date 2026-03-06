@@ -796,10 +796,10 @@ export const resolveAndEnqueueCustomEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // CAN-SPAM: Check suppression before doing any work
+    // CAN-SPAM: Check suppression before doing any work (store-aware)
     const suppressionResults = await ctx.runQuery(
       internal.emailUnsubscribe.checkSuppressionBatch,
-      { emails: [args.customerEmail] }
+      { emails: [args.customerEmail], storeId: args.storeId }
     );
     if (suppressionResults[0]?.suppressed) {
       return null;
@@ -1015,10 +1015,10 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // CAN-SPAM: Check suppression before doing any work
+    // CAN-SPAM: Check suppression before doing any work (store-aware)
     const suppressionResults = await ctx.runQuery(
       internal.emailUnsubscribe.checkSuppressionBatch,
-      { emails: [args.customerEmail] }
+      { emails: [args.customerEmail], storeId: args.storeId }
     );
     if (suppressionResults[0]?.suppressed) {
       return null;
@@ -1338,6 +1338,46 @@ ${bodyContent}
       };
     }
 
+    // 6b. Filter out suppressed recipients before sending broadcast
+    const suppressionResults = await ctx.runQuery(
+      internal.emailUnsubscribe.checkSuppressionBatch,
+      { emails: args.recipientEmails, storeId: args.storeId }
+    );
+    const suppressedEmails = new Set(
+      suppressionResults
+        .filter((r) => r.suppressed)
+        .map((r) => r.email.toLowerCase())
+    );
+
+    // Filter recipientEmails and executionIds in parallel (same indices)
+    const filteredEmails: string[] = [];
+    const filteredExecIds: typeof args.executionIds = [];
+    for (let i = 0; i < args.recipientEmails.length; i++) {
+      if (!suppressedEmails.has(args.recipientEmails[i].toLowerCase())) {
+        filteredEmails.push(args.recipientEmails[i]);
+        filteredExecIds.push(args.executionIds[i]);
+      }
+    }
+
+    if (filteredEmails.length === 0) {
+      // All recipients suppressed — mark executions as handled (no email to send)
+      try {
+        await ctx.runMutation(internal.emailWorkflows.bulkAdvanceAfterEmailNode, {
+          executionIds: args.executionIds,
+          workflowId: args.workflowId,
+          emailNodeId: args.emailNodeId,
+        });
+      } catch (error) {
+        console.error("[Broadcast] Failed to advance suppressed executions:", error);
+      }
+      return {
+        success: true,
+        handledExecutionIds: args.executionIds,
+        recipientCount: 0,
+        method: "broadcast-all-suppressed",
+      };
+    }
+
     // 7. Ensure all contacts exist in the marketing audience
     let audienceId: string;
     try {
@@ -1349,13 +1389,13 @@ ${bodyContent}
 
     // Batch-ensure contacts (with concurrency limit to avoid rate limits)
     const CONTACT_BATCH_SIZE = 50;
-    for (let i = 0; i < args.recipientEmails.length; i += CONTACT_BATCH_SIZE) {
-      const batch = args.recipientEmails.slice(i, i + CONTACT_BATCH_SIZE);
+    for (let i = 0; i < filteredEmails.length; i += CONTACT_BATCH_SIZE) {
+      const batch = filteredEmails.slice(i, i + CONTACT_BATCH_SIZE);
       await Promise.all(
         batch.map((email) => ensureMarketingContact(email))
       );
       // Small delay between batches to avoid rate limits on contacts API
-      if (i + CONTACT_BATCH_SIZE < args.recipientEmails.length) {
+      if (i + CONTACT_BATCH_SIZE < filteredEmails.length) {
         await new Promise((r) => setTimeout(r, 200));
       }
     }
@@ -1389,14 +1429,14 @@ ${bodyContent}
         return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: JSON.stringify(sendError) };
       }
 
-      console.log(`[Broadcast] Successfully sent broadcast ${data.id} to audience ${audienceId} (${args.recipientEmails.length} recipients)`);
+      console.log(`[Broadcast] Successfully sent broadcast ${data.id} to audience ${audienceId} (${filteredEmails.length} recipients, ${suppressedEmails.size} suppressed)`);
 
     } catch (error: any) {
       console.error("[Broadcast] Exception during broadcast create/send:", error);
       return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: String(error) };
     }
 
-    // 9. Advance all executions to the next node
+    // 9. Advance all executions to the next node (including suppressed ones — they're handled)
     try {
       await ctx.runMutation(internal.emailWorkflows.bulkAdvanceAfterEmailNode, {
         executionIds: args.executionIds,
@@ -1411,7 +1451,7 @@ ${bodyContent}
     return {
       success: true,
       handledExecutionIds: args.executionIds,
-      recipientCount: args.recipientEmails.length,
+      recipientCount: filteredEmails.length,
       method: "broadcast",
     };
   },
@@ -1432,10 +1472,10 @@ export const sendCustomWorkflowEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // CAN-SPAM: Check suppression before doing any work
+    // CAN-SPAM: Check suppression before doing any work (store-aware)
     const suppressionResults = await ctx.runQuery(
       internal.emailUnsubscribe.checkSuppressionBatch,
-      { emails: [args.customerEmail] }
+      { emails: [args.customerEmail], storeId: args.storeId }
     );
     if (suppressionResults[0]?.suppressed) {
       return null;

@@ -65,6 +65,7 @@ export const processExecution = internalAction({
 
     const suppressionResults = await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, {
       emails: [execution.customerEmail],
+      storeId: execution.storeId,
     });
     const suppression = suppressionResults[0];
 

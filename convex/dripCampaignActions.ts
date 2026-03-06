@@ -45,7 +45,7 @@ export const processDueDripEmails = internalAction({
 
         const suppressionResults = await ctx.runQuery(
           internal.emailUnsubscribe.checkSuppressionBatch,
-          { emails: [enrollment.email] }
+          { emails: [enrollment.email], storeId: campaign.storeId }
         );
         const suppression = suppressionResults[0];
 
@@ -168,67 +168,6 @@ export const resolveAndEnqueueDripEmail = internalAction({
       },
     });
 
-  },
-});
-
-/**
- * Send a drip email directly via Resend.
- * LEGACY: Kept for backwards compatibility. New code uses resolveAndEnqueueDripEmail.
- * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
- */
-export const sendDripEmail = internalAction({
-  args: {
-    enrollmentId: v.id("dripCampaignEnrollments"),
-    email: v.string(),
-    name: v.string(),
-    subject: v.string(),
-    htmlContent: v.string(),
-    textContent: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { getMarketingResendClient } = await import("./lib/resendClients");
-    const crypto = await import("crypto");
-
-    // MARKETING: Use marketing Resend client for drip campaign sends
-    const resend = getMarketingResendClient();
-
-    const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
-    const emailBase64 = Buffer.from(args.email).toString("base64url");
-    const signature = crypto.createHmac("sha256", secret).update(args.email).digest("base64url");
-    const token = `${emailBase64}.${signature}`;
-    const unsubscribeUrl = `${baseUrl}/unsubscribe/${token}`;
-    const apiUnsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${token}`;
-
-    const firstName = args.name.split(" ")[0] || "";
-    const personalizedHtml = args.htmlContent
-      .replace(/\{\{firstName\}\}/g, firstName)
-      .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "")
-      .replace(/\{\{email\}\}/g, args.email)
-      .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
-      .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl);
-
-    const personalizedSubject = args.subject
-      .replace(/\{\{firstName\}\}/g, firstName)
-      .replace(/\{\{first_name\}\}/g, firstName)
-      .replace(/\{\{name\}\}/g, args.name || "");
-
-    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
-    const fromName = process.env.FROM_NAME || "Andrew";
-
-    const { sendEmailViaProvider } = await import("./lib/emailProvider");
-    await sendEmailViaProvider(resend, {
-      from: `${fromName} <${fromEmail}>`,
-      to: args.email,
-      subject: personalizedSubject,
-      html: personalizedHtml,
-      text: args.textContent,
-      headers: {
-        "List-Unsubscribe": `<${apiUnsubscribeUrl}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
-    });
   },
 });
 
