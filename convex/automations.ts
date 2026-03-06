@@ -3,6 +3,84 @@ import { mutation, query, internalMutation, internalQuery } from "./_generated/s
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 
+// ==================== SHARED HELPERS ====================
+
+/**
+ * Core logic for finding an automation by keyword match.
+ * Shared between the public query and the internal query (webhook handler).
+ */
+async function _findAutomationByKeyword(ctx: { db: any }, keyword: string) {
+  const textLower = keyword.toLowerCase();
+
+  // Get all keywords and check if any are contained in the text
+  const allKeywords = await ctx.db.query("keywords").take(10000);
+
+  // Find a keyword that's contained in the text
+  const keywordMatch = allKeywords.find((kw: any) => textLower.includes(kw.word.toLowerCase()));
+
+  if (!keywordMatch) {
+    return null;
+  }
+
+  // Get the full automation with all related data
+  const automation = await ctx.db.get(keywordMatch.automationId);
+
+  if (!automation) {
+    return null;
+  }
+
+  const [trigger, listener, posts, user, keywords] = await Promise.all([
+    ctx.db
+      .query("triggers")
+      .withIndex("by_automationId", (q: any) => q.eq("automationId", automation._id))
+      .first(),
+    ctx.db
+      .query("listeners")
+      .withIndex("by_automationId", (q: any) => q.eq("automationId", automation._id))
+      .first(),
+    ctx.db
+      .query("posts")
+      .withIndex("by_automationId", (q: any) => q.eq("automationId", automation._id))
+      .take(200),
+    ctx.db.get(automation.userId),
+    ctx.db
+      .query("keywords")
+      .withIndex("by_automationId", (q: any) => q.eq("automationId", automation._id))
+      .take(200),
+  ]);
+
+  // Get user's Instagram integration
+  const integration = user
+    ? await ctx.db
+        .query("integrations")
+        .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+        .first()
+    : null;
+
+  // Get subscription for Smart AI check
+  const subscription = user
+    ? await ctx.db
+        .query("userSubscriptions")
+        .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+        .first()
+    : null;
+
+  return {
+    ...automation,
+    trigger,
+    listener,
+    posts: posts || [],
+    keywords: keywords || [],
+    user: user
+      ? {
+          ...user,
+          subscription,
+          integration,
+        }
+      : null,
+  };
+}
+
 // ==================== QUERIES ====================
 
 /**
@@ -128,75 +206,19 @@ export const findAutomationByKeyword = query({
   args: { keyword: v.string() },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
-    const textLower = args.keyword.toLowerCase();
+    return _findAutomationByKeyword(ctx, args.keyword);
+  },
+});
 
-    // Get all keywords and check if any are contained in the text
-    const allKeywords = await ctx.db.query("keywords").take(10000);
-
-    // Find a keyword that's contained in the text
-    const keywordMatch = allKeywords.find((kw) => textLower.includes(kw.word.toLowerCase()));
-
-    if (!keywordMatch) {
-      return null;
-    }
-
-    // Get the full automation with all related data
-    const automation = await ctx.db.get(keywordMatch.automationId);
-
-    if (!automation) {
-      return null;
-    }
-
-    const [trigger, listener, posts, user, keywords] = await Promise.all([
-      ctx.db
-        .query("triggers")
-        .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .first(),
-      ctx.db
-        .query("listeners")
-        .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .first(),
-      ctx.db
-        .query("posts")
-        .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .take(200),
-      ctx.db.get(automation.userId),
-      ctx.db
-        .query("keywords")
-        .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
-        .take(200),
-    ]);
-
-    // Get user's Instagram integration
-    const integration = user
-      ? await ctx.db
-          .query("integrations")
-          .withIndex("by_userId", (q) => q.eq("userId", user._id))
-          .first()
-      : null;
-
-    // Get subscription for Smart AI check
-    const subscription = user
-      ? await ctx.db
-          .query("userSubscriptions")
-          .withIndex("by_userId", (q) => q.eq("userId", user._id))
-          .first()
-      : null;
-
-    return {
-      ...automation,
-      trigger,
-      listener,
-      posts: posts || [],
-      keywords: keywords || [],
-      user: user
-        ? {
-            ...user,
-            subscription,
-            integration,
-          }
-        : null,
-    };
+/**
+ * Find automation by keyword (internal version for webhook handler).
+ * Same logic as findAutomationByKeyword but uses internalQuery (no auth).
+ */
+export const findAutomationByKeywordInternal = internalQuery({
+  args: { keyword: v.string() },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    return _findAutomationByKeyword(ctx, args.keyword);
   },
 });
 

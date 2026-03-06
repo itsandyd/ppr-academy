@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import OpenAI from "openai";
 import { decryptToken, isEncrypted } from "../lib/encryption";
 
@@ -71,7 +71,7 @@ export const processWebhook = internalAction({
 
         // Find automation by keyword match
         const matcher = await ctx.runQuery(
-          (api as any).automations.findAutomationByKeyword,
+          (internal as any).automations.findAutomationByKeywordInternal,
           { keyword: messageText.toLowerCase() }
         );
 
@@ -97,13 +97,13 @@ export const processWebhook = internalAction({
       // CASE 2: Check entry.changes for both comments AND messages
       if (entry.changes && entry.changes.length > 0) {
         const change = entry.changes[0];
-        
+
         // CASE 2a: Direct Message via entry.changes (Instagram style)
         if (change.field === "messages") {
           const messageData = change.value;
           const messageText = messageData?.message?.text || messageData?.text;
           const senderId = messageData?.sender?.id || messageData?.from?.id;
-          
+
           if (!messageText || !senderId) {
             return null;
           }
@@ -127,7 +127,7 @@ export const processWebhook = internalAction({
 
           // Find automation by keyword match
           const matcher = await ctx.runQuery(
-            (api as any).automations.findAutomationByKeyword,
+            (internal as any).automations.findAutomationByKeywordInternal,
             { keyword: messageText.toLowerCase() }
           );
 
@@ -169,7 +169,7 @@ export const processWebhook = internalAction({
 
         // Find automation by keyword
         const matcher = await ctx.runQuery(
-          (api as any).automations.findAutomationByKeyword,
+          (internal as any).automations.findAutomationByKeywordInternal,
           { keyword: commentText.toLowerCase() }
         );
 
@@ -243,14 +243,14 @@ async function executeAutomation(
   } | null;
   
   let tokenData = await ctx.runQuery(
-    (api as any).socialMedia.getInstagramTokenByBusinessId,
+    (internal as any).socialMedia.getInstagramTokenByBusinessIdInternal,
     { instagramBusinessAccountId: receiverId }
   ) as TokenData;
 
   // Fallback to user-based lookup if business ID lookup fails
   if (!tokenData?.accessToken) {
     tokenData = await ctx.runQuery(
-      (api as any).socialMedia.getInstagramToken,
+      (internal as any).socialMedia.getInstagramTokenInternal,
       { userId: automation.userId }
     ) as TokenData;
   }
@@ -345,16 +345,16 @@ async function executeAutomation(
     try {
       // Get the user to find their clerkId
       const user = await ctx.runQuery(
-        (api as any).users.getById,
-        { id: automation.userId }
+        (internal as any).socialMedia.getUserByIdInternal,
+        { userId: automation.userId }
       ) as { clerkId?: string } | null;
-      
+
       if (user?.clerkId) {
         const contextResult = await ctx.runAction(
           (internal as any).socialPostEmbeddings.searchSocialPostContext,
           { userId: user.clerkId, query: messageText, limit: 3 }
         ) as { context: string; matchCount: number };
-        
+
         if (contextResult.matchCount > 0) {
           socialPostContext = contextResult.context;
         }
@@ -470,14 +470,14 @@ async function continueSmartAIConversation(
   } | null;
   
   let tokenData = await ctx.runQuery(
-    (api as any).socialMedia.getInstagramTokenByBusinessId,
+    (internal as any).socialMedia.getInstagramTokenByBusinessIdInternal,
     { instagramBusinessAccountId: receiverId }
   ) as TokenData;
 
   // Fallback to user-based lookup if business ID lookup fails
   if (!tokenData?.accessToken) {
     tokenData = await ctx.runQuery(
-      (api as any).socialMedia.getInstagramToken,
+      (internal as any).socialMedia.getInstagramTokenInternal,
       { userId: automation.userId }
     ) as TokenData;
   }
@@ -503,8 +503,8 @@ async function continueSmartAIConversation(
   try {
     // Get the user to find their clerkId
     const user = await ctx.runQuery(
-      (api as any).users.getById,
-      { id: automation.userId }
+      (internal as any).socialMedia.getUserByIdInternal,
+      { userId: automation.userId }
     ) as { clerkId?: string } | null;
 
     if (user?.clerkId) {

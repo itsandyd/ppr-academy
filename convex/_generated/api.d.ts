@@ -23175,6 +23175,12 @@ export declare const internal: {
       { receiverId: string; senderId: string },
       { automationId: Id<"automations">; history: Array<any> } | null
     >;
+    findAutomationByKeywordInternal: FunctionReference<
+      "query",
+      "internal",
+      { keyword: string },
+      any | null
+    >;
     getAutomationWithListener: FunctionReference<
       "query",
       "internal",
@@ -29824,6 +29830,23 @@ export declare const internal: {
     >;
   };
   socialMedia: {
+    getInstagramTokenByBusinessIdInternal: FunctionReference<
+      "query",
+      "internal",
+      { instagramBusinessAccountId: string },
+      {
+        accessToken: string;
+        facebookPageId?: string;
+        instagramId: string;
+        username: string;
+      } | null
+    >;
+    getInstagramTokenInternal: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      { accessToken: string; instagramId: string; username: string } | null
+    >;
     getMediaUrlsInternal: FunctionReference<
       "query",
       "internal",
@@ -29836,6 +29859,12 @@ export declare const internal: {
       "internal",
       { accountId: Id<"socialAccounts"> },
       any
+    >;
+    getUserByIdInternal: FunctionReference<
+      "query",
+      "internal",
+      { userId: Id<"users"> },
+      { _id: Id<"users">; clerkId?: string } | null
     >;
     updatePostStatus: FunctionReference<
       "mutation",

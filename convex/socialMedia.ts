@@ -138,65 +138,7 @@ export const getInstagramTokenByBusinessId = query({
   ),
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    // PRIORITY 1: Check socialAccounts table (fresh OAuth tokens from reconnection flow)
-    const socialAccounts = await ctx.db
-      .query("socialAccounts")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("platform"), "instagram"),
-          q.eq(q.field("isConnected"), true),
-          q.eq(q.field("isActive"), true)
-        )
-      )
-      .take(1000);
-
-    for (const account of socialAccounts) {
-      const platformData = account.platformData as any;
-      if (
-        platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId ||
-        account.platformUserId === args.instagramBusinessAccountId
-      ) {
-        return {
-          accessToken: account.accessToken,
-          username: account.platformUsername || "",
-          instagramId: account.platformUserId,
-          facebookPageId: platformData?.facebookPageId,
-        };
-      }
-    }
-
-    // FALLBACK: Check legacy integrations table (for backwards compatibility)
-    const integration = await ctx.db
-      .query("integrations")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("name"), "INSTAGRAM"),
-          q.eq(q.field("instagramId"), args.instagramBusinessAccountId),
-          q.eq(q.field("isActive"), true)
-        )
-      )
-      .first();
-
-    if (integration?.token) {
-      // Try to get Page ID from socialAccounts for this account
-      let facebookPageId: string | undefined;
-      for (const account of socialAccounts) {
-        const platformData = account.platformData as any;
-        if (platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId) {
-          facebookPageId = platformData?.facebookPageId;
-          break;
-        }
-      }
-      
-      return {
-        accessToken: integration.token,
-        username: integration.username || "",
-        instagramId: integration.instagramId || args.instagramBusinessAccountId,
-        facebookPageId,
-      };
-    }
-
-    return null;
+    return _getInstagramTokenByBusinessId(ctx, args.instagramBusinessAccountId);
   },
 });
 
@@ -219,49 +161,7 @@ export const getInstagramToken = query({
   ),
   handler: async (ctx, args) => {
     await requireAuth(ctx);
-    // Get the user to find their Clerk ID
-    const user = await ctx.db.get(args.userId);
-    if (!user?.clerkId) {
-      return null;
-    }
-
-    // PRIORITY: Check socialAccounts table first (has fresh tokens)
-    const socialAccount = await ctx.db
-      .query("socialAccounts")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("userId"), user.clerkId),
-          q.eq(q.field("platform"), "instagram"),
-          q.eq(q.field("isConnected"), true),
-          q.eq(q.field("isActive"), true)
-        )
-      )
-      .first();
-
-    if (socialAccount?.accessToken) {
-      return {
-        accessToken: socialAccount.accessToken,
-        username: socialAccount.platformUsername || "",
-        instagramId: socialAccount.platformUserId,
-      };
-    }
-
-    // Fallback: check integrations table (legacy)
-    const integration = await ctx.db
-      .query("integrations")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("name"), "INSTAGRAM"))
-      .first();
-
-    if (integration?.token) {
-      return {
-        accessToken: integration.token,
-        username: integration.username || "",
-        instagramId: integration.instagramId || "",
-      };
-    }
-
-    return null;
+    return _getInstagramTokenByUserId(ctx, args.userId);
   },
 });
 
@@ -296,6 +196,198 @@ export const getSocialAccountById = internalQuery({
   returns: v.any(),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.accountId);
+  },
+});
+
+// ==================== SHARED HELPERS (no auth) ====================
+
+/**
+ * Core logic for looking up an Instagram token by Business Account ID.
+ * Shared between the public (auth-gated) query and the internal (webhook) query.
+ */
+async function _getInstagramTokenByBusinessId(
+  ctx: { db: any },
+  instagramBusinessAccountId: string
+) {
+  // PRIORITY 1: Check socialAccounts table (fresh OAuth tokens from reconnection flow)
+  const socialAccounts = await ctx.db
+    .query("socialAccounts")
+    .filter((q: any) =>
+      q.and(
+        q.eq(q.field("platform"), "instagram"),
+        q.eq(q.field("isConnected"), true),
+        q.eq(q.field("isActive"), true)
+      )
+    )
+    .take(1000);
+
+  for (const account of socialAccounts) {
+    const platformData = account.platformData as any;
+    if (
+      platformData?.instagramBusinessAccountId === instagramBusinessAccountId ||
+      account.platformUserId === instagramBusinessAccountId
+    ) {
+      return {
+        accessToken: account.accessToken,
+        username: account.platformUsername || "",
+        instagramId: account.platformUserId,
+        facebookPageId: platformData?.facebookPageId,
+      };
+    }
+  }
+
+  // FALLBACK: Check legacy integrations table (for backwards compatibility)
+  const integration = await ctx.db
+    .query("integrations")
+    .filter((q: any) =>
+      q.and(
+        q.eq(q.field("name"), "INSTAGRAM"),
+        q.eq(q.field("instagramId"), instagramBusinessAccountId),
+        q.eq(q.field("isActive"), true)
+      )
+    )
+    .first();
+
+  if (integration?.token) {
+    let facebookPageId: string | undefined;
+    for (const account of socialAccounts) {
+      const platformData = account.platformData as any;
+      if (platformData?.instagramBusinessAccountId === instagramBusinessAccountId) {
+        facebookPageId = platformData?.facebookPageId;
+        break;
+      }
+    }
+
+    return {
+      accessToken: integration.token,
+      username: integration.username || "",
+      instagramId: integration.instagramId || instagramBusinessAccountId,
+      facebookPageId,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Core logic for looking up an Instagram token by user ID.
+ * Shared between the public (auth-gated) query and the internal (webhook) query.
+ */
+async function _getInstagramTokenByUserId(
+  ctx: { db: any },
+  userId: Id<"users">
+) {
+  const user = await ctx.db.get(userId);
+  if (!user?.clerkId) {
+    return null;
+  }
+
+  // PRIORITY: Check socialAccounts table first (has fresh tokens)
+  const socialAccount = await ctx.db
+    .query("socialAccounts")
+    .filter((q: any) =>
+      q.and(
+        q.eq(q.field("userId"), user.clerkId),
+        q.eq(q.field("platform"), "instagram"),
+        q.eq(q.field("isConnected"), true),
+        q.eq(q.field("isActive"), true)
+      )
+    )
+    .first();
+
+  if (socialAccount?.accessToken) {
+    return {
+      accessToken: socialAccount.accessToken,
+      username: socialAccount.platformUsername || "",
+      instagramId: socialAccount.platformUserId,
+    };
+  }
+
+  // Fallback: check integrations table (legacy)
+  const integration = await ctx.db
+    .query("integrations")
+    .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+    .filter((q: any) => q.eq(q.field("name"), "INSTAGRAM"))
+    .first();
+
+  if (integration?.token) {
+    return {
+      accessToken: integration.token,
+      username: integration.username || "",
+      instagramId: integration.instagramId || "",
+    };
+  }
+
+  return null;
+}
+
+// ==================== INTERNAL QUERIES (for webhooks / server-to-server) ====================
+
+/**
+ * Get Instagram token by Business Account ID (internal — no auth required).
+ * Used by webhook handlers that process incoming Instagram events.
+ */
+export const getInstagramTokenByBusinessIdInternal = internalQuery({
+  args: {
+    instagramBusinessAccountId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      accessToken: v.string(),
+      username: v.string(),
+      instagramId: v.string(),
+      facebookPageId: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    return _getInstagramTokenByBusinessId(ctx, args.instagramBusinessAccountId);
+  },
+});
+
+/**
+ * Get Instagram token by user ID (internal — no auth required).
+ * Used by webhook handlers that process incoming Instagram events.
+ */
+export const getInstagramTokenInternal = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.union(
+    v.object({
+      accessToken: v.string(),
+      username: v.string(),
+      instagramId: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    return _getInstagramTokenByUserId(ctx, args.userId);
+  },
+});
+
+/**
+ * Get user by ID (internal — no auth required).
+ * Used by webhook handlers to look up user clerkId for embeddings search.
+ */
+export const getUserByIdInternal = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("users"),
+      clerkId: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      clerkId: user.clerkId,
+    };
   },
 });
 
