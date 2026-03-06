@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { api } from '@/convex/_generated/api';
-import { fetchMutation } from 'convex/nextjs';
+import { ConvexHttpClient } from 'convex/browser';
 import { encryptToken } from '@/lib/encryption';
 
 /**
@@ -12,8 +12,8 @@ export async function POST(
   { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const { userId } = await auth();
-    
+    const { userId, getToken } = await auth();
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -87,7 +87,15 @@ export async function POST(
         }
       : undefined;
 
-    await fetchMutation(api.socialMedia.connectSocialAccount, {
+    // Use ConvexHttpClient with explicit Clerk JWT to authenticate the mutation.
+    // fetchMutation() without a token runs unauthenticated, causing requireStoreOwner to fail.
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    const convexToken = await getToken({ template: "convex" });
+    if (convexToken) {
+      convex.setAuth(convexToken);
+    }
+
+    await convex.mutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
       platform: platform as any,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { api } from '@/convex/_generated/api';
-import { fetchMutation } from 'convex/nextjs';
+import { ConvexHttpClient } from 'convex/browser';
 import { encryptToken, decryptToken } from '@/lib/encryption';
 import {
   OAUTH_SESSION_COOKIE,
@@ -89,7 +89,7 @@ export async function GET(
   { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
 
     if (!userId) {
       return NextResponse.redirect(
@@ -123,7 +123,7 @@ export async function GET(
     if (!stateParam || stateParam !== session.state) {
       console.error('OAuth callback: state mismatch (possible CSRF)');
       return redirectAndClear(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${session.storeId}/social?social_error=state_mismatch`
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=state_mismatch`
       );
     }
 
@@ -132,13 +132,13 @@ export async function GET(
 
     if (error) {
       return redirectAndClear(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=${encodeURIComponent(error)}`
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=${encodeURIComponent(error)}`
       );
     }
 
     if (!code) {
       return redirectAndClear(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=missing_params`
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=missing_params`
       );
     }
 
@@ -165,7 +165,7 @@ export async function GET(
         if (!codeVerifier) {
           console.error('OAuth callback: missing code_verifier for Twitter PKCE');
           return redirectAndClear(
-            `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=pkce_missing`
+            `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=pkce_missing`
           );
         }
         tokenData = await exchangeTwitterCode(code, codeVerifier);
@@ -185,7 +185,7 @@ export async function GET(
 
       default:
         return redirectAndClear(
-          `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=unsupported_platform`
+          `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=unsupported_platform`
         );
     }
 
@@ -231,7 +231,15 @@ export async function GET(
         }
       : undefined;
 
-    await fetchMutation(api.socialMedia.connectSocialAccount, {
+    // Use ConvexHttpClient with explicit Clerk JWT to authenticate the mutation.
+    // fetchMutation() without a token runs unauthenticated, causing requireStoreOwner to fail.
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    const convexToken = await getToken({ template: "convex" });
+    if (convexToken) {
+      convex.setAuth(convexToken);
+    }
+
+    await convex.mutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
       platform: platform as any,
@@ -264,9 +272,11 @@ export async function GET(
                   type: 'oauth_success',
                   platform: '${platform}',
                   storeId: '${storeId}'
-                }, '*');
+                }, window.location.origin);
+                window.close();
+              } else {
+                window.location.href = '${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_success=${platform}';
               }
-              window.close();
             </script>
             <div style="text-align: center; padding: 50px; font-family: sans-serif;">
               <h2>Connected Successfully!</h2>
@@ -279,7 +289,7 @@ export async function GET(
       return htmlAndClear(html);
     } else {
       return redirectAndClear(
-        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_success=${platform}`
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_success=${platform}`
       );
     }
   } catch (error: any) {
@@ -305,9 +315,11 @@ export async function GET(
                   type: 'oauth_error',
                   error: '${safeError}',
                   storeId: '${storeId || ''}'
-                }, '*');
+                }, window.location.origin);
+                window.close();
+              } else {
+                window.location.href = '${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=server_error';
               }
-              window.close();
             </script>
             <div style="text-align: center; padding: 50px; font-family: sans-serif;">
               <h2>Connection Failed</h2>
@@ -319,13 +331,8 @@ export async function GET(
 
       return htmlAndClear(html);
     } else {
-      if (storeId) {
-        return redirectAndClear(
-          `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=server_error`
-        );
-      }
       return redirectAndClear(
-        `${process.env.NEXT_PUBLIC_APP_URL}/home?social_error=server_error`
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/social/?social_error=server_error`
       );
     }
   }
