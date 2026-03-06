@@ -1772,17 +1772,19 @@ export const getSocialAccount = internalQuery({
  */
 async function sendInstagramDM(message: any, account: any): Promise<boolean> {
   try {
-    // Get Instagram Business Account ID and access token from account
-    const instagramBusinessAccountId = account.platformData?.instagramBusinessAccountId || account.platformUserId;
+    // Instagram DMs require the Facebook Page ID, NOT the Instagram Business Account ID
+    const facebookPageId = account.platformData?.facebookPageId;
     const accessToken = account.accessToken;
 
-    if (!instagramBusinessAccountId || !accessToken) {
-      console.error("❌ Missing Instagram credentials for DM");
+    if (!facebookPageId || !accessToken) {
+      console.error("❌ Missing Instagram credentials for DM - facebookPageId:", !!facebookPageId, "accessToken:", !!accessToken);
       return false;
     }
 
-    // Use Facebook Graph API for Instagram messaging
-    const url = `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/messages`;
+    // Use Facebook Graph API with Page ID for Instagram messaging
+    const url = `https://graph.facebook.com/v21.0/${facebookPageId}/messages`;
+
+    console.log("DM send:", { endpoint: url, tokenPrefix: accessToken.substring(0, 10) + "...", pageId: facebookPageId, igBusinessId: account.platformData?.instagramBusinessAccountId || account.platformUserId });
 
     const response = await fetch(url, {
       method: "POST",

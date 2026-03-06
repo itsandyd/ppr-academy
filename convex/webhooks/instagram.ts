@@ -279,7 +279,7 @@ async function executeAutomation(
         accessToken,
         commentId,
         message: dmMessage,
-        instagramBusinessAccountId: receiverId,
+        facebookPageId: facebookPageId || receiverId,
       });
 
       if (!dmSuccess) {
@@ -289,7 +289,7 @@ async function executeAutomation(
             accessToken,
             recipientId: senderId,
             message: dmMessage,
-            instagramBusinessAccountId: receiverId,
+            facebookPageId: facebookPageId || receiverId,
           });
         }
       }
@@ -310,7 +310,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: dmMessage,
-        instagramBusinessAccountId: receiverId,
+        facebookPageId: facebookPageId || receiverId,
       });
     }
 
@@ -332,7 +332,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: "🤖 Smart AI conversations are available on our Pro plan! Upgrade to unlock AI-powered responses.",
-        instagramBusinessAccountId: receiverId,
+        facebookPageId: facebookPageId || receiverId,
       });
       return;
     }
@@ -389,7 +389,7 @@ async function executeAutomation(
         accessToken,
         commentId,
         message: aiResponse,
-        instagramBusinessAccountId: receiverId,
+        facebookPageId: facebookPageId || receiverId,
       });
 
       // Also reply to comment if configured
@@ -406,7 +406,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: aiResponse,
-        instagramBusinessAccountId: receiverId,
+        facebookPageId: facebookPageId || receiverId,
       });
     }
 
@@ -546,7 +546,7 @@ async function continueSmartAIConversation(
     accessToken: tokenData.accessToken,
     recipientId: senderId,
     message: aiResponse,
-    instagramBusinessAccountId: receiverId,
+    facebookPageId: tokenData.facebookPageId || receiverId,
   });
 
   // Track the response
@@ -642,19 +642,20 @@ async function sendInstagramDM(options: {
   accessToken: string;
   recipientId: string;
   message: string;
-  instagramBusinessAccountId?: string; // The Instagram Business Account ID from the webhook
+  facebookPageId: string; // Instagram DMs require the Facebook Page ID
 }): Promise<boolean> {
-  const { accessToken, recipientId, message, instagramBusinessAccountId } = options;
+  const { accessToken, recipientId, message, facebookPageId } = options;
 
-  if (!instagramBusinessAccountId) {
-    console.error("❌ Missing instagramBusinessAccountId for DM");
+  if (!facebookPageId) {
+    console.error("❌ Missing facebookPageId for DM");
     return false;
   }
 
   try {
-    // Use graph.facebook.com with Instagram Business Account ID
-    // This works with Facebook Page Access Tokens (EAAb...)
-    const url = `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/messages`;
+    // Instagram DMs require the Facebook Page ID, NOT the Instagram Business Account ID
+    const url = `https://graph.facebook.com/v21.0/${facebookPageId}/messages`;
+
+    console.log("DM send:", { endpoint: url, tokenPrefix: accessToken.substring(0, 10) + "...", pageId: facebookPageId });
 
     const response = await fetch(url, {
       method: "POST",
@@ -690,18 +691,20 @@ async function sendPrivateMessage(options: {
   accessToken: string;
   commentId: string;
   message: string;
-  instagramBusinessAccountId?: string;
+  facebookPageId: string;
 }): Promise<boolean> {
-  const { accessToken, commentId, message, instagramBusinessAccountId } = options;
+  const { accessToken, commentId, message, facebookPageId } = options;
 
-  if (!instagramBusinessAccountId) {
-    console.error("❌ Missing instagramBusinessAccountId for private message");
+  if (!facebookPageId) {
+    console.error("❌ Missing facebookPageId for private message");
     return false;
   }
 
   try {
-    // Use graph.facebook.com with Instagram Business Account ID
-    const url = `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/messages`;
+    // Instagram DMs require the Facebook Page ID, NOT the Instagram Business Account ID
+    const url = `https://graph.facebook.com/v21.0/${facebookPageId}/messages`;
+
+    console.log("DM send (private reply):", { endpoint: url, tokenPrefix: accessToken.substring(0, 10) + "...", pageId: facebookPageId });
 
     const response = await fetch(url, {
       method: "POST",

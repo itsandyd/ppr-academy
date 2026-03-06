@@ -39,12 +39,15 @@ async function sendInstagramDM(options: {
   accessToken: string;
   recipientId: string;
   message: string;
-  instagramBusinessAccountId: string;
+  facebookPageId: string;
 }): Promise<DMResult> {
-  const { accessToken, recipientId, message, instagramBusinessAccountId } = options;
+  const { accessToken, recipientId, message, facebookPageId } = options;
 
   try {
-    const url = `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/messages`;
+    // Instagram DMs require the Facebook Page ID, NOT the Instagram Business Account ID
+    const url = `https://graph.facebook.com/v21.0/${facebookPageId}/messages`;
+
+    console.log("DM send:", { endpoint: url, tokenPrefix: accessToken.substring(0, 10) + "...", pageId: facebookPageId });
 
     const response = await fetch(url, {
       method: "POST",
@@ -307,14 +310,12 @@ export const sendDirectMessage = action({
     const accountToUse = decryptedAccount;
     switch (accountToUse.platform) {
       case "instagram": {
-        const instagramBusinessAccountId =
-          accountToUse.platformData?.instagramBusinessAccountId ||
-          accountToUse.platformUserId;
+        const facebookPageId = accountToUse.platformData?.facebookPageId;
 
-        if (!instagramBusinessAccountId) {
+        if (!facebookPageId) {
           return {
             success: false,
-            error: "Instagram Business Account ID not found",
+            error: "Facebook Page ID not found - required for Instagram DMs",
             platform: "instagram",
           };
         }
@@ -323,7 +324,7 @@ export const sendDirectMessage = action({
           accessToken: accountToUse.accessToken,
           recipientId: args.recipientId,
           message: args.message,
-          instagramBusinessAccountId,
+          facebookPageId,
         });
       }
 
@@ -390,20 +391,19 @@ export const sendDMInternal = internalAction({
     recipientId: v.string(),
     message: v.string(),
     // Platform-specific options
-    instagramBusinessAccountId: v.optional(v.string()),
     facebookPageId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<DMResult> => {
     switch (args.platform) {
       case "instagram":
-        if (!args.instagramBusinessAccountId) {
-          return { success: false, error: "Missing Instagram Business Account ID", platform: "instagram" };
+        if (!args.facebookPageId) {
+          return { success: false, error: "Missing Facebook Page ID for Instagram DM", platform: "instagram" };
         }
         return sendInstagramDM({
           accessToken: args.accessToken,
           recipientId: args.recipientId,
           message: args.message,
-          instagramBusinessAccountId: args.instagramBusinessAccountId,
+          facebookPageId: args.facebookPageId,
         });
 
       case "twitter":

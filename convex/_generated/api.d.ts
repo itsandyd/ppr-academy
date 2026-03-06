@@ -29779,7 +29779,6 @@ export declare const internal: {
       {
         accessToken: string;
         facebookPageId?: string;
-        instagramBusinessAccountId?: string;
         message: string;
         platform: "instagram" | "twitter" | "facebook";
         recipientId: string;

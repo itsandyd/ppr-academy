@@ -309,24 +309,28 @@ async function sendInstagramDM(options: {
   accessToken: string;
   recipientId: string;
   message: string;
+  facebookPageId: string;
 }): Promise<boolean> {
-  const { accessToken, recipientId, message } = options;
+  const { accessToken, recipientId, message, facebookPageId } = options;
 
   try {
-    const response = await fetch(
-      `https://graph.instagram.com/v21.0/me/messages`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipient: { id: recipientId },
-          message: { text: message },
-        }),
-      }
-    );
+    // Instagram DMs require the Facebook Page ID and Page Access Token
+    // Must use graph.facebook.com, NOT graph.instagram.com
+    const url = `https://graph.facebook.com/v21.0/${facebookPageId}/messages`;
+
+    console.log("DM send:", { endpoint: url, tokenPrefix: accessToken.substring(0, 10) + "...", pageId: facebookPageId });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text: message },
+        access_token: accessToken,
+      }),
+    });
 
     const data = await response.json();
 
