@@ -48,7 +48,7 @@ This function:
 
 **API Call Used:**
 ```javascript
-https://graph.facebook.com/v18.0/{pageId}?fields=instagram_business_account{id,username,name,profile_picture_url}
+https://graph.facebook.com/v21.0/{pageId}?fields=instagram_business_account{id,username,name,profile_picture_url}
 ```
 
 ### 2. Updated OAuth Route Handler

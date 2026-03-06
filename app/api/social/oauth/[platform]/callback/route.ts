@@ -8,6 +8,7 @@ import {
   OAUTH_SESSION_MAX_AGE,
   PKCE_PLATFORMS,
 } from '@/lib/oauth-pkce';
+import { META_GRAPH_URL } from '@/lib/meta-api';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -349,7 +350,7 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
   });
 
   const response = await fetch(
-    `https://graph.facebook.com/v18.0/oauth/access_token?${params}`
+    `${META_GRAPH_URL}/oauth/access_token?${params}`
   );
 
   if (!response.ok) {
@@ -380,7 +381,7 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
       });
 
       const longLivedResponse = await fetch(
-        `https://graph.facebook.com/v18.0/oauth/access_token?${longLivedParams}`
+        `${META_GRAPH_URL}/oauth/access_token?${longLivedParams}`
       );
 
       if (longLivedResponse.ok) {
@@ -406,7 +407,7 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
   if (tokenData.access_token) {
     try {
       const userResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me?access_token=${tokenData.access_token}&fields=id,name,business`
+        `${META_GRAPH_URL}/me?access_token=${tokenData.access_token}&fields=id,name,business`
       );
 
       if (userResponse.ok) {
@@ -499,13 +500,13 @@ async function exchangeTikTokCode(code: string) {
 async function getInstagramBusinessData(accessToken: string) {
   // First, let's see who is logged in
   const meResponse = await fetch(
-    `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`
+    `${META_GRAPH_URL}/me?fields=id,name,email&access_token=${accessToken}`
   );
   const meData = await meResponse.json();
 
   // Get user's Facebook Pages
   const pagesResponse = await fetch(
-    `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
+    `${META_GRAPH_URL}/me/accounts?access_token=${accessToken}`
   );
   const pagesData = await pagesResponse.json();
 
@@ -529,7 +530,7 @@ async function getInstagramBusinessData(accessToken: string) {
 
   for (const page of pagesData.data) {
     const igResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${page.access_token}`
+      `${META_GRAPH_URL}/${page.id}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${page.access_token}`
     );
     const igData = await igResponse.json();
 
@@ -542,13 +543,13 @@ async function getInstagramBusinessData(accessToken: string) {
       try {
         // Try getting Instagram accounts directly from user
         const userIgResponse = await fetch(
-          `https://graph.facebook.com/v18.0/me?fields=accounts{instagram_business_account{id,username,name,profile_picture_url}}&access_token=${accessToken}`
+          `${META_GRAPH_URL}/me?fields=accounts{instagram_business_account{id,username,name,profile_picture_url}}&access_token=${accessToken}`
         );
         const userIgData = await userIgResponse.json();
 
         // Also try page-level Instagram endpoint
         const pageIgResponse = await fetch(
-          `https://graph.facebook.com/v18.0/${page.id}/instagram_accounts?access_token=${page.access_token}`
+          `${META_GRAPH_URL}/${page.id}/instagram_accounts?access_token=${page.access_token}`
         );
         const pageIgData = await pageIgResponse.json();
       } catch (altError) {
@@ -598,13 +599,13 @@ async function getInstagramBusinessData(accessToken: string) {
 async function getFacebookUserData(accessToken: string) {
   // First, let's see who is logged in
   const meResponse = await fetch(
-    `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`
+    `${META_GRAPH_URL}/me?fields=id,name,email&access_token=${accessToken}`
   );
   const meData = await meResponse.json();
 
   // Get user's Facebook Pages
   const pagesResponse = await fetch(
-    `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture&access_token=${accessToken}`
+    `${META_GRAPH_URL}/me/accounts?fields=id,name,access_token,picture&access_token=${accessToken}`
   );
   const pagesData = await pagesResponse.json();
 

@@ -78,9 +78,9 @@ Every single day I'd create a post, then manually reformat it for Instagram, rew
 PPR has a **unified social media command center** supporting 5 platforms with a 6-step AI-powered content creation pipeline that turns one piece of content into platform-optimized posts:
 
 **Supported Platforms:**
-- Instagram (Business accounts - posts, stories, reels via Facebook Graph API v18.0)
+- Instagram (Business accounts - posts, stories, reels via Facebook Graph API v21.0)
 - Twitter/X (Tweets via Twitter API v2)
-- Facebook (Page posts via Graph API v18.0)
+- Facebook (Page posts via Graph API v21.0)
 - TikTok (Videos via TikTok Open API)
 - LinkedIn (UGC Posts API v2 with visibility controls)
 

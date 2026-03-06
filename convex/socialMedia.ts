@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { requireStoreOwner, requireAuth, isCallerAdmin } from "./lib/auth";
+import { internal } from "./_generated/api";
 
 /**
  * Get media URLs from storage IDs
@@ -372,16 +373,30 @@ export const refreshAccountToken = mutation({
         };
       }
 
-      // Mark account as needing refresh
+      // Attempt graceful token refresh via the action (can make HTTP calls)
+      if (account.refreshToken || account.accessToken) {
+        await ctx.scheduler.runAfter(0, internal.socialMediaActions.refreshOAuthToken, {
+          accountId: args.accountId as Id<"socialAccounts">,
+          platform: account.platform as "instagram" | "twitter" | "facebook" | "tiktok" | "linkedin",
+          refreshToken: account.refreshToken || account.accessToken,
+        });
+
+        return {
+          success: true,
+          message: `Token refresh scheduled for @${account.platformUsername}`,
+        };
+      }
+
+      // No token available — mark inactive as last resort
       await ctx.db.patch(args.accountId as Id<"socialAccounts">, {
         lastVerified: Date.now(),
-        connectionError: "Token needs refresh - click reconnect for updated permissions",
-        isActive: false, // Force user to reconnect
+        connectionError: "No refresh token available - please reconnect",
+        isActive: false,
       });
 
       return {
-        success: true,
-        message: `Token refresh requested for @${account.platformUsername}`,
+        success: false,
+        message: `No refresh token for @${account.platformUsername} - please reconnect`,
       };
     } catch (error) {
       console.error("Token refresh error:", error);

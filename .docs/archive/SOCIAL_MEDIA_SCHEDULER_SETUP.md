@@ -254,7 +254,7 @@ const connectAccount = (platform: string, storeId: string) => {
   
   // Platform-specific OAuth URLs
   const authUrls = {
-    instagram: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=instagram_basic,instagram_content_publish`,
+    instagram: `https://www.facebook.com/v21.0/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=instagram_basic,instagram_content_publish`,
     twitter: `https://twitter.com/i/oauth2/authorize?client_id=${TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=tweet.read tweet.write users.read offline.access&response_type=code&code_challenge=challenge&code_challenge_method=plain`,
     // ... other platforms
   };

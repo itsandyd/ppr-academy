@@ -382,7 +382,7 @@ Delete/cancel a scheduled post.
 async function publishInstagramImage(post) {
   // Step 1: Create container
   const container = await fetch(
-    `https://graph.facebook.com/v18.0/${igUserId}/media`,
+    `https://graph.facebook.com/v21.0/${igUserId}/media`,
     {
       method: 'POST',
       body: new URLSearchParams({
@@ -400,7 +400,7 @@ async function publishInstagramImage(post) {
   
   // Step 3: Publish
   const published = await fetch(
-    `https://graph.facebook.com/v18.0/${igUserId}/media_publish`,
+    `https://graph.facebook.com/v21.0/${igUserId}/media_publish`,
     {
       method: 'POST',
       body: new URLSearchParams({
@@ -420,7 +420,7 @@ async function publishInstagramImage(post) {
 async function publishInstagramVideo(post) {
   // Step 1: Create container with video_url
   const container = await fetch(
-    `https://graph.facebook.com/v18.0/${igUserId}/media`,
+    `https://graph.facebook.com/v21.0/${igUserId}/media`,
     {
       method: 'POST',
       body: new URLSearchParams({
@@ -449,7 +449,7 @@ async function publishInstagramCarousel(post) {
   
   for (const mediaUrl of post.mediaUrls) {
     const item = await fetch(
-      `https://graph.facebook.com/v18.0/${igUserId}/media`,
+      `https://graph.facebook.com/v21.0/${igUserId}/media`,
       {
         method: 'POST',
         body: new URLSearchParams({
@@ -464,7 +464,7 @@ async function publishInstagramCarousel(post) {
   
   // Step 2: Create carousel container
   const carouselContainer = await fetch(
-    `https://graph.facebook.com/v18.0/${igUserId}/media`,
+    `https://graph.facebook.com/v21.0/${igUserId}/media`,
     {
       method: 'POST',
       body: new URLSearchParams({
@@ -507,7 +507,7 @@ async function publishFacebookPost(post) {
   }
   
   const response = await fetch(
-    `https://graph.facebook.com/v18.0${endpoint}`,
+    `https://graph.facebook.com/v21.0${endpoint}`,
     {
       method: 'POST',
       body: new URLSearchParams(params)

@@ -115,12 +115,12 @@ socialAccounts: {
 
 ```typescript
 // 1. Upload media container
-POST https://graph.facebook.com/v18.0/{businessAccountId}/media
+POST https://graph.facebook.com/v21.0/{businessAccountId}/media
 → { creation_id }
 
 // 2. Wait for processing (5s images, up to 5min videos)
 // 3. Publish
-POST https://graph.facebook.com/v18.0/{businessAccountId}/media_publish
+POST https://graph.facebook.com/v21.0/{businessAccountId}/media_publish
 → { id: publishedPostId }
 
 // Retry: 5 attempts for "media not ready" (error 9007)
@@ -138,10 +138,10 @@ Body: { text, media?: { media_ids }, reply_settings? }
 
 ```typescript
 // Photos:
-POST https://graph.facebook.com/v18.0/{pageId}/photos
+POST https://graph.facebook.com/v21.0/{pageId}/photos
 
 // Text only:
-POST https://graph.facebook.com/v18.0/{pageId}/feed
+POST https://graph.facebook.com/v21.0/{pageId}/feed
 ```
 
 ### LinkedIn Publishing

@@ -5,6 +5,7 @@ import { internalAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { decryptToken, isEncrypted } from "./lib/encryption";
+import { META_GRAPH_URL } from "./lib/constants";
 
 // ============================================================================
 // SOCIAL MEDIA PUBLISHING ACTIONS
@@ -36,7 +37,7 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
                     mediaUrl.toLowerCase().includes('mov') || 
                     mediaUrl.toLowerCase().includes('video');
 
-    const uploadEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media`;
+    const uploadEndpoint = `${META_GRAPH_URL}/${platformData.instagramBusinessAccountId}/media`;
     const uploadParams = new URLSearchParams({
       access_token: accessToken,
     });
@@ -88,7 +89,7 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
         await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
 
         const statusResponse = await fetch(
-          `https://graph.facebook.com/v18.0/${mediaContainerId}?fields=status_code&access_token=${accessToken}`
+          `${META_GRAPH_URL}/${mediaContainerId}?fields=status_code&access_token=${accessToken}`
         );
         const statusData = await statusResponse.json();
 
@@ -110,7 +111,7 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
     }
 
     // Step 2: Publish the post (with retry logic)
-    const publishEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media_publish`;
+    const publishEndpoint = `${META_GRAPH_URL}/${platformData.instagramBusinessAccountId}/media_publish`;
     const publishParams = new URLSearchParams({
       access_token: accessToken,
       creation_id: mediaContainerId,
@@ -253,11 +254,11 @@ async function publishToFacebook(post: any, account: any): Promise<{ success: bo
 
     if (mediaUrls && mediaUrls.length > 0) {
       // Photo post
-      endpoint = `https://graph.facebook.com/v18.0/${pageId}/photos`;
+      endpoint = `${META_GRAPH_URL}/${pageId}/photos`;
       params.url = mediaUrls[0];
     } else {
       // Text post
-      endpoint = `https://graph.facebook.com/v18.0/${pageId}/feed`;
+      endpoint = `${META_GRAPH_URL}/${pageId}/feed`;
     }
 
     const response = await fetch(endpoint, {
@@ -580,18 +581,13 @@ export const refreshOAuthToken = internalAction({
         case "instagram":
         case "facebook":
           // Facebook/Instagram use the same OAuth flow
-          const fbResponse = await fetch('https://graph.facebook.com/v18.0/oauth/access_token', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              grant_type: 'fb_exchange_token',
-              client_id: process.env.FACEBOOK_APP_ID,
-              client_secret: process.env.FACEBOOK_APP_SECRET,
-              fb_exchange_token: refreshToken,
-            }),
+          const fbParams = new URLSearchParams({
+            grant_type: 'fb_exchange_token',
+            client_id: process.env.FACEBOOK_APP_ID!,
+            client_secret: process.env.FACEBOOK_APP_SECRET!,
+            fb_exchange_token: refreshToken,
           });
+          const fbResponse = await fetch(`${META_GRAPH_URL}/oauth/access_token?${fbParams}`);
 
           if (!fbResponse.ok) {
             throw new Error('Failed to refresh Facebook token');

@@ -9,6 +9,7 @@ import {
   OAUTH_SESSION_MAX_AGE,
 } from "@/lib/oauth-pkce";
 import { encryptToken } from "@/lib/encryption";
+import { META_OAUTH_DIALOG_URL } from "@/lib/meta-api";
 
 /**
  * Server-side OAuth initiation route.
@@ -118,7 +119,7 @@ function buildAuthUrl(
       ].join(",");
 
       return (
-        `https://www.facebook.com/v21.0/dialog/oauth?` +
+        `${META_OAUTH_DIALOG_URL}?` +
         `client_id=${facebookAppId}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
         `state=${state}&` +
@@ -160,7 +161,7 @@ function buildAuthUrl(
       ].join(",");
 
       return (
-        `https://www.facebook.com/v18.0/dialog/oauth?` +
+        `${META_OAUTH_DIALOG_URL}?` +
         `client_id=${fbAppId}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
         `state=${state}&` +
