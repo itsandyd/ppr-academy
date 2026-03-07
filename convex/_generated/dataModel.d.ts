@@ -2195,7 +2195,7 @@ export type DataModel = {
   };
   chatHistory: {
     document: {
-      automationId: Id<"automations">;
+      automationId?: Id<"automations">;
       conversationId?: string;
       createdAt?: number;
       message: string;
@@ -2203,6 +2203,7 @@ export type DataModel = {
       role: "user" | "assistant";
       senderId: string;
       turnNumber?: number;
+      workflowExecutionId?: Id<"workflowExecutions">;
       _id: Id<"chatHistory">;
       _creationTime: number;
     };
@@ -2216,7 +2217,8 @@ export type DataModel = {
       | "receiverId"
       | "role"
       | "senderId"
-      | "turnNumber";
+      | "turnNumber"
+      | "workflowExecutionId";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
@@ -4647,6 +4649,52 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  dmWaitingExecutions: {
+    document: {
+      executionId: Id<"workflowExecutions">;
+      expectedKeywords?: Array<string>;
+      expectedResponseType:
+        | "any_reply"
+        | "email_reply"
+        | "keyword_reply"
+        | "purchase_check";
+      fulfilledAt?: number;
+      nodeId: string;
+      replyData?: any;
+      senderIgsid: string;
+      socialAccountId: Id<"socialAccounts">;
+      status: "waiting" | "fulfilled" | "expired";
+      storeId: Id<"stores">;
+      waitingSince: number;
+      workflowId: Id<"emailWorkflows">;
+      _id: Id<"dmWaitingExecutions">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "executionId"
+      | "expectedKeywords"
+      | "expectedResponseType"
+      | "fulfilledAt"
+      | "nodeId"
+      | "replyData"
+      | "senderIgsid"
+      | "socialAccountId"
+      | "status"
+      | "storeId"
+      | "waitingSince"
+      | "workflowId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_executionId: ["executionId", "_creationTime"];
+      by_senderIgsid: ["senderIgsid", "status", "_creationTime"];
+      by_status: ["status", "waitingSince", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   dripCampaignEnrollments: {
     document: {
       campaignId: Id<"dripCampaigns">;
@@ -6017,7 +6065,13 @@ export type DataModel = {
           | "courseCycle"
           | "courseEmail"
           | "purchaseCheck"
-          | "cycleLoop";
+          | "cycleLoop"
+          | "sendDM"
+          | "dmCondition"
+          | "captureEmail"
+          | "aiConversation"
+          | "checkDMPurchase"
+          | "enterEmailWorkflow";
       }>;
       sequenceType?:
         | "welcome"
@@ -6058,9 +6112,13 @@ export type DataModel = {
           | "user_inactivity"
           | "any_purchase"
           | "any_course_complete"
-          | "learner_conversion";
+          | "learner_conversion"
+          | "comment_keyword"
+          | "dm_received"
+          | "story_reply";
       };
       userId: string;
+      workflowType?: "email" | "dm";
       _id: Id<"emailWorkflows">;
       _creationTime: number;
     };
@@ -6082,7 +6140,8 @@ export type DataModel = {
       | "trigger"
       | "trigger.config"
       | "trigger.type"
-      | "userId";
+      | "userId"
+      | "workflowType";
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
@@ -6091,6 +6150,7 @@ export type DataModel = {
       by_sequenceType: ["sequenceType", "_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
       by_storeId_sequenceType: ["storeId", "sequenceType", "_creationTime"];
+      by_storeId_workflowType: ["storeId", "workflowType", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
     };
     searchIndexes: {};

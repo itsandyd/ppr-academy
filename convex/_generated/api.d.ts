@@ -12346,7 +12346,13 @@ export declare const api: {
             | "courseCycle"
             | "courseEmail"
             | "purchaseCheck"
-            | "cycleLoop";
+            | "cycleLoop"
+            | "sendDM"
+            | "dmCondition"
+            | "captureEmail"
+            | "aiConversation"
+            | "checkDMPurchase"
+            | "enterEmailWorkflow";
         }>;
         trigger: {
           config: any;
@@ -12374,7 +12380,10 @@ export declare const api: {
             | "new_signup"
             | "user_inactivity"
             | "any_purchase"
-            | "any_course_complete";
+            | "any_course_complete"
+            | "comment_keyword"
+            | "dm_received"
+            | "story_reply";
         };
         userId: string;
       },
@@ -12424,7 +12433,13 @@ export declare const api: {
             | "courseCycle"
             | "courseEmail"
             | "purchaseCheck"
-            | "cycleLoop";
+            | "cycleLoop"
+            | "sendDM"
+            | "dmCondition"
+            | "captureEmail"
+            | "aiConversation"
+            | "checkDMPurchase"
+            | "enterEmailWorkflow";
         }>;
         sequenceType?:
           | "welcome"
@@ -12463,9 +12478,13 @@ export declare const api: {
             | "new_signup"
             | "user_inactivity"
             | "any_purchase"
-            | "any_course_complete";
+            | "any_course_complete"
+            | "comment_keyword"
+            | "dm_received"
+            | "story_reply";
         };
         userId: string;
+        workflowType?: "email" | "dm";
       },
       Id<"emailWorkflows">
     >;
@@ -12634,6 +12653,12 @@ export declare const api: {
       }>
     >;
     listAdminWorkflows: FunctionReference<"query", "public", {}, Array<any>>;
+    listDMWorkflows: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<any>
+    >;
     listEmailTemplates: FunctionReference<
       "query",
       "public",
@@ -12719,7 +12744,13 @@ export declare const api: {
             | "courseCycle"
             | "courseEmail"
             | "purchaseCheck"
-            | "cycleLoop";
+            | "cycleLoop"
+            | "sendDM"
+            | "dmCondition"
+            | "captureEmail"
+            | "aiConversation"
+            | "checkDMPurchase"
+            | "enterEmailWorkflow";
         }>;
         sequenceType?:
           | "welcome"
@@ -12757,7 +12788,10 @@ export declare const api: {
             | "new_signup"
             | "user_inactivity"
             | "any_purchase"
-            | "any_course_complete";
+            | "any_course_complete"
+            | "comment_keyword"
+            | "dm_received"
+            | "story_reply";
         };
         workflowId: Id<"emailWorkflows">;
       },
@@ -24541,6 +24575,182 @@ export declare const internal: {
       null
     >;
   };
+  dmWorkflowActions: {
+    executeAIConversationNode: FunctionReference<
+      "action",
+      "internal",
+      { executionId: Id<"workflowExecutions">; nodeId: string },
+      null
+    >;
+    executeCaptureEmailNode: FunctionReference<
+      "action",
+      "internal",
+      {
+        executionId: Id<"workflowExecutions">;
+        nodeId: string;
+        replyData?: any;
+      },
+      null
+    >;
+    executeCheckDMPurchaseNode: FunctionReference<
+      "action",
+      "internal",
+      { executionId: Id<"workflowExecutions">; nodeId: string },
+      null
+    >;
+    executeDMConditionNode: FunctionReference<
+      "action",
+      "internal",
+      {
+        executionId: Id<"workflowExecutions">;
+        nodeId: string;
+        replyData?: any;
+      },
+      null
+    >;
+    executeEnterEmailWorkflowNode: FunctionReference<
+      "action",
+      "internal",
+      { executionId: Id<"workflowExecutions">; nodeId: string },
+      null
+    >;
+    executeSendDMNode: FunctionReference<
+      "action",
+      "internal",
+      { executionId: Id<"workflowExecutions">; nodeId: string },
+      null
+    >;
+    resumeExecution: FunctionReference<
+      "action",
+      "internal",
+      {
+        executionId: Id<"workflowExecutions">;
+        nodeId: string;
+        replyData?: any;
+      },
+      null
+    >;
+    startExecution: FunctionReference<
+      "action",
+      "internal",
+      {
+        triggerData: {
+          commentId?: string;
+          keyword?: string;
+          messageText?: string;
+          postId?: string;
+          senderId: string;
+          senderIgsid: string;
+          type: string;
+        };
+        workflowId: Id<"emailWorkflows">;
+      },
+      null
+    >;
+  };
+  dmWorkflows: {
+    createDMChatHistory: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        executionId: Id<"workflowExecutions">;
+        message: string;
+        receiverId: string;
+        role: "user" | "assistant";
+        senderId: string;
+      },
+      null
+    >;
+    createWaitingExecution: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        executionId: Id<"workflowExecutions">;
+        expectedKeywords?: Array<string>;
+        expectedResponseType:
+          | "any_reply"
+          | "email_reply"
+          | "keyword_reply"
+          | "purchase_check";
+        nodeId: string;
+        senderIgsid: string;
+        socialAccountId: Id<"socialAccounts">;
+        storeId: Id<"stores">;
+        workflowId: Id<"emailWorkflows">;
+      },
+      Id<"dmWaitingExecutions">
+    >;
+    expireAndResumeStaleExecutions: FunctionReference<
+      "action",
+      "internal",
+      {},
+      null
+    >;
+    expireStaleExecutions: FunctionReference<
+      "mutation",
+      "internal",
+      { maxAgeMs: number },
+      number
+    >;
+    findWorkflowByCommentKeyword: FunctionReference<
+      "query",
+      "internal",
+      { keyword: string; socialAccountId: string },
+      any
+    >;
+    fulfillWaitingExecution: FunctionReference<
+      "mutation",
+      "internal",
+      { replyData: any; waitingId: Id<"dmWaitingExecutions"> },
+      null
+    >;
+    getChatHistoryByExecution: FunctionReference<
+      "query",
+      "internal",
+      { executionId: Id<"workflowExecutions">; senderIgsid: string },
+      any
+    >;
+    getSocialAccountForStore: FunctionReference<
+      "query",
+      "internal",
+      { storeId: string },
+      any
+    >;
+    getStaleWaitingExecutions: FunctionReference<
+      "query",
+      "internal",
+      { maxAgeMs: number },
+      Array<{
+        executionId: Id<"workflowExecutions">;
+        nodeId: string;
+        waitingId: Id<"dmWaitingExecutions">;
+      }>
+    >;
+    getWaitingExecution: FunctionReference<
+      "query",
+      "internal",
+      { senderIgsid: string; status: "waiting" | "fulfilled" | "expired" },
+      any
+    >;
+    markWaitingExpired: FunctionReference<
+      "mutation",
+      "internal",
+      { waitingId: Id<"dmWaitingExecutions"> },
+      null
+    >;
+    updateCurrentNode: FunctionReference<
+      "mutation",
+      "internal",
+      { executionId: Id<"workflowExecutions">; nodeId: string },
+      null
+    >;
+    updateExecutionData: FunctionReference<
+      "mutation",
+      "internal",
+      { executionData: any; executionId: Id<"workflowExecutions"> },
+      null
+    >;
+  };
   dripCampaignActions: {
     processDueDripEmails: FunctionReference<"action", "internal", {}, any>;
     resolveAndEnqueueDripEmail: FunctionReference<
@@ -24674,6 +24884,20 @@ export declare const internal: {
       { cursor?: string; status: string; storeId: string },
       { count: number; done: boolean; nextCursor: string | null }
     >;
+    createContactInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        customFields?: any;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+        source?: string;
+        storeId: string;
+        tags?: Array<string>;
+      },
+      Id<"emailContacts">
+    >;
     deleteContactInternal: FunctionReference<
       "mutation",
       "internal",
@@ -24700,6 +24924,12 @@ export declare const internal: {
         }>;
         nextCursor?: string;
       }
+    >;
+    getContactByEmailInternal: FunctionReference<
+      "query",
+      "internal",
+      { email: string; storeId: string },
+      any
     >;
     importContactsBatchInternal: FunctionReference<
       "mutation",

@@ -90,7 +90,14 @@ const nodeValidator = v.object({
     v.literal("courseCycle"),
     v.literal("courseEmail"),
     v.literal("purchaseCheck"),
-    v.literal("cycleLoop")
+    v.literal("cycleLoop"),
+    // DM-specific nodes
+    v.literal("sendDM"),
+    v.literal("dmCondition"),
+    v.literal("captureEmail"),
+    v.literal("aiConversation"),
+    v.literal("checkDMPurchase"),
+    v.literal("enterEmailWorkflow")
   ),
   position: v.object({
     x: v.number(),
@@ -134,7 +141,11 @@ const triggerValidator = v.object({
     v.literal("new_signup"),
     v.literal("user_inactivity"),
     v.literal("any_purchase"),
-    v.literal("any_course_complete")
+    v.literal("any_course_complete"),
+    // DM-specific triggers
+    v.literal("comment_keyword"),
+    v.literal("dm_received"),
+    v.literal("story_reply")
   ),
   config: v.any(),
 });
@@ -223,6 +234,7 @@ export const createWorkflow = mutation({
     nodes: v.array(nodeValidator),
     edges: v.array(edgeValidator),
     sequenceType: sequenceTypeValidator,
+    workflowType: v.optional(v.union(v.literal("email"), v.literal("dm"))),
   },
   returns: v.id("emailWorkflows"),
   handler: async (ctx, args) => {
@@ -239,6 +251,7 @@ export const createWorkflow = mutation({
       storeId: args.storeId,
       userId: args.userId,
       isActive: false,
+      workflowType: args.workflowType,
       trigger: args.trigger,
       nodes: args.nodes,
       edges: args.edges,
@@ -656,6 +669,24 @@ export const listWorkflows = query({
     }
 
     return allWorkflows.sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
+/**
+ * List DM workflows for a store
+ */
+export const listDMWorkflows = query({
+  args: { storeId: v.string() },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    await requireStoreOwner(ctx, args.storeId);
+    return await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_storeId_workflowType", (q) =>
+        q.eq("storeId", args.storeId).eq("workflowType", "dm")
+      )
+      .order("desc")
+      .collect();
   },
 });
 

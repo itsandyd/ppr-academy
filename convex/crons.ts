@@ -93,4 +93,12 @@ crons.interval(
   {}
 );
 
+// DM workflow — expire stale waiting executions and resume with timeout
+crons.interval(
+  "expire stale DM waiting executions",
+  { minutes: 5 },
+  internal.dmWorkflows.expireAndResumeStaleExecutions,
+  {}
+);
+
 export default crons;

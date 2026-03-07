@@ -69,6 +69,32 @@ export const processWebhook = internalAction({
           return null;
         }
 
+        // Check for DM workflow executions waiting for a reply from this sender
+        const waitingExecution = await ctx.runQuery(
+          internal.dmWorkflows.getWaitingExecution,
+          { senderIgsid: senderId, status: "waiting" as const }
+        );
+
+        if (waitingExecution) {
+          await ctx.runMutation(
+            internal.dmWorkflows.fulfillWaitingExecution,
+            {
+              waitingId: waitingExecution._id,
+              replyData: {
+                text: messageText,
+                timestamp: Date.now(),
+                senderId: senderId,
+              },
+            }
+          );
+          await ctx.scheduler.runAfter(0, internal.dmWorkflowActions.resumeExecution, {
+            executionId: waitingExecution.executionId,
+            nodeId: waitingExecution.nodeId,
+            replyData: { text: messageText, senderId: senderId },
+          });
+          return null;
+        }
+
         // Find automation by keyword match
         const matcher = await ctx.runQuery(
           (internal as any).automations.findAutomationByKeywordInternal,
@@ -125,6 +151,32 @@ export const processWebhook = internalAction({
             return null;
           }
 
+          // Check for DM workflow executions waiting for a reply from this sender
+          const waitingExecution2 = await ctx.runQuery(
+            internal.dmWorkflows.getWaitingExecution,
+            { senderIgsid: senderId, status: "waiting" as const }
+          );
+
+          if (waitingExecution2) {
+            await ctx.runMutation(
+              internal.dmWorkflows.fulfillWaitingExecution,
+              {
+                waitingId: waitingExecution2._id,
+                replyData: {
+                  text: messageText,
+                  timestamp: Date.now(),
+                  senderId: senderId,
+                },
+              }
+            );
+            await ctx.scheduler.runAfter(0, internal.dmWorkflowActions.resumeExecution, {
+              executionId: waitingExecution2.executionId,
+              nodeId: waitingExecution2.nodeId,
+              replyData: { text: messageText, senderId: senderId },
+            });
+            return null;
+          }
+
           // Find automation by keyword match
           const matcher = await ctx.runQuery(
             (internal as any).automations.findAutomationByKeywordInternal,
@@ -148,10 +200,10 @@ export const processWebhook = internalAction({
             messageText,
             isDM: true,
           });
-          
+
           return null;
         }
-        
+
         // CASE 2b: Comment on Post
         if (change.field !== "comments") return null;
 
@@ -164,6 +216,28 @@ export const processWebhook = internalAction({
         const accountId = entry.id;
         
         if (commentSenderId === accountId) {
+          return null;
+        }
+
+        // Check for DM workflows triggered by this comment keyword
+        const dmWorkflow = await ctx.runQuery(
+          internal.dmWorkflows.findWorkflowByCommentKeyword,
+          { keyword: commentText, socialAccountId: accountId }
+        );
+
+        if (dmWorkflow) {
+          const postId = change.value?.media?.id;
+          await ctx.scheduler.runAfter(0, internal.dmWorkflowActions.startExecution, {
+            workflowId: dmWorkflow._id,
+            triggerData: {
+              type: "comment_keyword",
+              senderId: commentSenderId,
+              senderIgsid: commentSenderId,
+              keyword: commentText,
+              postId: postId,
+              commentId: change.value?.id,
+            },
+          });
           return null;
         }
 

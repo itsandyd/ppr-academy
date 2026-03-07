@@ -2275,3 +2275,121 @@ export const getContactBatchForMarketingSync = internalQuery({
     };
   },
 });
+
+// ─────────────────────────────────────────────────────────────
+// Internal functions (no auth — for server-side use only)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Create or return an existing email contact without auth.
+ * Used by DM workflow nodes to create contacts from Instagram DM interactions.
+ */
+export const createContactInternal = internalMutation({
+  args: {
+    storeId: v.string(),
+    email: v.string(),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    source: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())), // Tag names (not IDs) — will be resolved or created
+    customFields: v.optional(v.any()),
+  },
+  returns: v.id("emailContacts"),
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase();
+
+    // Check for existing contact
+    const existing = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", args.storeId).eq("email", email)
+      )
+      .first();
+
+    if (existing) {
+      // Update custom fields if provided
+      if (args.customFields) {
+        await ctx.db.patch(existing._id, {
+          customFields: { ...existing.customFields, ...args.customFields },
+          updatedAt: Date.now(),
+        });
+      }
+      return existing._id;
+    }
+
+    // Resolve tag names to IDs (create if they don't exist)
+    const tagIds: Id<"emailTags">[] = [];
+    if (args.tags && args.tags.length > 0) {
+      for (const tagName of args.tags) {
+        const existingTag = await ctx.db
+          .query("emailTags")
+          .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+          .filter((q) => q.eq(q.field("name"), tagName))
+          .first();
+
+        if (existingTag) {
+          tagIds.push(existingTag._id);
+          await ctx.db.patch(existingTag._id, { contactCount: existingTag.contactCount + 1 });
+        } else {
+          const newTagId = await ctx.db.insert("emailTags", {
+            storeId: args.storeId,
+            name: tagName,
+            color: "#6366f1", // Default indigo
+            contactCount: 1,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          });
+          tagIds.push(newTagId);
+        }
+      }
+    }
+
+    const now = Date.now();
+    const contactId = await ctx.db.insert("emailContacts", {
+      storeId: args.storeId,
+      email,
+      firstName: args.firstName,
+      lastName: args.lastName,
+      status: "subscribed",
+      subscribedAt: now,
+      tagIds,
+      source: args.source || "instagram_dm",
+      emailsSent: 0,
+      emailsOpened: 0,
+      emailsClicked: 0,
+      customFields: args.customFields,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Sync to Resend marketing (fire-and-forget)
+    await ctx.scheduler.runAfter(0, internal.resendMarketingSync.syncContactToMarketing, {
+      email,
+      firstName: args.firstName,
+      lastName: args.lastName,
+      unsubscribed: false,
+    });
+
+    return contactId;
+  },
+});
+
+/**
+ * Get a contact by email without auth.
+ * Used by DM workflow nodes to check for existing contacts.
+ */
+export const getContactByEmailInternal = internalQuery({
+  args: {
+    storeId: v.string(),
+    email: v.string(),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", args.storeId).eq("email", args.email.toLowerCase())
+      )
+      .first();
+  },
+});

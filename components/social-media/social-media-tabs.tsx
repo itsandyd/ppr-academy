@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { SocialScheduler } from "@/components/social-media/social-scheduler";
 import { InstagramAutomations } from "./automations/instagram-automations";
-import { Calendar, Zap, Wand2, Users, FileText, Sparkles } from "lucide-react";
+import { Calendar, Zap, Wand2, Users, FileText, Sparkles, GitBranch } from "lucide-react";
 
 interface SocialMediaTabsProps {
   storeId: string;
@@ -18,6 +18,8 @@ export function SocialMediaTabs({ storeId, userId }: SocialMediaTabsProps) {
   const handleTabChange = (value: string) => {
     if (value === "generator") {
       router.push("/dashboard/social/create?mode=create");
+    } else if (value === "workflows") {
+      router.push("/dashboard/social/workflows?mode=create");
     }
   };
 
@@ -51,7 +53,7 @@ export function SocialMediaTabs({ storeId, userId }: SocialMediaTabsProps) {
       </div>
 
       <Tabs defaultValue="scheduler" className="space-y-6" onValueChange={handleTabChange}>
-        <TabsList className="grid w-full max-w-xl grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="scheduler" className="gap-2">
             <Calendar className="h-4 w-4" />
             Post Scheduler
@@ -59,6 +61,10 @@ export function SocialMediaTabs({ storeId, userId }: SocialMediaTabsProps) {
           <TabsTrigger value="automations" className="gap-2">
             <Zap className="h-4 w-4" />
             DM Automation
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="gap-2">
+            <GitBranch className="h-4 w-4" />
+            DM Workflows
           </TabsTrigger>
           <TabsTrigger value="generator" className="gap-2">
             <Wand2 className="h-4 w-4" />
@@ -72,6 +78,12 @@ export function SocialMediaTabs({ storeId, userId }: SocialMediaTabsProps) {
 
         <TabsContent value="automations">
           <InstagramAutomations storeId={storeId} userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="workflows">
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            Redirecting to DM Workflows...
+          </div>
         </TabsContent>
 
         <TabsContent value="generator">

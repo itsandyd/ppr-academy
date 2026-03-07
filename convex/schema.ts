@@ -538,6 +538,8 @@ export default defineSchema({
     isActive: v.optional(v.boolean()),
     // Admin workflow flag - when true, targets platform-wide users
     isAdminWorkflow: v.optional(v.boolean()),
+    // Workflow type: "email" (default) or "dm" for Instagram DM workflows
+    workflowType: v.optional(v.union(v.literal("email"), v.literal("dm"))),
     // Sequence type for categorization
     sequenceType: v.optional(v.union(
       v.literal("welcome"),
@@ -578,7 +580,11 @@ export default defineSchema({
         v.literal("user_inactivity"),
         v.literal("any_purchase"),
         v.literal("any_course_complete"),
-        v.literal("learner_conversion") // Learner hits creator-readiness milestone
+        v.literal("learner_conversion"), // Learner hits creator-readiness milestone
+        // DM workflow triggers
+        v.literal("comment_keyword"), // Instagram comment with keyword
+        v.literal("dm_received"),     // Someone DMs the connected account
+        v.literal("story_reply")      // Someone replies to a story
       ),
       config: v.any(), // Flexible config for different trigger types
     }),
@@ -600,7 +606,14 @@ export default defineSchema({
           v.literal("courseCycle"),
           v.literal("courseEmail"),
           v.literal("purchaseCheck"),
-          v.literal("cycleLoop")
+          v.literal("cycleLoop"),
+          // DM workflow nodes
+          v.literal("sendDM"),
+          v.literal("dmCondition"),
+          v.literal("captureEmail"),
+          v.literal("aiConversation"),
+          v.literal("checkDMPurchase"),
+          v.literal("enterEmailWorkflow")
         ),
         position: v.object({
           x: v.number(),
@@ -630,7 +643,8 @@ export default defineSchema({
     .index("by_active", ["isActive"])
     .index("by_isAdminWorkflow", ["isAdminWorkflow"])
     .index("by_sequenceType", ["sequenceType"])
-    .index("by_storeId_sequenceType", ["storeId", "sequenceType"]),
+    .index("by_storeId_sequenceType", ["storeId", "sequenceType"])
+    .index("by_storeId_workflowType", ["storeId", "workflowType"]),
 
   // Workflow Templates (pre-built workflow templates)
   workflowTemplates: defineTable({
@@ -5023,7 +5037,7 @@ export default defineSchema({
 
   // Chat History - Conversation history for Smart AI
   chatHistory: defineTable({
-    automationId: v.id("automations"),
+    automationId: v.optional(v.id("automations")), // Optional: DM workflows use workflowExecutionId instead
 
     // Instagram user identity
     senderId: v.string(), // Instagram user ID who sent message
@@ -5035,6 +5049,7 @@ export default defineSchema({
 
     // Context
     conversationId: v.optional(v.string()), // Group messages by conversation
+    workflowExecutionId: v.optional(v.id("workflowExecutions")), // Track DM conversations by workflow execution
 
     // Timestamps for conversation management
     createdAt: v.optional(v.number()), // Unix timestamp
@@ -7177,4 +7192,28 @@ export default defineSchema({
     .index("by_storeId_status", ["storeId", "status"])
     .index("by_storeId_week", ["storeId", "week"])
     .index("by_storeId_category", ["storeId", "category"]),
+
+  // DM Workflow Waiting Executions - tracks workflow executions waiting for a DM reply
+  dmWaitingExecutions: defineTable({
+    executionId: v.id("workflowExecutions"),
+    workflowId: v.id("emailWorkflows"),
+    storeId: v.id("stores"),
+    socialAccountId: v.id("socialAccounts"),
+    senderIgsid: v.string(),        // Instagram-scoped user ID of the person we're waiting for
+    nodeId: v.string(),              // Which node in the workflow is waiting
+    waitingSince: v.number(),        // Timestamp
+    expectedResponseType: v.union(
+      v.literal("any_reply"),
+      v.literal("email_reply"),
+      v.literal("keyword_reply"),
+      v.literal("purchase_check")
+    ),
+    expectedKeywords: v.optional(v.array(v.string())),
+    status: v.union(v.literal("waiting"), v.literal("fulfilled"), v.literal("expired")),
+    fulfilledAt: v.optional(v.number()),
+    replyData: v.optional(v.any()),  // The actual reply content when fulfilled
+  })
+    .index("by_senderIgsid", ["senderIgsid", "status"])
+    .index("by_executionId", ["executionId"])
+    .index("by_status", ["status", "waitingSince"]),
 });

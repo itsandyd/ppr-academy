@@ -933,13 +933,13 @@ export const findAutomationByChatHistory = internalQuery({
       .order("desc")
       .first();
 
-    if (!recentChat) return null;
+    if (!recentChat || !recentChat.automationId) return null;
 
     // Get all history for this automation and sender
     const history = await ctx.db
       .query("chatHistory")
       .withIndex("by_automationId_and_sender", (q) =>
-        q.eq("automationId", recentChat.automationId).eq("senderId", args.senderId)
+        q.eq("automationId", recentChat.automationId!).eq("senderId", args.senderId)
       )
       .order("asc")
       .take(1000);
