@@ -10,6 +10,11 @@
       "source": "resend/resend-skills",
       "sourceType": "github",
       "computedHash": "65fcf36998c3844eda9278b27b6a5228078ad75d03d60a2b7d01cf368785a932"
+    },
+    "shadcn": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "computedHash": "91c02eb706f046fb9d6a061efbb96496e4be751b5b14c283cf82baaa50f3a985"
     }
   }
 }
