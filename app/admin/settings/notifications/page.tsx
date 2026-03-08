@@ -49,7 +49,7 @@ export default function NotificationsSettingsPage() {
     smtpUser: "",
     smtpPassword: "",
     fromEmail: "noreply@pauseplayrepeat.com",
-    fromName: "PausePlayRepeat",
+    fromName: "Andrew",
     replyToEmail: "support@pauseplayrepeat.com",
     // Notification Preferences
     enableEmailNotifications: true,

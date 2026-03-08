@@ -513,7 +513,7 @@ export const sendWorkflowEmail = internalAction({
       .replace(/\{\{name\}\}/g, args.name || "there");
 
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     let html = personalizedHtml;
     if (args.previewText) {
@@ -574,7 +574,7 @@ export const sendNotificationEmail = internalAction({
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
-    const fromName = process.env.FROM_NAME || "PPR Academy";
+    const fromName = process.env.FROM_NAME || "Andrew";
 
     const { sendEmailViaProvider } = await import("./lib/emailProvider");
     await sendEmailViaProvider(resend, {
