@@ -61,15 +61,15 @@ import { cn } from "@/lib/utils";
 // Sequence type definitions - Creator-focused (for nurturing THEIR audience)
 // Note: "coaching" in UI maps to "coaching_client" in schema
 const sequenceTypes = [
-  { id: "welcome", schemaId: "welcome", name: "Welcome Sequence", icon: UserPlus, color: "text-blue-600", bgColor: "bg-blue-50" },
-  { id: "buyer", schemaId: "buyer", name: "Purchase Thank You", icon: ShoppingCart, color: "text-green-600", bgColor: "bg-green-50" },
-  { id: "course_student", schemaId: "course_student", name: "Course Student", icon: GraduationCap, color: "text-purple-600", bgColor: "bg-purple-50" },
-  { id: "product_launch", schemaId: "product_launch", name: "Product Launch", icon: Sparkles, color: "text-amber-600", bgColor: "bg-amber-50" },
-  { id: "coaching", schemaId: "coaching_client", name: "Coaching Client", icon: Users, color: "text-cyan-600", bgColor: "bg-cyan-50" },
-  { id: "lead_nurture", schemaId: "lead_nurture", name: "Lead Nurture", icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-50" },
-  { id: "reengagement", schemaId: "reengagement", name: "Re-engagement", icon: Clock, color: "text-orange-600", bgColor: "bg-orange-50" },
-  { id: "winback", schemaId: "winback", name: "Win-back", icon: UserX, color: "text-red-600", bgColor: "bg-red-50" },
-  { id: "custom", schemaId: "custom", name: "Custom Sequence", icon: Workflow, color: "text-gray-600", bgColor: "bg-gray-50" },
+  { id: "welcome", schemaId: "welcome", name: "Welcome Sequence", icon: UserPlus, color: "text-blue-600", bgColor: "bg-blue-50 dark:bg-blue-950/30" },
+  { id: "buyer", schemaId: "buyer", name: "Purchase Thank You", icon: ShoppingCart, color: "text-green-600", bgColor: "bg-green-50 dark:bg-green-950/30" },
+  { id: "course_student", schemaId: "course_student", name: "Course Student", icon: GraduationCap, color: "text-purple-600", bgColor: "bg-purple-50 dark:bg-purple-950/30" },
+  { id: "product_launch", schemaId: "product_launch", name: "Product Launch", icon: Sparkles, color: "text-amber-600", bgColor: "bg-amber-50 dark:bg-amber-950/30" },
+  { id: "coaching", schemaId: "coaching_client", name: "Coaching Client", icon: Users, color: "text-cyan-600", bgColor: "bg-cyan-50 dark:bg-cyan-950/30" },
+  { id: "lead_nurture", schemaId: "lead_nurture", name: "Lead Nurture", icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-50 dark:bg-emerald-950/30" },
+  { id: "reengagement", schemaId: "reengagement", name: "Re-engagement", icon: Clock, color: "text-orange-600", bgColor: "bg-orange-50 dark:bg-orange-950/30" },
+  { id: "winback", schemaId: "winback", name: "Win-back", icon: UserX, color: "text-red-600", bgColor: "bg-red-50 dark:bg-red-950/30" },
+  { id: "custom", schemaId: "custom", name: "Custom Sequence", icon: Workflow, color: "text-gray-600", bgColor: "bg-gray-50 dark:bg-gray-950/30" },
 ];
 
 export default function SequencesPage() {
@@ -213,7 +213,7 @@ export default function SequencesPage() {
         <div className={cn("flex items-center justify-between p-3 rounded-lg border", activeFilterType.bgColor)}>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
+            <span className="text-sm text-foreground">
               Showing <strong>{activeFilterType.name}</strong> sequences only
             </span>
           </div>
@@ -275,138 +275,229 @@ export default function SequencesPage() {
         )}
       </div>
 
-      {/* Sequence Cards */}
-      {!workflows ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : filteredWorkflows?.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
-            <Workflow className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
-          </div>
-          <h3 className="text-lg font-semibold tracking-tight mb-2">Nurture fans into customers</h3>
-          <p className="text-muted-foreground mb-5 text-[13px] max-w-[340px] mx-auto leading-relaxed">
-            Set up automated email sequences that welcome new subscribers, follow up after purchases, and re-engage inactive fans — on autopilot.
-          </p>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Sequence
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredWorkflows?.map((workflow: any) => {
-            const seqType = getSequenceType(workflow);
-            const Icon = seqType?.icon || Workflow;
+      {/* Main Content + Sidebar */}
+      <div className="grid lg:grid-cols-[1fr_280px] gap-6">
+        {/* Left: Sequence Cards */}
+        <div className="space-y-6">
+          {!workflows ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredWorkflows?.length === 0 ? (
+            <Card className="p-12 text-center">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-100 via-zinc-50 to-stone-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/60 dark:from-zinc-800/60 dark:via-zinc-800/40 dark:to-zinc-900/60 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] dark:ring-zinc-700/40">
+                <Workflow className="h-7 w-7 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight mb-2">Nurture fans into customers</h3>
+              <p className="text-muted-foreground mb-5 text-[13px] max-w-[340px] mx-auto leading-relaxed">
+                Set up automated email sequences that welcome new subscribers, follow up after purchases, and re-engage inactive fans — on autopilot.
+              </p>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Sequence
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredWorkflows?.map((workflow: any) => {
+                const seqType = getSequenceType(workflow);
+                const Icon = seqType?.icon || Workflow;
 
-            return (
-              <Card
-                key={workflow._id}
-                className="group cursor-pointer hover:shadow-md transition-all"
-                onClick={() => router.push(`/dashboard/emails/workflows?mode=create&id=${workflow._id}`)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={cn("p-2 rounded-lg", seqType?.bgColor || "bg-gray-50")}>
-                        <Icon className={cn("h-5 w-5", seqType?.color || "text-gray-600")} />
+                return (
+                  <Card
+                    key={workflow._id}
+                    className="group cursor-pointer hover:shadow-md transition-all"
+                    onClick={() => router.push(`/dashboard/emails/workflows?mode=create&id=${workflow._id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("p-2 rounded-lg", seqType?.bgColor || "bg-gray-50 dark:bg-gray-950/30")}>
+                            <Icon className={cn("h-5 w-5", seqType?.color || "text-gray-600")} />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{workflow.name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {seqType?.name || "Custom Sequence"}
+                            </p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/dashboard/emails/workflows?mode=create&id=${workflow._id}`);
+                            }}>
+                              Edit Sequence
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{workflow.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {seqType?.name || "Custom Sequence"}
+
+                      {workflow.description && (
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                          {workflow.description}
                         </p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/dashboard/emails/workflows?mode=create&id=${workflow._id}`);
-                        }}>
-                          Edit Sequence
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {workflow.description && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {workflow.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between pt-3 border-t">
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {workflow.steps?.length || 0} emails
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {workflow.enrolledCount || 0} enrolled
-                      </span>
-                    </div>
-                    <Badge variant={workflow.isActive ? "default" : "secondary"}>
-                      {workflow.isActive ? (
-                        <>
-                          <Play className="h-3 w-3 mr-1" />
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <Pause className="h-3 w-3 mr-1" />
-                          Paused
-                        </>
                       )}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Quick Start Templates */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Start Templates</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {sequenceTypes.slice(0, 8).map((type) => {
-              const Icon = type.icon;
-              return (
-                <Button
-                  key={type.id}
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-start gap-2 justify-start"
-                  onClick={() => {
-                    setNewSequence({ name: type.name, description: "", type: type.id });
-                    setIsCreateOpen(true);
-                  }}
-                >
-                  <div className={cn("p-2 rounded-lg", type.bgColor)}>
-                    <Icon className={cn("h-4 w-4", type.color)} />
-                  </div>
-                  <span className="font-medium text-sm">{type.name}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                      <div className="flex items-center justify-between pt-3 border-t">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {workflow.steps?.length || 0} emails
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {workflow.enrolledCount || 0} enrolled
+                          </span>
+                        </div>
+                        <Badge variant={workflow.isActive ? "default" : "secondary"}>
+                          {workflow.isActive ? (
+                            <>
+                              <Play className="h-3 w-3 mr-1" />
+                              Active
+                            </>
+                          ) : (
+                            <>
+                              <Pause className="h-3 w-3 mr-1" />
+                              Paused
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Quick Start Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Start Templates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                {sequenceTypes.slice(0, 8).map((type) => {
+                  const Icon = type.icon;
+                  return (
+                    <Button
+                      key={type.id}
+                      variant="outline"
+                      className="h-auto p-4 flex flex-col items-start gap-2 justify-start"
+                      onClick={() => {
+                        setNewSequence({ name: type.name, description: "", type: type.id });
+                        setIsCreateOpen(true);
+                      }}
+                    >
+                      <div className={cn("p-2 rounded-lg", type.bgColor)}>
+                        <Icon className={cn("h-4 w-4", type.color)} />
+                      </div>
+                      <span className="font-medium text-sm">{type.name}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="space-y-4">
+          {/* Sequences by Type */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold">Sequences by Type</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {sequenceTypes.filter(t => t.id !== "custom").map((type) => {
+                const Icon = type.icon;
+                const count = workflowCounts?.[type.schemaId] || 0;
+                const isActive = typeFilter === type.id || typeFilter === type.schemaId;
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => {
+                      if (isActive) {
+                        clearFilter();
+                      } else {
+                        setTypeFilter(type.id);
+                        router.push(`/dashboard/emails/sequences?type=${type.id}`);
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors",
+                      isActive
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4 shrink-0", type.color)} />
+                    <span className="flex-1 text-left truncate">{type.name}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold">Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Total sequences</span>
+                <span className="font-medium">{workflows?.length || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Active</span>
+                <span className="font-medium text-green-600">
+                  {workflows?.filter((w: any) => w.isActive).length || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Paused</span>
+                <span className="font-medium">
+                  {workflows?.filter((w: any) => !w.isActive).length || 0}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Help Card */}
+          <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20 border-cyan-200 dark:border-cyan-900">
+            <CardContent className="p-4">
+              <h4 className="font-semibold text-sm mb-2">How Sequences Work</h4>
+              <ul className="text-xs space-y-2 text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <TrendingUp className="h-3 w-3 mt-0.5 text-cyan-600 shrink-0" />
+                  <span>Users enter sequences based on triggers you set</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Clock className="h-3 w-3 mt-0.5 text-cyan-600 shrink-0" />
+                  <span>Emails send on your configured schedule</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Mail className="h-3 w-3 mt-0.5 text-cyan-600 shrink-0" />
+                  <span>Each sequence can have multiple emails with delays</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

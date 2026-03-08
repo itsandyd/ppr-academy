@@ -263,6 +263,27 @@ function SequenceCard({
   );
 }
 
+// Helper to infer sequence type from a workflow (mirrors logic in sequences page)
+function inferSequenceType(workflow: any): SequenceType | null {
+  // Explicit sequenceType field
+  if (workflow.sequenceType) {
+    const valid: SequenceType[] = ["welcome", "buyer", "course_student", "lead_nurture", "product_launch", "coaching_client", "reengagement", "winback"];
+    if (valid.includes(workflow.sequenceType)) return workflow.sequenceType as SequenceType;
+  }
+
+  // Fall back to name-based inference
+  const nameLC = (workflow.name || "").toLowerCase();
+  if (nameLC.includes("welcome")) return "welcome";
+  if (nameLC.includes("buyer") || nameLC.includes("purchase") || nameLC.includes("thank you")) return "buyer";
+  if (nameLC.includes("course") || nameLC.includes("student") || nameLC.includes("enrollment")) return "course_student";
+  if (nameLC.includes("launch") || nameLC.includes("release") || nameLC.includes("new product")) return "product_launch";
+  if (nameLC.includes("coaching") || nameLC.includes("session") || nameLC.includes("client")) return "coaching_client";
+  if (nameLC.includes("nurture") || nameLC.includes("lead")) return "lead_nurture";
+  if (nameLC.includes("reengag") || nameLC.includes("inactive")) return "reengagement";
+  if (nameLC.includes("winback") || nameLC.includes("win-back")) return "winback";
+  return null;
+}
+
 export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
   const router = useRouter();
 
@@ -272,10 +293,40 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
   // Get stats
   const contactStats = useQuery(api.emailContacts.getContactStats, { storeId });
 
+  // Build a map of sequence type -> best matching workflow
+  const workflowByType = new Map<SequenceType, any>();
+  if (workflows) {
+    for (const wf of workflows) {
+      const seqType = inferSequenceType(wf);
+      if (seqType && !workflowByType.has(seqType)) {
+        workflowByType.set(seqType, wf);
+      }
+    }
+  }
+
+  // Enrich sequence nodes with real status from workflows
+  const enrichedNodes: SequenceNode[] = sequenceNodes.map((node) => {
+    const matchedWorkflow = workflowByType.get(node.id);
+    if (!matchedWorkflow) return node;
+
+    const status: SequenceNode["status"] = matchedWorkflow.isActive
+      ? "active"
+      : matchedWorkflow.steps?.length > 0
+        ? "draft"
+        : "draft";
+
+    return {
+      ...node,
+      status,
+      emailCount: matchedWorkflow.steps?.length || node.emailCount,
+      enrolledCount: matchedWorkflow.enrolledCount || node.enrolledCount,
+    };
+  });
+
   // Separate sequences by position
-  const mainFlow = sequenceNodes.filter(n => n.position === "main");
-  const branchFlow = sequenceNodes.filter(n => n.position === "branch");
-  const recoveryFlow = sequenceNodes.filter(n => n.position === "recovery");
+  const mainFlow = enrichedNodes.filter(n => n.position === "main");
+  const branchFlow = enrichedNodes.filter(n => n.position === "branch");
+  const recoveryFlow = enrichedNodes.filter(n => n.position === "recovery");
 
   // Navigate to workflow editor with sequence type pre-selected
   const handleSequenceClick = (sequenceId: SequenceType) => {
@@ -293,7 +344,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
                 <Workflow className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{sequenceNodes.filter(n => n.status === "active").length}/{sequenceNodes.length}</p>
+                <p className="text-2xl font-bold">{enrichedNodes.filter(n => n.status === "active").length}/{enrichedNodes.length}</p>
                 <p className="text-xs text-muted-foreground">Sequences Active</p>
               </div>
             </div>
@@ -321,7 +372,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
                 <Mail className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{sequenceNodes.reduce((acc, n) => acc + n.emailCount, 0)}</p>
+                <p className="text-2xl font-bold">{enrichedNodes.reduce((acc, n) => acc + n.emailCount, 0)}</p>
                 <p className="text-xs text-muted-foreground">Total Emails</p>
               </div>
             </div>
@@ -335,7 +386,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
                 <TrendingUp className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{sequenceNodes.reduce((acc, n) => acc + n.enrolledCount, 0)}</p>
+                <p className="text-2xl font-bold">{enrichedNodes.reduce((acc, n) => acc + n.enrolledCount, 0)}</p>
                 <p className="text-xs text-muted-foreground">Currently Enrolled</p>
               </div>
             </div>
@@ -344,7 +395,7 @@ export function EmailFunnelOverview({ storeId }: EmailFunnelOverviewProps) {
       </div>
 
       {/* Setup CTA if nothing configured */}
-      {sequenceNodes.every(n => n.status === "not_configured") && (
+      {enrichedNodes.every(n => n.status === "not_configured") && (
         <Card className="border-dashed bg-muted/30">
           <CardContent className="py-8 text-center">
             <Workflow className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
