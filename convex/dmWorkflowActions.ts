@@ -51,11 +51,27 @@ async function loadNodeContext(
     return null;
   }
 
-  // Get the Instagram social account for this store
-  const socialAccount = await ctx.runQuery(
-    internal.dmWorkflows.getSocialAccountForStore,
-    { storeId: execution.storeId }
-  );
+  // Get the Instagram social account — prefer the trigger node's configured account
+  let socialAccount: any = null;
+
+  // Check if the trigger node has a specific socialAccountId configured
+  const triggerNode = workflow.nodes.find((n: any) => n.type === "trigger");
+  const triggerSocialAccountId = triggerNode?.data?.socialAccountId;
+
+  if (triggerSocialAccountId) {
+    socialAccount = await ctx.runQuery(
+      internal.dmWorkflows.getSocialAccountById,
+      { socialAccountId: triggerSocialAccountId }
+    );
+  }
+
+  // Fallback to the first Instagram account for the store
+  if (!socialAccount) {
+    socialAccount = await ctx.runQuery(
+      internal.dmWorkflows.getSocialAccountForStore,
+      { storeId: execution.storeId }
+    );
+  }
 
   if (!socialAccount) {
     console.error(`[DM Workflow] No Instagram account for store ${execution.storeId}`);

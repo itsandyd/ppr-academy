@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { Id } from "@/convex/_generated/dataModel";
@@ -41,6 +41,14 @@ import {
   Clock,
   Search,
   GitBranch,
+  Instagram,
+  Globe,
+  Image as ImageIcon,
+  Video,
+  Layers,
+  RefreshCw,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import DMNodeSidebar from "./components/DMNodeSidebar";
@@ -144,6 +152,50 @@ export default function DMWorkflowPage() {
     user?.id ? { userId: user.id } : "skip"
   );
 
+  // Social accounts for trigger node account selection
+  const socialAccounts = useQuery(
+    api.socialMedia.getSocialAccounts,
+    storeId ? { storeId } : "skip"
+  );
+
+  const instagramAccounts = (socialAccounts || []).filter(
+    (account: any) => account.platform === "instagram" && account.isConnected
+  );
+
+  // Instagram post fetching for trigger node
+  const fetchInstagramPosts = useAction(api.integrations.instagram.getUserPosts);
+  const [triggerPosts, setTriggerPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+
+  // Fetch posts when the selected account changes on the trigger node
+  const loadPostsForAccount = useCallback(async (accountId: string) => {
+    if (!accountId || !user?.id) return;
+    setLoadingPosts(true);
+    try {
+      const result = await fetchInstagramPosts({
+        userId: user.id as any,
+        instagramAccountId: accountId,
+      });
+      if (result.status === 200 && Array.isArray(result.data)) {
+        setTriggerPosts(result.data.map((post: any) => ({
+          id: post.id,
+          caption: post.caption,
+          media_url: post.media_url,
+          thumbnail_url: post.thumbnail_url,
+          media_type: post.media_type,
+          timestamp: post.timestamp,
+          permalink: post.permalink,
+        })));
+      } else {
+        setTriggerPosts([]);
+      }
+    } catch {
+      setTriggerPosts([]);
+    } finally {
+      setLoadingPosts(false);
+    }
+  }, [fetchInstagramPosts, user?.id]);
+
   // ─── Mutations ──────────────────────────────────────────────────────────────
 
   const createWorkflow = useMutation(api.emailWorkflows.createWorkflow);
@@ -159,8 +211,14 @@ export default function DMWorkflowPage() {
       setIsActive(existingWorkflow.isActive || false);
       if (existingWorkflow.nodes) setNodes(existingWorkflow.nodes);
       if (existingWorkflow.edges) setEdges(existingWorkflow.edges);
+
+      // Load posts if trigger node has a socialAccountId
+      const triggerNode = existingWorkflow.nodes?.find((n: any) => n.type === "trigger");
+      if (triggerNode?.data?.socialAccountId) {
+        loadPostsForAccount(triggerNode.data.socialAccountId);
+      }
     }
-  }, [existingWorkflow]);
+  }, [existingWorkflow, loadPostsForAccount]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
   useEffect(() => {
@@ -577,11 +635,70 @@ export default function DMWorkflowPage() {
             {/* Trigger Config */}
             {selectedNode.type === "trigger" && (
               <div className="space-y-4">
+                {/* Instagram Account Selector */}
+                <div>
+                  <Label className="text-xs">Instagram Account</Label>
+                  {instagramAccounts.length === 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      No Instagram accounts connected. Connect one in Social settings.
+                    </p>
+                  ) : (
+                    <Select
+                      value={selectedNode.data.socialAccountId || ""}
+                      onValueChange={(v) => {
+                        const account = instagramAccounts.find((a: any) => a._id === v);
+                        updateNodeData(selectedNode.id, {
+                          socialAccountId: v,
+                          socialAccountUsername: account?.platformUsername || "",
+                          // Reset post selection when account changes
+                          selectedPostId: undefined,
+                          selectedPostCaption: undefined,
+                          selectedPostMediaUrl: undefined,
+                        });
+                        loadPostsForAccount(v);
+                      }}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select Instagram account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {instagramAccounts.map((account: any) => (
+                          <SelectItem key={account._id} value={account._id}>
+                            <div className="flex items-center gap-2">
+                              {account.profileImageUrl ? (
+                                <img
+                                  src={account.profileImageUrl}
+                                  alt=""
+                                  className="h-5 w-5 rounded-full"
+                                />
+                              ) : (
+                                <Instagram className="h-4 w-4 text-pink-500" />
+                              )}
+                              <span>@{account.platformUsername}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Trigger Type */}
                 <div>
                   <Label className="text-xs">Trigger Type</Label>
                   <Select
                     value={selectedNode.data.triggerType}
-                    onValueChange={(v) => updateNodeData(selectedNode.id, { triggerType: v })}
+                    onValueChange={(v) => {
+                      updateNodeData(selectedNode.id, {
+                        triggerType: v,
+                        // Reset post selection when switching away from comment_keyword
+                        ...(v !== "comment_keyword" ? {
+                          selectedPostId: undefined,
+                          selectedPostCaption: undefined,
+                          selectedPostMediaUrl: undefined,
+                        } : {}),
+                      });
+                    }}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
@@ -593,7 +710,133 @@ export default function DMWorkflowPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {selectedNode.data.triggerType === "comment_keyword" && (
+
+                {/* Post Selector — only for comment_keyword trigger */}
+                {selectedNode.data.triggerType === "comment_keyword" && selectedNode.data.socialAccountId && (
+                  <div>
+                    <Label className="text-xs">Monitor Post</Label>
+                    {loadingPosts ? (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Loading posts...
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {/* All Posts option */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateNodeData(selectedNode.id, {
+                              selectedPostId: "ALL_POSTS_AND_FUTURE",
+                              selectedPostCaption: "All Posts + Future Posts",
+                              selectedPostMediaUrl: undefined,
+                            })
+                          }
+                          className={`flex w-full items-center gap-2 rounded-md border p-2 text-left text-xs transition-colors ${
+                            selectedNode.data.selectedPostId === "ALL_POSTS_AND_FUTURE"
+                              ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                              : "hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                          }`}
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-blue-500/10">
+                            <Globe className="h-4 w-4 text-blue-500" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium">All Posts + Future Posts</div>
+                            <div className="text-[10px] text-muted-foreground">Monitor all current and future posts</div>
+                          </div>
+                          {selectedNode.data.selectedPostId === "ALL_POSTS_AND_FUTURE" && (
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                          )}
+                        </button>
+
+                        {/* Individual post list */}
+                        <div className="max-h-48 space-y-1 overflow-y-auto">
+                          {triggerPosts.map((post: any) => (
+                            <button
+                              key={post.id}
+                              type="button"
+                              onClick={() =>
+                                updateNodeData(selectedNode.id, {
+                                  selectedPostId: post.id,
+                                  selectedPostCaption: post.caption?.slice(0, 80) || "",
+                                  selectedPostMediaUrl: post.media_type === "VIDEO" && post.thumbnail_url
+                                    ? post.thumbnail_url
+                                    : post.media_url,
+                                })
+                              }
+                              className={`flex w-full items-center gap-2 rounded-md border p-1.5 text-left transition-colors ${
+                                selectedNode.data.selectedPostId === post.id
+                                  ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                                  : "hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                              }`}
+                            >
+                              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
+                                {(post.media_url || post.thumbnail_url) ? (
+                                  <img
+                                    src={post.media_type === "VIDEO" && post.thumbnail_url ? post.thumbnail_url : post.media_url}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <ImageIcon className="m-auto h-5 w-5 text-muted-foreground" />
+                                )}
+                                {post.media_type === "VIDEO" && (
+                                  <div className="absolute bottom-0 left-0 rounded-tr bg-black/70 px-0.5">
+                                    <Video className="h-2.5 w-2.5 text-white" />
+                                  </div>
+                                )}
+                                {post.media_type === "CAROUSEL_ALBUM" && (
+                                  <div className="absolute bottom-0 left-0 rounded-tr bg-black/70 px-0.5">
+                                    <Layers className="h-2.5 w-2.5 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-[11px]">
+                                  {post.caption?.slice(0, 50) || "No caption"}
+                                </div>
+                                {post.timestamp && (
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {new Date(post.timestamp).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                              {selectedNode.data.selectedPostId === post.id && (
+                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+
+                        {triggerPosts.length === 0 && !loadingPosts && (
+                          <p className="text-[10px] text-muted-foreground">
+                            No posts found. Make sure the account has published posts.
+                          </p>
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => loadPostsForAccount(selectedNode.data.socialAccountId)}
+                          className="h-7 gap-1 text-[10px]"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Refresh posts
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedNode.data.triggerType === "comment_keyword" && !selectedNode.data.socialAccountId && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                    Select an Instagram account above to choose which post to monitor.
+                  </p>
+                )}
+
+                {/* Keywords — for comment_keyword and dm_received */}
+                {(selectedNode.data.triggerType === "comment_keyword" || selectedNode.data.triggerType === "dm_received" || selectedNode.data.triggerType === "story_reply") && (
                   <div>
                     <Label className="text-xs">Keywords (comma-separated)</Label>
                     <Input
@@ -606,6 +849,9 @@ export default function DMWorkflowPage() {
                       }
                       placeholder="e.g. LINK, SEND, FREE"
                     />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Case-insensitive matching. Leave empty to match any message.
+                    </p>
                   </div>
                 )}
               </div>

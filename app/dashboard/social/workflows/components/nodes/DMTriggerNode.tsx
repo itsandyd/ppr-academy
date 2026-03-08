@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
-import { Zap } from "lucide-react";
+import { Zap, Instagram, Globe, Image as ImageIcon } from "lucide-react";
 
 const triggerLabels: Record<string, string> = {
   comment_keyword: "Comment Keyword",
@@ -21,14 +21,32 @@ function DMTriggerNode({ data, selected }: NodeProps) {
       subtitle = "Set keywords";
     }
   } else if (data.triggerType === "dm_received") {
-    subtitle = "Any incoming DM";
+    if (data.keywords?.length > 0) {
+      subtitle = data.keywords.join(", ");
+    } else {
+      subtitle = "Any incoming DM";
+    }
   } else if (data.triggerType === "story_reply") {
-    subtitle = "Reply to your story";
+    if (data.keywords?.length > 0) {
+      subtitle = data.keywords.join(", ");
+    } else {
+      subtitle = "Reply to your story";
+    }
   }
+
+  const accountLabel = data.socialAccountUsername
+    ? `@${data.socialAccountUsername}`
+    : null;
+
+  const postLabel = data.selectedPostId === "ALL_POSTS_AND_FUTURE"
+    ? "All Posts"
+    : data.selectedPostCaption
+      ? data.selectedPostCaption.slice(0, 30) + (data.selectedPostCaption.length > 30 ? "..." : "")
+      : null;
 
   return (
     <div
-      className={`min-w-[180px] max-w-[220px] rounded-lg border-2 bg-white px-4 py-3 shadow-md dark:bg-zinc-900 ${
+      className={`min-w-[180px] max-w-[240px] rounded-lg border-2 bg-white px-4 py-3 shadow-md dark:bg-zinc-900 ${
         selected ? "border-green-500 ring-2 ring-green-500/20" : "border-green-500/50"
       }`}
     >
@@ -46,6 +64,35 @@ function DMTriggerNode({ data, selected }: NodeProps) {
           )}
         </div>
       </div>
+
+      {/* Account + Post info */}
+      {(accountLabel || postLabel) && (
+        <div className="mt-2 space-y-1 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+          {accountLabel && (
+            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+              <Instagram className="h-3 w-3 text-pink-500" />
+              <span className="truncate">{accountLabel}</span>
+            </div>
+          )}
+          {postLabel && data.triggerType === "comment_keyword" && (
+            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
+              {data.selectedPostId === "ALL_POSTS_AND_FUTURE" ? (
+                <Globe className="h-3 w-3 text-blue-500" />
+              ) : (
+                <>
+                  {data.selectedPostMediaUrl ? (
+                    <img src={data.selectedPostMediaUrl} alt="" className="h-3 w-3 rounded-sm object-cover" />
+                  ) : (
+                    <ImageIcon className="h-3 w-3" />
+                  )}
+                </>
+              )}
+              <span className="truncate">{postLabel}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <Handle
         type="source"
         position={Position.Bottom}

@@ -137,6 +137,20 @@ export const getSocialAccountForStore = internalQuery({
 });
 
 /**
+ * Get a specific social account by its document ID.
+ * Used by DM workflow execution to use the trigger node's configured account.
+ */
+export const getSocialAccountById = internalQuery({
+  args: {
+    socialAccountId: v.id("socialAccounts"),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.socialAccountId);
+  },
+});
+
+/**
  * Get chat history for a DM workflow execution.
  * Used by aiConversation node to build conversation context.
  */
@@ -323,10 +337,77 @@ export const expireAndResumeStaleExecutions = internalAction({
   },
 });
 
+/**
+ * Find an active DM workflow that matches a dm_received or story_reply trigger.
+ * Used by the webhook handler when someone sends a DM or replies to a story.
+ */
+export const findWorkflowByDMKeyword = internalQuery({
+  args: {
+    keyword: v.string(),
+    socialAccountId: v.string(),
+    triggerType: v.union(v.literal("dm_received"), v.literal("story_reply")),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const socialAccount = await ctx.db
+      .query("socialAccounts")
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("platformUserId"), args.socialAccountId),
+          q.eq(
+            q.field("platformData.instagramBusinessAccountId"),
+            args.socialAccountId
+          )
+        )
+      )
+      .first();
+
+    if (!socialAccount) return null;
+
+    const workflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_storeId_workflowType", (q) =>
+        q.eq("storeId", socialAccount.storeId).eq("workflowType", "dm")
+      )
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    for (const workflow of workflows) {
+      if (workflow.trigger?.type !== args.triggerType) continue;
+
+      const triggerConfig = workflow.trigger?.config;
+
+      // Check account match
+      const workflowSocialAccountId = triggerConfig?.socialAccountId;
+      if (workflowSocialAccountId && socialAccount._id.toString() !== workflowSocialAccountId) {
+        continue;
+      }
+
+      // Check keyword match
+      const triggerKeywords: string[] = triggerConfig?.keywords ?? [];
+      const lowerKeyword = args.keyword.toLowerCase();
+
+      // If no keywords configured, match any DM/story reply
+      if (triggerKeywords.length === 0) {
+        return workflow;
+      }
+
+      const matched = triggerKeywords.some(
+        (k: string) => lowerKeyword.includes(k.toLowerCase())
+      );
+
+      if (matched) return workflow;
+    }
+
+    return null;
+  },
+});
+
 export const findWorkflowByCommentKeyword = internalQuery({
   args: {
     keyword: v.string(),
     socialAccountId: v.string(),
+    postId: v.optional(v.string()),
   },
   returns: v.any(),
   handler: async (ctx, args) => {
@@ -354,13 +435,53 @@ export const findWorkflowByCommentKeyword = internalQuery({
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    // Check each workflow's trigger for a keyword match
+    // Check each workflow's trigger for a keyword match + post match + account match
     for (const workflow of workflows) {
       if (workflow.trigger?.type !== "comment_keyword") continue;
 
-      const triggerKeywords: string[] =
-        workflow.trigger?.config?.keywords ?? [];
+      const triggerConfig = workflow.trigger?.config;
+
+      // 1. Check account match — if the workflow has a socialAccountId configured,
+      //    only match if it's the same account that received the comment
+      const workflowSocialAccountId = triggerConfig?.socialAccountId;
+      if (workflowSocialAccountId) {
+        // The workflow is tied to a specific social account doc ID.
+        // Check if the incoming socialAccountId matches the account's platformUserId
+        // or instagramBusinessAccountId.
+        if (
+          socialAccount._id.toString() !== workflowSocialAccountId &&
+          socialAccount.platformUserId !== args.socialAccountId &&
+          socialAccount.platformData?.instagramBusinessAccountId !== args.socialAccountId
+        ) {
+          // socialAccount already matched above, so if we got here,
+          // the workflow's configured account doesn't match this socialAccount
+          // — need to check the workflow's account specifically
+          const workflowAccount: any = await ctx.db.get(workflowSocialAccountId as any);
+          if (!workflowAccount) continue;
+          if (
+            workflowAccount.platformUserId !== args.socialAccountId &&
+            workflowAccount.platformData?.instagramBusinessAccountId !== args.socialAccountId
+          ) {
+            continue;
+          }
+        }
+      }
+
+      // 2. Check post match — if the workflow has a selectedPostId configured,
+      //    only match if the comment is on that post (or "ALL_POSTS_AND_FUTURE")
+      const selectedPostId = triggerConfig?.selectedPostId;
+      if (selectedPostId && selectedPostId !== "ALL_POSTS_AND_FUTURE" && args.postId) {
+        if (selectedPostId !== args.postId) continue;
+      }
+
+      // 3. Check keyword match
+      const triggerKeywords: string[] = triggerConfig?.keywords ?? [];
       const lowerKeyword = args.keyword.toLowerCase();
+
+      // If no keywords configured, match any comment
+      if (triggerKeywords.length === 0) {
+        return workflow;
+      }
 
       const matched = triggerKeywords.some(
         (k: string) => lowerKeyword.includes(k.toLowerCase())

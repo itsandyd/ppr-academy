@@ -211,6 +211,30 @@ const Sidebar = React.forwardRef<
               } as React.CSSProperties
             }
             side={side}
+            onInteractOutside={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                target.closest("[data-clerk-portal]") ||
+                target.closest("[class*='cl-']") ||
+                target.closest(".cl-userButtonPopoverCard") ||
+                target.closest(".cl-modalBackdrop") ||
+                target.closest(".cl-rootBox")
+              ) {
+                e.preventDefault();
+              }
+            }}
+            onPointerDownOutside={(e) => {
+              const target = e.target as HTMLElement;
+              if (
+                target.closest("[data-clerk-portal]") ||
+                target.closest("[class*='cl-']") ||
+                target.closest(".cl-userButtonPopoverCard") ||
+                target.closest(".cl-modalBackdrop") ||
+                target.closest(".cl-rootBox")
+              ) {
+                e.preventDefault();
+              }
+            }}
           >
             <SheetHeader className="sr-only">
               <SheetTitle>Sidebar</SheetTitle>

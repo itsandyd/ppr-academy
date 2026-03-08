@@ -24695,7 +24695,17 @@ export declare const internal: {
     findWorkflowByCommentKeyword: FunctionReference<
       "query",
       "internal",
-      { keyword: string; socialAccountId: string },
+      { keyword: string; postId?: string; socialAccountId: string },
+      any
+    >;
+    findWorkflowByDMKeyword: FunctionReference<
+      "query",
+      "internal",
+      {
+        keyword: string;
+        socialAccountId: string;
+        triggerType: "dm_received" | "story_reply";
+      },
       any
     >;
     fulfillWaitingExecution: FunctionReference<
@@ -24708,6 +24718,12 @@ export declare const internal: {
       "query",
       "internal",
       { executionId: Id<"workflowExecutions">; senderIgsid: string },
+      any
+    >;
+    getSocialAccountById: FunctionReference<
+      "query",
+      "internal",
+      { socialAccountId: Id<"socialAccounts"> },
       any
     >;
     getSocialAccountForStore: FunctionReference<

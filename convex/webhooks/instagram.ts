@@ -95,6 +95,26 @@ export const processWebhook = internalAction({
           return null;
         }
 
+        // Check for DM workflows with dm_received trigger
+        const dmReceivedWorkflow = await ctx.runQuery(
+          internal.dmWorkflows.findWorkflowByDMKeyword,
+          { keyword: messageText, socialAccountId: entry.id, triggerType: "dm_received" as const }
+        );
+
+        if (dmReceivedWorkflow) {
+          await ctx.scheduler.runAfter(0, internal.dmWorkflowActions.startExecution, {
+            workflowId: dmReceivedWorkflow._id,
+            triggerData: {
+              type: "dm_received",
+              senderId: senderId,
+              senderIgsid: senderId,
+              keyword: messageText,
+              messageText: messageText,
+            },
+          });
+          return null;
+        }
+
         // Find automation by keyword match
         const matcher = await ctx.runQuery(
           (internal as any).automations.findAutomationByKeywordInternal,
@@ -177,6 +197,26 @@ export const processWebhook = internalAction({
             return null;
           }
 
+          // Check for DM workflows with dm_received trigger
+          const dmReceivedWorkflow2 = await ctx.runQuery(
+            internal.dmWorkflows.findWorkflowByDMKeyword,
+            { keyword: messageText, socialAccountId: entry.id, triggerType: "dm_received" as const }
+          );
+
+          if (dmReceivedWorkflow2) {
+            await ctx.scheduler.runAfter(0, internal.dmWorkflowActions.startExecution, {
+              workflowId: dmReceivedWorkflow2._id,
+              triggerData: {
+                type: "dm_received",
+                senderId: senderId,
+                senderIgsid: senderId,
+                keyword: messageText,
+                messageText: messageText,
+              },
+            });
+            return null;
+          }
+
           // Find automation by keyword match
           const matcher = await ctx.runQuery(
             (internal as any).automations.findAutomationByKeywordInternal,
@@ -220,13 +260,13 @@ export const processWebhook = internalAction({
         }
 
         // Check for DM workflows triggered by this comment keyword
+        const postId = change.value?.media?.id;
         const dmWorkflow = await ctx.runQuery(
           internal.dmWorkflows.findWorkflowByCommentKeyword,
-          { keyword: commentText, socialAccountId: accountId }
+          { keyword: commentText, socialAccountId: accountId, postId: postId }
         );
 
         if (dmWorkflow) {
-          const postId = change.value?.media?.id;
           await ctx.scheduler.runAfter(0, internal.dmWorkflowActions.startExecution, {
             workflowId: dmWorkflow._id,
             triggerData: {
@@ -256,7 +296,6 @@ export const processWebhook = internalAction({
           return null;
         }
 
-        const postId = change.value?.media?.id;
         const hasGlobalMonitoring = matcher.posts?.some((p: any) => p.postId === "ALL_POSTS_AND_FUTURE");
         const isPostAttached = matcher.posts?.some((p: any) => p.postId === postId);
 

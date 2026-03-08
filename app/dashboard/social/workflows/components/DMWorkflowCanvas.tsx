@@ -47,7 +47,7 @@ const nodeTypes = {
 };
 
 export const defaultNodeData: Record<string, object> = {
-  trigger: { triggerType: "comment_keyword", description: "When someone comments a keyword", keywords: [] },
+  trigger: { triggerType: "comment_keyword", description: "When someone comments a keyword", keywords: [], socialAccountId: "", socialAccountUsername: "", selectedPostId: "", selectedPostCaption: "", selectedPostMediaUrl: "" },
   sendDM: { messageText: "", includeLink: "" },
   aiConversation: { goalDescription: "", systemPrompt: "", waitForReply: true },
   dmCondition: { conditionType: "replied" },
