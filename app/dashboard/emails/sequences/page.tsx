@@ -174,7 +174,7 @@ export default function SequencesPage() {
   };
 
   return (
-    <div className="container px-4 md:px-6 py-6 space-y-6">
+    <div className="px-4 md:px-6 py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
