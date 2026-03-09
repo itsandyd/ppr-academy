@@ -91,7 +91,7 @@ const Scene3_Solution: React.FC = () => {
         <div style={{ width: 40, height: 150, background: C.darkGray, borderRadius: "5px 5px 0 0" }} />
         <div style={{ width: 40, height: harmonic * 1.2, background: C.orange, borderRadius: "5px 5px 0 0" }} />
         <div style={{ width: 40, height: harmonic * 0.8, background: C.gold, borderRadius: "5px 5px 0 0" }} />
-        <div style={{ width: 40, height: harmonic * 0.5, background: C.yellow, borderRadius: "5px 5px 0 0" }} />
+        <div style={{ width: 40, height: harmonic * 0.5, background: C.warmOrange, borderRadius: "5px 5px 0 0" }} />
       </div>
     </CenterScene>
   );
