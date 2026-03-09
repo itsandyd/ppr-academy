@@ -84,13 +84,13 @@ const Scene3_Solution: React.FC = () => {
     <CenterScene opacity={op} translateY={y} tint={C.cyan} seed={97}>
       <FadeUp delay={10}>
         <div style={{ fontSize: 48, fontWeight: 900, fontFamily: F, color: C.white, marginBottom: 40 }}>
-          Use <GradientText from={C.cyan} to={C.blue}>Soft Clipping.</GradientText>
+          Use <GradientText from={C.cyan} to={C.primary}>Soft Clipping.</GradientText>
         </div>
       </FadeUp>
 
       <svg width="400" height="200" style={{ overflow: "visible" }}>
         <path d="M 0,100 Q 100,0 200,100 T 400,100" fill="none" stroke={C.cyan} strokeWidth="4" />
-        <path d="M 0,100 Q 100,20 200,100 T 400,100" fill="none" stroke={C.blue} strokeWidth="4" strokeDasharray="10 10" />
+        <path d="M 0,100 Q 100,20 200,100 T 400,100" fill="none" stroke={C.primary} strokeWidth="4" strokeDasharray="10 10" />
       </svg>
     </CenterScene>
   );
