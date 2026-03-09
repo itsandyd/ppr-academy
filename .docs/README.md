@@ -8,6 +8,7 @@ This directory contains all project documentation organized by date and topic.
 Files are organized by month when they were created/last modified:
 
 **Current & Recent:**
+- `2026-03-march/` - March 2026
 - `2025-03-march/` - March 2025
 - `2025-02-february/` - February 2025
 - `2025-01-january/` - January 2025
@@ -84,6 +85,10 @@ When creating new documentation:
 2. **Use descriptive names** - `EMAIL_CAMPAIGN_PERFORMANCE_FIX.md` not `FIX.md`
 3. **Follow naming convention** - UPPERCASE with underscores
 4. **Include context** - Make the purpose clear from the filename
+
+Recent addition:
+
+- `2026-03-march/social-media/REMOTION_SOCIAL_VIDEO_WORKFLOW.md` - End-to-end workflow for building Remotion social videos, including model handoff guidance, voiceover generation, timing validation, and overlap fixes
 
 See `.cursorrules` for complete documentation guidelines.
 

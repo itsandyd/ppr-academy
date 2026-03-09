@@ -1,31 +1,36 @@
 import React from "react";
 import { Composition } from "remotion";
 import { PausePlayRepeatVideo } from "./PausePlayRepeatVideo";
-import { EmailAutomationVideo } from "./EmailAutomationVideo";
-import { BeatLeaseVideo } from "./BeatLeaseVideo";
-import { FollowGatesVideo } from "./FollowGatesVideo";
-import { SaturationCourseVideo } from "./SaturationCourseVideo";
-import { SaturationCourseV2 } from "./SaturationCourseV2";
-import { HarmonicsLessonVideo } from "./HarmonicsLessonVideo";
-import { HarmonicsLessonLong } from "./HarmonicsLessonLong";
-import { HarmonicsFullLesson } from "./HarmonicsFullLesson";
-import { ExcalidrawEmailVideo } from "./ExcalidrawEmailVideo";
-import { ExcalidrawGamificationVideo } from "./ExcalidrawGamificationVideo";
+import { EmailAutomationVideo } from "./compositions/features/EmailAutomationVideo";
+import { BeatLeaseVideo } from "./compositions/features/BeatLeaseVideo";
+import { FollowGatesVideo } from "./compositions/features/FollowGatesVideo";
+import { SaturationCourseVideo } from "./compositions/courses/SaturationCourseVideo";
+import { SaturationCourseV2 } from "./compositions/courses/SaturationCourseV2";
+import { HarmonicsLessonVideo } from "./compositions/courses/HarmonicsLessonVideo";
+import { HarmonicsLessonLong } from "./compositions/courses/HarmonicsLessonLong";
+import { HarmonicsFullLesson } from "./compositions/courses/HarmonicsFullLesson";
+import { ExcalidrawEmailVideo } from "./compositions/features/ExcalidrawEmailVideo";
+import { ExcalidrawGamificationVideo } from "./compositions/features/ExcalidrawGamificationVideo";
 import { DynamicVideo } from "./DynamicVideo";
-import { PromoWhatIsPPR } from "./PromoWhatIsPPR";
-import { PromoAIMarketing } from "./PromoAIMarketing";
-import { PromoStorefront } from "./PromoStorefront";
-import { PromoCreatorToolkit } from "./PromoCreatorToolkit";
-import { PromoLearnerToCreator } from "./PromoLearnerToCreator";
-import { PromoMadeForProducers } from "./PromoMadeForProducers";
-import { PromoRebrandAnnouncement } from "./PromoRebrandAnnouncement";
-import { CampaignDay1 } from "./CampaignDay1";
+import { PromoWhatIsPPR } from "./compositions/social/PromoWhatIsPPR";
+import { PromoAIMarketing } from "./compositions/features/PromoAIMarketing";
+import { PromoStorefront } from "./compositions/features/PromoStorefront";
+import { PromoCreatorToolkit } from "./compositions/features/PromoCreatorToolkit";
+import { PromoLearnerToCreator } from "./compositions/social/PromoLearnerToCreator";
+import { PromoMadeForProducers } from "./compositions/social/PromoMadeForProducers";
+import { PromoRebrandAnnouncement } from "./compositions/social/PromoRebrandAnnouncement";
+import { CampaignDay1 } from "./compositions/social/CampaignDay1";
 import { CampaignDay3 } from "./CampaignDay3";
 import { CampaignDay5 } from "./CampaignDay5";
 import { CampaignDay7 } from "./CampaignDay7";
 import { CampaignDay10 } from "./CampaignDay10";
-import { BeatTapeRevenueVideo } from "./BeatTapeRevenueVideo";
-import { EmailSequenceVideo } from "./EmailSequenceVideo";
+import { BeatTapeRevenueVideo } from "./compositions/social/BeatTapeRevenueVideo";
+import { TheStackIKilled } from "./compositions/social/TheStackIKilled";
+import { EmailSequenceVideo } from "./compositions/social/EmailSequenceVideo";
+import { DMStrategyVideo } from "./compositions/social/DMStrategyVideo";
+import { getDmStrategyTimeline } from "./compositions/social/dmStrategyVoiceover";
+import { BeatLeaseVideo as BeatLeaseSocialVideo } from "./compositions/social/BeatLeaseVideo";
+import { getBeatLeaseTimeline } from "./compositions/social/beatLeaseVoiceover";
 import { SceneHook } from "./SceneHook";
 import { SceneLeak } from "./SceneLeak";
 import { SceneThreeEmails } from "./SceneThreeEmails";
@@ -42,6 +47,9 @@ type DynamicVideoProps = {
   width: number;
   height: number;
 };
+
+const dmStrategy60Timeline = getDmStrategyTimeline(60);
+const beatLease60Timeline = getBeatLeaseTimeline(60);
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -130,24 +138,24 @@ export const RemotionRoot: React.FC = () => {
         component={HarmonicsLessonLong}
         durationInFrames={3360}
         fps={30}
-        width={1920}
-        height={1080}
+        width={1080}
+        height={1920}
       />
       <Composition
         id="HarmonicsFullLesson"
         component={HarmonicsFullLesson}
         durationInFrames={19800}
         fps={30}
-        width={1920}
-        height={1080}
+        width={1080}
+        height={1920}
       />
       <Composition
         id="ExcalidrawEmail"
         component={ExcalidrawEmailVideo}
         durationInFrames={2280}
         fps={30}
-        width={1920}
-        height={1080}
+        width={1080}
+        height={1920}
       />
       <Composition
         id="ExcalidrawGamification"
@@ -257,6 +265,14 @@ export const RemotionRoot: React.FC = () => {
       />
       {/* ─── CONTENT VIDEOS: Educational Social Media Content ─── */}
       <Composition
+        id="TheStackIKilled"
+        component={TheStackIKilled}
+        durationInFrames={1050}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
         id="BeatTapeRevenue"
         component={BeatTapeRevenueVideo}
         durationInFrames={1800}
@@ -320,6 +336,50 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1080}
         height={1920}
+      />
+      <Composition
+        id="DMStrategyVideo"
+        component={DMStrategyVideo}
+        durationInFrames={dmStrategy60Timeline.total}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          enableVoiceover: true,
+        }}
+      />
+      <Composition
+        id="DMStrategyVideoSilent"
+        component={DMStrategyVideo}
+        durationInFrames={dmStrategy60Timeline.total}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          enableVoiceover: false,
+        }}
+      />
+      <Composition
+        id="BeatLeaseVideo"
+        component={BeatLeaseSocialVideo}
+        durationInFrames={beatLease60Timeline.total}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          enableVoiceover: true,
+        }}
+      />
+      <Composition
+        id="BeatLeaseVideoSilent"
+        component={BeatLeaseSocialVideo}
+        durationInFrames={beatLease60Timeline.total}
+        fps={60}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          enableVoiceover: false,
+        }}
       />
       {/* ─── EMAIL WORKFLOW ENGINE: Codebase-Driven Video ─── */}
       <Composition

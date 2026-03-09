@@ -184,7 +184,7 @@ export function AppSidebarEnhanced() {
           },
           {
             icon: Video,
-            href: `/store/${storeId}/videos`,
+            href: `/dashboard/videos`,
             label: "Video Studio",
             badge: "AI",
             isNew: true,
