@@ -89,15 +89,22 @@ export const generateCode = internalAction({
     }
 
     // Attempt code generation with retries
-    const MAX_ATTEMPTS = 3;
+    const MAX_ATTEMPTS = 4;
     let lastErrors: string[] = [];
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
-        const prompt =
-          attempt === 0
-            ? userPrompt
-            : `${userPrompt}\n\n## IMPORTANT: Fix These Issues From Previous Attempt\nYour previous code had these validation errors:\n${lastErrors.map((e) => `- ${e}`).join("\n")}\n\nPlease fix ALL of these issues and output corrected code.`;
+        let prompt: string;
+        if (attempt === 0) {
+          prompt = userPrompt;
+        } else {
+          const hasSyntaxErrors = lastErrors.some((e) => e.includes("[Syntax]"));
+          const syntaxWarning = hasSyntaxErrors
+            ? `\n\n⚠️ CRITICAL: The previous code had UNBALANCED DELIMITERS. Before outputting code, mentally count every opening and closing parenthesis (), brace {}, and bracket []. Ensure all JSX closing tags match their opening tags (e.g. </div>, </span>). Double-check string concatenation with + does not break JSX boundaries.`
+            : "";
+
+          prompt = `${userPrompt}\n\n## IMPORTANT: Fix These Issues From Previous Attempt (attempt ${attempt + 1})\nYour previous code had these validation errors:\n${lastErrors.map((e) => `- ${e}`).join("\n")}${syntaxWarning}\n\nPlease fix ALL of these issues and output corrected code.`;
+        }
 
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",

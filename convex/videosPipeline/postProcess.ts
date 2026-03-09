@@ -48,93 +48,81 @@ export const postProcess = internalAction({
     });
 
     // ── Generate Thumbnail ────────────────────────────────────────────
+    // Use Remotion Lambda to render a still frame (avoids needing local Chrome/Puppeteer).
+    // Falls back gracefully if Lambda env vars are not configured.
     try {
-      const { bundle } = await import("@remotion/bundler");
-      const { renderStill, selectComposition } = await import(
-        "@remotion/renderer"
-      );
-      const path = await import("path");
-      const fs = await import("fs");
-      const os = await import("os");
+      const serveUrl = process.env.REMOTION_SERVE_URL;
+      const functionName = process.env.REMOTION_FUNCTION_NAME;
+      const accessKeyId = process.env.REMOTION_AWS_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
+      const secretAccessKey = process.env.REMOTION_AWS_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
 
-      const tmpDir = os.tmpdir();
-      const thumbPath = path.join(
-        tmpDir,
-        `ppr-thumb-${args.jobId}-${Date.now()}.png`
-      );
+      if (!serveUrl || !functionName || !accessKeyId || !secretAccessKey) {
+        console.warn("⚠️ Skipping thumbnail: Lambda env vars not configured");
+      } else {
+        // Ensure Remotion Lambda client can find credentials
+        process.env.REMOTION_AWS_ACCESS_KEY_ID = accessKeyId;
+        process.env.REMOTION_AWS_SECRET_ACCESS_KEY = secretAccessKey;
 
-      const entryPoint = path.resolve(
-        process.cwd(),
-        "..",
-        "remotion",
-        "index.ts"
-      );
+        const { renderStillOnLambda } = await import("@remotion/lambda/client");
+        const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
+        const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
 
-      let resolvedEntry = entryPoint;
-      const alternatePaths = [
-        path.resolve("remotion", "index.ts"),
-        path.resolve("..", "remotion", "index.ts"),
-        path.resolve(process.cwd(), "remotion", "index.ts"),
-      ];
+        const region = (process.env.REMOTION_AWS_REGION ?? "us-east-1") as "us-east-1";
+        const thumbnailFrame = Math.round(args.totalFrames * 0.3);
 
-      for (const p of [entryPoint, ...alternatePaths]) {
-        if (fs.existsSync(p)) {
-          resolvedEntry = p;
-          break;
+        const inputProps = {
+          generatedCode: args.generatedCode,
+          images: args.imageUrls,
+          audioUrl: args.audioUrl ?? null,
+          duration: args.totalFrames,
+          width: args.width,
+          height: args.height,
+        };
+
+        const { bucketName, renderId } = await renderStillOnLambda({
+          region,
+          functionName,
+          serveUrl,
+          composition: "DynamicVideo",
+          inputProps,
+          frame: thumbnailFrame,
+          imageFormat: "png",
+          privacy: "no-acl",
+        });
+
+        // Download the rendered still via presigned URL
+        const s3Client = new S3Client({
+          region,
+          credentials: { accessKeyId, secretAccessKey },
+        });
+
+        const objectKey = `renders/${renderId}/out.png`;
+        const presignedUrl = await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({ Bucket: bucketName, Key: objectKey }),
+          { expiresIn: 300 }
+        );
+
+        const thumbResponse = await fetch(presignedUrl);
+        if (thumbResponse.ok) {
+          const thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
+
+          const uploadUrl: string = await ctx.runMutation(
+            internal.videosPipeline.jobMutations.generateUploadUrl,
+            {}
+          );
+
+          const uploadResult = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": "image/png" },
+            body: thumbBuffer,
+          });
+
+          if (uploadResult.ok) {
+            const uploadJson: any = await uploadResult.json();
+            thumbnailId = uploadJson.storageId as Id<"_storage">;
+          }
         }
-      }
-
-      const bundleLocation = await bundle({ entryPoint: resolvedEntry });
-
-      const inputProps = {
-        generatedCode: args.generatedCode,
-        images: args.imageUrls,
-        audioUrl: args.audioUrl ?? null,
-        duration: args.totalFrames,
-        width: args.width,
-        height: args.height,
-      };
-
-      const composition = await selectComposition({
-        serveUrl: bundleLocation,
-        id: "DynamicVideo",
-        inputProps,
-      });
-
-      // Render still at ~30% through the video
-      const thumbnailFrame = Math.round(args.totalFrames * 0.3);
-
-      await renderStill({
-        composition,
-        serveUrl: bundleLocation,
-        output: thumbPath,
-        frame: thumbnailFrame,
-        inputProps,
-      });
-
-      // Upload thumbnail
-      const thumbBuffer = fs.readFileSync(thumbPath);
-      const uploadUrl: string = await ctx.runMutation(
-        internal.videosPipeline.jobMutations.generateUploadUrl,
-        {}
-      );
-
-      const uploadResult = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": "image/png" },
-        body: thumbBuffer,
-      });
-
-      if (uploadResult.ok) {
-        const uploadJson: any = await uploadResult.json();
-        thumbnailId = uploadJson.storageId as Id<"_storage">;
-      }
-
-      // Cleanup
-      try {
-        if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
-      } catch {
-        // ignore
       }
     } catch (err: any) {
       console.error("⚠️ Thumbnail generation failed:", err.message);

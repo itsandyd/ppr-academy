@@ -206,7 +206,10 @@ export default function VideoStudioPage() {
         aspectRatio,
         voiceId: voiceEnabled ? undefined : undefined,
       });
-      router.push(`/dashboard/videos/${jobId}`);
+      // Stay on the same page — the new job appears in "Recent Videos" via reactive query.
+      // Auto-expand the new job's inline progress panel.
+      setExpandedJobId(jobId);
+      setPrompt("");
     } catch (err) {
       console.error("Failed to start generation:", err);
     } finally {
@@ -407,10 +410,11 @@ export default function VideoStudioPage() {
                   <Card
                     className="group cursor-pointer overflow-hidden bg-card border-border hover:border-primary/30 transition-all duration-200"
                     onClick={() => {
-                      if (isActive) {
-                        setExpandedJobId(isExpanded ? null : job._id);
-                      } else {
+                      if (job.status === "completed") {
                         router.push(`/dashboard/videos/${job._id}`);
+                      } else {
+                        // For generating, queued, or failed jobs — toggle inline progress panel
+                        setExpandedJobId(isExpanded ? null : job._id);
                       }
                     }}
                   >
@@ -487,14 +491,18 @@ export default function VideoStudioPage() {
                     </div>
                   </Card>
 
-                  {/* Inline Progress Panel for active jobs */}
-                  {isActive && isExpanded && (
+                  {/* Inline Progress Panel for non-completed jobs */}
+                  {job.status !== "completed" && isExpanded && (
                     <Card className="mt-2 p-4 bg-card border-border border-primary/20">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          {job.status === "failed" ? (
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          )}
                           <span className="text-sm font-semibold text-foreground">
-                            Generating...
+                            {job.status === "failed" ? "Generation failed" : "Generating..."}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">

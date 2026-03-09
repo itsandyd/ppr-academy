@@ -61,6 +61,8 @@ async function renderViaLambda(
     renderMediaOnLambda,
     getRenderProgress,
   } = await import("@remotion/lambda/client");
+  const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
+  const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
 
   const region = (process.env.REMOTION_AWS_REGION ?? "us-east-1") as "us-east-1";
   const serveUrl = process.env.REMOTION_SERVE_URL!;
@@ -149,8 +151,30 @@ async function renderViaLambda(
     throw new Error("Lambda render completed but no output file URL was returned.");
   }
 
+  // Generate a presigned URL to download the rendered MP4 from S3.
+  // The raw outputFile URL is unauthenticated and S3 returns 403 for private objects.
+  const s3Client = new S3Client({
+    region,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  });
+
+  // Extract the S3 object key from the outputFile URL
+  const outputUrl = new URL(outputFile);
+  const objectKey = outputUrl.pathname.startsWith("/")
+    ? outputUrl.pathname.slice(1)
+    : outputUrl.pathname;
+
+  const presignedUrl = await getSignedUrl(
+    s3Client,
+    new GetObjectCommand({ Bucket: bucketName, Key: objectKey }),
+    { expiresIn: 900 }
+  );
+
   // Download the rendered MP4 from S3 and re-upload to Convex storage
-  const videoResponse = await fetch(outputFile);
+  const videoResponse = await fetch(presignedUrl);
   if (!videoResponse.ok) {
     throw new Error(`Failed to download rendered video from S3: ${videoResponse.statusText}`);
   }
