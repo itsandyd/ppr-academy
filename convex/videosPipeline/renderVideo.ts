@@ -66,6 +66,19 @@ async function renderViaLambda(
   const serveUrl = process.env.REMOTION_SERVE_URL!;
   const functionName = process.env.REMOTION_FUNCTION_NAME!;
 
+  // Ensure AWS credentials are available in the environment for the Remotion Lambda client.
+  // Convex actions have env vars in process.env, but the Remotion SDK looks for specific keys.
+  const accessKeyId = process.env.REMOTION_AWS_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.REMOTION_AWS_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "AWS credentials not configured. Set REMOTION_AWS_ACCESS_KEY_ID and REMOTION_AWS_SECRET_ACCESS_KEY in your Convex deployment environment variables."
+    );
+  }
+  // Remotion Lambda client reads these from process.env automatically
+  process.env.REMOTION_AWS_ACCESS_KEY_ID = accessKeyId;
+  process.env.REMOTION_AWS_SECRET_ACCESS_KEY = secretAccessKey;
+
   const startTime = Date.now();
 
   // Start the Lambda render

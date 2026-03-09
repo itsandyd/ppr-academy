@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import {
   Video,
   Wand2,
@@ -33,6 +34,10 @@ import {
   AlertCircle,
   CheckCircle2,
   RotateCcw,
+  FileText,
+  Image as ImageIcon,
+  Code,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +62,35 @@ const ASPECT_RATIOS = [
   { value: "16:9", label: "16:9", desc: "YouTube" },
   { value: "1:1", label: "1:1", desc: "Feed" },
 ];
+
+const PIPELINE_STEPS = [
+  { key: "gathering_context", label: "Gathering course data", icon: FileText },
+  { key: "generating_script", label: "Writing script", icon: Sparkles },
+  { key: "generating_assets", label: "Generating images", icon: ImageIcon },
+  { key: "generating_voice", label: "Generating voiceover", icon: Mic },
+  { key: "generating_code", label: "Writing video composition", icon: Code },
+  { key: "rendering", label: "Rendering video", icon: Film },
+  { key: "post_processing", label: "Finishing up", icon: CheckCircle2 },
+] as const;
+
+type PipelineStepKey = (typeof PIPELINE_STEPS)[number]["key"];
+
+function getStepStatus(
+  stepKey: PipelineStepKey,
+  currentStatus: string
+): "pending" | "active" | "completed" {
+  const stepOrder: string[] = PIPELINE_STEPS.map((s) => s.key);
+  const currentIdx = stepOrder.indexOf(currentStatus);
+  const stepIdx = stepOrder.indexOf(stepKey);
+
+  if (currentStatus === "completed") return "completed";
+  if (currentStatus === "failed") {
+    return stepIdx < currentIdx ? "completed" : stepIdx === currentIdx ? "active" : "pending";
+  }
+  if (stepIdx < currentIdx) return "completed";
+  if (stepIdx === currentIdx) return "active";
+  return "pending";
+}
 
 const STATUS_CONFIG: Record<
   string,
@@ -102,6 +136,7 @@ export default function VideoStudioPage() {
   const [aspectRatio, setAspectRatio] = useState("9:16");
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
   const jobs = useQuery(
     api.videos.getJobsByStore,
@@ -365,87 +400,195 @@ export default function VideoStudioPage() {
               const StatusIcon = statusInfo.icon;
               const isActive =
                 job.status !== "completed" && job.status !== "failed";
+              const isExpanded = expandedJobId === job._id;
 
               return (
-                <Card
-                  key={job._id}
-                  className="group cursor-pointer overflow-hidden bg-card border-border hover:border-primary/30 transition-all duration-200"
-                  onClick={() =>
-                    router.push(`/dashboard/videos/${job._id}`)
-                  }
-                >
-                  {/* Thumbnail / Placeholder */}
-                  <div className="relative aspect-[9/16] max-h-48 bg-muted overflow-hidden">
-                    {job.thumbnailUrl ? (
-                      <img
-                        src={job.thumbnailUrl}
-                        alt={job.prompt.slice(0, 50)}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                        {isActive ? (
-                          <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-                        ) : job.status === "failed" ? (
-                          <AlertCircle className="w-8 h-8 text-red-400" />
-                        ) : (
-                          <MonitorPlay className="w-8 h-8 text-muted-foreground" />
-                        )}
+                <div key={job._id} className="relative">
+                  <Card
+                    className="group cursor-pointer overflow-hidden bg-card border-border hover:border-primary/30 transition-all duration-200"
+                    onClick={() => {
+                      if (isActive) {
+                        setExpandedJobId(isExpanded ? null : job._id);
+                      } else {
+                        router.push(`/dashboard/videos/${job._id}`);
+                      }
+                    }}
+                  >
+                    {/* Thumbnail / Placeholder */}
+                    <div className="relative aspect-[9/16] max-h-48 bg-muted overflow-hidden">
+                      {job.thumbnailUrl ? (
+                        <img
+                          src={job.thumbnailUrl}
+                          alt={job.prompt.slice(0, 50)}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                          {isActive ? (
+                            <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                          ) : job.status === "failed" ? (
+                            <AlertCircle className="w-8 h-8 text-red-400" />
+                          ) : (
+                            <MonitorPlay className="w-8 h-8 text-muted-foreground" />
+                          )}
+                        </div>
+                      )}
+                      {/* Play overlay for completed */}
+                      {job.status === "completed" && job.videoUrl && (
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                            <Play className="w-5 h-5 text-black ml-0.5" />
+                          </div>
+                        </div>
+                      )}
+                      {/* Duration badge */}
+                      <div className="absolute bottom-2 right-2">
+                        <Badge
+                          variant="secondary"
+                          className="bg-black/70 text-white text-xs border-0"
+                        >
+                          {job.targetDuration}s
+                        </Badge>
                       </div>
-                    )}
-                    {/* Play overlay for completed */}
-                    {job.status === "completed" && job.videoUrl && (
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                          <Play className="w-5 h-5 text-black ml-0.5" />
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3 space-y-2">
+                      <p className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
+                        {job.prompt.slice(0, 80)}
+                        {job.prompt.length > 80 ? "..." : ""}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <Badge
+                          className={cn(
+                            "text-xs font-medium gap-1",
+                            statusInfo.color
+                          )}
+                          variant="secondary"
+                        >
+                          <StatusIcon
+                            className={cn(
+                              "w-3 h-3",
+                              isActive && "animate-spin"
+                            )}
+                          />
+                          {statusInfo.label}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(job._creationTime).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {job.version > 1 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <RotateCcw className="w-3 h-3" />
+                          v{job.version}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+
+                  {/* Inline Progress Panel for active jobs */}
+                  {isActive && isExpanded && (
+                    <Card className="mt-2 p-4 bg-card border-border border-primary/20">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          <span className="text-sm font-semibold text-foreground">
+                            Generating...
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/dashboard/videos/${job._id}`);
+                            }}
+                          >
+                            <MonitorPlay className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedJobId(null);
+                            }}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
                       </div>
-                    )}
-                    {/* Duration badge */}
-                    <div className="absolute bottom-2 right-2">
-                      <Badge
-                        variant="secondary"
-                        className="bg-black/70 text-white text-xs border-0"
-                      >
-                        {job.targetDuration}s
-                      </Badge>
-                    </div>
-                  </div>
 
-                  {/* Info */}
-                  <div className="p-3 space-y-2">
-                    <p className="text-sm font-medium text-foreground line-clamp-2 leading-tight">
-                      {job.prompt.slice(0, 80)}
-                      {job.prompt.length > 80 ? "..." : ""}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        className={cn(
-                          "text-xs font-medium gap-1",
-                          statusInfo.color
-                        )}
-                        variant="secondary"
-                      >
-                        <StatusIcon
-                          className={cn(
-                            "w-3 h-3",
-                            isActive && "animate-spin"
-                          )}
-                        />
-                        {statusInfo.label}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(job._creationTime).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {job.version > 1 && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <RotateCcw className="w-3 h-3" />
-                        v{job.version}
+                      <div className="space-y-1.5">
+                        {PIPELINE_STEPS.map((step) => {
+                          const status = getStepStatus(step.key, job.status);
+                          const StepIcon = step.icon;
+
+                          return (
+                            <div
+                              key={step.key}
+                              className={cn(
+                                "flex items-center gap-2 py-1 px-2 rounded text-xs",
+                                status === "active" && "bg-primary/5"
+                              )}
+                            >
+                              <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                                {status === "completed" ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                                ) : status === "active" ? (
+                                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                                ) : (
+                                  <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />
+                                )}
+                              </div>
+                              <StepIcon
+                                className={cn(
+                                  "w-3 h-3 shrink-0",
+                                  status === "completed"
+                                    ? "text-green-500"
+                                    : status === "active"
+                                      ? "text-primary"
+                                      : "text-muted-foreground/40"
+                                )}
+                              />
+                              <span
+                                className={cn(
+                                  "flex-1",
+                                  status === "completed"
+                                    ? "text-foreground"
+                                    : status === "active"
+                                      ? "text-primary font-medium"
+                                      : "text-muted-foreground/40"
+                                )}
+                              >
+                                {step.label}
+                              </span>
+                              {step.key === "rendering" && status === "active" && (
+                                <span className="text-primary font-medium">
+                                  {Math.max(0, Math.round(((job.progress ?? 0) - 70) / 25 * 100))}%
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                </Card>
+
+                      <div className="mt-3 pt-2 border-t border-border">
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <span className="text-muted-foreground">Overall</span>
+                          <span className="font-medium text-foreground">
+                            {job.progress ?? 0}%
+                          </span>
+                        </div>
+                        <Progress value={job.progress ?? 0} className="h-1.5" />
+                      </div>
+                    </Card>
+                  )}
+                </div>
               );
             })}
           </div>

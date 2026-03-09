@@ -5,6 +5,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import type { VideoContext } from "./gatherContext";
+import { cleanJsonResponse } from "../masterAI/llmClient";
 
 /**
  * Step 2: Generate a structured video script using Claude Opus 4.6 via OpenRouter.
@@ -146,8 +147,9 @@ async function callOpenRouter(systemPrompt: string, userPrompt: string): Promise
     throw new Error("No content in OpenRouter response");
   }
 
-  // Parse JSON from response
-  const parsed = JSON.parse(content) as ScriptOutput;
+  // Clean markdown fences / thinking blocks before parsing
+  const cleaned = cleanJsonResponse(content);
+  const parsed = JSON.parse(cleaned) as ScriptOutput;
 
   // Basic validation
   if (!parsed.scenes || !Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
@@ -166,6 +168,7 @@ function buildSystemPrompt(): string {
   return `You are a video script writer for Pause Play Repeat, a music production education and creator platform. You write structured video scripts that will be turned into animated Remotion videos.
 
 ## Output Format
+Return ONLY valid JSON. Do NOT wrap in markdown code fences or backticks.
 Return a valid JSON object with this exact structure:
 {
   "totalDuration": <number in seconds>,
