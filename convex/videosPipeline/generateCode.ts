@@ -117,7 +117,7 @@ export const generateCode = internalAction({
               "X-Title": "Pause Play Repeat Video Generator",
             },
             body: JSON.stringify({
-              model: "anthropic/claude-opus-4.6",
+              model: "google/gemini-3.1-pro-preview",
               messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: prompt },

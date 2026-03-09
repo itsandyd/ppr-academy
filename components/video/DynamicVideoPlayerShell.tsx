@@ -3,8 +3,76 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill } from "remotion";
 import * as RemotionLib from "remotion";
-import * as ComponentLib from "../../remotion/components";
-import * as ThemeLib from "../../remotion/theme";
+import { transform } from "sucrase";
+// Explicit named imports prevent production tree-shaking from removing components
+// that are only referenced dynamically inside `new Function()` generated code.
+import {
+  GlowOrb,
+  GridPattern,
+  ScanLine,
+  BG,
+  CinematicBG,
+  CenterScene,
+  Content,
+  FadeUp,
+  useExit,
+  FeatureCard,
+  StepRow,
+  ReasonCard,
+  TierCard,
+  StatCounter,
+  StatBlock,
+  StatBig,
+  WaveformVisual,
+  GradientText,
+  SectionLabel,
+  CTAButton,
+  LogoIcon,
+  ConnectorLine,
+} from "../../remotion/components";
+import { C, F } from "../../remotion/theme";
+
+// Build objects explicitly so the bundler sees every export is used.
+const ComponentLib = {
+  GlowOrb,
+  GridPattern,
+  ScanLine,
+  BG,
+  CinematicBG,
+  CenterScene,
+  Content,
+  FadeUp,
+  useExit,
+  FeatureCard,
+  StepRow,
+  ReasonCard,
+  TierCard,
+  StatCounter,
+  StatBlock,
+  StatBig,
+  WaveformVisual,
+  GradientText,
+  SectionLabel,
+  CTAButton,
+  LogoIcon,
+  ConnectorLine,
+};
+
+const ThemeLib = { C, F };
+
+/**
+ * Transpile JSX/TypeScript in generated code to plain JS so `new Function()` can execute it.
+ * The LLM outputs JSX (<AbsoluteFill>, <Sequence>, etc.) but `new Function()` only
+ * understands plain JavaScript. Sucrase handles this fast and without config.
+ */
+function transpileCode(code: string): string {
+  const { code: transpiled } = transform(code, {
+    transforms: ["jsx", "typescript"],
+    jsxRuntime: "classic",
+    production: true,
+  });
+  return transpiled;
+}
 
 /**
  * A client-side shell component for the @remotion/player.
@@ -22,8 +90,14 @@ export const DynamicVideoPlayerShell: React.FC<{
   images: string[];
   audioUrl: string | null;
 }> = ({ generatedCode, images, audioUrl }) => {
-  const VideoComponent = useMemo(() => {
+  const result = useMemo<{
+    component: React.FC | null;
+    error: string | null;
+  }>(() => {
     try {
+      // Transpile JSX → React.createElement calls
+      const jsCode = transpileCode(generatedCode);
+
       const factory = new Function(
         "React",
         "Remotion",
@@ -31,10 +105,10 @@ export const DynamicVideoPlayerShell: React.FC<{
         "Theme",
         "images",
         "audioUrl",
-        generatedCode
+        jsCode
       );
 
-      return factory(
+      const comp = factory(
         React,
         RemotionLib,
         ComponentLib,
@@ -42,16 +116,24 @@ export const DynamicVideoPlayerShell: React.FC<{
         images,
         audioUrl
       );
-    } catch (err) {
+
+      if (!comp) {
+        return {
+          component: null,
+          error: "Generated code did not return a component",
+        };
+      }
+      return { component: comp, error: null };
+    } catch (err: any) {
       console.error(
         "DynamicVideoPlayerShell: Failed to create component:",
         err
       );
-      return null;
+      return { component: null, error: err.message || String(err) };
     }
   }, [generatedCode, images, audioUrl]);
 
-  if (!VideoComponent) {
+  if (!result.component) {
     return (
       <AbsoluteFill
         style={{
@@ -81,13 +163,14 @@ export const DynamicVideoPlayerShell: React.FC<{
             marginTop: 12,
             textAlign: "center",
             padding: "0 40px",
+            maxWidth: 500,
           }}
         >
-          The composition could not be loaded for preview.
+          {result.error || "The composition could not be loaded for preview."}
         </div>
       </AbsoluteFill>
     );
   }
 
-  return <VideoComponent />;
+  return <result.component />;
 };

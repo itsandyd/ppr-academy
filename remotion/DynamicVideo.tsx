@@ -1,8 +1,74 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill } from "remotion";
 import * as RemotionLib from "remotion";
-import * as ComponentLib from "./components";
-import * as ThemeLib from "./theme";
+import { transform } from "sucrase";
+// Explicit named imports prevent tree-shaking from removing components
+// that are only referenced dynamically inside `new Function()` generated code.
+import {
+  GlowOrb,
+  GridPattern,
+  ScanLine,
+  BG,
+  CinematicBG,
+  CenterScene,
+  Content,
+  FadeUp,
+  useExit,
+  FeatureCard,
+  StepRow,
+  ReasonCard,
+  TierCard,
+  StatCounter,
+  StatBlock,
+  StatBig,
+  WaveformVisual,
+  GradientText,
+  SectionLabel,
+  CTAButton,
+  LogoIcon,
+  ConnectorLine,
+} from "./components";
+import { C, F } from "./theme";
+
+// Build objects explicitly so the bundler sees every export is used.
+const ComponentLib = {
+  GlowOrb,
+  GridPattern,
+  ScanLine,
+  BG,
+  CinematicBG,
+  CenterScene,
+  Content,
+  FadeUp,
+  useExit,
+  FeatureCard,
+  StepRow,
+  ReasonCard,
+  TierCard,
+  StatCounter,
+  StatBlock,
+  StatBig,
+  WaveformVisual,
+  GradientText,
+  SectionLabel,
+  CTAButton,
+  LogoIcon,
+  ConnectorLine,
+};
+
+const ThemeLib = { C, F };
+
+/**
+ * Transpile JSX/TypeScript in generated code to plain JS so `new Function()` can execute it.
+ */
+function transpileCode(code: string): string {
+  const { code: transpiled } = transform(code, {
+    transforms: ["jsx", "typescript"],
+    jsxRuntime: "classic",
+    production: true,
+  });
+  return transpiled;
+}
 
 /**
  * DynamicVideo — The shell that executes LLM-generated code at render time.
@@ -22,11 +88,14 @@ export const DynamicVideo: React.FC<{
   images: string[];
   audioUrl: string | null;
 }> = ({ generatedCode, images, audioUrl }) => {
-  const VideoComponent = useMemo(() => {
+  const result = useMemo<{
+    component: React.FC | null;
+    error: string | null;
+  }>(() => {
     try {
-      // Create a function from the generated code string.
-      // The function receives React, Remotion, Components, Theme, images, audioUrl
-      // and must return a React component.
+      // Transpile JSX → React.createElement calls
+      const jsCode = transpileCode(generatedCode);
+
       const factory = new Function(
         "React",
         "Remotion",
@@ -34,7 +103,7 @@ export const DynamicVideo: React.FC<{
         "Theme",
         "images",
         "audioUrl",
-        generatedCode
+        jsCode
       );
 
       const Component = factory(
@@ -46,15 +115,17 @@ export const DynamicVideo: React.FC<{
         audioUrl
       );
 
-      return Component;
-    } catch (err) {
+      if (!Component) {
+        return { component: null, error: "Generated code did not return a component" };
+      }
+      return { component: Component, error: null };
+    } catch (err: any) {
       console.error("DynamicVideo: Failed to create component from code:", err);
-      return null;
+      return { component: null, error: err.message || String(err) };
     }
   }, [generatedCode, images, audioUrl]);
 
-  // Error fallback — show a dark frame instead of crashing the render
-  if (!VideoComponent) {
+  if (!result.component) {
     return (
       <AbsoluteFill
         style={{
@@ -62,6 +133,7 @@ export const DynamicVideo: React.FC<{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
+          flexDirection: "column",
         }}
       >
         <div
@@ -84,16 +156,14 @@ export const DynamicVideo: React.FC<{
             marginTop: 16,
             textAlign: "center",
             padding: "0 60px",
+            maxWidth: 800,
           }}
         >
-          The generated composition could not be loaded.
+          {result.error || "The generated composition could not be loaded."}
         </div>
       </AbsoluteFill>
     );
   }
 
-  // Wrap in error boundary behavior — if the component throws during render,
-  // catch it and show the fallback. Since React error boundaries don't work
-  // in Remotion's render pipeline the same way, we use try/catch in useMemo above.
-  return <VideoComponent />;
+  return <result.component />;
 };

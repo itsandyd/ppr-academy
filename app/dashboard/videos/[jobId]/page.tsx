@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
@@ -75,19 +75,10 @@ function getStepStatus(
 
 export default function VideoJobDetailPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const effectiveUserId = useEffectiveUserId(user?.id);
   const jobId = params.jobId as string;
-  const mode = searchParams.get("mode");
-
-  // Redirect if not in create mode
-  useEffect(() => {
-    if (isLoaded && mode !== "create") {
-      router.replace("/dashboard?mode=learn");
-    }
-  }, [mode, isLoaded, router]);
 
   // Get user's stores for storeId
   const stores = useQuery(
