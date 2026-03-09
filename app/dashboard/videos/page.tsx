@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useEffectiveUserId } from "@/lib/impersonation-context";
 import { useQuery, useMutation } from "convex/react";
@@ -109,18 +109,9 @@ const STATUS_CONFIG: Record<
 };
 
 export default function VideoStudioPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const effectiveUserId = useEffectiveUserId(user?.id);
-  const mode = searchParams.get("mode");
-
-  // Redirect if not in create mode
-  useEffect(() => {
-    if (isLoaded && mode !== "create") {
-      router.replace("/dashboard?mode=learn");
-    }
-  }, [mode, isLoaded, router]);
 
   // Get user's stores
   const stores = useQuery(
@@ -155,14 +146,6 @@ export default function VideoStudioPage() {
             <Skeleton key={i} className="h-64 rounded-xl" />
           ))}
         </div>
-      </div>
-    );
-  }
-
-  if (mode !== "create") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Skeleton className="h-screen w-full" />
       </div>
     );
   }
