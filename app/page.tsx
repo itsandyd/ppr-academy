@@ -31,6 +31,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
 import { Footer } from "./_components/footer";
 import { HomepageStructuredData } from "./_components/HomepageStructuredData";
@@ -688,10 +689,11 @@ export default function SectionedMarketplace() {
                       <div className="relative h-36 overflow-hidden">
                         {creator.bannerImage ? (
                           <div className="relative h-full w-full">
-                            <img
+                            <Image
                               src={creator.bannerImage}
                               alt={`${creator.name} banner`}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              fill
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           </div>
                         ) : (

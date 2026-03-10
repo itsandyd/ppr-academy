@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 import {
   CheckCircle2,
   XCircle,
@@ -189,10 +190,12 @@ export function AccountManagementDialog({
               <h4 className="text-sm font-semibold">Account Details</h4>
               <div className="space-y-2 rounded-lg border p-4">
                 {account.profileImageUrl && (
-                  <img
+                  <Image
                     src={account.profileImageUrl}
-                    alt={account.platformUsername}
-                    className="h-12 w-12 rounded-full"
+                    alt={account.platformUsername || ""}
+                    width={48}
+                    height={48}
+                    className="rounded-full object-cover"
                   />
                 )}
                 {account.platformUsername && (

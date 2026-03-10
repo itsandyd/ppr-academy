@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import Image from "next/image";
 import { Handle, Position, NodeProps } from "reactflow";
 import { Zap, Instagram, Globe, Image as ImageIcon } from "lucide-react";
 
@@ -81,7 +82,7 @@ function DMTriggerNode({ data, selected }: NodeProps) {
               ) : (
                 <>
                   {data.selectedPostMediaUrl ? (
-                    <img src={data.selectedPostMediaUrl} alt="" className="h-3 w-3 rounded-sm object-cover" />
+                    <Image src={data.selectedPostMediaUrl} alt="" width={12} height={12} className="rounded-sm object-cover" />
                   ) : (
                     <ImageIcon className="h-3 w-3" />
                   )}

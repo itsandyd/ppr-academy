@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Id } from "@/convex/_generated/dataModel";
 import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
@@ -135,12 +136,13 @@ function AttachmentPreview({ attachment, isOwn }: { attachment: Attachment; isOw
         href={attachment.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block"
+        className="relative block h-64 w-full"
       >
-        <img
+        <Image
           src={attachment.url}
           alt={attachment.name}
-          className="max-h-64 rounded-lg object-cover"
+          fill
+          className="rounded-lg object-cover"
         />
       </a>
     );

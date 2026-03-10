@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Sparkles
 } from 'lucide-react';
+import Image from 'next/image';
 import { EmptyState } from '@/components/ui/empty-state';
 
 interface LearnProductsViewProps {
@@ -129,11 +130,12 @@ function ProductCard({ purchase }: { purchase: any }) {
     <Card className="hover:shadow-lg transition-all overflow-hidden">
       {/* Image or placeholder */}
       {purchase.product?.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={purchase.product.imageUrl} 
-            alt={purchase.product?.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={purchase.product.imageUrl}
+            alt={purchase.product?.title || ""}
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (
@@ -141,7 +143,7 @@ function ProductCard({ purchase }: { purchase: any }) {
           <Package className="w-16 h-16 text-purple-400 dark:text-purple-600" />
         </div>
       )}
-      
+
       <CardContent className="p-6">
         <h4 className="font-semibold text-lg mb-2 line-clamp-2">{purchase.product?.title}</h4>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
@@ -161,19 +163,20 @@ function ProductCard({ purchase }: { purchase: any }) {
 }
 
 function PackCard({ purchase }: { purchase: any }) {
-  const fileCount = purchase.product?.packFiles 
-    ? JSON.parse(purchase.product.packFiles).length 
+  const fileCount = purchase.product?.packFiles
+    ? JSON.parse(purchase.product.packFiles).length
     : 0;
 
   return (
     <Card className="hover:shadow-lg transition-all overflow-hidden">
       {/* Image or placeholder */}
       {purchase.product?.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={purchase.product.imageUrl} 
-            alt={purchase.product?.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={purchase.product.imageUrl}
+            alt={purchase.product?.title || ""}
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (

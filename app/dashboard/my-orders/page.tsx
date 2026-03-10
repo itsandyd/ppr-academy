@@ -27,6 +27,7 @@ import {
   Upload,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { EmptyState as SharedEmptyState } from "@/components/ui/empty-state";
 
@@ -226,7 +227,7 @@ function OrderCard({ order }: { order: any }) {
           <div className="flex items-start gap-4">
             <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20">
               {order.productImage ? (
-                <img src={order.productImage} alt="" className="h-full w-full object-cover" />
+                <Image src={order.productImage} alt="" fill className="object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <Headphones className="h-8 w-8 text-purple-500" />

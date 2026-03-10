@@ -3,6 +3,7 @@
 import { useCommunityCreation } from "../context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Check, X, MessageCircle, Shield, Unlock } from "lucide-react";
+import Image from "next/image";
 
 export function CommunityPublishForm() {
   const { state, canPublish } = useCommunityCreation();
@@ -46,11 +47,14 @@ export function CommunityPublishForm() {
             <h3 className="font-semibold mb-4">Preview</h3>
             <div className="flex items-start gap-4">
               {state.data.thumbnail ? (
-                <img
-                  src={state.data.thumbnail}
-                  alt="Community thumbnail"
-                  className="w-20 h-20 rounded-lg object-cover"
-                />
+                <div className="relative w-20 h-20">
+                  <Image
+                    src={state.data.thumbnail}
+                    alt="Community thumbnail"
+                    fill
+                    className="rounded-lg object-cover"
+                  />
+                </div>
               ) : (
                 <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
                   <Users className="w-8 h-8 text-white" />

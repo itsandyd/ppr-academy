@@ -39,6 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
+import NextImage from "next/image";
 
 // Store API references to avoid TypeScript deep instantiation issues
 const usersApi = api.users as any;
@@ -205,11 +206,14 @@ function VisualIdeaCard({
       {/* Generated Image Display */}
       {generatedImage && (
         <div className="mb-4 rounded-lg overflow-hidden border bg-muted/20">
-          <img 
-            src={generatedImage} 
-            alt={idea.sentenceOrConcept}
-            className="w-full h-auto max-h-[250px] sm:max-h-[300px] object-contain"
-          />
+          <div className="relative h-[250px] w-full sm:h-[300px]">
+            <NextImage
+              src={generatedImage}
+              alt={idea.sentenceOrConcept}
+              fill
+              className="object-contain"
+            />
+          </div>
           <div className="p-2 border-t bg-muted/10">
             {!isSaved ? (
               <div className="flex flex-col sm:flex-row sm:justify-between gap-2">

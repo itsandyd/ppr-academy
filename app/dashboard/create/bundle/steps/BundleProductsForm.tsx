@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Package, BookOpen, X, DollarSign } from "lucide-react";
+import Image from "next/image";
 import { useState, useMemo } from "react";
 import { useStoresByUser, useDigitalProductsByStore, useCoursesByStore } from "@/lib/convex-typed-hooks";
 
@@ -165,11 +166,14 @@ export function BundleProductsForm() {
                 >
                   <div className="flex items-center gap-3">
                     {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.title}
-                        className="h-10 w-10 rounded object-cover"
-                      />
+                      <div className="relative h-10 w-10">
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.title}
+                          fill
+                          className="rounded object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
                         {getCategoryIcon(product.productCategory)}
@@ -232,11 +236,14 @@ export function BundleProductsForm() {
                   >
                     <Checkbox checked={isSelected} />
                     {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.title}
-                        className="h-12 w-12 rounded object-cover"
-                      />
+                      <div className="relative h-12 w-12">
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.title}
+                          fill
+                          className="rounded object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="flex h-12 w-12 items-center justify-center rounded bg-muted">
                         {getCategoryIcon(product.productCategory)}

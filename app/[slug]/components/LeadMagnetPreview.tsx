@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import Image from "next/image";
 
 interface LeadMagnetPreviewProps {
   leadMagnet?: {
@@ -190,12 +191,13 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   return (
     <div className="w-full p-4 space-y-4 bg-white dark:bg-black relative z-0">
       {/* Image Preview */}
-      <div className="w-full h-32 bg-primary/5 rounded-lg flex items-center justify-center border border-primary/20">
+      <div className="relative w-full h-32 bg-primary/5 rounded-lg flex items-center justify-center border border-primary/20">
         {leadMagnet?.imageUrl ? (
-          <img 
-            src={leadMagnet.imageUrl} 
-            alt="Lead magnet preview" 
-            className="w-full h-full object-cover rounded-lg"
+          <Image
+            src={leadMagnet.imageUrl}
+            alt="Lead magnet preview"
+            fill
+            className="object-cover rounded-lg"
           />
         ) : (
           <div className="text-center">

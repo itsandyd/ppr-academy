@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Coffee, Heart, Check } from "lucide-react";
+import Image from "next/image";
 
 export function TipJarPublishForm() {
   const { state, updateData } = useTipJarCreation();
@@ -91,11 +92,14 @@ export function TipJarPublishForm() {
             <h3 className="font-semibold mb-4">Preview</h3>
             <div className="flex items-start gap-4">
               {state.data.thumbnail ? (
-                <img
-                  src={state.data.thumbnail}
-                  alt="Tip jar thumbnail"
-                  className="w-20 h-20 rounded-lg object-cover"
-                />
+                <div className="relative w-20 h-20">
+                  <Image
+                    src={state.data.thumbnail}
+                    alt="Tip jar thumbnail"
+                    fill
+                    className="rounded-lg object-cover"
+                  />
+                </div>
               ) : (
                 <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                   <Coffee className="w-8 h-8 text-white" />

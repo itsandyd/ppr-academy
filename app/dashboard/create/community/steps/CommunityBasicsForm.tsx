@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Image as ImageIcon, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { ValidatedField } from "@/shared/components/ValidatedField";
 import { validationRules } from "@/hooks/useFieldValidation";
 import { ProductAIAssistant } from "@/components/ai/ProductAIAssistant";
@@ -143,11 +144,12 @@ export function CommunityBasicsForm() {
             className="hidden"
           />
           {state.data.thumbnail ? (
-            <div className="relative">
-              <img
+            <div className="relative h-48 w-full">
+              <Image
                 src={state.data.thumbnail}
                 alt="Thumbnail preview"
-                className="h-48 w-full rounded-lg object-cover"
+                fill
+                className="rounded-lg object-cover"
               />
               <Button
                 variant="secondary"

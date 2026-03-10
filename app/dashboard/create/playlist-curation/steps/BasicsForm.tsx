@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { List, Eye, EyeOff, ImageIcon, Link as LinkIcon, Upload, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { usePlaylistCuration } from "../context";
 import { GENRE_OPTIONS } from "../types";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
@@ -153,10 +154,11 @@ export function BasicsForm() {
             <div className="flex items-center gap-4">
               {state.data.coverUrl ? (
                 <div className="relative h-32 w-32 overflow-hidden rounded-lg border">
-                  <img
+                  <Image
                     src={state.data.coverUrl}
                     alt="Cover preview"
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               ) : (

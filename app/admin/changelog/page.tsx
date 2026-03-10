@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -784,10 +785,12 @@ export default function AdminChangelogPage() {
                       />
 
                       {commit.authorAvatar ? (
-                        <img
+                        <Image
                           src={commit.authorAvatar}
                           alt={commit.authorName}
-                          className="h-10 w-10 rounded-full"
+                          width={40}
+                          height={40}
+                          className="rounded-full"
                         />
                       ) : (
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">

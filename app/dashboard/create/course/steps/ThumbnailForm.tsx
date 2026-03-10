@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X, ArrowRight, Save, Sparkles, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { useUploadThing } from "@/lib/uploadthing-hooks";
@@ -474,15 +475,18 @@ export function ThumbnailForm() {
                 <Label className="text-foreground font-medium">Preview</Label>
                 <div className="relative inline-block w-full max-w-md">
                   <div className="relative w-full max-w-md rounded-lg overflow-hidden border border-border bg-muted">
-                    <img
-                      src={formData.thumbnail}
-                      alt="Course thumbnail preview"
-                      className="w-full h-auto object-contain max-h-64"
-                      onError={() => {
-                        console.error("Failed to load thumbnail image");
-                        handleInputChange("thumbnail", "");
-                      }}
-                    />
+                    <div className="relative w-full max-h-64" style={{ aspectRatio: '16/9' }}>
+                      <Image
+                        src={formData.thumbnail}
+                        alt="Course thumbnail preview"
+                        fill
+                        className="object-contain"
+                        onError={() => {
+                          console.error("Failed to load thumbnail image");
+                          handleInputChange("thumbnail", "");
+                        }}
+                      />
+                    </div>
                     <Button
                       variant="destructive"
                       size="sm"

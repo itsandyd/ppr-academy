@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   Pencil,
 } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { InstagramPostSelector } from "./components/instagram-post-selector";
 
@@ -391,10 +392,12 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                     onClick={() => setSelectedInstagramAccount(account._id)}
                   >
                     <div className="flex items-center gap-3">
-                      <img
+                      <Image
                         src={account.profileImageUrl}
                         alt={account.platformUsername}
-                        className="h-8 w-8 rounded-full"
+                        width={32}
+                        height={32}
+                        className="rounded-full object-cover"
                       />
                       <div className="flex-1">
                         <p className="text-sm font-medium">@{account.platformUsername}</p>

@@ -13,17 +13,18 @@ import { useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useStoreId } from "@/hooks/useStoreId";
-import { 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Upload, 
-  Play, 
-  FileText, 
+import {
+  Plus,
+  Trash2,
+  Edit3,
+  Upload,
+  Play,
+  FileText,
   ChevronDown,
   ChevronRight,
   Save
 } from "lucide-react";
+import Image from "next/image";
 
 interface Module {
   id?: number;
@@ -852,11 +853,14 @@ export default function CreateCourseForm({
                 <CardContent>
                   <div className="space-y-4">
                     {thumbnail && (
-                      <img
-                        src={thumbnail}
-                        alt="Course thumbnail"
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
+                      <div className="relative w-full h-32">
+                        <Image
+                          src={thumbnail}
+                          alt="Course thumbnail"
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      </div>
                     )}
                     
                     <div>

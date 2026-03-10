@@ -44,6 +44,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { EmptyState as SharedEmptyState } from '@/components/ui/empty-state';
 
@@ -727,11 +728,12 @@ function BeatCard({ product }: { product: any }) {
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       {product.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={product.imageUrl} 
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={product.imageUrl}
             alt={product.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (
@@ -793,11 +795,12 @@ function BundleCard({ bundle }: { bundle: any }) {
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       {bundle.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
             src={bundle.imageUrl}
             alt={bundle.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (
@@ -866,11 +869,12 @@ function BlogPostCard({ product }: { product: any }) {
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       {product.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
             src={product.imageUrl}
             alt={product.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (
@@ -930,11 +934,12 @@ function PDFCard({ product }: { product: any }) {
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       {product.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={product.imageUrl} 
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={product.imageUrl}
             alt={product.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (
@@ -994,11 +999,12 @@ function EffectChainCard({ product }: { product: any }) {
   return (
     <Card className="group hover:shadow-lg transition-all overflow-hidden">
       {product.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={product.imageUrl} 
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={product.imageUrl}
             alt={product.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (
@@ -1076,11 +1082,12 @@ function ProductCard({ product, onEdit, onDelete, onTogglePublish, onTogglePin }
     <Card className="group hover:shadow-lg transition-all overflow-hidden relative">
       {/* Image or placeholder */}
       {product.imageUrl ? (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={product.imageUrl} 
+        <div className="relative aspect-video w-full overflow-hidden">
+          <Image
+            src={product.imageUrl}
             alt={product.title}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       ) : (

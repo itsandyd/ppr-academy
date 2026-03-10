@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { PlaylistCurationProvider, usePlaylistCuration } from "./context";
 import { List, Settings, DollarSign, Share2 } from "lucide-react";
+import Image from "next/image";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
@@ -139,10 +140,11 @@ function LayoutContentInner({ children }: PlaylistCurationLayoutProps) {
                 <div className="space-y-4">
                   <div className="relative aspect-square overflow-hidden rounded-lg bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20">
                     {state.data.coverUrl ? (
-                      <img
+                      <Image
                         src={state.data.coverUrl}
                         alt="Playlist cover"
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center">

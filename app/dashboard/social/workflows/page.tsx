@@ -50,6 +50,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import Image from "next/image";
 import { EmptyState } from "@/components/ui/empty-state";
 import DMNodeSidebar from "./components/DMNodeSidebar";
 import DMWorkflowCanvas from "./components/DMWorkflowCanvas";
@@ -666,10 +667,12 @@ export default function DMWorkflowPage() {
                           <SelectItem key={account._id} value={account._id}>
                             <div className="flex items-center gap-2">
                               {account.profileImageUrl ? (
-                                <img
+                                <Image
                                   src={account.profileImageUrl}
                                   alt=""
-                                  className="h-5 w-5 rounded-full"
+                                  width={20}
+                                  height={20}
+                                  className="rounded-full object-cover"
                                 />
                               ) : (
                                 <Instagram className="h-4 w-4 text-pink-500" />
@@ -773,10 +776,11 @@ export default function DMWorkflowPage() {
                             >
                               <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
                                 {(post.media_url || post.thumbnail_url) ? (
-                                  <img
+                                  <Image
                                     src={post.media_type === "VIDEO" && post.thumbnail_url ? post.thumbnail_url : post.media_url}
                                     alt=""
-                                    className="h-full w-full object-cover"
+                                    fill
+                                    className="object-cover"
                                   />
                                 ) : (
                                   <ImageIcon className="m-auto h-5 w-5 text-muted-foreground" />

@@ -29,6 +29,7 @@ import {
   Zap,
   BarChart3,
 } from "lucide-react";
+import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
 import { PostComposer } from "./post-composer";
@@ -476,11 +477,13 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                         {post.mediaUrls && post.mediaUrls.length > 0 && (
                           <div className="flex space-x-2">
                             {post.mediaUrls.map((url: string, idx: number) => (
-                              <img
+                              <Image
                                 key={idx}
                                 src={url}
                                 alt="Post media"
-                                className="h-20 w-20 rounded object-cover"
+                                width={80}
+                                height={80}
+                                className="rounded object-cover"
                               />
                             ))}
                           </div>

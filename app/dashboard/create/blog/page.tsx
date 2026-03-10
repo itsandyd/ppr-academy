@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Sparkles, Loader2, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { TiptapEditor } from "@/components/editor/tiptap-editor";
@@ -314,14 +315,17 @@ export default function BlogEditorPage() {
                 <div className="mt-2">
                   <p className="text-xs text-muted-foreground mb-2">Preview:</p>
                   <div className="relative w-full max-w-md rounded-lg overflow-hidden border border-border">
-                    <img
-                      src={watch("coverImage")}
-                      alt="Cover preview"
-                      className="w-full h-auto object-cover"
-                      onError={() => {
-                        setImageError("Failed to load image preview");
-                      }}
-                    />
+                    <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+                      <Image
+                        src={watch("coverImage")!}
+                        alt="Cover preview"
+                        fill
+                        className="object-cover"
+                        onError={() => {
+                          setImageError("Failed to load image preview");
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

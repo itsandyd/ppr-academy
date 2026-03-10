@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Star, Users, Clock } from "lucide-react";
@@ -48,12 +49,13 @@ export function PhonePreview({ user, store, mode = "course", coursePreview }: Ph
             {mode === "course" && (
               <>
                 {/* Thumbnail */}
-                <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center overflow-hidden">
                   {coursePreview?.thumbnail ? (
-                    <img
+                    <Image
                       src={coursePreview.thumbnail}
                       alt="Course thumbnail"
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   ) : (
                     <BookOpen className="w-12 h-12 text-white/70" />

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
 import Link from "next/link";
+import Image from "next/image";
 import { Play, Star, Clock, Users, GraduationCap, Bot, Download, Smartphone, Award, Music, Headphones, Zap, ArrowRight, CheckCircle, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -530,11 +531,12 @@ export default function LandingClient({ isAuthenticated, featuredCourses, featur
                 viewport={{ once: true }}
               >
                 <Card className="group cursor-pointer hover:shadow-2xl dark:hover:shadow-primary/10 transition-all duration-300 overflow-hidden bg-card border border-border shadow-sm hover:border-primary/20">
-                  <div className="relative">
-                    <img 
-                      src={course.thumbnail} 
+                  <div className="relative h-48">
+                    <Image
+                      src={course.thumbnail}
                       alt={course.title}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="absolute top-4 right-4 flex gap-2">
@@ -555,10 +557,12 @@ export default function LandingClient({ isAuthenticated, featuredCourses, featur
                   </div>
                   <CardContent className="p-6">
                     <div className="flex items-center mb-4">
-                      <img 
-                        src={course.instructorImage} 
+                      <Image
+                        src={course.instructorImage}
                         alt={course.instructor}
-                        className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-border group-hover:border-primary/20 transition-colors duration-300"
+                        width={48}
+                        height={48}
+                        className="rounded-full object-cover mr-4 border-2 border-border group-hover:border-primary/20 transition-colors duration-300"
                       />
                       <div>
                         <p className="font-bold text-foreground group-hover:text-primary transition-colors">{course.instructor}</p>

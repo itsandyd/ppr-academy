@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Sparkles, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
@@ -238,11 +239,14 @@ export function PackBasicsForm() {
           />
           <div className="flex items-center gap-4">
             {state.data.thumbnail ? (
-              <img
-                src={state.data.thumbnail}
-                alt="Pack thumbnail"
-                className="w-32 h-32 rounded-lg object-cover"
-              />
+              <div className="relative w-32 h-32">
+                <Image
+                  src={state.data.thumbnail}
+                  alt="Pack thumbnail"
+                  fill
+                  className="rounded-lg object-cover"
+                />
+              </div>
             ) : (
               <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center">
                 {isUploadingThumbnail ? (

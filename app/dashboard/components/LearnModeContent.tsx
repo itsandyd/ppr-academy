@@ -35,6 +35,7 @@ import {
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { LearnerOnboarding } from "@/components/onboarding/LearnerOnboarding";
 import { ReferralCard } from "@/components/referrals/ReferralCard";
 import { useApplyReferral } from "@/hooks/use-apply-referral";
@@ -279,10 +280,11 @@ export function LearnModeContent() {
               {/* Course Thumbnail */}
               <div className="relative h-32 w-full flex-shrink-0 overflow-hidden rounded-xl md:h-40 md:w-56">
                 {continueWatching.course.imageUrl ? (
-                  <img
+                  <Image
                     src={continueWatching.course.imageUrl}
                     alt={continueWatching.course.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-chart-1 to-chart-2">
@@ -510,10 +512,11 @@ export function LearnModeContent() {
                             {/* Thumbnail */}
                             <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
                               {item.coverImageUrl ? (
-                                <img
+                                <Image
                                   src={item.coverImageUrl}
                                   alt={item.title}
-                                  className="h-full w-full object-cover"
+                                  fill
+                                  className="object-cover"
                                 />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-chart-1 to-chart-2">

@@ -26,6 +26,7 @@ import {
   Youtube,
   Disc,
 } from "lucide-react";
+import Image from "next/image";
 
 const socialPlatforms = [
   {
@@ -358,11 +359,14 @@ export function ReleasePresaveForm() {
             <CardContent>
               <div className="rounded-lg bg-background p-6 text-center space-y-4">
                 {state.data.coverArtUrl && (
-                  <img
-                    src={state.data.coverArtUrl}
-                    alt="Cover"
-                    className="w-32 h-32 mx-auto rounded-lg shadow-lg"
-                  />
+                  <div className="relative w-32 h-32 mx-auto">
+                    <Image
+                      src={state.data.coverArtUrl}
+                      alt="Cover"
+                      fill
+                      className="rounded-lg object-cover shadow-lg"
+                    />
+                  </div>
                 )}
                 <div>
                   <h3 className="text-xl font-bold">

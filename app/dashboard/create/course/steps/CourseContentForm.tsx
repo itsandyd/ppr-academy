@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, Save, Upload, X, Sparkles, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -524,15 +525,18 @@ function CourseThumbnailCard() {
               <Label className="text-foreground font-medium">Preview</Label>
               <div className="relative inline-block w-full max-w-md">
                 <div className="relative w-full max-w-md rounded-lg overflow-hidden border border-border bg-muted">
-                  <img
-                    src={state.data.thumbnail}
-                    alt="Course thumbnail preview"
-                    className="w-full h-auto object-contain max-h-64"
-                    onError={() => {
-                      console.error("Failed to load thumbnail image");
-                      handleInputChange("thumbnail", "");
-                    }}
-                  />
+                  <div className="relative w-full max-h-64" style={{ aspectRatio: '16/9' }}>
+                    <Image
+                      src={state.data.thumbnail}
+                      alt="Course thumbnail preview"
+                      fill
+                      className="object-contain"
+                      onError={() => {
+                        console.error("Failed to load thumbnail image");
+                        handleInputChange("thumbnail", "");
+                      }}
+                    />
+                  </div>
                   <Button
                     variant="destructive"
                     size="sm"

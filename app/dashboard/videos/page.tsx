@@ -40,6 +40,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -404,10 +405,11 @@ export default function VideoStudioPage() {
                     {/* Thumbnail / Placeholder */}
                     <div className="relative aspect-[9/16] max-h-48 bg-muted overflow-hidden">
                       {job.thumbnailUrl ? (
-                        <img
+                        <Image
                           src={job.thumbnailUrl}
                           alt={job.prompt.slice(0, 50)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">

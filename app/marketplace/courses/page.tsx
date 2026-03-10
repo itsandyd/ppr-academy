@@ -27,6 +27,7 @@ import {
   Star,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 import { stripHtml } from "@/lib/text-utils";
@@ -269,10 +270,11 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
           <div className="flex">
             <div className="relative h-32 w-48 flex-shrink-0">
               {(course.thumbnail || course.imageUrl) ? (
-                <img
+                <Image
                   src={course.thumbnail || course.imageUrl}
                   alt={course.title}
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-chart-1/20 to-chart-2/20">
@@ -313,10 +315,11 @@ function CourseCard({ course, viewMode }: { course: any; viewMode: "grid" | "lis
       <Card className="group overflow-hidden transition-all hover:shadow-lg">
         <div className="relative aspect-video">
           {(course.thumbnail || course.imageUrl) ? (
-            <img
+            <Image
               src={course.thumbnail || course.imageUrl}
               alt={course.title}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-chart-1/20 to-chart-2/20">

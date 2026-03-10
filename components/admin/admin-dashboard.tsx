@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -973,15 +974,18 @@ export default function AdminDashboard({
                   <div className="space-y-4">
                     {allCourses.map((course: any) => (
                       <div key={course.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
-                        <Link 
+                        <Link
                           href={`/courses/${course.slug || generateSlug(course.title)}`}
                           className="flex items-start space-x-3 flex-1 cursor-pointer group"
                         >
-                          <img
-                            src={course.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"}
-                            alt={course.title}
-                            className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0 group-hover:opacity-90 transition-opacity"
-                          />
+                          <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
+                            <Image
+                              src={course.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"}
+                              alt={course.title}
+                              fill
+                              className="object-cover rounded-lg group-hover:opacity-90 transition-opacity"
+                            />
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-medium text-dark text-sm sm:text-base line-clamp-1 group-hover:text-primary transition-colors">{course.title}</h4>
@@ -1079,11 +1083,14 @@ export default function AdminDashboard({
                 {courseToDelete && (
                   <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-start space-x-3">
-                      <img
-                        src={courseToDelete.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"}
-                        alt={courseToDelete.title}
-                        className="w-12 h-12 object-cover rounded"
-                      />
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <Image
+                          src={courseToDelete.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"}
+                          alt={courseToDelete.title}
+                          fill
+                          className="object-cover rounded"
+                        />
+                      </div>
                       <div className="flex-1">
                         <h4 className="font-medium text-red-900">{courseToDelete.title}</h4>
                         <p className="text-sm text-red-700 mt-1">
@@ -1517,11 +1524,14 @@ export default function AdminDashboard({
                     {allCourses.slice(0, 6).map((course: any) => (
                       <div key={course.id} className="border border-slate-200 rounded-lg p-4">
                         <div className="flex items-center space-x-3 mb-3">
-                          <img
-                            src={course.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"}
-                            alt={course.title}
-                            className="w-12 h-12 object-cover rounded"
-                          />
+                          <div className="relative w-12 h-12 flex-shrink-0">
+                            <Image
+                              src={course.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"}
+                              alt={course.title}
+                              fill
+                              className="object-cover rounded"
+                            />
+                          </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-sm truncate">{course.title}</h4>
                             <p className="text-xs text-slate-500">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, Sparkles, Loader2, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
 
@@ -143,11 +144,14 @@ export function ImageUploader({
         />
         <div className="flex items-center gap-4">
           {value ? (
-            <img
-              src={value}
-              alt="Thumbnail"
-              className="h-32 w-32 rounded-lg object-cover"
-            />
+            <div className="relative h-32 w-32">
+              <Image
+                src={value}
+                alt="Thumbnail"
+                fill
+                className="rounded-lg object-cover"
+              />
+            </div>
           ) : (
             <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
               {isUploading ? (

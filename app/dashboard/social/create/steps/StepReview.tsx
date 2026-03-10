@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import NextImage from "next/image";
 import {
   CheckCircle,
   ChevronLeft,
@@ -223,12 +224,13 @@ export function StepReview() {
                   .map((image, index) => (
                     <div
                       key={index}
-                      className="aspect-square overflow-hidden rounded-md bg-muted sm:rounded-lg"
+                      className="relative aspect-square overflow-hidden rounded-md bg-muted sm:rounded-lg"
                     >
-                      <img
-                        src={image.url}
+                      <NextImage
+                        src={image.url ?? ""}
                         alt={`Image ${index + 1}`}
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     </div>
                   ))}

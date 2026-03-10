@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import MuxPlayerComponent from "@mux/mux-player-react";
 
 interface MuxPlayerProps {
@@ -78,13 +79,12 @@ export function MuxThumbnail({
   const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg?time=${time}&width=${width}&height=${height}`;
 
   return (
-    <img
+    <Image
       src={thumbnailUrl}
       alt={alt}
       width={width}
       height={height}
       className={className}
-      loading="lazy"
     />
   );
 }
@@ -110,12 +110,12 @@ export function MuxGif({
   const gifUrl = `https://image.mux.com/${playbackId}/animated.gif?start=${start}&end=${end}&width=${width}&fps=${fps}`;
 
   return (
-    <img
+    <Image
       src={gifUrl}
       alt="Video preview"
       width={width}
+      height={Math.round(width * 9 / 16)}
       className={className}
-      loading="lazy"
     />
   );
 }

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Zap, Plus, Instagram, Play, Pause, Settings, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -146,10 +147,12 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                       return (
                         <SelectItem key={account._id} value={account._id}>
                           <div className="flex items-center gap-2">
-                            <img
+                            <Image
                               src={account.profileImageUrl}
                               alt={account.platformUsername}
-                              className="h-4 w-4 rounded-full"
+                              width={16}
+                              height={16}
+                              className="rounded-full object-cover"
                             />
                             @{account.platformUsername} ({accountAutomations.length})
                           </div>
@@ -187,10 +190,12 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                       {/* Show which Instagram account this automation uses */}
                       {automationAccount && (
                         <div className="mt-2 flex items-center gap-2">
-                          <img
+                          <Image
                             src={automationAccount.profileImageUrl}
                             alt={automationAccount.platformUsername}
-                            className="h-4 w-4 rounded-full"
+                            width={16}
+                            height={16}
+                            className="rounded-full object-cover"
                           />
                           <span className="text-xs text-muted-foreground">
                             @{automationAccount.platformUsername}

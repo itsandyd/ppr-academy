@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { User, Save, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -87,10 +88,12 @@ export default function AccountSettingsPage() {
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
               {user?.imageUrl ? (
-                <img
+                <Image
                   src={user.imageUrl}
                   alt="Profile"
-                  className="h-16 w-16 rounded-full object-cover"
+                  width={64}
+                  height={64}
+                  className="rounded-full object-cover"
                 />
               ) : (
                 <User className="h-8 w-8 text-muted-foreground" />

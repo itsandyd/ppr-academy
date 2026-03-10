@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import NextImage from "next/image";
 import {
   Image,
   ChevronRight,
@@ -648,10 +649,11 @@ export function StepGenerateImages() {
                       className={`relative bg-muted ${aspectRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
                     >
                       {image.url ? (
-                        <img
+                        <NextImage
                           src={image.url}
                           alt={`Generated image ${index + 1}`}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
@@ -693,10 +695,12 @@ export function StepGenerateImages() {
                       {/* Source image preview (if uploaded) */}
                       {image.sourceImageUrl && (
                         <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-2">
-                          <img
+                          <NextImage
                             src={image.sourceImageUrl}
                             alt="Source"
-                            className="h-10 w-10 rounded object-cover"
+                            width={40}
+                            height={40}
+                            className="rounded object-cover"
                           />
                           <div className="flex-1">
                             <p className="text-xs font-medium text-primary">
@@ -885,12 +889,13 @@ export function StepGenerateImages() {
                 <div>
                   <p className="mb-1.5 text-xs font-medium sm:mb-2 sm:text-sm">Original</p>
                   <div
-                    className={`overflow-hidden rounded-lg border ${aspectRatio === "9:16" ? "aspect-[9/16] max-h-[200px] sm:max-h-none" : "aspect-video"}`}
+                    className={`relative overflow-hidden rounded-lg border ${aspectRatio === "9:16" ? "aspect-[9/16] max-h-[200px] sm:max-h-none" : "aspect-video"}`}
                   >
-                    <img
-                      src={imagesRef.current[editingIndex].url}
+                    <NextImage
+                      src={imagesRef.current[editingIndex]?.url ?? ""}
                       alt="Original"
-                      className="h-full w-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                 </div>
@@ -899,7 +904,7 @@ export function StepGenerateImages() {
                     {editedPreviewUrl ? "Edited Result" : "Preview"}
                   </p>
                   <div
-                    className={`flex items-center justify-center overflow-hidden rounded-lg border bg-muted ${aspectRatio === "9:16" ? "aspect-[9/16] max-h-[200px] sm:max-h-none" : "aspect-video"}`}
+                    className={`relative flex items-center justify-center overflow-hidden rounded-lg border bg-muted ${aspectRatio === "9:16" ? "aspect-[9/16] max-h-[200px] sm:max-h-none" : "aspect-video"}`}
                   >
                     {isEditing ? (
                       <div className="flex flex-col items-center gap-2">
@@ -907,10 +912,11 @@ export function StepGenerateImages() {
                         <p className="text-xs text-muted-foreground sm:text-sm">Editing...</p>
                       </div>
                     ) : editedPreviewUrl ? (
-                      <img
+                      <NextImage
                         src={editedPreviewUrl}
                         alt="Edited"
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <p className="p-4 text-center text-xs text-muted-foreground sm:text-sm">

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Image as ImageIcon, Sparkles, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { ProductCategory, getProductInfo } from "../types";
 import { ProductAIAssistant } from "@/components/ai/ProductAIAssistant";
 import { useRouter } from "next/navigation";
@@ -218,11 +219,12 @@ export function BasicsStep({
           className="hidden"
         />
         {imageUrl ? (
-          <div className="relative">
-            <img
+          <div className="relative h-48 w-full">
+            <Image
               src={imageUrl}
               alt="Thumbnail preview"
-              className="h-48 w-full rounded-lg object-cover"
+              fill
+              className="rounded-lg object-cover"
             />
             <Button
               variant="secondary"

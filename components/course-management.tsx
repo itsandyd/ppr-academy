@@ -39,6 +39,7 @@ import {
   Archive,
   Copy,
 } from "lucide-react";
+import Image from "next/image";
 import { CourseWithDetails } from "@/lib/types";
 import { generateSlug } from "@/lib/utils";
 import Link from "next/link";
@@ -294,14 +295,17 @@ export default function CourseManagement({ courses }: CourseManagementProps) {
                   />
 
                   <div className="flex flex-1 items-center space-x-4">
-                    <img
-                      src={
-                        course.imageUrl ||
-                        "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"
-                      }
-                      alt={course.title}
-                      className="h-16 w-16 rounded-lg object-cover"
-                    />
+                    <div className="relative h-16 w-16 flex-shrink-0">
+                      <Image
+                        src={
+                          course.imageUrl ||
+                          "https://images.unsplash.com/photo-1571330735066-03aaa9429d89"
+                        }
+                        alt={course.title}
+                        fill
+                        className="rounded-lg object-cover"
+                      />
+                    </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center space-x-2">

@@ -31,6 +31,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 import { stripHtml } from "@/lib/text-utils";
@@ -377,10 +378,11 @@ function CoachingCard({
             <div className="flex">
               <div className="relative h-32 w-48 flex-shrink-0">
                 {session.imageUrl ? (
-                  <img
+                  <Image
                     src={session.imageUrl}
                     alt={session.title}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
@@ -439,10 +441,11 @@ function CoachingCard({
         <Card className="group cursor-pointer overflow-hidden transition-all hover:shadow-lg">
           <div className="relative aspect-video">
             {session.imageUrl ? (
-              <img
+              <Image
                 src={session.imageUrl}
                 alt={session.title}
-                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                fill
+                className="object-cover transition-transform group-hover:scale-105"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">

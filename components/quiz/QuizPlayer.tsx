@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -423,11 +424,14 @@ export function QuizPlayer({ quizId, courseId, onComplete }: QuizPlayerProps) {
             <Badge variant="outline">{currentQuestion.points} pts</Badge>
           </div>
           {currentQuestion.questionImage && (
-            <img
-              src={currentQuestion.questionImage}
-              alt="Question illustration"
-              className="mt-4 max-h-64 rounded-lg object-contain"
-            />
+            <div className="relative mt-4 h-64 w-full">
+              <Image
+                src={currentQuestion.questionImage}
+                alt="Question illustration"
+                fill
+                className="rounded-lg object-contain"
+              />
+            </div>
           )}
         </CardHeader>
         <CardContent>

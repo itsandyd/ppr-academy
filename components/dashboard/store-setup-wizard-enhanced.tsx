@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -494,11 +495,14 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
                     <div className="mt-2 border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-purple-300 transition-colors">
                       {formData.logoUrl ? (
                         <div className="space-y-4">
-                          <img
-                            src={formData.logoUrl}
-                            alt="Store logo"
-                            className="w-32 h-32 object-cover rounded-lg mx-auto border-4 border-white dark:border-black shadow-lg"
-                          />
+                          <div className="relative w-32 h-32 mx-auto">
+                            <Image
+                              src={formData.logoUrl}
+                              alt="Store logo"
+                              fill
+                              className="object-cover rounded-lg border-4 border-white dark:border-black shadow-lg"
+                            />
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"

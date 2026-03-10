@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -231,7 +232,9 @@ export default function GeneralSettingsPage() {
               </div>
               {settings.logoUrl && (
                 <div className="mt-2 rounded-lg border p-4">
-                  <img src={settings.logoUrl} alt="Logo preview" className="h-12 object-contain" />
+                  <div className="relative h-12 w-full">
+                    <Image src={settings.logoUrl} alt="Logo preview" fill className="object-contain" />
+                  </div>
                 </div>
               )}
             </div>

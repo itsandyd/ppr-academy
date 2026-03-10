@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Sparkles, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
@@ -189,11 +190,14 @@ export function BundleBasicsForm() {
           />
           <div className="flex items-center gap-4">
             {state.data.thumbnail ? (
-              <img
-                src={state.data.thumbnail}
-                alt="Bundle thumbnail"
-                className="h-32 w-32 rounded-lg object-cover"
-              />
+              <div className="relative h-32 w-32">
+                <Image
+                  src={state.data.thumbnail}
+                  alt="Bundle thumbnail"
+                  fill
+                  className="rounded-lg object-cover"
+                />
+              </div>
             ) : (
               <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
                 {isUploading ? (

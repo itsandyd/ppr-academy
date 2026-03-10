@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
@@ -254,11 +255,14 @@ export function BeatLicensesPortal({ className }: BeatLicensesPortalProps) {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {license.beat?.imageUrl ? (
-                          <img
-                            src={license.beat.imageUrl}
-                            alt={license.beatTitle}
-                            className="h-12 w-12 rounded-md object-cover"
-                          />
+                          <div className="relative h-12 w-12 flex-shrink-0">
+                            <Image
+                              src={license.beat.imageUrl}
+                              alt={license.beatTitle}
+                              fill
+                              className="rounded-md object-cover"
+                            />
+                          </div>
                         ) : (
                           <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted">
                             <Music className="h-6 w-6 text-muted-foreground" />
@@ -376,11 +380,14 @@ function LicenseDetails({ license }: { license: any }) {
       {/* Beat Info */}
       <div className="flex items-start gap-4">
         {license.beat?.imageUrl ? (
-          <img
-            src={license.beat.imageUrl}
-            alt={license.beatTitle}
-            className="h-20 w-20 rounded-lg object-cover"
-          />
+          <div className="relative h-20 w-20 flex-shrink-0">
+            <Image
+              src={license.beat.imageUrl}
+              alt={license.beatTitle}
+              fill
+              className="rounded-lg object-cover"
+            />
+          </div>
         ) : (
           <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted">
             <Music className="h-8 w-8 text-muted-foreground" />

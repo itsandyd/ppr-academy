@@ -13,6 +13,7 @@ import {
   Play,
   ArrowRight,
 } from "lucide-react";
+import Image from "next/image";
 
 interface Block {
   id: string;
@@ -187,10 +188,12 @@ function TestimonialsBlock({ settings }: { settings: any }) {
               </p>
               <div className="flex items-center gap-3">
                 {testimonial.avatar && (
-                  <img
+                  <Image
                     src={testimonial.avatar}
                     alt={testimonial.name}
-                    className="w-10 h-10 rounded-full"
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover"
                   />
                 )}
                 <div>
@@ -370,11 +373,14 @@ function ImageBlock({ settings }: { settings: any }) {
     <section className="py-20 px-4">
       <div className="max-w-6xl mx-auto">
         {settings.imageUrl ? (
-          <img
-            src={settings.imageUrl}
-            alt={settings.alt || ""}
-            className="w-full rounded-lg"
-          />
+          <div className="relative aspect-video w-full">
+            <Image
+              src={settings.imageUrl}
+              alt={settings.alt || ""}
+              fill
+              className="object-cover rounded-lg"
+            />
+          </div>
         ) : (
           <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
             <span className="text-zinc-400">No image</span>
@@ -489,11 +495,13 @@ function SocialProofBlock({ settings }: { settings: any }) {
         {settings.logos && settings.logos.length > 0 && (
           <div className="flex flex-wrap items-center justify-center gap-8 mt-8 opacity-50">
             {settings.logos.map((logo: string, index: number) => (
-              <img
+              <Image
                 key={index}
                 src={logo}
                 alt=""
-                className="h-8 grayscale"
+                width={120}
+                height={32}
+                className="h-8 w-auto grayscale"
               />
             ))}
           </div>
@@ -528,12 +536,13 @@ function ProductShowcaseBlock({
               href={`/${storeSlug}/products/${product.slug || product.id}`}
               className="group block"
             >
-              <div className="aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 mb-4">
+              <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 mb-4">
                 {product.imageUrl ? (
-                  <img
+                  <Image
                     src={product.imageUrl}
                     alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-zinc-400">

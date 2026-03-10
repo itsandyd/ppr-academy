@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Smartphone, Monitor, Store, Package, ExternalLink } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export interface StorefrontPreviewProps {
@@ -53,12 +54,13 @@ function ProductCard({
       )}
     >
       <div className="relative">
-        <div className="flex aspect-video items-center justify-center overflow-hidden bg-muted">
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-muted">
           {product.imageUrl ? (
-            <img
+            <Image
               src={product.imageUrl}
               alt={product.title || "Product"}
-              className="h-full w-full object-cover"
+              fill
+              className="object-cover"
             />
           ) : (
             <Package className="h-8 w-8 text-muted-foreground" />

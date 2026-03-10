@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -336,13 +337,14 @@ function SamplePackCard({
           onClick={onToggle}
         >
           <div
-            className={`flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${getCategoryColor(pack.productCategory)}`}
+            className={`relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br ${getCategoryColor(pack.productCategory)}`}
           >
             {pack.imageUrl ? (
-              <img
+              <Image
                 src={pack.imageUrl}
                 alt={pack.title}
-                className="h-full w-full rounded-lg object-cover"
+                fill
+                className="rounded-lg object-cover"
               />
             ) : (
               <Package className="h-8 w-8 text-white" />

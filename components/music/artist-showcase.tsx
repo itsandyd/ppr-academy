@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,10 +33,12 @@ function TrackCard({ track, onPlay, onLike, onShare }: TrackCardProps) {
           {/* Artwork */}
           <div className="relative">
             {track.artworkUrl ? (
-              <img
+              <Image
                 src={track.artworkUrl}
                 alt={`${track.title} artwork`}
-                className="h-16 w-16 rounded-lg object-cover"
+                width={64}
+                height={64}
+                className="rounded-lg object-cover"
               />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-200">
@@ -189,11 +192,12 @@ export function ArtistShowcase({ artistProfileId, isOwner = false }: ArtistShowc
       <div className="relative">
         {/* Banner Image */}
         {artistProfile.bannerImage && (
-          <div className="mb-6 h-48 overflow-hidden rounded-xl">
-            <img
+          <div className="relative mb-6 h-48 overflow-hidden rounded-xl">
+            <Image
               src={artistProfile.bannerImage}
               alt="Artist banner"
-              className="h-full w-full object-cover"
+              fill
+              className="object-cover"
             />
           </div>
         )}

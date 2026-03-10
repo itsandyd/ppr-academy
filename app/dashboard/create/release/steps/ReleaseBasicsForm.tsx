@@ -25,6 +25,7 @@ import {
   Image as ImageIcon,
   Loader2,
 } from "lucide-react";
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
 import { toast } from "sonner";
@@ -387,11 +388,12 @@ export function ReleaseBasicsForm() {
             onClick={() => !isUploading && fileInputRef.current?.click()}
           >
             {state.data.coverArtUrl ? (
-              <div className="relative">
-                <img
+              <div className="relative h-48 w-48">
+                <Image
                   src={state.data.coverArtUrl}
                   alt="Cover art"
-                  className="h-48 w-48 rounded-lg object-cover shadow-lg"
+                  fill
+                  className="rounded-lg object-cover shadow-lg"
                 />
                 <Button
                   variant="destructive"

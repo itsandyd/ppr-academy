@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -164,10 +165,11 @@ export function BeatLicenseCard({ license }: BeatLicenseCardProps) {
           {/* Beat Artwork */}
           <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
             {license.beat?.imageUrl ? (
-              <img
+              <Image
                 src={license.beat.imageUrl}
                 alt={license.beatTitle}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-500/20 to-red-500/20">

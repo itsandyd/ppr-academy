@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -919,11 +920,14 @@ export default function AdminPluginsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {plugin.image ? (
-                          <img
-                            src={plugin.image}
-                            alt={plugin.name}
-                            className="w-10 h-10 rounded object-cover"
-                          />
+                          <div className="relative w-10 h-10 flex-shrink-0">
+                            <Image
+                              src={plugin.image}
+                              alt={plugin.name}
+                              fill
+                              className="rounded object-cover"
+                            />
+                          </div>
                         ) : (
                           <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
                             <ImageIcon className="w-5 h-5 text-muted-foreground" />

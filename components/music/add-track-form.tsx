@@ -13,13 +13,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Music, ExternalLink, Check, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { 
-  extractMetadataFromUrl, 
-  isValidMusicUrl, 
-  detectPlatform, 
+import Image from 'next/image';
+import {
+  extractMetadataFromUrl,
+  isValidMusicUrl,
+  detectPlatform,
   getPlatformConfig,
   getPlatformDisplayName,
-  type MusicTrackMetadata 
+  type MusicTrackMetadata
 } from '@/lib/music-url-parser';
 
 interface AddTrackFormProps {
@@ -193,11 +194,14 @@ export function AddTrackForm({ artistProfileId, storeId, onSuccess }: AddTrackFo
             <CardContent className="pt-4">
               <div className="flex items-start gap-4">
                 {metadata.artworkUrl && (
-                  <img 
-                    src={metadata.artworkUrl} 
-                    alt="Track artwork"
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
+                  <div className="relative h-16 w-16 flex-shrink-0">
+                    <Image
+                      src={metadata.artworkUrl}
+                      alt="Track artwork"
+                      fill
+                      className="rounded-lg object-cover"
+                    />
+                  </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
