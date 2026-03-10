@@ -94,10 +94,25 @@ export const DynamicVideoPlayerShell: React.FC<{
     component: React.FC | null;
     error: string | null;
   }>(() => {
+    // Step 1: Transpile JSX → React.createElement calls
+    let jsCode: string;
     try {
-      // Transpile JSX → React.createElement calls
-      const jsCode = transpileCode(generatedCode);
+      jsCode = transpileCode(generatedCode);
+    } catch (err: any) {
+      console.error(
+        "DynamicVideoPlayerShell: Transpilation failed:",
+        err.message,
+        "\nCode (first 300 chars):",
+        generatedCode.substring(0, 300)
+      );
+      return {
+        component: null,
+        error: `Transpilation error: ${err.message}`,
+      };
+    }
 
+    // Step 2: Execute the transpiled code
+    try {
       const factory = new Function(
         "React",
         "Remotion",
@@ -118,6 +133,11 @@ export const DynamicVideoPlayerShell: React.FC<{
       );
 
       if (!comp) {
+        console.error(
+          "DynamicVideoPlayerShell: Code did not return a component.",
+          "\nCode (first 300 chars):",
+          generatedCode.substring(0, 300)
+        );
         return {
           component: null,
           error: "Generated code did not return a component",
@@ -126,10 +146,15 @@ export const DynamicVideoPlayerShell: React.FC<{
       return { component: comp, error: null };
     } catch (err: any) {
       console.error(
-        "DynamicVideoPlayerShell: Failed to create component:",
-        err
+        "DynamicVideoPlayerShell: Execution failed:",
+        err.message,
+        "\nCode (first 300 chars):",
+        generatedCode.substring(0, 300)
       );
-      return { component: null, error: err.message || String(err) };
+      return {
+        component: null,
+        error: `Execution error: ${err.message}`,
+      };
     }
   }, [generatedCode, images, audioUrl]);
 

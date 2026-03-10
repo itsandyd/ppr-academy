@@ -108,6 +108,15 @@ interface ScriptOutput {
 
 // ─── OpenRouter API Call ────────────────────────────────────────────────────
 
+const GATEWAY_ERROR_CODES = [502, 503, 504];
+const MAX_GATEWAY_RETRIES = 3;
+const GATEWAY_RETRY_DELAY_MS = 5000;
+
+function isGatewayErrorBody(text: string): boolean {
+  const trimmed = text.trimStart().toLowerCase();
+  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
+}
+
 async function callOpenRouter(systemPrompt: string, userPrompt: string): Promise<ScriptOutput> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -116,50 +125,79 @@ async function callOpenRouter(systemPrompt: string, userPrompt: string): Promise
     );
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://academy.pauseplayrepeat.com",
-      "X-Title": "Pause Play Repeat Video Generator",
-    },
-    body: JSON.stringify({
-      model: "anthropic/claude-opus-4.6",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 4000,
-      response_format: { type: "json_object" },
-    }),
+  const requestBody = JSON.stringify({
+    model: "anthropic/claude-opus-4.6",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.6,
+    max_tokens: 4000,
+    response_format: { type: "json_object" },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+  for (let gatewayAttempt = 0; gatewayAttempt <= MAX_GATEWAY_RETRIES; gatewayAttempt++) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://academy.pauseplayrepeat.com",
+        "X-Title": "Pause Play Repeat Video Generator",
+      },
+      body: requestBody,
+    });
+
+    // Check for gateway errors by status code
+    if (GATEWAY_ERROR_CODES.includes(response.status)) {
+      if (gatewayAttempt < MAX_GATEWAY_RETRIES) {
+        console.warn(`OpenRouter returned ${response.status}, retrying in 5s (attempt ${gatewayAttempt + 1}/${MAX_GATEWAY_RETRIES})`);
+        await new Promise((r) => setTimeout(r, GATEWAY_RETRY_DELAY_MS));
+        continue;
+      }
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error (${response.status}) after ${MAX_GATEWAY_RETRIES} gateway retries: ${errorText.substring(0, 200)}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+    }
+
+    // Read the body and check for HTML responses that sneak through with 200 status
+    const responseText = await response.text();
+    if (isGatewayErrorBody(responseText)) {
+      if (gatewayAttempt < MAX_GATEWAY_RETRIES) {
+        console.warn(`OpenRouter returned HTML instead of JSON, retrying in 5s (attempt ${gatewayAttempt + 1}/${MAX_GATEWAY_RETRIES})`);
+        await new Promise((r) => setTimeout(r, GATEWAY_RETRY_DELAY_MS));
+        continue;
+      }
+      throw new Error(`OpenRouter returned HTML instead of JSON after ${MAX_GATEWAY_RETRIES} gateway retries: ${responseText.substring(0, 200)}`);
+    }
+
+    const data: any = JSON.parse(responseText);
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("No content in OpenRouter response");
+    }
+
+    // Clean markdown fences / thinking blocks before parsing
+    const cleaned = cleanJsonResponse(content);
+    const parsed = JSON.parse(cleaned) as ScriptOutput;
+
+    // Basic validation
+    if (!parsed.scenes || !Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
+      throw new Error("Invalid script: no scenes found");
+    }
+    if (!parsed.colorPalette || !parsed.voiceoverScript) {
+      throw new Error("Invalid script: missing colorPalette or voiceoverScript");
+    }
+
+    return parsed;
   }
 
-  const data: any = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error("No content in OpenRouter response");
-  }
-
-  // Clean markdown fences / thinking blocks before parsing
-  const cleaned = cleanJsonResponse(content);
-  const parsed = JSON.parse(cleaned) as ScriptOutput;
-
-  // Basic validation
-  if (!parsed.scenes || !Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
-    throw new Error("Invalid script: no scenes found");
-  }
-  if (!parsed.colorPalette || !parsed.voiceoverScript) {
-    throw new Error("Invalid script: missing colorPalette or voiceoverScript");
-  }
-
-  return parsed;
+  // Should never reach here, but satisfy TypeScript
+  throw new Error("OpenRouter call failed after gateway retries");
 }
 
 // ─── Prompt Builders ────────────────────────────────────────────────────────

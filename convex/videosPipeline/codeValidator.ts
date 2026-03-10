@@ -202,18 +202,209 @@ export function validateAll(code: string): {
 export function extractCode(raw: string): string {
   let code = raw.trim();
 
-  // Remove markdown code fences
-  const fencePattern = /^```(?:typescript|tsx|ts|jsx|js)?\s*\n?([\s\S]*?)\n?```$/;
+  // Remove markdown code fences (including ```javascript variant)
+  const fencePattern = /^```(?:typescript|tsx|ts|jsx|js|javascript)?\s*\n?([\s\S]*?)\n?```$/;
   const match = code.match(fencePattern);
   if (match) {
     code = match[1].trim();
   }
 
   // Also handle case where there's text before/after the fence
-  const innerMatch = code.match(/```(?:typescript|tsx|ts|jsx|js)?\s*\n?([\s\S]*?)\n?```/);
+  const innerMatch = code.match(/```(?:typescript|tsx|ts|jsx|js|javascript)?\s*\n?([\s\S]*?)\n?```/);
   if (innerMatch && !match) {
     code = innerMatch[1].trim();
   }
 
   return code;
+}
+
+// ─── Scene Code Cleaning ────────────────────────────────────────────────────
+
+/**
+ * Clean AI-generated scene code before validation.
+ * Strips markdown fences, import/export lines, and text outside the component.
+ */
+export function cleanSceneCode(raw: string): string {
+  let code = raw.trim();
+
+  // Strip markdown fences — handle all variants:
+  // Opening fences: ```javascript, ```tsx, ```jsx, ```js, ```typescript, plain ```
+  // Fences with code on the same line: ```javascript const Scene6...
+  // Fences with leading whitespace or newlines
+  // Closing fences: ``` at end of output
+  code = code.replace(/^\s*```(?:typescript|tsx|ts|jsx|js|javascript)?\s*\n/gm, "");
+  // Handle opening fence with code continuing on the same line (no newline after lang tag)
+  code = code.replace(/^\s*```(?:typescript|tsx|ts|jsx|js|javascript)\s+/gm, "");
+  // Handle plain opening fence with code on same line
+  code = code.replace(/^\s*```\s+(?=\S)/gm, "");
+  // Closing fences (on their own line or at end of string)
+  code = code.replace(/\n?\s*```\s*$/gm, "");
+  code = code.trim();
+
+  // Strip lines that start with import
+  code = code
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("import "))
+    .join("\n");
+
+  // Strip lines that start with export (export default, export const, etc.)
+  code = code
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("export "))
+    .join("\n");
+
+  // Strip text before the first const/var/function declaration
+  const declMatch = code.match(
+    /^([\s\S]*?)((?:const|var|let|function)\s+(?:Scene|[A-Z])\w*)/m
+  );
+  if (declMatch && declMatch.index !== undefined) {
+    const beforeDecl = declMatch[1];
+    // Only strip if there's non-whitespace text before (explanation text)
+    if (beforeDecl.trim().length > 0) {
+      code = code.substring(declMatch.index + beforeDecl.length);
+    }
+  }
+
+  // Strip text after the final `};` (trailing explanation text)
+  const lastSemicolon = code.lastIndexOf("};");
+  if (lastSemicolon !== -1) {
+    const after = code.substring(lastSemicolon + 2).trim();
+    // Only trim if there's trailing non-code text
+    if (after.length > 0 && !after.startsWith("const ") && !after.startsWith("var ")) {
+      code = code.substring(0, lastSemicolon + 2);
+    }
+  }
+
+  return code.trim();
+}
+
+/**
+ * Detect if cleaned output is planning text (not code).
+ * Returns true if the text appears to be planning notes, frame breakdowns,
+ * or other non-code output from the AI.
+ */
+export function isNonCodeOutput(code: string): boolean {
+  const head = code.substring(0, 200);
+  // Must contain at least one code indicator in the first 200 chars
+  const hasCodeIndicator =
+    /\bconst\s/.test(head) ||
+    /\bfunction\s/.test(head) ||
+    /=>/.test(head) ||
+    /\breturn\s*\(/.test(head) ||
+    /\bvar\s/.test(head) ||
+    /\blet\s/.test(head);
+  return !hasCodeIndicator;
+}
+
+// ─── Delimiter Auto-Fix ─────────────────────────────────────────────────────
+
+/**
+ * Auto-fix unbalanced braces, parentheses, and brackets.
+ * Handles the common off-by-1-3 delimiter mismatches from AI models.
+ */
+export function autoFixDelimiters(code: string): string {
+  let fixed = code;
+
+  // Count each delimiter type
+  let openBraces = 0, closeBraces = 0;
+  let openParens = 0, closeParens = 0;
+  let openBrackets = 0, closeBrackets = 0;
+  for (const ch of fixed) {
+    if (ch === "{") openBraces++;
+    if (ch === "}") closeBraces++;
+    if (ch === "(") openParens++;
+    if (ch === ")") closeParens++;
+    if (ch === "[") openBrackets++;
+    if (ch === "]") closeBrackets++;
+  }
+
+  // Add missing closing delimiters at the end
+  if (openBraces > closeBraces) {
+    const diff = openBraces - closeBraces;
+    console.log(`  autoFixDelimiters: adding ${diff} missing "}"`);
+    fixed = fixed.trimEnd() + "\n" + "}".repeat(diff);
+  }
+  if (openParens > closeParens) {
+    const diff = openParens - closeParens;
+    console.log(`  autoFixDelimiters: adding ${diff} missing ")"`);
+    fixed = fixed.trimEnd() + ")".repeat(diff);
+  }
+  if (openBrackets > closeBrackets) {
+    const diff = openBrackets - closeBrackets;
+    console.log(`  autoFixDelimiters: adding ${diff} missing "]"`);
+    fixed = fixed.trimEnd() + "]".repeat(diff);
+  }
+
+  // Remove excess closing delimiters from the end
+  if (closeBraces > openBraces) {
+    const diff = closeBraces - openBraces;
+    console.log(`  autoFixDelimiters: removing ${diff} excess "}"`);
+    for (let i = 0; i < diff; i++) {
+      const lastIdx = fixed.lastIndexOf("}");
+      if (lastIdx > -1) fixed = fixed.substring(0, lastIdx) + fixed.substring(lastIdx + 1);
+    }
+  }
+  if (closeParens > openParens) {
+    const diff = closeParens - openParens;
+    console.log(`  autoFixDelimiters: removing ${diff} excess ")"`);
+    for (let i = 0; i < diff; i++) {
+      const lastIdx = fixed.lastIndexOf(")");
+      if (lastIdx > -1) fixed = fixed.substring(0, lastIdx) + fixed.substring(lastIdx + 1);
+    }
+  }
+  if (closeBrackets > openBrackets) {
+    const diff = closeBrackets - openBrackets;
+    console.log(`  autoFixDelimiters: removing ${diff} excess "]"`);
+    for (let i = 0; i < diff; i++) {
+      const lastIdx = fixed.lastIndexOf("]");
+      if (lastIdx > -1) fixed = fixed.substring(0, lastIdx) + fixed.substring(lastIdx + 1);
+    }
+  }
+
+  return fixed;
+}
+
+// ─── Scene Validation ───────────────────────────────────────────────────────
+
+/**
+ * Validate a single scene component (lighter than full validateAll).
+ * Only checks syntax, security, and minimal structure.
+ */
+export function validateSceneCode(code: string): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  // Syntax: balanced delimiters (strict)
+  const syntax = validateSyntax(code);
+  errors.push(...syntax.errors.map((e) => `[Syntax] ${e}`));
+
+  // Security: forbidden patterns (strict)
+  const security = validateSecurity(code);
+  errors.push(...security.violations.map((e) => `[Security] ${e}`));
+
+  // Structure: only fail if the code is essentially empty
+  if (code.trim().length < 50) {
+    errors.push("[Structure] Scene code is too short (under 50 chars)");
+  } else {
+    // Pass if ANY of these indicators are found:
+    const hasReactIndicator =
+      /<[A-Z]/.test(code) ||                                    // JSX component tag
+      /<div|<span|<svg|<p\b|<h[1-6]/.test(code) ||             // HTML elements
+      /style=\{\{/.test(code) ||                                 // style={{ }}
+      /className=/.test(code) ||                                 // className prop
+      /React\.createElement/.test(code) ||                       // createElement
+      /AbsoluteFill|Sequence|SceneShell|GlassCard/.test(code) || // Remotion/component names
+      /CenterScene|FadeUp|GradientText|SectionLabel/.test(code) ||
+      /interpolate\(|spring\(\{|useCurrentFrame/.test(code);     // Remotion hooks
+
+    if (!hasReactIndicator) {
+      errors.push(
+        "[Structure] No JSX, React component usage, or Remotion patterns found"
+      );
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }

@@ -7,7 +7,10 @@ import {
   validateAll,
   extractCode,
   validateSecurity,
-  validateSyntax,
+  validateSceneCode,
+  cleanSceneCode,
+  autoFixDelimiters,
+  isNonCodeOutput,
 } from "./codeValidator";
 
 /**
@@ -145,13 +148,19 @@ export const generateCode = internalAction({
     }
 
     // ── Compose final video ─────────────────────────────────────────
-    const finalCode = composeVideo(
+    const composedCode = composeVideo(
       generatedScenes,
       sceneData,
       args.audioData ?? null,
       totalFrames,
       script.colorPalette
     );
+
+    // Strip any TypeScript syntax the AI may have included
+    const strippedCode = stripTypeScript(composedCode);
+
+    // Auto-fix delimiter mismatches in the full composed output
+    const finalCode = autoFixDelimiters(strippedCode);
 
     // Final validation on the complete file
     const validation = validateAll(finalCode);
@@ -195,46 +204,86 @@ const ASPECT_RATIO_DIMS: Record<string, { width: number; height: number }> = {
 
 // ─── AI Call Helper ─────────────────────────────────────────────────────────
 
+const GATEWAY_ERROR_CODES = [502, 503, 504];
+const MAX_GATEWAY_RETRIES = 3;
+const GATEWAY_RETRY_DELAY_MS = 5000;
+
+function isGatewayErrorBody(text: string): boolean {
+  const trimmed = text.trimStart().toLowerCase();
+  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
+}
+
 async function callOpenRouter(
   apiKey: string,
   systemPrompt: string,
   userPrompt: string,
   maxTokens: number = 4000
 ): Promise<string> {
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://academy.pauseplayrepeat.com",
-        "X-Title": "Pause Play Repeat Video Generator",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.1-pro-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.3,
-        max_tokens: maxTokens,
-      }),
+  const requestBody = JSON.stringify({
+    model: "google/gemini-3.1-pro-preview",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.3,
+    max_tokens: maxTokens,
+  });
+
+  let lastError: Error | null = null;
+
+  for (let gatewayAttempt = 0; gatewayAttempt <= MAX_GATEWAY_RETRIES; gatewayAttempt++) {
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://academy.pauseplayrepeat.com",
+          "X-Title": "Pause Play Repeat Video Generator",
+        },
+        body: requestBody,
+      }
+    );
+
+    // Check for gateway errors by status code
+    if (GATEWAY_ERROR_CODES.includes(response.status)) {
+      if (gatewayAttempt < MAX_GATEWAY_RETRIES) {
+        console.warn(`OpenRouter returned ${response.status}, retrying in 5s (attempt ${gatewayAttempt + 1}/${MAX_GATEWAY_RETRIES})`);
+        await new Promise((r) => setTimeout(r, GATEWAY_RETRY_DELAY_MS));
+        continue;
+      }
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error (${response.status}) after ${MAX_GATEWAY_RETRIES} gateway retries: ${errorText.substring(0, 200)}`);
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+    }
+
+    // Read the body and check for HTML responses that sneak through with 200 status
+    const responseText = await response.text();
+    if (isGatewayErrorBody(responseText)) {
+      if (gatewayAttempt < MAX_GATEWAY_RETRIES) {
+        console.warn(`OpenRouter returned HTML instead of JSON, retrying in 5s (attempt ${gatewayAttempt + 1}/${MAX_GATEWAY_RETRIES})`);
+        await new Promise((r) => setTimeout(r, GATEWAY_RETRY_DELAY_MS));
+        continue;
+      }
+      throw new Error(`OpenRouter returned HTML instead of JSON after ${MAX_GATEWAY_RETRIES} gateway retries: ${responseText.substring(0, 200)}`);
+    }
+
+    const data: any = JSON.parse(responseText);
+    const rawContent = data.choices?.[0]?.message?.content;
+    if (!rawContent) {
+      throw new Error("No content in OpenRouter response");
+    }
+
+    return extractCode(rawContent);
   }
 
-  const data: any = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content;
-  if (!rawContent) {
-    throw new Error("No content in OpenRouter response");
-  }
-
-  return extractCode(rawContent);
+  // Should never reach here, but satisfy TypeScript
+  throw lastError || new Error("OpenRouter call failed after gateway retries");
 }
 
 // ─── Scene-Level Generation ─────────────────────────────────────────────────
@@ -251,14 +300,21 @@ async function generateSingleScene(
   sceneId: string
 ): Promise<string | null> {
   const MAX_SCENE_ATTEMPTS = 3;
+  const MAX_NON_CODE_REPROMPTS = 2;
   let lastErrors: string[] = [];
   let lastCode: string | null = null;
+  let nonCodeReprompt = false;
+  let nonCodeRepromptCount = 0;
 
   for (let attempt = 0; attempt < MAX_SCENE_ATTEMPTS; attempt++) {
     try {
       let prompt = scenePrompt;
 
-      if (attempt > 0 && lastErrors.length > 0) {
+      if (nonCodeReprompt) {
+        // AI returned planning notes — don't count as a retry, re-prompt with specific instruction
+        prompt += `\n\n## CRITICAL: YOU RETURNED PLANNING NOTES INSTEAD OF CODE\nYou returned planning notes instead of code. Return ONLY the JavaScript component function. Start with "const Scene${sceneIndex} = () => {". No explanations, no frame breakdowns, no markdown, no SVG paths.`;
+        nonCodeReprompt = false;
+      } else if (attempt > 0 && lastErrors.length > 0) {
         let syntaxWarning = "";
         if (lastCode) {
           syntaxWarning = buildDelimiterWarning(lastCode);
@@ -266,14 +322,36 @@ async function generateSingleScene(
         prompt += `\n\n## FIX THESE ERRORS (attempt ${attempt + 1})\n`;
         prompt += lastErrors.map((e) => `- ${e}`).join("\n");
         prompt += syntaxWarning;
-        prompt += `\n\nOutput the corrected scene function ONLY.`;
+        prompt += `\n\nOutput the corrected scene function ONLY. No markdown, no imports, no exports, no explanation text.`;
       }
 
-      const code = await callOpenRouter(apiKey, systemPrompt, prompt, 4000);
+      const rawCode = await callOpenRouter(apiKey, systemPrompt, prompt, 4000);
+
+      // Clean the scene code FIRST, then log the cleaned output
+      const cleaned = cleanSceneCode(rawCode);
+
+      // Diagnostic: log CLEANED output so we see actual processed code
+      console.log(`Scene ${sceneId} cleaned (first 500):`, cleaned.substring(0, 500));
+
+      // Detect non-code output (planning notes, frame breakdowns, etc.)
+      if (isNonCodeOutput(cleaned)) {
+        nonCodeRepromptCount++;
+        if (nonCodeRepromptCount <= MAX_NON_CODE_REPROMPTS) {
+          console.warn(`⚠️ Scene ${sceneId} returned non-code output (reprompt ${nonCodeRepromptCount}/${MAX_NON_CODE_REPROMPTS}), re-prompting...`);
+          nonCodeReprompt = true;
+          // Don't count this as a real attempt — decrement so we get a fresh try
+          attempt--;
+          continue;
+        }
+        console.error(`❌ Scene ${sceneId} returned non-code output ${nonCodeRepromptCount} times, giving up`);
+        return null;
+      }
+
+      const code = autoFixDelimiters(cleaned);
       lastCode = code;
 
-      // Validate this scene individually
-      const sceneValidation = validateScene(code, sceneIndex);
+      // Validate with scene-specific (relaxed) validator
+      const sceneValidation = validateSceneCode(code);
 
       if (sceneValidation.valid) {
         return code;
@@ -282,7 +360,7 @@ async function generateSingleScene(
       console.warn(`⚠️ Scene ${sceneId} validation failed (attempt ${attempt + 1}):`, sceneValidation.errors);
       lastErrors = sceneValidation.errors;
 
-      // Security check
+      // Security check — bail early on security violations
       const securityCheck = validateSecurity(code);
       if (!securityCheck.safe) {
         console.error(`🚫 Security violations in scene ${sceneId}, skipping retries`);
@@ -295,38 +373,6 @@ async function generateSingleScene(
   }
 
   return null;
-}
-
-/**
- * Validate a single scene component (lighter than full validateAll).
- */
-function validateScene(code: string, _sceneIndex: number): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // Syntax: balanced delimiters
-  const syntax = validateSyntax(code);
-  errors.push(...syntax.errors.map((e) => `[Syntax] ${e}`));
-
-  // Security
-  const security = validateSecurity(code);
-  errors.push(...security.violations.map((e) => `[Security] ${e}`));
-
-  // Must contain a function/const declaration for the scene
-  if (!/(?:const|var|function)\s+\w+/.test(code)) {
-    errors.push("[Structure] No function or const declaration found");
-  }
-
-  // Must contain JSX or React.createElement
-  if (!/</.test(code) && !/React\.createElement/.test(code)) {
-    errors.push("[Structure] No JSX or React.createElement found");
-  }
-
-  // Must be substantial
-  if (code.trim().length < 30) {
-    errors.push("[Structure] Scene code is too short");
-  }
-
-  return { valid: errors.length === 0, errors };
 }
 
 /**
@@ -356,6 +402,41 @@ function buildDelimiterWarning(code: string): string {
   }
   if (parts.length === 0) return "";
   return `\n\n⚠️ DELIMITER MISMATCH:\n${parts.join("\n")}`;
+}
+
+// ─── TypeScript Stripping ────────────────────────────────────────────────────
+
+/**
+ * Strip TypeScript-specific syntax from generated code so Sucrase/new Function()
+ * can handle it as plain JavaScript + JSX. Handles:
+ * - `as SomeType` cast expressions
+ * - Type annotations (`: number`, `: string`, `: React.FC<Props>`, etc.)
+ * - `interface` and `type` declarations
+ * - Generic type params like `<Props>`
+ */
+function stripTypeScript(code: string): string {
+  let result = code;
+
+  // Remove `as SomeType` casts (e.g., `value as number`, `foo as React.FC`)
+  result = result.replace(/\s+as\s+[A-Z][A-Za-z0-9.<>,\s|&\[\]]*(?=[;,)\]\s}])/g, "");
+
+  // Remove interface declarations (entire block)
+  result = result.replace(/^\s*interface\s+\w+[^{]*\{[^}]*\}\s*;?\s*$/gm, "");
+
+  // Remove type alias declarations
+  result = result.replace(/^\s*type\s+\w+\s*=\s*[^;]+;\s*$/gm, "");
+
+  // Remove type annotations on const/let/var declarations: `const x: number = ...` → `const x = ...`
+  result = result.replace(/((?:const|let|var)\s+\w+)\s*:\s*[A-Za-z][A-Za-z0-9.<>,\s|&\[\]]*(?=\s*=)/g, "$1");
+
+  // Remove type annotations on arrow function params: `(x: number)` → `(x)`
+  result = result.replace(/(\w+)\s*:\s*(?:number|string|boolean|any|void|null|undefined|React\.\w+(?:<[^>]*>)?)\s*(?=[,)])/g, "$1");
+
+  // Remove generic type params on function calls: `useState<number>()` → `useState()`
+  // Only matches word<Type>( — won't match JSX tags since those don't have `(` after `>`
+  result = result.replace(/(\w+)<[A-Z][A-Za-z0-9<>,\s|&]*>(\s*\()/g, "$1$2");
+
+  return result;
 }
 
 // ─── Composition Assembly ───────────────────────────────────────────────────
@@ -414,9 +495,13 @@ function buildSceneSystemPrompt(
 ): string {
   return `You are a Remotion scene component generator for Pause Play Repeat, a music production education platform.
 
-## YOUR OUTPUT FORMAT
+## YOUR OUTPUT FORMAT — CRITICAL
 
-You must output ONLY a single JavaScript scene component function (no markdown, no explanation, no \`\`\`).
+You must output ONLY a single JavaScript scene component function.
+- NO markdown fences (\`\`\`), NO imports, NO exports, NO explanation text
+- Start with \`const SceneN = () => {\` and end with \`};\`
+- Do NOT wrap the code in anything — output raw JavaScript only
+- Generate plain JavaScript with JSX only. Do NOT use TypeScript syntax — no type annotations, no \`as\` casts, no interfaces, no generics.
 
 The scene will be placed inside a larger composition that already has these destructured:
 \`\`\`
@@ -639,7 +724,7 @@ const Scene${index} = () => {
 \`\`\``;
   }
 
-  prompt += `\n\nGenerate Scene${index} now. Output ONLY the const function — no imports, no extra code.`;
+  prompt += `\n\nGenerate Scene${index} now. Return ONLY the scene component function. Plain JavaScript with JSX — no TypeScript, no type annotations, no \`as\` casts. No imports, no exports, no markdown fences, no explanation text. Start with "const Scene${index} = () => {" and end with "};".`;
 
   return prompt;
 }
@@ -692,7 +777,9 @@ async function generateFullComposition(
         prompt = `${userPrompt}\n\n## FIX THESE ERRORS (attempt ${attempt + 1})\n${lastErrors.map((e) => `- ${e}`).join("\n")}${syntaxWarning}\n\nFix ALL issues and output corrected code.`;
       }
 
-      const code = await callOpenRouter(apiKey, systemPrompt, prompt, 12000);
+      const rawCode = await callOpenRouter(apiKey, systemPrompt, prompt, 12000);
+      console.log(`Iteration raw (first 500):`, rawCode.substring(0, 500));
+      const code = autoFixDelimiters(stripTypeScript(rawCode));
       lastCode = code;
 
       const validation = validateAll(code);
@@ -737,6 +824,7 @@ function buildFullSystemPrompt(
 ## YOUR OUTPUT FORMAT
 
 You must output ONLY a JavaScript function body (no markdown, no explanation, no \`\`\`).
+Generate plain JavaScript with JSX only. Do NOT use TypeScript syntax — no type annotations, no \`as\` casts, no interfaces, no generics.
 
 The code will be executed as:
 \`\`\`

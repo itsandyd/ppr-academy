@@ -92,10 +92,25 @@ export const DynamicVideo: React.FC<{
     component: React.FC | null;
     error: string | null;
   }>(() => {
+    // Step 1: Transpile JSX → React.createElement calls
+    let jsCode: string;
     try {
-      // Transpile JSX → React.createElement calls
-      const jsCode = transpileCode(generatedCode);
+      jsCode = transpileCode(generatedCode);
+    } catch (err: any) {
+      console.error(
+        "DynamicVideo: Transpilation failed:",
+        err.message,
+        "\nCode (first 300 chars):",
+        generatedCode.substring(0, 300)
+      );
+      return {
+        component: null,
+        error: `Transpilation error: ${err.message}`,
+      };
+    }
 
+    // Step 2: Execute the transpiled code
+    try {
       const factory = new Function(
         "React",
         "Remotion",
@@ -116,12 +131,22 @@ export const DynamicVideo: React.FC<{
       );
 
       if (!Component) {
+        console.error(
+          "DynamicVideo: Code did not return a component.",
+          "\nCode (first 300 chars):",
+          generatedCode.substring(0, 300)
+        );
         return { component: null, error: "Generated code did not return a component" };
       }
       return { component: Component, error: null };
     } catch (err: any) {
-      console.error("DynamicVideo: Failed to create component from code:", err);
-      return { component: null, error: err.message || String(err) };
+      console.error(
+        "DynamicVideo: Execution failed:",
+        err.message,
+        "\nCode (first 300 chars):",
+        generatedCode.substring(0, 300)
+      );
+      return { component: null, error: `Execution error: ${err.message}` };
     }
   }, [generatedCode, images, audioUrl]);
 

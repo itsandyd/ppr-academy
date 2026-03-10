@@ -75,11 +75,10 @@ export const postProcess = internalAction({
           height: args.height,
         };
 
-        let stillUrl: string | null = null;
+        let thumbBuffer: Buffer | null = null;
 
         try {
-          const { renderStillOnLambda } = await import("@remotion/lambda/client");
-          console.log("[postProcess] renderStillOnLambda type:", typeof renderStillOnLambda);
+          const { renderStillOnLambda, presignUrl } = await import("@remotion/lambda/client");
 
           const result = await renderStillOnLambda({
             region,
@@ -92,60 +91,48 @@ export const postProcess = internalAction({
             privacy: "no-acl",
           });
 
-          console.log("[postProcess] renderStillOnLambda result keys:", Object.keys(result));
+          console.log("[postProcess] renderStillOnLambda result:", {
+            bucketName: result.bucketName,
+            outKey: (result as any).outKey,
+          });
 
-          // Remotion v4 returns { url, bucketName, renderId, ... }
-          // Use the URL directly if available
-          if ('url' in result && typeof (result as any).url === 'string') {
-            stillUrl = (result as any).url;
+          // Use presigned URL directly (direct S3 URLs return 403)
+          const objectKey = (result as any).outKey as string;
+          const presignedUrl = await presignUrl({
+            region,
+            bucketName: result.bucketName,
+            objectKey,
+            expiresInSeconds: 900,
+            checkIfObjectExists: true,
+          });
+
+          const thumbResponse = await fetch(presignedUrl);
+          if (thumbResponse.ok) {
+            thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
           } else {
-            // Fall back to constructing a presigned URL
-            const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
-            const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
-
-            const s3Client = new S3Client({
-              region,
-              credentials: { accessKeyId, secretAccessKey },
-            });
-
-            const objectKey = `stills/${result.renderId}/out.png`;
-            console.log("[postProcess] Constructed still objectKey:", objectKey);
-
-            stillUrl = await getSignedUrl(
-              s3Client,
-              new GetObjectCommand({ Bucket: result.bucketName, Key: objectKey }),
-              { expiresIn: 300 }
-            );
+            console.warn(`⚠️ Thumbnail download failed: ${thumbResponse.status} ${thumbResponse.statusText}`);
           }
         } catch (stillErr: any) {
-          console.error("⚠️ renderStillOnLambda failed:", stillErr.message, stillErr.stack);
-          // Non-fatal — skip thumbnail
+          console.warn("⚠️ renderStillOnLambda failed (non-fatal):", stillErr.message);
         }
 
-        if (stillUrl) {
-          const thumbResponse = await fetch(stillUrl);
-          if (thumbResponse.ok) {
-            const thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
+        if (thumbBuffer) {
+          const uploadUrl: string = await ctx.runMutation(
+            internal.videosPipeline.jobMutations.generateUploadUrl,
+            {}
+          );
 
-            const uploadUrl: string = await ctx.runMutation(
-              internal.videosPipeline.jobMutations.generateUploadUrl,
-              {}
-            );
+          const uploadResult = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": "image/png" },
+            body: thumbBuffer,
+          });
 
-            const uploadResult = await fetch(uploadUrl, {
-              method: "POST",
-              headers: { "Content-Type": "image/png" },
-              body: thumbBuffer,
-            });
-
-            if (uploadResult.ok) {
-              const uploadJson: any = await uploadResult.json();
-              thumbnailId = uploadJson.storageId as Id<"_storage">;
-            } else {
-              console.warn("⚠️ Thumbnail upload failed:", uploadResult.status, uploadResult.statusText);
-            }
+          if (uploadResult.ok) {
+            const uploadJson: any = await uploadResult.json();
+            thumbnailId = uploadJson.storageId as Id<"_storage">;
           } else {
-            console.warn("⚠️ Thumbnail download failed:", thumbResponse.status, thumbResponse.statusText);
+            console.warn("⚠️ Thumbnail upload failed:", uploadResult.status, uploadResult.statusText);
           }
         }
       }

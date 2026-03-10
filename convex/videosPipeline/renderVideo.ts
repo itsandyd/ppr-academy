@@ -60,9 +60,8 @@ async function renderViaLambda(
   const {
     renderMediaOnLambda,
     getRenderProgress,
+    presignUrl,
   } = await import("@remotion/lambda/client");
-  const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
-  const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
 
   const region = (process.env.REMOTION_AWS_REGION ?? "us-east-1") as "us-east-1";
   const serveUrl = process.env.REMOTION_SERVE_URL!;
@@ -164,15 +163,6 @@ async function renderViaLambda(
   if (!videoResponse.ok) {
     console.log(`[renderVideo] Direct fetch failed (${videoResponse.status}), falling back to presigned URL`);
 
-    // Generate a presigned URL to download the rendered MP4 from S3.
-    const s3Client = new S3Client({
-      region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    });
-
     // Extract the S3 object key from the outputFile URL.
     // Handle both virtual-hosted-style (bucket.s3.region.amazonaws.com/key)
     // and path-style (s3.region.amazonaws.com/bucket/key) URLs.
@@ -196,11 +186,14 @@ async function renderViaLambda(
 
     console.log("[renderVideo] Extracted objectKey:", objectKey);
 
-    const presignedUrl = await getSignedUrl(
-      s3Client,
-      new GetObjectCommand({ Bucket: bucketName, Key: objectKey }),
-      { expiresIn: 900 }
-    );
+    // Use Remotion's built-in presignUrl (works in Convex unlike @aws-sdk/client-s3)
+    const presignedUrl = await presignUrl({
+      region,
+      bucketName,
+      objectKey,
+      expiresInSeconds: 900,
+      checkIfObjectExists: true,
+    });
 
     videoResponse = await fetch(presignedUrl);
     if (!videoResponse.ok) {

@@ -178,6 +178,15 @@ async function callOpenAI(options: LLMOptions): Promise<LLMResponse> {
 // OPENROUTER PROVIDER (Claude, DeepSeek, Gemini, Llama, etc.)
 // ============================================================================
 
+const GATEWAY_ERROR_CODES = [502, 503, 504];
+const MAX_GATEWAY_RETRIES = 3;
+const GATEWAY_RETRY_DELAY_MS = 5000;
+
+function isGatewayErrorBody(text: string): boolean {
+  const trimmed = text.trimStart().toLowerCase();
+  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
+}
+
 async function callOpenRouter(options: LLMOptions): Promise<LLMResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -219,38 +228,67 @@ async function callOpenRouter(options: LLMOptions): Promise<LLMResponse> {
     };
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.SITE_URL || "https://ppr.academy",
-      "X-Title": "PPR Academy AI Assistant",
-    },
-    body: JSON.stringify(body),
-  });
+  const requestBody = JSON.stringify(body);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error (${response.status}): ${error}`);
+  for (let gatewayAttempt = 0; gatewayAttempt <= MAX_GATEWAY_RETRIES; gatewayAttempt++) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.SITE_URL || "https://ppr.academy",
+        "X-Title": "PPR Academy AI Assistant",
+      },
+      body: requestBody,
+    });
+
+    // Check for gateway errors by status code
+    if (GATEWAY_ERROR_CODES.includes(response.status)) {
+      if (gatewayAttempt < MAX_GATEWAY_RETRIES) {
+        console.warn(`OpenRouter returned ${response.status}, retrying in 5s (attempt ${gatewayAttempt + 1}/${MAX_GATEWAY_RETRIES})`);
+        await new Promise((r) => setTimeout(r, GATEWAY_RETRY_DELAY_MS));
+        continue;
+      }
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error (${response.status}) after ${MAX_GATEWAY_RETRIES} gateway retries: ${errorText.substring(0, 200)}`);
+    }
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error (${response.status}): ${error}`);
+    }
+
+    // Read the body and check for HTML responses that sneak through with 200 status
+    const responseText = await response.text();
+    if (isGatewayErrorBody(responseText)) {
+      if (gatewayAttempt < MAX_GATEWAY_RETRIES) {
+        console.warn(`OpenRouter returned HTML instead of JSON, retrying in 5s (attempt ${gatewayAttempt + 1}/${MAX_GATEWAY_RETRIES})`);
+        await new Promise((r) => setTimeout(r, GATEWAY_RETRY_DELAY_MS));
+        continue;
+      }
+      throw new Error(`OpenRouter returned HTML instead of JSON after ${MAX_GATEWAY_RETRIES} gateway retries: ${responseText.substring(0, 200)}`);
+    }
+
+    const data = JSON.parse(responseText) as {
+      choices: Array<{ message?: { content?: string }; finish_reason?: string }>;
+      model: string;
+      usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    };
+
+    return {
+      content: data.choices[0]?.message?.content || "",
+      model: data.model,
+      tokensUsed: data.usage ? {
+        input: data.usage.prompt_tokens,
+        output: data.usage.completion_tokens,
+        total: data.usage.total_tokens,
+      } : undefined,
+      finishReason: data.choices[0]?.finish_reason,
+    };
   }
 
-  const data = await response.json() as {
-    choices: Array<{ message?: { content?: string }; finish_reason?: string }>;
-    model: string;
-    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-  };
-  
-  return {
-    content: data.choices[0]?.message?.content || "",
-    model: data.model,
-    tokensUsed: data.usage ? {
-      input: data.usage.prompt_tokens,
-      output: data.usage.completion_tokens,
-      total: data.usage.total_tokens,
-    } : undefined,
-    finishReason: data.choices[0]?.finish_reason,
-  };
+  // Should never reach here, but satisfy TypeScript
+  throw new Error("OpenRouter call failed after gateway retries");
 }
 
 /**
