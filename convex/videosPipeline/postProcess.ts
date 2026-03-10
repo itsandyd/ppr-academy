@@ -63,10 +63,6 @@ export const postProcess = internalAction({
         process.env.REMOTION_AWS_ACCESS_KEY_ID = accessKeyId;
         process.env.REMOTION_AWS_SECRET_ACCESS_KEY = secretAccessKey;
 
-        const { renderStillOnLambda } = await import("@remotion/lambda/client");
-        const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
-        const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
-
         const region = (process.env.REMOTION_AWS_REGION ?? "us-east-1") as "us-east-1";
         const thumbnailFrame = Math.round(args.totalFrames * 0.3);
 
@@ -79,48 +75,77 @@ export const postProcess = internalAction({
           height: args.height,
         };
 
-        const { bucketName, renderId } = await renderStillOnLambda({
-          region,
-          functionName,
-          serveUrl,
-          composition: "DynamicVideo",
-          inputProps,
-          frame: thumbnailFrame,
-          imageFormat: "png",
-          privacy: "no-acl",
-        });
+        let stillUrl: string | null = null;
 
-        // Download the rendered still via presigned URL
-        const s3Client = new S3Client({
-          region,
-          credentials: { accessKeyId, secretAccessKey },
-        });
+        try {
+          const { renderStillOnLambda } = await import("@remotion/lambda/client");
+          console.log("[postProcess] renderStillOnLambda type:", typeof renderStillOnLambda);
 
-        const objectKey = `renders/${renderId}/out.png`;
-        const presignedUrl = await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({ Bucket: bucketName, Key: objectKey }),
-          { expiresIn: 300 }
-        );
-
-        const thumbResponse = await fetch(presignedUrl);
-        if (thumbResponse.ok) {
-          const thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
-
-          const uploadUrl: string = await ctx.runMutation(
-            internal.videosPipeline.jobMutations.generateUploadUrl,
-            {}
-          );
-
-          const uploadResult = await fetch(uploadUrl, {
-            method: "POST",
-            headers: { "Content-Type": "image/png" },
-            body: thumbBuffer,
+          const result = await renderStillOnLambda({
+            region,
+            functionName,
+            serveUrl,
+            composition: "DynamicVideo",
+            inputProps,
+            frame: thumbnailFrame,
+            imageFormat: "png",
+            privacy: "no-acl",
           });
 
-          if (uploadResult.ok) {
-            const uploadJson: any = await uploadResult.json();
-            thumbnailId = uploadJson.storageId as Id<"_storage">;
+          console.log("[postProcess] renderStillOnLambda result keys:", Object.keys(result));
+
+          // Remotion v4 returns { url, bucketName, renderId, ... }
+          // Use the URL directly if available
+          if ('url' in result && typeof (result as any).url === 'string') {
+            stillUrl = (result as any).url;
+          } else {
+            // Fall back to constructing a presigned URL
+            const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
+            const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+
+            const s3Client = new S3Client({
+              region,
+              credentials: { accessKeyId, secretAccessKey },
+            });
+
+            const objectKey = `stills/${result.renderId}/out.png`;
+            console.log("[postProcess] Constructed still objectKey:", objectKey);
+
+            stillUrl = await getSignedUrl(
+              s3Client,
+              new GetObjectCommand({ Bucket: result.bucketName, Key: objectKey }),
+              { expiresIn: 300 }
+            );
+          }
+        } catch (stillErr: any) {
+          console.error("⚠️ renderStillOnLambda failed:", stillErr.message, stillErr.stack);
+          // Non-fatal — skip thumbnail
+        }
+
+        if (stillUrl) {
+          const thumbResponse = await fetch(stillUrl);
+          if (thumbResponse.ok) {
+            const thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
+
+            const uploadUrl: string = await ctx.runMutation(
+              internal.videosPipeline.jobMutations.generateUploadUrl,
+              {}
+            );
+
+            const uploadResult = await fetch(uploadUrl, {
+              method: "POST",
+              headers: { "Content-Type": "image/png" },
+              body: thumbBuffer,
+            });
+
+            if (uploadResult.ok) {
+              const uploadJson: any = await uploadResult.json();
+              thumbnailId = uploadJson.storageId as Id<"_storage">;
+            } else {
+              console.warn("⚠️ Thumbnail upload failed:", uploadResult.status, uploadResult.statusText);
+            }
+          } else {
+            console.warn("⚠️ Thumbnail download failed:", thumbResponse.status, thumbResponse.statusText);
           }
         }
       }

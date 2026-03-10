@@ -151,32 +151,63 @@ async function renderViaLambda(
     throw new Error("Lambda render completed but no output file URL was returned.");
   }
 
-  // Generate a presigned URL to download the rendered MP4 from S3.
-  // The raw outputFile URL is unauthenticated and S3 returns 403 for private objects.
-  const s3Client = new S3Client({
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
+  console.log("[renderVideo] outputFile URL:", outputFile);
+  console.log("[renderVideo] bucketName:", bucketName);
+  console.log("[renderVideo] AWS creds defined:", {
+    accessKeyId: !!accessKeyId,
+    secretAccessKey: !!secretAccessKey,
   });
 
-  // Extract the S3 object key from the outputFile URL
-  const outputUrl = new URL(outputFile);
-  const objectKey = outputUrl.pathname.startsWith("/")
-    ? outputUrl.pathname.slice(1)
-    : outputUrl.pathname;
+  // Try fetching the outputFile URL directly first (it may already be accessible).
+  let videoResponse = await fetch(outputFile);
 
-  const presignedUrl = await getSignedUrl(
-    s3Client,
-    new GetObjectCommand({ Bucket: bucketName, Key: objectKey }),
-    { expiresIn: 900 }
-  );
-
-  // Download the rendered MP4 from S3 and re-upload to Convex storage
-  const videoResponse = await fetch(presignedUrl);
   if (!videoResponse.ok) {
-    throw new Error(`Failed to download rendered video from S3: ${videoResponse.statusText}`);
+    console.log(`[renderVideo] Direct fetch failed (${videoResponse.status}), falling back to presigned URL`);
+
+    // Generate a presigned URL to download the rendered MP4 from S3.
+    const s3Client = new S3Client({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+
+    // Extract the S3 object key from the outputFile URL.
+    // Handle both virtual-hosted-style (bucket.s3.region.amazonaws.com/key)
+    // and path-style (s3.region.amazonaws.com/bucket/key) URLs.
+    const outputUrl = new URL(outputFile);
+    let objectKey: string;
+
+    if (outputUrl.hostname.includes(".s3.") && !outputUrl.hostname.startsWith("s3.")) {
+      // Virtual-hosted-style: bucket is in the hostname
+      objectKey = outputUrl.pathname.startsWith("/")
+        ? outputUrl.pathname.slice(1)
+        : outputUrl.pathname;
+    } else {
+      // Path-style: bucket is the first segment of the path
+      const pathParts = outputUrl.pathname.replace(/^\//, "").split("/");
+      // First segment is the bucket name, rest is the key
+      objectKey = pathParts.slice(1).join("/");
+    }
+
+    // URL-decode the key (S3 keys may contain encoded characters)
+    objectKey = decodeURIComponent(objectKey);
+
+    console.log("[renderVideo] Extracted objectKey:", objectKey);
+
+    const presignedUrl = await getSignedUrl(
+      s3Client,
+      new GetObjectCommand({ Bucket: bucketName, Key: objectKey }),
+      { expiresIn: 900 }
+    );
+
+    videoResponse = await fetch(presignedUrl);
+    if (!videoResponse.ok) {
+      throw new Error(
+        `Failed to download rendered video from S3: ${videoResponse.statusText} (status: ${videoResponse.status}, bucket: ${bucketName}, key: ${objectKey})`
+      );
+    }
   }
 
   const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
