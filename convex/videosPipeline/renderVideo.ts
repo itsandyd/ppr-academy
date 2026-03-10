@@ -195,6 +195,10 @@ async function renderViaLambda(
       checkIfObjectExists: true,
     });
 
+    if (!presignedUrl) {
+      throw new Error(`presignUrl returned null for ${bucketName}/${objectKey} — object may not exist`);
+    }
+
     videoResponse = await fetch(presignedUrl);
     if (!videoResponse.ok) {
       throw new Error(

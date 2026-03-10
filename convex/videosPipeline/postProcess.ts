@@ -106,10 +106,14 @@ export const postProcess = internalAction({
             checkIfObjectExists: true,
           });
 
-          const thumbResponse = await fetch(presignedUrl);
-          if (thumbResponse.ok) {
+          if (!presignedUrl) {
+            console.warn("⚠️ presignUrl returned null — object may not exist");
+          }
+
+          const thumbResponse = presignedUrl ? await fetch(presignedUrl) : null;
+          if (thumbResponse?.ok) {
             thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
-          } else {
+          } else if (thumbResponse) {
             console.warn(`⚠️ Thumbnail download failed: ${thumbResponse.status} ${thumbResponse.statusText}`);
           }
         } catch (stillErr: any) {
