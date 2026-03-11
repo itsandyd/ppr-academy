@@ -2,6 +2,12 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { C, F } from "../theme";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── CTAButton: Pulsing gradient call-to-action button ──────────────────
 export const CTAButton: React.FC<{
   children: React.ReactNode;
@@ -14,7 +20,7 @@ export const CTAButton: React.FC<{
   const { fps } = useVideoConfig();
   const ctaSpring = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 50, stiffness: 160 },
   });
   const ctaScale = interpolate(ctaSpring, [0, 1], [0, 1]);
@@ -58,7 +64,7 @@ export const LogoIcon: React.FC<{
   const { fps } = useVideoConfig();
   const logoSpring = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 40, stiffness: 150 },
   });
   const logoScale = interpolate(logoSpring, [0, 1], [0, 1]);

@@ -1,6 +1,12 @@
 import React from "react";
 import { useCurrentFrame, interpolate } from "remotion";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── ConnectorLine: Animated vertical connector between steps ───────────
 // Used by EmailAutomationVideo between StepRow components
 export const ConnectorLine: React.FC<{
@@ -8,7 +14,8 @@ export const ConnectorLine: React.FC<{
   color: string;
 }> = ({ delay, color }) => {
   const frame = useCurrentFrame();
-  const h = interpolate(frame, [delay, delay + 10], [0, 20], {
+  const d = n(delay);
+  const h = interpolate(frame, [d, d + 10], [0, 20], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

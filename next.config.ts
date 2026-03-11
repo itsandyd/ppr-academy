@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     // Helps with client component bundling issues
     esmExternals: true,
   },
+  // Prevent bundling of ESM-only packages that break in serverless (jsdom chain)
+  serverExternalPackages: ['jsdom', 'html-encoding-sniffer', '@exodus/bytes', 'isomorphic-dompurify'],
   // Disable static optimization globally to prevent prerendering issues with auth
   output: 'standalone',
   trailingSlash: false,

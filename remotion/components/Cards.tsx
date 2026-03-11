@@ -2,6 +2,12 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { C, F } from "../theme";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── FeatureCard: Icon + title + description horizontal card ────────────
 // Used by PausePlayRepeatVideo for feature showcase scenes
 export const FeatureCard: React.FC<{
@@ -15,7 +21,7 @@ export const FeatureCard: React.FC<{
 
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 60, stiffness: 180 },
   });
 
@@ -23,7 +29,7 @@ export const FeatureCard: React.FC<{
   const opacity = interpolate(enter, [0, 1], [0, 1]);
   const x = interpolate(enter, [0, 1], [80, 0]);
 
-  const glow = Math.sin((frame - delay) * 0.08) * 0.15 + 0.85;
+  const glow = Math.sin((frame - n(delay)) * 0.08) * 0.15 + 0.85;
 
   return (
     <div
@@ -76,15 +82,16 @@ export const StepRow: React.FC<{
 }> = ({ step, delay }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const d = n(delay);
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - d,
     config: { damping: 50, stiffness: 160 },
   });
   const x = interpolate(enter, [0, 1], [100, 0]);
   const op = interpolate(enter, [0, 1], [0, 1]);
   const sc = interpolate(enter, [0, 1], [0.9, 1]);
-  const glow = Math.sin(Math.max(0, frame - delay - 15) * 0.06) * 0.2 + 0.8;
+  const glow = Math.sin(Math.max(0, frame - d - 15) * 0.06) * 0.2 + 0.8;
 
   return (
     <div
@@ -150,7 +157,7 @@ export const ReasonCard: React.FC<{
   const { fps } = useVideoConfig();
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 55, stiffness: 170 },
   });
   const sc = interpolate(enter, [0, 1], [0.8, 1]);
@@ -212,16 +219,17 @@ export const TierCard: React.FC<{
 }> = ({ tier, delay }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const d = n(delay);
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - d,
     config: { damping: 45, stiffness: 150 },
   });
   const sc = interpolate(enter, [0, 1], [0.7, 1]);
   const op = interpolate(enter, [0, 1], [0, 1]);
   const yy = interpolate(enter, [0, 1], [60, 0]);
   const glow =
-    Math.sin(Math.max(0, frame - delay - 20) * 0.05) * 0.2 + 0.8;
+    Math.sin(Math.max(0, frame - d - 20) * 0.05) * 0.2 + 0.8;
 
   return (
     <div
@@ -270,7 +278,7 @@ export const TierCard: React.FC<{
       {/* Features */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {tier.features.map((feat, i) => {
-          const fd = delay + 12 + i * 6;
+          const fd = d + 12 + i * 6;
           const fop = interpolate(frame, [fd, fd + 8], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",

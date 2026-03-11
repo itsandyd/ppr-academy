@@ -38,6 +38,13 @@ import { SceneProblem } from "./SceneProblem";
 import { ScenePPR } from "./ScenePPR";
 import { SceneCTA } from "./SceneCTA";
 import { EmailWorkflowVideo } from "./workflow-video/EmailWorkflowVideo";
+import { ProducersTeachVideo } from "./compositions/social/ProducersTeachVideo";
+import { TwoStepsAheadVideo } from "./compositions/social/TwoStepsAheadVideo";
+import { PromoProducerPlatform } from "./compositions/social/PromoProducerPlatform";
+import {
+  BeatLeaseWarningAdaptive,
+  calculateBeatLeaseWarningMetadata,
+} from "./compositions/social/BeatLeaseWarningAdaptive";
 
 type DynamicVideoProps = {
   generatedCode: string;
@@ -389,6 +396,45 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1080}
         height={1920}
+      />
+      <Composition
+        id="ProducersTeachVideo"
+        component={ProducersTeachVideo}
+        durationInFrames={3807}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── PROMO: Two Steps Ahead — Creator Journey Video ─── */}
+      <Composition
+        id="TwoStepsAhead"
+        component={TwoStepsAheadVideo}
+        durationInFrames={5100}
+        fps={60}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── PROMO: Producer Platform Promotional Video ─── */}
+      <Composition
+        id="PromoProducerPlatform"
+        component={PromoProducerPlatform}
+        durationInFrames={1410}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      {/* ─── BEAT LEASE WARNING: Adaptive-Duration Cyberpunk Educational ─── */}
+      <Composition
+        id="BeatLeaseWarningAdaptive"
+        component={BeatLeaseWarningAdaptive}
+        durationInFrames={1650}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          pacingMultiplier: 1,
+        }}
+        calculateMetadata={calculateBeatLeaseWarningMetadata}
       />
     </>
   );

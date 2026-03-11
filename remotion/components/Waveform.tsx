@@ -2,6 +2,12 @@ import React from "react";
 import { useCurrentFrame, interpolate } from "remotion";
 import { C } from "../theme";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── WaveformVisual: Accurate SVG sine wave with tanh soft-clip saturation
 // Used by SaturationCourseVideo for clean vs saturated waveform comparison
 export const WaveformVisual: React.FC<{
@@ -9,7 +15,8 @@ export const WaveformVisual: React.FC<{
   distorted?: boolean;
 }> = ({ delay, distorted = false }) => {
   const frame = useCurrentFrame();
-  const enter = interpolate(frame, [delay, delay + 15], [0, 1], {
+  const d = n(delay);
+  const enter = interpolate(frame, [d, d + 15], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

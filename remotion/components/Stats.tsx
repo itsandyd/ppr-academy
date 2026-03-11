@@ -2,6 +2,12 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { C, F } from "../theme";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── StatCounter: Animated stat with gradient value ─────────────────────
 // Used by PausePlayRepeatVideo in the stats scene (2x2 grid)
 export const StatCounter: React.FC<{
@@ -14,7 +20,7 @@ export const StatCounter: React.FC<{
 
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 60, stiffness: 200 },
   });
 
@@ -68,7 +74,7 @@ export const StatBlock: React.FC<{
   const { fps } = useVideoConfig();
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 50, stiffness: 160 },
   });
   const sc = interpolate(enter, [0, 1], [0, 1]);
@@ -121,7 +127,7 @@ export const StatBig: React.FC<{
   const { fps } = useVideoConfig();
   const enter = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 45, stiffness: 150 },
   });
   const sc = interpolate(enter, [0, 1], [0, 1]);

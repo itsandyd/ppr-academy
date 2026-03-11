@@ -1,6 +1,12 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── FadeUp: Spring-animated fade + translate entrance ──────────────────
 export const FadeUp: React.FC<{
   children: React.ReactNode;
@@ -11,7 +17,7 @@ export const FadeUp: React.FC<{
   const { fps } = useVideoConfig();
   const s = spring({
     fps,
-    frame: frame - delay,
+    frame: frame - n(delay),
     config: { damping: 60, stiffness: 180 },
   });
   const y = interpolate(s, [0, 1], [45, 0]);
@@ -31,11 +37,13 @@ export const useExit = (
   exitY: number = -30
 ) => {
   const frame = useCurrentFrame();
-  const op = interpolate(frame, [exitStart, exitEnd], [1, 0], {
+  const safeStart = n(exitStart);
+  const safeEnd = n(exitEnd, safeStart + 1);
+  const op = interpolate(frame, [safeStart, safeEnd], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const y = interpolate(frame, [exitStart, exitEnd], [0, exitY], {
+  const y = interpolate(frame, [safeStart, safeEnd], [0, n(exitY, -30)], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

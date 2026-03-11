@@ -2,6 +2,12 @@ import React from "react";
 import { useCurrentFrame, useVideoConfig, interpolate, Img } from "remotion";
 import { C } from "../theme";
 
+// Sanitize numeric props — LLM-generated code may pass undefined/NaN
+const n = (v: unknown, fallback = 0): number => {
+  const num = Number(v);
+  return Number.isFinite(num) ? num : fallback;
+};
+
 // ─── GlowOrb: Floating ambient background orb ──────────────────────────
 export const GlowOrb: React.FC<{
   x: number;
@@ -11,8 +17,9 @@ export const GlowOrb: React.FC<{
   delay: number;
 }> = ({ x, y, size, color, delay }) => {
   const frame = useCurrentFrame();
-  const pulse = Math.sin((frame + delay) * 0.03) * 0.3 + 0.7;
-  const drift = Math.sin((frame + delay) * 0.015) * 30;
+  const d = n(delay);
+  const pulse = Math.sin((frame + d) * 0.03) * 0.3 + 0.7;
+  const drift = Math.sin((frame + d) * 0.015) * 30;
 
   return (
     <div
