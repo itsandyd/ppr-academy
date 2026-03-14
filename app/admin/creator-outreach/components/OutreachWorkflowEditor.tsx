@@ -623,6 +623,20 @@ export default function OutreachWorkflowEditor({
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Preview Text</Label>
+                    <Input
+                      placeholder="Short preview shown in inbox..."
+                      value={selectedNode.data.previewText || ""}
+                      onChange={(e) =>
+                        updateNodeData(selectedNode.id, { previewText: e.target.value })
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Shown next to the subject line in the inbox
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>Body</Label>
                       <Button
