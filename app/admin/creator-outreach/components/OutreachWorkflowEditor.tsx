@@ -236,8 +236,8 @@ export default function OutreachWorkflowEditor({
   // Mutations & Actions
   const createSequenceMut = useMutation(api.admin.creatorOutreach.createOutreachSequence);
   const updateSequenceMut = useMutation(api.admin.creatorOutreach.updateOutreachSequence);
-  const generateOutreachSequence = useAction(api.admin.creatorOutreach.generateOutreachSequence);
-  const generateOutreachEmail = useAction(api.admin.creatorOutreach.generateOutreachEmail);
+  const generateOutreachSequence = useAction(api.admin.creatorOutreachActions.generateOutreachSequence);
+  const generateOutreachEmail = useAction(api.admin.creatorOutreachActions.generateOutreachEmail);
 
   // Load existing sequence
   useEffect(() => {

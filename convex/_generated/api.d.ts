@@ -309,29 +309,6 @@ export declare const api: {
         },
         { enrolled: number; skipped: number }
       >;
-      generateOutreachEmail: FunctionReference<
-        "action",
-        "public",
-        {
-          clerkId: string;
-          emailPosition?: string;
-          existingBody?: string;
-          existingSubject?: string;
-          goal?: string;
-        },
-        { body: string; subject: string }
-      >;
-      generateOutreachSequence: FunctionReference<
-        "action",
-        "public",
-        {
-          clerkId: string;
-          goal: string;
-          sequenceLength?: number;
-          tone?: "casual" | "friendly" | "professional";
-        },
-        { edges: Array<any>; name: string; nodes: Array<any> }
-      >;
       getCreatorOutreachList: FunctionReference<
         "query",
         "public",
@@ -511,6 +488,31 @@ export declare const api: {
         "public",
         { clerkId: string },
         null | { admin: boolean }
+      >;
+    };
+    creatorOutreachActions: {
+      generateOutreachEmail: FunctionReference<
+        "action",
+        "public",
+        {
+          clerkId: string;
+          emailPosition?: string;
+          existingBody?: string;
+          existingSubject?: string;
+          goal?: string;
+        },
+        { body: string; subject: string }
+      >;
+      generateOutreachSequence: FunctionReference<
+        "action",
+        "public",
+        {
+          clerkId: string;
+          goal: string;
+          sequenceLength?: number;
+          tone?: "casual" | "friendly" | "professional";
+        },
+        { edges: Array<any>; name: string; nodes: Array<any> }
       >;
     };
     featureDiscovery: {
