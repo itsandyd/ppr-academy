@@ -276,9 +276,11 @@ export declare const api: {
         {
           clerkId: string;
           description?: string;
+          edges?: string;
           fromEmail?: string;
           fromName?: string;
           name: string;
+          nodes?: string;
           replyTo?: string;
           steps: Array<{
             delayDays: number;
@@ -350,10 +352,12 @@ export declare const api: {
           _id: Id<"adminOutreachSequences">;
           createdAt: number;
           description?: string;
+          edges?: string;
           fromEmail: string;
           fromName: string;
           isActive: boolean;
           name: string;
+          nodes?: string;
           replyTo?: string;
           steps: Array<{
             delayDays: number;
@@ -454,6 +458,30 @@ export declare const api: {
         "public",
         { clerkId: string; sequenceId: Id<"adminOutreachSequences"> },
         { isActive: boolean }
+      >;
+      updateOutreachSequence: FunctionReference<
+        "mutation",
+        "public",
+        {
+          clerkId: string;
+          description?: string;
+          edges?: string;
+          fromEmail?: string;
+          fromName?: string;
+          name?: string;
+          nodes?: string;
+          replyTo?: string;
+          sequenceId: Id<"adminOutreachSequences">;
+          steps?: Array<{
+            delayDays: number;
+            htmlContent: string;
+            subject: string;
+            textContent?: string;
+          }>;
+          stopOnProductUpload?: boolean;
+          stopOnReply?: boolean;
+        },
+        null
       >;
     };
     featureDiscovery: {

@@ -7207,6 +7207,7 @@ export default defineSchema({
     sequenceId: v.optional(v.id("adminOutreachSequences")),
     sequenceName: v.optional(v.string()),
     currentStepIndex: v.optional(v.number()),
+    currentNodeId: v.optional(v.string()), // For graph-based workflow traversal
     nextEmailAt: v.optional(v.number()),
     // Status
     status: v.union(
@@ -7244,7 +7245,7 @@ export default defineSchema({
     fromName: v.string(), // e.g. "Andrew"
     fromEmail: v.string(), // e.g. "andrew@pauseplayrepeat.com"
     replyTo: v.optional(v.string()),
-    // Steps
+    // Steps (legacy linear format, kept for backward compat)
     steps: v.array(
       v.object({
         stepIndex: v.number(),
@@ -7254,6 +7255,9 @@ export default defineSchema({
         delayDays: v.number(), // Days after previous step (0 for first)
       })
     ),
+    // Visual workflow graph (set when created/edited via the visual editor)
+    nodes: v.optional(v.string()), // JSON-serialized ReactFlow Node[]
+    edges: v.optional(v.string()), // JSON-serialized ReactFlow Edge[]
     // Auto-stop conditions
     stopOnProductUpload: v.boolean(),
     stopOnReply: v.boolean(),

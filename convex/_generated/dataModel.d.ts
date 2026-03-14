@@ -88,6 +88,7 @@ export type DataModel = {
       creatorEmail: string;
       creatorName: string;
       creatorUserId: string;
+      currentNodeId?: string;
       currentStepIndex?: number;
       emailsClicked: number;
       emailsOpened: number;
@@ -120,6 +121,7 @@ export type DataModel = {
       | "creatorEmail"
       | "creatorName"
       | "creatorUserId"
+      | "currentNodeId"
       | "currentStepIndex"
       | "emailsClicked"
       | "emailsOpened"
@@ -258,10 +260,12 @@ export type DataModel = {
       createdAt: number;
       createdBy: string;
       description?: string;
+      edges?: string;
       fromEmail: string;
       fromName: string;
       isActive: boolean;
       name: string;
+      nodes?: string;
       replyTo?: string;
       steps: Array<{
         delayDays: number;
@@ -285,10 +289,12 @@ export type DataModel = {
       | "createdAt"
       | "createdBy"
       | "description"
+      | "edges"
       | "fromEmail"
       | "fromName"
       | "isActive"
       | "name"
+      | "nodes"
       | "replyTo"
       | "steps"
       | "stopOnProductUpload"

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLoading } from "../components/admin-loading";
 import { AdminPagination, usePagination } from "../components/admin-pagination";
+import OutreachWorkflowEditor from "./components/OutreachWorkflowEditor";
 import { cn } from "@/lib/utils";
 import {
   Mail,
@@ -59,17 +61,28 @@ import {
   Eye,
   MousePointer,
   Ban,
+  Pencil,
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
 type FilterType = "all" | "inactive" | "active" | "no_stripe" | "no_products" | "churned";
 
 export default function CreatorOutreachPage() {
+  return (
+    <Suspense fallback={<AdminLoading variant="dashboard" />}>
+      <CreatorOutreachContent />
+    </Suspense>
+  );
+}
+
+function CreatorOutreachContent() {
   const { user } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const clerkId = user?.id;
 
-  // State
+  // State — all hooks must be called before any conditional returns
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
   const [selectedCreators, setSelectedCreators] = useState<string[]>([]);
@@ -126,6 +139,25 @@ export default function CreatorOutreachPage() {
   // Pagination
   const pagination = usePagination(filteredCreators, 20);
 
+  // Get selected creator objects
+  const selectedCreatorObjects = useMemo(
+    () => filteredCreators.filter((c) => selectedCreators.includes(c.userId)),
+    [filteredCreators, selectedCreators]
+  );
+
+  // Check if we should show the editor
+  const editorSequenceId = searchParams.get("edit");
+  const isNewSequence = searchParams.has("new");
+
+  if ((isNewSequence || editorSequenceId) && clerkId) {
+    return (
+      <OutreachWorkflowEditor
+        sequenceId={editorSequenceId || undefined}
+        clerkId={clerkId}
+      />
+    );
+  }
+
   // Selection helpers
   const toggleCreator = (userId: string) => {
     setSelectedCreators((prev) =>
@@ -147,12 +179,6 @@ export default function CreatorOutreachPage() {
     );
     setSelectedCreators(inactive.map((c) => c.userId));
   };
-
-  // Get selected creator objects
-  const selectedCreatorObjects = useMemo(
-    () => filteredCreators.filter((c) => selectedCreators.includes(c.userId)),
-    [filteredCreators, selectedCreators]
-  );
 
   // Send email handler
   const handleSendEmail = async () => {
@@ -311,7 +337,7 @@ export default function CreatorOutreachPage() {
             Email creators who need a nudge — activate, re-engage, and support
           </p>
         </div>
-        <Button onClick={() => setCreateSequenceOpen(true)} className="gap-2">
+        <Button onClick={() => router.push("/admin/creator-outreach?new")} className="gap-2">
           <Plus className="h-4 w-4" />
           New Sequence
         </Button>
@@ -589,7 +615,7 @@ export default function CreatorOutreachPage() {
                   <p className="mb-6 text-muted-foreground">
                     Create an email sequence to automatically nurture inactive creators
                   </p>
-                  <Button onClick={() => setCreateSequenceOpen(true)} className="gap-2">
+                  <Button onClick={() => router.push("/admin/creator-outreach?new")} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Create First Sequence
                   </Button>
@@ -616,6 +642,15 @@ export default function CreatorOutreachPage() {
                             Auto-stop
                           </Badge>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/creator-outreach?edit=${seq._id}`)}
+                          className="gap-1"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

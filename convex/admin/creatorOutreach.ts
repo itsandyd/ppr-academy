@@ -257,6 +257,8 @@ export const getOutreachSequence = query({
           delayDays: v.number(),
         })
       ),
+      nodes: v.optional(v.string()),
+      edges: v.optional(v.string()),
       isActive: v.boolean(),
       stopOnProductUpload: v.boolean(),
       stopOnReply: v.boolean(),
@@ -279,6 +281,8 @@ export const getOutreachSequence = query({
       fromEmail: seq.fromEmail,
       replyTo: seq.replyTo,
       steps: seq.steps,
+      nodes: seq.nodes,
+      edges: seq.edges,
       isActive: seq.isActive,
       stopOnProductUpload: seq.stopOnProductUpload,
       stopOnReply: seq.stopOnReply,
@@ -393,6 +397,8 @@ export const createOutreachSequence = mutation({
         delayDays: v.number(),
       })
     ),
+    nodes: v.optional(v.string()),
+    edges: v.optional(v.string()),
     stopOnProductUpload: v.optional(v.boolean()),
     stopOnReply: v.optional(v.boolean()),
   },
@@ -411,6 +417,8 @@ export const createOutreachSequence = mutation({
         ...step,
         stepIndex: index,
       })),
+      nodes: args.nodes,
+      edges: args.edges,
       stopOnProductUpload: args.stopOnProductUpload ?? true,
       stopOnReply: args.stopOnReply ?? true,
       isActive: true,
@@ -421,6 +429,59 @@ export const createOutreachSequence = mutation({
       updatedAt: now,
       createdBy: args.clerkId,
     });
+  },
+});
+
+/**
+ * Update an existing outreach sequence
+ */
+export const updateOutreachSequence = mutation({
+  args: {
+    clerkId: v.string(),
+    sequenceId: v.id("adminOutreachSequences"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    fromName: v.optional(v.string()),
+    fromEmail: v.optional(v.string()),
+    replyTo: v.optional(v.string()),
+    steps: v.optional(
+      v.array(
+        v.object({
+          subject: v.string(),
+          htmlContent: v.string(),
+          textContent: v.optional(v.string()),
+          delayDays: v.number(),
+        })
+      )
+    ),
+    nodes: v.optional(v.string()),
+    edges: v.optional(v.string()),
+    stopOnProductUpload: v.optional(v.boolean()),
+    stopOnReply: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx, args.clerkId);
+
+    const seq = await ctx.db.get(args.sequenceId);
+    if (!seq) throw new Error("Sequence not found");
+
+    const patch: Record<string, unknown> = { updatedAt: Date.now() };
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.description !== undefined) patch.description = args.description;
+    if (args.fromName !== undefined) patch.fromName = args.fromName;
+    if (args.fromEmail !== undefined) patch.fromEmail = args.fromEmail;
+    if (args.replyTo !== undefined) patch.replyTo = args.replyTo;
+    if (args.steps !== undefined) {
+      patch.steps = args.steps.map((step, index) => ({ ...step, stepIndex: index }));
+    }
+    if (args.nodes !== undefined) patch.nodes = args.nodes;
+    if (args.edges !== undefined) patch.edges = args.edges;
+    if (args.stopOnProductUpload !== undefined) patch.stopOnProductUpload = args.stopOnProductUpload;
+    if (args.stopOnReply !== undefined) patch.stopOnReply = args.stopOnReply;
+
+    await ctx.db.patch(args.sequenceId, patch);
+    return null;
   },
 });
 
@@ -455,6 +516,18 @@ export const enrollCreatorsInSequence = mutation({
     let enrolled = 0;
     let skipped = 0;
 
+    // For graph-based workflows, find the first node after trigger
+    let firstNodeId: string | undefined;
+    if (sequence.nodes && sequence.edges) {
+      const graphNodes = JSON.parse(sequence.nodes) as Array<{ id: string; type: string }>;
+      const graphEdges = JSON.parse(sequence.edges) as Array<{ source: string; target: string }>;
+      const triggerNode = graphNodes.find((n) => n.type === "outreachTrigger");
+      if (triggerNode) {
+        const firstEdge = graphEdges.find((e) => e.source === triggerNode.id);
+        firstNodeId = firstEdge?.target;
+      }
+    }
+
     for (const creator of creators) {
       // Check if already enrolled in this sequence
       const existing = await ctx.db
@@ -484,6 +557,7 @@ export const enrollCreatorsInSequence = mutation({
         sequenceId,
         sequenceName: sequence.name,
         currentStepIndex: 0,
+        currentNodeId: firstNodeId,
         nextEmailAt,
         status: "enrolled",
         emailsSent: 0,
@@ -668,24 +742,10 @@ export const processOutreachEmails = internalMutation({
     let processed = 0;
 
     for (const outreach of allDue) {
-      if (!outreach.sequenceId || outreach.currentStepIndex === undefined) continue;
+      if (!outreach.sequenceId) continue;
 
       const sequence = await ctx.db.get(outreach.sequenceId);
       if (!sequence || !sequence.isActive) continue;
-
-      const step = sequence.steps[outreach.currentStepIndex];
-      if (!step) {
-        // No more steps — mark completed
-        await ctx.db.patch(outreach._id, {
-          status: "completed",
-          completedAt: now,
-        });
-        await ctx.db.patch(outreach.sequenceId, {
-          totalCompleted: sequence.totalCompleted + 1,
-          updatedAt: now,
-        });
-        continue;
-      }
 
       // Check auto-stop: did creator upload a product?
       if (sequence.stopOnProductUpload && outreach.storeId) {
@@ -715,8 +775,216 @@ export const processOutreachEmails = internalMutation({
         }
       }
 
+      // Graph-based workflow path
+      if (outreach.currentNodeId && sequence.nodes && sequence.edges) {
+        const graphNodes = JSON.parse(sequence.nodes) as Array<{
+          id: string;
+          type: string;
+          data: Record<string, any>;
+        }>;
+        const graphEdges = JSON.parse(sequence.edges) as Array<{
+          source: string;
+          target: string;
+          sourceHandle?: string;
+        }>;
+
+        const getNextNodeId = (sourceId: string, handle?: string): string | null => {
+          const edge = graphEdges.find(
+            (e) => e.source === sourceId && (handle ? e.sourceHandle === handle : true)
+          );
+          return edge?.target ?? null;
+        };
+
+        let currentNodeId: string | null = outreach.currentNodeId;
+        let advanceCount = 0;
+        const MAX_ADVANCES = 10; // prevent infinite loops
+
+        while (currentNodeId && advanceCount < MAX_ADVANCES) {
+          const currentNode = graphNodes.find((n) => n.id === currentNodeId);
+          if (!currentNode) {
+            // Node not found — mark completed
+            await ctx.db.patch(outreach._id, { status: "completed", completedAt: now });
+            await ctx.db.patch(outreach.sequenceId, {
+              totalCompleted: sequence.totalCompleted + 1,
+              updatedAt: now,
+            });
+            break;
+          }
+
+          if (currentNode.type === "sendEmail") {
+            // Send the email
+            const personalizeStr = (str: string) =>
+              str
+                .replace(/\{\{name\}\}/g, outreach.creatorName)
+                .replace(/\{\{firstName\}\}/g, outreach.creatorName.split(" ")[0])
+                .replace(/\{\{email\}\}/g, outreach.creatorEmail)
+                .replace(/\{\{storeName\}\}/g, outreach.storeSlug || "")
+                .replace(/\{\{storeSlug\}\}/g, outreach.storeSlug || "");
+
+            const subject = personalizeStr(currentNode.data.subject || "");
+            let htmlContent = personalizeStr(currentNode.data.htmlContent || "");
+            if (!htmlContent.includes("<")) {
+              htmlContent = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a; line-height: 1.6;">${htmlContent.replace(/\n/g, "<br>")}</div>`;
+            }
+
+            const sendQueueId = await ctx.db.insert("emailSendQueue", {
+              storeId: "admin",
+              source: "transactional",
+              toEmail: outreach.creatorEmail,
+              fromName: sequence.fromName,
+              fromEmail: sequence.fromEmail,
+              subject,
+              htmlContent,
+              textContent: currentNode.data.textContent,
+              replyTo: sequence.replyTo || sequence.fromEmail,
+              status: "queued",
+              priority: 3,
+              attempts: 0,
+              maxAttempts: 3,
+              queuedAt: now,
+            });
+
+            await ctx.db.insert("adminOutreachEmails", {
+              outreachId: outreach._id,
+              sequenceId: outreach.sequenceId!,
+              toEmail: outreach.creatorEmail,
+              fromName: sequence.fromName,
+              fromEmail: sequence.fromEmail,
+              subject: currentNode.data.subject || "",
+              status: "sent",
+              sendQueueId,
+              sentAt: now,
+            });
+
+            // Advance to next node
+            const nextId = getNextNodeId(currentNode.id);
+            if (!nextId) {
+              // No next node — completed
+              await ctx.db.patch(outreach._id, {
+                status: "completed",
+                currentNodeId: undefined,
+                emailsSent: outreach.emailsSent + 1,
+                lastEmailSentAt: now,
+                completedAt: now,
+              });
+              await ctx.db.patch(outreach.sequenceId, {
+                totalCompleted: sequence.totalCompleted + 1,
+                updatedAt: now,
+              });
+            } else {
+              // Check if next node is a delay
+              const nextNode = graphNodes.find((n) => n.id === nextId);
+              if (nextNode?.type === "delay") {
+                const delayMs = getDelayMs(nextNode.data);
+                const afterDelayId = getNextNodeId(nextNode.id);
+                await ctx.db.patch(outreach._id, {
+                  status: "active",
+                  currentNodeId: afterDelayId || undefined,
+                  nextEmailAt: now + delayMs,
+                  emailsSent: outreach.emailsSent + 1,
+                  lastEmailSentAt: now,
+                });
+              } else {
+                // Next node is not a delay — process immediately next cron run
+                await ctx.db.patch(outreach._id, {
+                  status: "active",
+                  currentNodeId: nextId,
+                  nextEmailAt: now,
+                  emailsSent: outreach.emailsSent + 1,
+                  lastEmailSentAt: now,
+                });
+              }
+            }
+            processed++;
+            break; // Only send one email per cron cycle per creator
+
+          } else if (currentNode.type === "condition") {
+            // Evaluate condition
+            const condResult = await evaluateOutreachCondition(
+              ctx,
+              currentNode.data.conditionType,
+              outreach
+            );
+            const nextId = getNextNodeId(currentNode.id, condResult ? "yes" : "no");
+            if (!nextId) {
+              await ctx.db.patch(outreach._id, { status: "completed", completedAt: now });
+              await ctx.db.patch(outreach.sequenceId, {
+                totalCompleted: sequence.totalCompleted + 1,
+                updatedAt: now,
+              });
+              break;
+            }
+            currentNodeId = nextId;
+            await ctx.db.patch(outreach._id, {
+              status: "active",
+              currentNodeId: nextId,
+              nextEmailAt: now,
+            });
+            advanceCount++;
+            continue; // Evaluate next node immediately
+
+          } else if (currentNode.type === "delay") {
+            // Delay nodes should be skipped during graph traversal
+            // (they're handled as lookaheads from sendEmail)
+            const nextId = getNextNodeId(currentNode.id);
+            if (!nextId) {
+              await ctx.db.patch(outreach._id, { status: "completed", completedAt: now });
+              break;
+            }
+            currentNodeId = nextId;
+            await ctx.db.patch(outreach._id, {
+              status: "active",
+              currentNodeId: nextId,
+              nextEmailAt: now,
+            });
+            advanceCount++;
+            continue;
+
+          } else if (currentNode.type === "stop") {
+            await ctx.db.patch(outreach._id, {
+              status: "completed",
+              currentNodeId: undefined,
+              completedAt: now,
+            });
+            await ctx.db.patch(outreach.sequenceId, {
+              totalCompleted: sequence.totalCompleted + 1,
+              updatedAt: now,
+            });
+            break;
+
+          } else {
+            // Unknown node type — advance past it
+            const nextId = getNextNodeId(currentNode.id);
+            if (!nextId) {
+              await ctx.db.patch(outreach._id, { status: "completed", completedAt: now });
+              break;
+            }
+            currentNodeId = nextId;
+            advanceCount++;
+          }
+        }
+        continue; // Skip legacy path
+      }
+
+      // Legacy linear step-based path
+      if (outreach.currentStepIndex === undefined) continue;
+
+      const step = sequence.steps[outreach.currentStepIndex];
+      if (!step) {
+        // No more steps — mark completed
+        await ctx.db.patch(outreach._id, {
+          status: "completed",
+          completedAt: now,
+        });
+        await ctx.db.patch(outreach.sequenceId, {
+          totalCompleted: sequence.totalCompleted + 1,
+          updatedAt: now,
+        });
+        continue;
+      }
+
       // Personalize content
-      let htmlContent = step.htmlContent
+      const htmlContent = step.htmlContent
         .replace(/\{\{name\}\}/g, outreach.creatorName)
         .replace(/\{\{firstName\}\}/g, outreach.creatorName.split(" ")[0])
         .replace(/\{\{email\}\}/g, outreach.creatorEmail);
@@ -789,3 +1057,72 @@ export const processOutreachEmails = internalMutation({
     return { processed };
   },
 });
+
+// ─── Graph Execution Helpers ──────────────────────────────────────────────────
+
+function getDelayMs(data: Record<string, any>): number {
+  const value = data.delayValue || 1;
+  const unit = data.delayUnit || "days";
+  switch (unit) {
+    case "minutes":
+      return value * 60 * 1000;
+    case "hours":
+      return value * 60 * 60 * 1000;
+    case "days":
+      return value * 24 * 60 * 60 * 1000;
+    default:
+      return value * 24 * 60 * 60 * 1000;
+  }
+}
+
+async function evaluateOutreachCondition(
+  ctx: any,
+  conditionType: string,
+  outreach: {
+    storeId?: any;
+    creatorUserId: string;
+    emailsOpened: number;
+    emailsClicked: number;
+  }
+): Promise<boolean> {
+  switch (conditionType) {
+    case "has_products": {
+      if (!outreach.storeId) return false;
+      const store = await ctx.db.get(outreach.storeId);
+      if (!store) return false;
+      const product = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_storeId", (q: any) => q.eq("storeId", store._id))
+        .first();
+      if (product) return true;
+      const course = await ctx.db
+        .query("courses")
+        .withIndex("by_userId", (q: any) => q.eq("userId", store.userId))
+        .first();
+      return !!course;
+    }
+    case "has_stripe": {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q: any) => q.eq("clerkId", outreach.creatorUserId))
+        .unique();
+      return !!(user?.stripeConnectAccountId && user?.stripeAccountStatus === "enabled");
+    }
+    case "is_churned": {
+      if (!outreach.storeId) return false;
+      const sixtyDaysAgo = Date.now() - 60 * 24 * 60 * 60 * 1000;
+      const recentPurchase = await ctx.db
+        .query("purchases")
+        .withIndex("by_storeId", (q: any) => q.eq("storeId", outreach.storeId))
+        .first();
+      if (!recentPurchase) return false;
+      return recentPurchase._creationTime < sixtyDaysAgo;
+    }
+    case "emails_opened":
+      return outreach.emailsOpened > 0;
+    case "emails_clicked":
+      return outreach.emailsClicked > 0;
+    default:
+      return false;
+  }
+}
