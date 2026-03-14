@@ -21,6 +21,7 @@ const KAJABI_REDIRECTS: Record<string, string> = {
   '/abletonaudioeffects': '/courses/ultimate-guide-to-ableton-live-audio-effects',
   '/abletonfoundations': '/courses/ultimate-guide-to-ableton-live-audio-effects',
   '/coaching': '/marketplace/coaching',
+  '/eqcheatsheet': '/marketplace',
   '/pro': '/pricing',
   '/subscriptions': '/pricing',
   '/pauseplayrepeat.com': '/',

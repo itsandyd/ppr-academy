@@ -15,9 +15,11 @@ export default function robots(): MetadataRoute.Robots {
           "/sign-in/",
           "/sign-up/",
           "/library/",
-          "/(dashboard)/",
           "/auth/",
           "/verify/",
+          "/booking/",
+          "/onboarding/",
+          "/unsubscribe/",
         ],
       },
       {

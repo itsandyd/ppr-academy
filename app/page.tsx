@@ -39,7 +39,7 @@ import { motion } from "framer-motion";
 import { MarketplaceGrid } from "./_components/marketplace-grid";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 
-// Force dynamic rendering to avoid build-time Clerk issues
+// Force dynamic rendering — required because this is a client component using useAuth/useQuery
 export const dynamic = "force-dynamic";
 
 export default function SectionedMarketplace() {

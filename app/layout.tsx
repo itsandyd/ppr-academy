@@ -67,9 +67,6 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
     creator: "@pauseplayrepeat",
   },
-  alternates: {
-    canonical: baseUrl,
-  },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION,
   },

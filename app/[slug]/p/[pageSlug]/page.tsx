@@ -23,6 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
+
     return {
       title: page.metaTitle || page.title,
       description: page.metaDescription || page.description,
@@ -30,6 +32,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: page.metaTitle || page.title,
         description: page.metaDescription || page.description,
         images: page.metaImage ? [page.metaImage] : undefined,
+      },
+      alternates: {
+        canonical: `${baseUrl}/${slug}/p/${pageSlug}`,
       },
     };
   } catch {

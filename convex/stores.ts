@@ -193,7 +193,7 @@ export const getAllStores = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("stores")
-      .take(500);
+      .take(1000);
   },
 });
 

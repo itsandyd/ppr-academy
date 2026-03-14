@@ -1665,7 +1665,7 @@ export const getAllPublishedProducts = query({
     const products = await ctx.db
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .take(100);
+      .take(1000);
 
     // Enrich with download counts and creator info
     const productsWithDetails = await Promise.all(

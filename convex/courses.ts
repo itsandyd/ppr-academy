@@ -1660,7 +1660,7 @@ export const getAllPublishedCourses = query({
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("isPublished"), true))
-      .take(200);
+      .take(500);
 
     // Enrich with enrollment counts and creator info
     const coursesWithDetails = await Promise.all(

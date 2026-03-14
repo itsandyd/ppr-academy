@@ -1,7 +1,7 @@
 "use client";
 
 import { FC } from "react";
-import { Music, Twitter, Instagram, Youtube, Linkedin } from "lucide-react";
+import { Music, Facebook, Instagram, Youtube } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,30 +36,38 @@ export const Footer: FC<FooterProps> = () => {
                 learn from real producers.
               </p>
               <div className="flex space-x-4">
-                <button
-                  onClick={() => showComingSoon("Twitter/X")}
-                  className="text-muted-foreground transition-colors hover:text-primary"
-                >
-                  <Twitter className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => showComingSoon("Instagram")}
+                <a
+                  href="https://www.instagram.com/pauseplayrepeat"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
                   <Instagram className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => showComingSoon("YouTube")}
+                </a>
+                <a
+                  href="https://www.youtube.com/@PausePlayRepeat"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
                   <Youtube className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => showComingSoon("LinkedIn")}
+                </a>
+                <a
+                  href="https://www.facebook.com/Pauseplayrepeat.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
-                  <Linkedin className="h-5 w-5" />
-                </button>
+                  <Facebook className="h-5 w-5" />
+                </a>
+                <a
+                  href="https://www.tiktok.com/@pauseplayrepeat"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground transition-colors hover:text-primary"
+                >
+                  <Music className="h-5 w-5" />
+                </a>
               </div>
             </div>
 
@@ -186,24 +194,24 @@ export const Footer: FC<FooterProps> = () => {
         <div className="border-t py-8">
           <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
             <div className="flex flex-wrap justify-center space-x-6 md:justify-start">
-              <button
-                onClick={() => showComingSoon("Privacy Policy")}
+              <Link
+                href="/privacy-policy"
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
               >
                 Privacy Policy
-              </button>
-              <button
-                onClick={() => showComingSoon("Terms of Service")}
+              </Link>
+              <Link
+                href="/terms-of-service"
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
               >
                 Terms of Service
-              </button>
-              <button
-                onClick={() => showComingSoon("Cookie Policy")}
+              </Link>
+              <Link
+                href="/dmca"
                 className="text-sm text-muted-foreground transition-colors hover:text-primary"
               >
-                Cookie Policy
-              </button>
+                DMCA
+              </Link>
             </div>
             <p className="text-sm text-muted-foreground">
               © 2026 PausePlayRepeat. All rights reserved.

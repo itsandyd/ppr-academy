@@ -254,7 +254,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Fetch all published products (for marketplace)
     const products = await fetchQuery(api.digitalProducts.getAllPublishedProducts, {});
     const productSitemapEntries: MetadataRoute.Sitemap = (products || []).map((product: any) => ({
-      url: `${baseUrl}/marketplace/products/${product._id}`,
+      url: `${baseUrl}/marketplace/products/${product.slug || product._id}`,
       lastModified: new Date(product._creationTime),
       changeFrequency: "monthly" as const,
       priority: 0.6,
