@@ -1,9 +1,17 @@
 "use client";
 
 import { AdminCategoryPage } from "../components/AdminCategoryPage";
-import { MessageSquare, Mail, Server, Bell, GitCommit } from "lucide-react";
+import { MessageSquare, Mail, Server, Bell, GitCommit, UserCog } from "lucide-react";
 
 const communicationsCards = [
+  {
+    title: "Creator Outreach",
+    description: "Email inactive creators to activate and re-engage them",
+    href: "/admin/creator-outreach",
+    icon: UserCog,
+    color: "bg-orange-500",
+    badge: "NEW",
+  },
   {
     title: "Email Marketing",
     description: "Create and manage email campaigns for user engagement",

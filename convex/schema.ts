@@ -7193,6 +7193,113 @@ export default defineSchema({
     .index("by_storeId_week", ["storeId", "week"])
     .index("by_storeId_category", ["storeId", "category"]),
 
+  // ============================================================================
+  // ADMIN CREATOR OUTREACH - Track admin-to-creator email campaigns
+  // ============================================================================
+  adminCreatorOutreach: defineTable({
+    // Creator identity
+    creatorUserId: v.string(), // Clerk ID of the creator
+    creatorEmail: v.string(),
+    creatorName: v.string(),
+    storeId: v.optional(v.id("stores")),
+    storeSlug: v.optional(v.string()),
+    // Sequence enrollment
+    sequenceId: v.optional(v.id("adminOutreachSequences")),
+    sequenceName: v.optional(v.string()),
+    currentStepIndex: v.optional(v.number()),
+    nextEmailAt: v.optional(v.number()),
+    // Status
+    status: v.union(
+      v.literal("enrolled"),
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("completed"),
+      v.literal("stopped_by_action"), // Auto-stopped because creator took action
+      v.literal("unsubscribed")
+    ),
+    stoppedReason: v.optional(v.string()),
+    // Tracking
+    emailsSent: v.number(),
+    emailsOpened: v.number(),
+    emailsClicked: v.number(),
+    lastEmailSentAt: v.optional(v.number()),
+    lastOpenedAt: v.optional(v.number()),
+    lastClickedAt: v.optional(v.number()),
+    // Timestamps
+    enrolledAt: v.number(),
+    pausedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_creatorUserId", ["creatorUserId"])
+    .index("by_sequenceId", ["sequenceId"])
+    .index("by_status", ["status"])
+    .index("by_sequenceId_status", ["sequenceId", "status"])
+    .index("by_nextEmailAt", ["status", "nextEmailAt"]),
+
+  // Admin outreach sequences (admin-to-creator email sequences)
+  adminOutreachSequences: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    // Sender info
+    fromName: v.string(), // e.g. "Andrew"
+    fromEmail: v.string(), // e.g. "andrew@pauseplayrepeat.com"
+    replyTo: v.optional(v.string()),
+    // Steps
+    steps: v.array(
+      v.object({
+        stepIndex: v.number(),
+        subject: v.string(),
+        htmlContent: v.string(),
+        textContent: v.optional(v.string()),
+        delayDays: v.number(), // Days after previous step (0 for first)
+      })
+    ),
+    // Auto-stop conditions
+    stopOnProductUpload: v.boolean(),
+    stopOnReply: v.boolean(),
+    // Status
+    isActive: v.boolean(),
+    // Stats
+    totalEnrolled: v.number(),
+    totalCompleted: v.number(),
+    totalStopped: v.number(),
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.string(), // Admin clerk ID
+  })
+    .index("by_isActive", ["isActive"])
+    .index("by_createdBy", ["createdBy"]),
+
+  // Admin outreach email log (individual emails sent)
+  adminOutreachEmails: defineTable({
+    outreachId: v.id("adminCreatorOutreach"),
+    sequenceId: v.optional(v.id("adminOutreachSequences")),
+    stepIndex: v.optional(v.number()),
+    // Email details
+    toEmail: v.string(),
+    fromName: v.string(),
+    fromEmail: v.string(),
+    subject: v.string(),
+    // Status
+    status: v.union(
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("failed")
+    ),
+    sendQueueId: v.optional(v.id("emailSendQueue")),
+    // Timestamps
+    sentAt: v.number(),
+    openedAt: v.optional(v.number()),
+    clickedAt: v.optional(v.number()),
+  })
+    .index("by_outreachId", ["outreachId"])
+    .index("by_sequenceId", ["sequenceId"])
+    .index("by_toEmail", ["toEmail"]),
+
   // DM Workflow Waiting Executions - tracks workflow executions waiting for a DM reply
   dmWaitingExecutions: defineTable({
     executionId: v.id("workflowExecutions"),

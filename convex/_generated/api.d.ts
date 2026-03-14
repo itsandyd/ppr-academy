@@ -269,6 +269,193 @@ export declare const api: {
     >;
   };
   admin: {
+    creatorOutreach: {
+      createOutreachSequence: FunctionReference<
+        "mutation",
+        "public",
+        {
+          clerkId: string;
+          description?: string;
+          fromEmail?: string;
+          fromName?: string;
+          name: string;
+          replyTo?: string;
+          steps: Array<{
+            delayDays: number;
+            htmlContent: string;
+            subject: string;
+            textContent?: string;
+          }>;
+          stopOnProductUpload?: boolean;
+          stopOnReply?: boolean;
+        },
+        Id<"adminOutreachSequences">
+      >;
+      enrollCreatorsInSequence: FunctionReference<
+        "mutation",
+        "public",
+        {
+          clerkId: string;
+          creators: Array<{
+            email: string;
+            name: string;
+            storeId?: Id<"stores">;
+            storeSlug?: string;
+            userId: string;
+          }>;
+          sequenceId: Id<"adminOutreachSequences">;
+        },
+        { enrolled: number; skipped: number }
+      >;
+      getCreatorOutreachList: FunctionReference<
+        "query",
+        "public",
+        {
+          clerkId?: string;
+          filter?:
+            | "all"
+            | "inactive"
+            | "active"
+            | "no_stripe"
+            | "no_products"
+            | "churned";
+        },
+        Array<{
+          courseCount: number;
+          digitalProductCount: number;
+          email: string;
+          hasPublished: boolean;
+          imageUrl?: string;
+          lastSaleAt?: number;
+          name: string;
+          outreachStatus?: string;
+          plan?: string;
+          productsUploaded: number;
+          signupDate: number;
+          status: string;
+          storeId?: Id<"stores">;
+          storeName?: string;
+          storeSlug?: string;
+          stripeConnected: boolean;
+          stripeOnboardingComplete: boolean;
+          totalRevenue: number;
+          userId: string;
+        }>
+      >;
+      getOutreachSequence: FunctionReference<
+        "query",
+        "public",
+        { clerkId?: string; sequenceId: Id<"adminOutreachSequences"> },
+        null | {
+          _id: Id<"adminOutreachSequences">;
+          createdAt: number;
+          description?: string;
+          fromEmail: string;
+          fromName: string;
+          isActive: boolean;
+          name: string;
+          replyTo?: string;
+          steps: Array<{
+            delayDays: number;
+            htmlContent: string;
+            stepIndex: number;
+            subject: string;
+            textContent?: string;
+          }>;
+          stopOnProductUpload: boolean;
+          stopOnReply: boolean;
+          totalCompleted: number;
+          totalEnrolled: number;
+          totalStopped: number;
+          updatedAt: number;
+        }
+      >;
+      getOutreachSequences: FunctionReference<
+        "query",
+        "public",
+        { clerkId?: string },
+        Array<{
+          _id: Id<"adminOutreachSequences">;
+          createdAt: number;
+          description?: string;
+          fromEmail: string;
+          fromName: string;
+          isActive: boolean;
+          name: string;
+          replyTo?: string;
+          stepCount: number;
+          stopOnProductUpload: boolean;
+          stopOnReply: boolean;
+          totalCompleted: number;
+          totalEnrolled: number;
+          totalStopped: number;
+          updatedAt: number;
+        }>
+      >;
+      getOutreachStats: FunctionReference<
+        "query",
+        "public",
+        { clerkId?: string },
+        {
+          activeSequences: number;
+          stoppedByAction: number;
+          totalClicked: number;
+          totalEmailsSent: number;
+          totalEnrolled: number;
+          totalOpened: number;
+          totalSequences: number;
+        }
+      >;
+      getSequenceEnrollments: FunctionReference<
+        "query",
+        "public",
+        { clerkId?: string; sequenceId: Id<"adminOutreachSequences"> },
+        Array<{
+          _id: Id<"adminCreatorOutreach">;
+          creatorEmail: string;
+          creatorName: string;
+          currentStepIndex?: number;
+          emailsClicked: number;
+          emailsOpened: number;
+          emailsSent: number;
+          enrolledAt: number;
+          lastEmailSentAt?: number;
+          status: string;
+          stoppedReason?: string;
+        }>
+      >;
+      sendOneOffEmail: FunctionReference<
+        "mutation",
+        "public",
+        {
+          clerkId: string;
+          creators: Array<{
+            email: string;
+            name: string;
+            storeId?: Id<"stores">;
+            userId: string;
+          }>;
+          fromEmail?: string;
+          fromName?: string;
+          htmlContent: string;
+          subject: string;
+          textContent?: string;
+        },
+        { queued: number }
+      >;
+      toggleCreatorOutreach: FunctionReference<
+        "mutation",
+        "public",
+        { clerkId: string; outreachId: Id<"adminCreatorOutreach"> },
+        { newStatus: string }
+      >;
+      toggleSequenceActive: FunctionReference<
+        "mutation",
+        "public",
+        { clerkId: string; sequenceId: Id<"adminOutreachSequences"> },
+        { isActive: boolean }
+      >;
+    };
     featureDiscovery: {
       analyzeCoursesForFeatures: FunctionReference<
         "action",
@@ -22030,6 +22217,14 @@ export declare const internal: {
     >;
   };
   admin: {
+    creatorOutreach: {
+      processOutreachEmails: FunctionReference<
+        "mutation",
+        "internal",
+        {},
+        { processed: number }
+      >;
+    };
     featureDiscovery: {
       bulkSaveSuggestions: FunctionReference<
         "mutation",

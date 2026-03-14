@@ -101,4 +101,12 @@ crons.interval(
   {}
 );
 
+// Admin creator outreach — process sequence emails for inactive creators
+crons.interval(
+  "process admin creator outreach emails",
+  { hours: 1 },
+  internal.admin.creatorOutreach.processOutreachEmails,
+  {}
+);
+
 export default crons;

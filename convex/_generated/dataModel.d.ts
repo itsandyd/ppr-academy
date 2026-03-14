@@ -82,6 +82,72 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  adminCreatorOutreach: {
+    document: {
+      completedAt?: number;
+      creatorEmail: string;
+      creatorName: string;
+      creatorUserId: string;
+      currentStepIndex?: number;
+      emailsClicked: number;
+      emailsOpened: number;
+      emailsSent: number;
+      enrolledAt: number;
+      lastClickedAt?: number;
+      lastEmailSentAt?: number;
+      lastOpenedAt?: number;
+      nextEmailAt?: number;
+      pausedAt?: number;
+      sequenceId?: Id<"adminOutreachSequences">;
+      sequenceName?: string;
+      status:
+        | "enrolled"
+        | "active"
+        | "paused"
+        | "completed"
+        | "stopped_by_action"
+        | "unsubscribed";
+      stoppedReason?: string;
+      storeId?: Id<"stores">;
+      storeSlug?: string;
+      _id: Id<"adminCreatorOutreach">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "completedAt"
+      | "creatorEmail"
+      | "creatorName"
+      | "creatorUserId"
+      | "currentStepIndex"
+      | "emailsClicked"
+      | "emailsOpened"
+      | "emailsSent"
+      | "enrolledAt"
+      | "lastClickedAt"
+      | "lastEmailSentAt"
+      | "lastOpenedAt"
+      | "nextEmailAt"
+      | "pausedAt"
+      | "sequenceId"
+      | "sequenceName"
+      | "status"
+      | "stoppedReason"
+      | "storeId"
+      | "storeSlug";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_creatorUserId: ["creatorUserId", "_creationTime"];
+      by_nextEmailAt: ["status", "nextEmailAt", "_creationTime"];
+      by_sequenceId: ["sequenceId", "_creationTime"];
+      by_sequenceId_status: ["sequenceId", "status", "_creationTime"];
+      by_status: ["status", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   adminMetrics: {
     document: {
       activeUsers: number;
@@ -135,6 +201,107 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  adminOutreachEmails: {
+    document: {
+      clickedAt?: number;
+      fromEmail: string;
+      fromName: string;
+      openedAt?: number;
+      outreachId: Id<"adminCreatorOutreach">;
+      sendQueueId?: Id<"emailSendQueue">;
+      sentAt: number;
+      sequenceId?: Id<"adminOutreachSequences">;
+      status:
+        | "sent"
+        | "delivered"
+        | "opened"
+        | "clicked"
+        | "bounced"
+        | "failed";
+      stepIndex?: number;
+      subject: string;
+      toEmail: string;
+      _id: Id<"adminOutreachEmails">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "clickedAt"
+      | "fromEmail"
+      | "fromName"
+      | "openedAt"
+      | "outreachId"
+      | "sendQueueId"
+      | "sentAt"
+      | "sequenceId"
+      | "status"
+      | "stepIndex"
+      | "subject"
+      | "toEmail";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_outreachId: ["outreachId", "_creationTime"];
+      by_sequenceId: ["sequenceId", "_creationTime"];
+      by_toEmail: ["toEmail", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  adminOutreachSequences: {
+    document: {
+      createdAt: number;
+      createdBy: string;
+      description?: string;
+      fromEmail: string;
+      fromName: string;
+      isActive: boolean;
+      name: string;
+      replyTo?: string;
+      steps: Array<{
+        delayDays: number;
+        htmlContent: string;
+        stepIndex: number;
+        subject: string;
+        textContent?: string;
+      }>;
+      stopOnProductUpload: boolean;
+      stopOnReply: boolean;
+      totalCompleted: number;
+      totalEnrolled: number;
+      totalStopped: number;
+      updatedAt: number;
+      _id: Id<"adminOutreachSequences">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "createdBy"
+      | "description"
+      | "fromEmail"
+      | "fromName"
+      | "isActive"
+      | "name"
+      | "replyTo"
+      | "steps"
+      | "stopOnProductUpload"
+      | "stopOnReply"
+      | "totalCompleted"
+      | "totalEnrolled"
+      | "totalStopped"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_createdBy: ["createdBy", "_creationTime"];
+      by_isActive: ["isActive", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
