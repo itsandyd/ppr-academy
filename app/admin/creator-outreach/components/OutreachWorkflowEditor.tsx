@@ -527,7 +527,7 @@ export default function OutreachWorkflowEditor({
 
       {/* ─── Node Configuration Dialog ─────────────────────────────────────── */}
       <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto bg-white dark:bg-black">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-white dark:bg-black">
           <DialogHeader>
             <DialogTitle className="capitalize">
               {selectedNode?.type === "outreachTrigger"
