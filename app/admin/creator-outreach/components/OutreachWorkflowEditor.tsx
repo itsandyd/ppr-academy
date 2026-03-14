@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { WysiwygEditor, type WysiwygEditorRef } from "@/components/ui/wysiwyg-editor";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -222,8 +223,8 @@ export default function OutreachWorkflowEditor({
   // AI single email generation state
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
 
-  // Body textarea ref for merge tag insertion
-  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  // Editor ref for merge tag insertion
+  const wysiwygRef = useRef<WysiwygEditorRef>(null);
 
   // Queries
   const existingSequence = useQuery(
@@ -440,22 +441,8 @@ export default function OutreachWorkflowEditor({
 
   // Insert merge tag at cursor position
   const insertMergeTag = (tag: string) => {
-    if (!bodyTextareaRef.current || !selectedNode) return;
-
-    const textarea = bodyTextareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentValue = selectedNode.data.htmlContent || "";
-    const newValue = currentValue.substring(0, start) + tag + currentValue.substring(end);
-
-    updateNodeData(selectedNode.id, { htmlContent: newValue });
-
-    // Restore cursor position after React re-renders
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.selectionStart = start + tag.length;
-      textarea.selectionEnd = start + tag.length;
-    });
+    if (!wysiwygRef.current) return;
+    wysiwygRef.current.insertText(tag);
   };
 
   // Handle node selection from canvas
@@ -654,14 +641,14 @@ export default function OutreachWorkflowEditor({
                         {isGeneratingEmail ? "Generating..." : "Generate with AI"}
                       </Button>
                     </div>
-                    <Textarea
-                      ref={bodyTextareaRef}
-                      placeholder={`Hey {{firstName}},\n\nI noticed you signed up for PPR...\n\n- Andrew`}
-                      value={selectedNode.data.htmlContent || ""}
-                      onChange={(e) =>
-                        updateNodeData(selectedNode.id, { htmlContent: e.target.value })
+                    <WysiwygEditor
+                      ref={wysiwygRef}
+                      content={selectedNode.data.htmlContent || ""}
+                      onChange={(html) =>
+                        updateNodeData(selectedNode.id, { htmlContent: html })
                       }
-                      rows={12}
+                      placeholder="Write your email content here..."
+                      className="min-h-[300px]"
                     />
                   </div>
 
