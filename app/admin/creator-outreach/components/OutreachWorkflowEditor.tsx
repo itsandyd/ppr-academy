@@ -23,6 +23,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -32,6 +33,7 @@ import OutreachWorkflowCanvas, { defaultNodeData } from "./OutreachWorkflowCanva
 import OutreachNodeSidebar from "./OutreachNodeSidebar";
 import {
   ArrowLeft,
+  Check,
   Loader2,
   Save,
   Sparkles,
@@ -466,55 +468,60 @@ export default function OutreachWorkflowEditor({
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 border-b bg-white px-4 py-3 dark:bg-zinc-950">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/admin/creator-outreach")}
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back
-        </Button>
-        <div className="h-6 w-px bg-border" />
-        <Input
-          value={workflowName}
-          onChange={(e) => setWorkflowName(e.target.value)}
-          className="max-w-xs border-0 text-lg font-semibold shadow-none focus-visible:ring-0"
-          placeholder="Sequence name..."
-        />
-        <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <Switch
-            id="plainTextMode"
-            checked={plainTextMode}
-            onCheckedChange={setPlainTextMode}
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-2 py-2 dark:border-zinc-800 dark:bg-zinc-950 md:px-4 md:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() => router.push("/admin/creator-outreach")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Input
+            value={workflowName}
+            onChange={(e) => setWorkflowName(e.target.value)}
+            className="min-w-0 flex-1 border-none bg-transparent text-base font-semibold focus-visible:ring-0 md:max-w-64 md:text-lg"
+            placeholder="Sequence name..."
           />
-          <Label htmlFor="plainTextMode" className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">
-            Plain text mode
-          </Label>
         </div>
-        <div className="h-6 w-px bg-border" />
-        <Button
-          variant="outline"
-          onClick={() => setIsAIDialogOpen(true)}
-          className="gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20"
-        >
-          <Wand2 className="h-4 w-4 text-purple-600" />
-          <span className="hidden md:inline">AI Generate</span>
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-          <Save className="h-4 w-4" />
-          {isSaving ? "Saving..." : "Save"}
-        </Button>
-      </div>
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+          <div className="flex items-center gap-2 rounded-md border px-2 py-1 md:px-3 md:py-1.5">
+            <span className="hidden text-sm md:inline">
+              {plainTextMode ? "Plain Text" : "Rich Text"}
+            </span>
+            <Switch
+              id="plainTextMode"
+              checked={plainTextMode}
+              onCheckedChange={setPlainTextMode}
+              className="scale-75 md:scale-90"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setIsAIDialogOpen(true)}
+            className="h-8 gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 md:h-9 md:px-3"
+          >
+            <Wand2 className="h-4 w-4 text-purple-600" />
+            <span className="hidden md:inline">AI Generate</span>
+          </Button>
+          <Button
+            size="icon"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="h-8 w-8 md:h-9 md:w-auto md:gap-2 md:px-3"
+          >
+            <Save className="h-4 w-4" />
+            <span className="hidden md:inline">{isSaving ? "Saving..." : "Save"}</span>
+          </Button>
+        </div>
+      </header>
 
       {/* Main editor area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Node sidebar */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <OutreachNodeSidebar onAddNode={addNodeFn ?? undefined} />
 
-        {/* Canvas */}
-        <div className="flex-1">
+        <div className="min-h-0 flex-1">
           <OutreachWorkflowCanvas
             initialNodes={nodes}
             initialEdges={edges}
@@ -526,14 +533,9 @@ export default function OutreachWorkflowEditor({
         </div>
       </div>
 
-      {/* Mobile bottom bar */}
-      <div className="md:hidden">
-        <OutreachNodeSidebar onAddNode={addNodeFn ?? undefined} />
-      </div>
-
       {/* ─── Node Configuration Dialog ─────────────────────────────────────── */}
       <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-white dark:bg-black">
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto bg-white dark:bg-black">
           <DialogHeader>
             <DialogTitle className="capitalize">
               {selectedNode?.type === "outreachTrigger"
@@ -547,22 +549,7 @@ export default function OutreachWorkflowEditor({
           </DialogHeader>
 
           {selectedNode && (
-            <div className="mt-4 space-y-4">
-              {/* Delete button for non-trigger nodes */}
-              {selectedNode.type !== "outreachTrigger" && (
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteNode(selectedNode.id)}
-                    className="h-8 gap-1.5 text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Node
-                  </Button>
-                </div>
-              )}
-
+            <div className="mt-6 space-y-4">
               {/* Trigger config */}
               {selectedNode.type === "outreachTrigger" && (
                 <div className="space-y-4">
@@ -815,6 +802,22 @@ export default function OutreachWorkflowEditor({
                   will be sent.
                 </div>
               )}
+
+              <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteNode(selectedNode.id)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Node
+                </Button>
+                <Button size="sm" onClick={() => setSelectedNode(null)} className="gap-2">
+                  <Check className="h-4 w-4" />
+                  Done
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
