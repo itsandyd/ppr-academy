@@ -29875,6 +29875,8 @@ export declare const internal: {
       { notificationId: Id<"notifications"> },
       null
     >;
+  };
+  notificationsActions: {
     processNotificationEmails: FunctionReference<
       "action",
       "internal",

@@ -15,7 +15,7 @@ const conditionLabels: Record<string, string> = {
 function OutreachConditionNode({ data, selected }: NodeProps) {
   return (
     <div
-      className={`min-w-[200px] rounded-lg border-2 bg-white px-4 py-3 shadow-md dark:bg-zinc-900 ${
+      className={`min-w-[180px] rounded-lg border-2 bg-white px-4 py-3 shadow-md dark:bg-zinc-900 ${
         selected ? "border-purple-500 ring-2 ring-purple-500/20" : "border-purple-500/50"
       }`}
     >
@@ -28,18 +28,18 @@ function OutreachConditionNode({ data, selected }: NodeProps) {
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10">
           <GitBranch className="h-4 w-4 text-purple-500" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div>
           <div className="text-[10px] font-medium uppercase tracking-wide text-purple-600 dark:text-purple-400">
             Condition
           </div>
-          <div className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-            {conditionLabels[data.conditionType] || "Select condition"}
+          <div className="text-sm font-medium text-zinc-900 dark:text-white">
+            {conditionLabels[data.conditionType] || "Condition"}
           </div>
         </div>
       </div>
-      <div className="mt-2 flex justify-between text-[10px] font-medium">
-        <span className="text-green-600">Yes</span>
-        <span className="text-red-600">No</span>
+      <div className="mt-3 flex justify-between text-[10px] font-medium">
+        <span className="text-green-600 dark:text-green-400">Yes</span>
+        <span className="text-red-600 dark:text-red-400">No</span>
       </div>
       <Handle
         type="source"

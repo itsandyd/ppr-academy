@@ -740,10 +740,10 @@ export default function OutreachWorkflowEditor({
                         updateNodeData(selectedNode.id, { conditionType: v })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white dark:bg-black">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white dark:bg-black">
                         <SelectItem value="has_products">Has uploaded a product?</SelectItem>
                         <SelectItem value="has_stripe">Has connected Stripe?</SelectItem>
                         <SelectItem value="is_churned">Is churned (60d no sales)?</SelectItem>
@@ -782,10 +782,10 @@ export default function OutreachWorkflowEditor({
                           updateNodeData(selectedNode.id, { delayUnit: v })
                         }
                       >
-                        <SelectTrigger className="flex-1">
+                        <SelectTrigger className="flex-1 bg-white dark:bg-black">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white dark:bg-black">
                           <SelectItem value="hours">Hours</SelectItem>
                           <SelectItem value="days">Days</SelectItem>
                         </SelectContent>

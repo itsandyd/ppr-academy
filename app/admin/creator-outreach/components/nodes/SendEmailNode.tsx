@@ -20,15 +20,20 @@ function SendEmailNode({ data, selected }: NodeProps) {
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10">
           <Mail className="h-4 w-4 text-blue-500" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-[10px] font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
             Send Email
           </div>
-          <div className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-            {data.subject || "No subject set"}
+          <div className="max-w-[160px] truncate text-sm font-medium text-zinc-900 dark:text-white">
+            {data.subject || "No subject"}
           </div>
         </div>
       </div>
+      {data.previewText && (
+        <div className="mt-2 max-w-[180px] truncate text-xs text-zinc-500 dark:text-zinc-400">
+          {data.previewText}
+        </div>
+      )}
       <Handle
         type="source"
         position={Position.Bottom}
