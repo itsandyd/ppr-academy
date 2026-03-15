@@ -31,13 +31,17 @@ import { useToast } from "@/hooks/use-toast";
 import { AdminLoading } from "../../components/admin-loading";
 import OutreachWorkflowCanvas, { defaultNodeData } from "./OutreachWorkflowCanvas";
 import OutreachNodeSidebar from "./OutreachNodeSidebar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft,
   Check,
   Loader2,
   Save,
+  Search,
   Sparkles,
   Trash2,
+  UserPlus,
+  Users,
   Wand2,
   X,
 } from "lucide-react";
@@ -231,6 +235,13 @@ export default function OutreachWorkflowEditor({
   // Email editor dialog (second-level dialog for configuring email content)
   const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
 
+  // Add Creators dialog state
+  const [isAddCreatorsOpen, setIsAddCreatorsOpen] = useState(false);
+  const [creatorSearchQuery, setCreatorSearchQuery] = useState("");
+  const [selectedCreators, setSelectedCreators] = useState<Set<string>>(new Set());
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isEnrollingAll, setIsEnrollingAll] = useState(false);
+
   // Editor ref for merge tag insertion
   const wysiwygRef = useRef<WysiwygEditorRef>(null);
 
@@ -247,6 +258,13 @@ export default function OutreachWorkflowEditor({
   const updateSequenceMut = useMutation(api.admin.creatorOutreach.updateOutreachSequence);
   const generateOutreachSequence = useAction(api.admin.creatorOutreachActions.generateOutreachSequence);
   const generateOutreachEmail = useAction(api.admin.creatorOutreachActions.generateOutreachEmail);
+  const enrollCreatorsMut = useMutation(api.admin.creatorOutreach.enrollCreatorsInSequence);
+
+  // Creator list for Add Creators dialog
+  const creatorList = useQuery(
+    api.admin.creatorOutreach.getCreatorOutreachList,
+    isAddCreatorsOpen ? { clerkId } : "skip"
+  );
 
   // Load existing sequence
   useEffect(() => {
@@ -458,6 +476,93 @@ export default function OutreachWorkflowEditor({
     wysiwygRef.current.insertText(tag);
   };
 
+  // ─── Add Creators helpers ──────────────────────────────────────────────
+  const filteredCreators = (creatorList ?? []).filter((c) => {
+    if (!creatorSearchQuery) return true;
+    const q = creatorSearchQuery.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      (c.storeName || "").toLowerCase().includes(q)
+    );
+  });
+
+  const toggleCreatorSelection = (userId: string) => {
+    setSelectedCreators((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const toggleAllCreators = () => {
+    if (selectedCreators.size === filteredCreators.length) {
+      setSelectedCreators(new Set());
+    } else {
+      setSelectedCreators(new Set(filteredCreators.map((c) => c.userId)));
+    }
+  };
+
+  const handleEnrollCreators = async () => {
+    if (!sequenceId || selectedCreators.size === 0) return;
+    setIsEnrolling(true);
+    try {
+      const creatorsToEnroll = filteredCreators
+        .filter((c) => selectedCreators.has(c.userId))
+        .map((c) => ({
+          userId: c.userId,
+          email: c.email,
+          name: c.name,
+          storeId: c.storeId,
+          storeSlug: c.storeSlug,
+        }));
+      const result = await enrollCreatorsMut({
+        clerkId,
+        sequenceId: sequenceId as Id<"adminOutreachSequences">,
+        creators: creatorsToEnroll,
+      });
+      toast({
+        title: `Enrolled ${result.enrolled} creator${result.enrolled !== 1 ? "s" : ""}`,
+        description: result.skipped > 0 ? `${result.skipped} already enrolled` : undefined,
+      });
+      setSelectedCreators(new Set());
+      setIsAddCreatorsOpen(false);
+    } catch (error) {
+      toast({ title: "Failed to enroll", description: String(error), variant: "destructive" });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  const handleEnrollAllCreators = async () => {
+    if (!sequenceId || !creatorList?.length) return;
+    setIsEnrollingAll(true);
+    try {
+      const allCreators = creatorList.map((c) => ({
+        userId: c.userId,
+        email: c.email,
+        name: c.name,
+        storeId: c.storeId,
+        storeSlug: c.storeSlug,
+      }));
+      const result = await enrollCreatorsMut({
+        clerkId,
+        sequenceId: sequenceId as Id<"adminOutreachSequences">,
+        creators: allCreators,
+      });
+      toast({
+        title: `Enrolled ${result.enrolled} creator${result.enrolled !== 1 ? "s" : ""}`,
+        description: result.skipped > 0 ? `${result.skipped} already enrolled` : undefined,
+      });
+      setIsAddCreatorsOpen(false);
+    } catch (error) {
+      toast({ title: "Failed to enroll", description: String(error), variant: "destructive" });
+    } finally {
+      setIsEnrollingAll(false);
+    }
+  };
+
   // Handle node selection from canvas
   const handleNodeSelect = useCallback((node: Node | null) => {
     setSelectedNode(node);
@@ -500,6 +605,16 @@ export default function OutreachWorkflowEditor({
               className="scale-75 md:scale-90"
             />
           </div>
+          {sequenceId && (
+            <Button
+              variant="outline"
+              onClick={() => setIsAddCreatorsOpen(true)}
+              className="h-8 w-8 md:h-9 md:w-auto md:gap-2 md:px-3"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden md:inline">Add Creators</span>
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setIsAIDialogOpen(true)}
@@ -1049,6 +1164,149 @@ export default function OutreachWorkflowEditor({
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Add Creators Dialog ─────────────────────────────────────────── */}
+      <Dialog open={isAddCreatorsOpen} onOpenChange={setIsAddCreatorsOpen}>
+        <DialogContent className="max-h-[80vh] max-w-lg bg-white dark:bg-black">
+          <DialogHeader>
+            <DialogTitle>Add Creators to Sequence</DialogTitle>
+            <DialogDescription>
+              Select creators to enroll in this outreach sequence
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Enroll All Option */}
+            {creatorList && creatorList.length > 0 && (
+              <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 dark:border-purple-900 dark:bg-purple-950/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                      Enroll All Creators
+                    </p>
+                    <p className="text-xs text-purple-600 dark:text-purple-400">
+                      Add all {creatorList.length.toLocaleString()} creators to this sequence
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleEnrollAllCreators}
+                    disabled={isEnrollingAll}
+                    className="shrink-0 gap-2 bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Users className="h-4 w-4" />
+                    {isEnrollingAll ? "Enrolling..." : "Enroll All"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="relative flex items-center gap-2">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or select specific creators</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search creators..."
+                className="pl-10"
+                value={creatorSearchQuery}
+                onChange={(e) => setCreatorSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {selectedCreators.size > 0 && (
+              <div className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2">
+                <span className="text-sm font-medium">
+                  {selectedCreators.size} creator{selectedCreators.size !== 1 ? "s" : ""} selected
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCreators(new Set())}>
+                  Clear
+                </Button>
+              </div>
+            )}
+
+            <div className="max-h-[300px] overflow-y-auto rounded-md border">
+              {filteredCreators.length > 0 && (
+                <div
+                  className="flex cursor-pointer items-center gap-3 border-b bg-muted/50 px-3 py-2"
+                  onClick={toggleAllCreators}
+                >
+                  <Checkbox
+                    checked={
+                      filteredCreators.length > 0 &&
+                      selectedCreators.size === filteredCreators.length
+                    }
+                    onCheckedChange={toggleAllCreators}
+                  />
+                  <span className="text-sm font-medium">Select All</span>
+                </div>
+              )}
+              {creatorList === undefined ? (
+                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                  Loading creators...
+                </div>
+              ) : filteredCreators.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-8">
+                  <Users className="h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    {creatorSearchQuery ? `No creators match "${creatorSearchQuery}"` : "No creators found"}
+                  </p>
+                </div>
+              ) : (
+                filteredCreators.slice(0, 100).map((creator) => (
+                  <div
+                    key={creator.userId}
+                    className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+                    onClick={() => toggleCreatorSelection(creator.userId)}
+                  >
+                    <Checkbox
+                      checked={selectedCreators.has(creator.userId)}
+                      onCheckedChange={() => toggleCreatorSelection(creator.userId)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
+                        {creator.name || creator.email}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {creator.email}
+                        {creator.storeName && ` · ${creator.storeName}`}
+                      </div>
+                    </div>
+                    {creator.outreachStatus && (
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {creator.outreachStatus}
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+              {filteredCreators.length > 100 && (
+                <div className="px-3 py-2 text-center text-xs text-muted-foreground">
+                  Showing 100 of {filteredCreators.length} creators
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddCreatorsOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEnrollCreators}
+              disabled={selectedCreators.size === 0 || isEnrolling}
+              className="gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              {isEnrolling
+                ? "Enrolling..."
+                : `Enroll ${selectedCreators.size} Creator${selectedCreators.size !== 1 ? "s" : ""}`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
