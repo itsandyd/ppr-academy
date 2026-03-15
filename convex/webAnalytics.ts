@@ -20,6 +20,7 @@ const RESERVED_PATHS = new Set([
   "coach-application",
   "courses",
   "create-course",
+  "creators",
   "credits",
   "dashboard",
   "dashboard-demo",

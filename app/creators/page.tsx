@@ -2,13 +2,93 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  Music,
+  Sliders,
+  Piano,
+  Zap,
+  Layout,
+  Music2,
+  FolderOpen,
+  Video,
+  Mic2,
+  FileText,
+  Users,
+  Heart,
+  CheckCircle,
+  Gift,
+  Lock,
+  TrendingUp,
+  DollarSign,
+  Globe,
+  Sparkles,
+  BarChart3,
+  Mail,
+  Instagram,
+  Youtube,
+  Star,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Footer } from "../_components/footer";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 import {
   ScreenshotShowcase,
   SectionVisualBreak,
 } from "@/components/creators/screenshot-showcase";
+
+// Product type data organized by category
+const productCategories = [
+  {
+    category: "Sounds & Tools",
+    description: "Sell the sounds and tools you create",
+    gradient: "from-purple-500 to-pink-500",
+    items: [
+      { name: "Sample Packs", icon: Music, description: "Drums, loops, one-shots, and textures" },
+      { name: "Preset Packs", icon: Sliders, description: "Synth presets for Serum, Vital, Massive, etc." },
+      { name: "MIDI Packs", icon: Piano, description: "Chord progressions, melodies, and patterns" },
+      { name: "Effect Chains", icon: Zap, description: "Signal chains for vocals, drums, mix bus" },
+      { name: "Mixing Templates", icon: Layout, description: "Pre-configured DAW sessions" },
+    ],
+  },
+  {
+    category: "Music",
+    description: "License your music and share your process",
+    gradient: "from-blue-500 to-cyan-500",
+    items: [
+      { name: "Beat Leases", icon: Music2, description: "License instrumentals to artists" },
+      { name: "Project Files", icon: FolderOpen, description: "Full DAW sessions for learning" },
+    ],
+  },
+  {
+    category: "Education",
+    description: "Teach what you know and get paid",
+    gradient: "from-green-500 to-emerald-500",
+    items: [
+      { name: "Courses", icon: Video, description: "Structured video lessons with modules" },
+      { name: "Coaching Sessions", icon: Mic2, description: "1-on-1 calls and feedback sessions" },
+      { name: "PDFs & Cheat Sheets", icon: FileText, description: "Quick reference guides and ebooks" },
+    ],
+  },
+  {
+    category: "Community",
+    description: "Build and monetize your audience",
+    gradient: "from-orange-500 to-red-500",
+    items: [
+      { name: "Community Access", icon: Users, description: "Paid Discord or private community" },
+      { name: "Tip Jar", icon: Heart, description: "Let fans support you directly" },
+    ],
+  },
+];
+
+const valueProps = [
+  { icon: DollarSign, title: "Keep 90% of Sales", description: "Industry-leading payout. Gumroad takes 10% + fees. We take less." },
+  { icon: Globe, title: "All-in-One Platform", description: "Products, courses, coaching, email, analytics. One dashboard." },
+  { icon: Sparkles, title: "AI Content Assistant", description: "Generate descriptions, tags, and thumbnails in seconds." },
+  { icon: BarChart3, title: "Built-in Analytics", description: "Track views, sales, and conversions. Know what's working." },
+  { icon: Mail, title: "Email Marketing", description: "Collect emails and send campaigns. No Mailchimp needed." },
+  { icon: Star, title: "Beautiful Storefronts", description: "Professional pages that match your brand. No coding required." },
+];
 
 export default function CreatorsLetterPage() {
   const [showFloatingCta, setShowFloatingCta] = useState(false);
@@ -250,6 +330,41 @@ export default function CreatorsLetterPage() {
 
             <p>Everything. One storefront. One place.</p>
 
+            {/* Product categories grid — merged from /for-creators */}
+            <div className="relative mx-auto my-16 w-[calc(100%+2rem)] max-w-[900px] -translate-x-4 sm:my-20 sm:w-[calc(100%+6rem)] sm:-translate-x-12 lg:w-[900px] lg:-translate-x-[110px]">
+              <h3 className="mb-8 text-center text-xl font-semibold text-foreground sm:text-2xl">
+                Everything you can sell on PausePlayRepeat
+              </h3>
+              <div className="space-y-8">
+                {productCategories.map((category) => (
+                  <div key={category.category}>
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className={`h-1 w-8 rounded-full bg-gradient-to-r ${category.gradient}`} />
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">{category.category}</span>
+                        <span className="ml-2 text-sm text-muted-foreground">— {category.description}</span>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {category.items.map((item) => (
+                        <Card key={item.name} className="border-border/30 bg-card/30">
+                          <CardContent className="flex items-start gap-3 p-4">
+                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${category.gradient}`}>
+                              <item.icon className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-medium text-foreground">{item.name}</h4>
+                              <p className="text-xs text-muted-foreground">{item.description}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Screenshot: Creator storefront */}
             <ScreenshotShowcase
               alt="A creator storefront on PausePlayRepeat — dark hero banner, product grid, and stats sidebar"
@@ -464,6 +579,52 @@ export default function CreatorsLetterPage() {
               url="pauseplayrepeat.com/dashboard/emails/workflows"
               src="/screenshots/email-engine.png"
             />
+          </div>
+
+          {/* --- Follow Gate Feature (merged from /for-creators) --- */}
+          <div className="my-16 rounded-xl border border-green-500/20 bg-green-500/5 p-6 sm:p-8">
+            <div className="mb-1 flex items-center gap-2 text-sm font-medium text-green-400">
+              <Gift className="h-4 w-4" />
+              Exclusive Feature
+            </div>
+            <h3 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">
+              Turn free downloads into real followers
+            </h3>
+            <p className="mb-8 text-base text-muted-foreground">
+              Our Follow Gate feature lets you require email signup and social follows
+              before users can download your free content. No other platform does this.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { step: "1", title: "Create Free Product", description: "Upload a sample pack, preset, or any product", icon: Gift },
+                { step: "2", title: "Set Requirements", description: "Choose: email, Instagram, YouTube, TikTok, Spotify", icon: Lock },
+                { step: "3", title: "User Completes", description: "They follow you and enter their email", icon: CheckCircle },
+                { step: "4", title: "You Both Win", description: "They get the download. You get a real follower.", icon: TrendingUp },
+              ].map((item) => (
+                <div key={item.step} className="text-center">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20">
+                    <item.icon className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div className="mb-1 text-xs font-medium text-green-400">Step {item.step}</div>
+                  <h4 className="mb-1 text-sm font-semibold text-foreground">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+              <span>Supported:</span>
+              {[
+                { icon: Mail, label: "Email" },
+                { icon: Instagram, label: "Instagram" },
+                { icon: Youtube, label: "YouTube" },
+              ].map((platform) => (
+                <span key={platform.label} className="inline-flex items-center gap-1.5 rounded-full border border-border/30 bg-background/50 px-2.5 py-1 text-xs">
+                  <platform.icon className="h-3 w-3" />
+                  {platform.label}
+                </span>
+              ))}
+              <span className="text-xs">+ TikTok, Spotify</span>
+            </div>
           </div>
 
           {/* --- Divider --- */}
@@ -733,6 +894,26 @@ export default function CreatorsLetterPage() {
               just think it&apos;s worth knowing that the people who show up
               first tend to do really well on platforms like this.
             </p>
+          </div>
+
+          {/* --- Value Props Grid (merged from /for-creators) --- */}
+          <div className="my-16 relative mx-auto w-[calc(100%+2rem)] max-w-[900px] -translate-x-4 sm:w-[calc(100%+6rem)] sm:-translate-x-12 lg:w-[900px] lg:-translate-x-[110px]">
+            <h3 className="mb-8 text-center text-xl font-semibold text-foreground sm:text-2xl">
+              Why creators choose PausePlayRepeat
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {valueProps.map((prop) => (
+                <Card key={prop.title} className="border-border/30 bg-card/30">
+                  <CardContent className="p-5">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
+                      <prop.icon className="h-5 w-5 text-purple-400" />
+                    </div>
+                    <h4 className="mb-1 text-sm font-semibold text-foreground">{prop.title}</h4>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{prop.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
 
           {/* --- Divider --- */}
