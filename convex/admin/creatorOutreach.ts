@@ -50,27 +50,6 @@ function htmlToPlainText(html: string): string {
   return text.trim();
 }
 
-/**
- * Convert plain text to minimal HTML for deliverability.
- * Looks like a personal email (no styling, no divs, no CSS) but URLs are
- * wrapped in <a> tags so they're clickable. This is the Cymatics approach:
- * HTML that looks like it was typed on a phone.
- */
-function plainTextToMinimalHtml(text: string): string {
-  let html = text;
-  // Escape HTML entities first
-  html = html.replace(/&/g, "&amp;");
-  html = html.replace(/</g, "&lt;");
-  html = html.replace(/>/g, "&gt;");
-  // Auto-link naked URLs (must come after entity escaping)
-  html = html.replace(
-    /(https?:\/\/[^\s<>&"]+)/g,
-    '<a href="$1">$1</a>'
-  );
-  // Convert newlines to <br>
-  html = html.replace(/\n/g, "<br>");
-  return html;
-}
 
 async function verifyAdmin(ctx: any, clerkId?: string) {
   if (!clerkId) throw new Error("Unauthorized: Authentication required");
@@ -951,13 +930,12 @@ export const processOutreachEmails = internalMutation({
             let textContent: string | undefined;
 
             if (isPlainText) {
-              // Plain text mode: minimal HTML (no styling, just clickable links)
+              // True plain text mode: NO HTML at all. Gmail/Apple Mail/Outlook
+              // auto-linkify naked URLs in text/plain emails.
               const rawContent = personalizeStr(currentNode.data.htmlContent || "");
               const plainBody = htmlToPlainText(rawContent);
               textContent = plainBody + PLAIN_TEXT_FOOTER;
-              // Convert body to HTML, then append HTML footer separately
-              // (so the <a> tag in the footer isn't escaped)
-              htmlContent = plainTextToMinimalHtml(plainBody) + HTML_FOOTER;
+              htmlContent = "";
             } else {
               htmlContent = personalizeStr(currentNode.data.htmlContent || "");
               if (!htmlContent.includes("<")) {
@@ -1134,9 +1112,11 @@ export const processOutreachEmails = internalMutation({
       let htmlContent: string;
       let textContent: string | undefined;
       if (isPlainText) {
+        // True plain text mode: NO HTML at all. Gmail/Apple Mail/Outlook
+        // auto-linkify naked URLs in text/plain emails.
         const plainBody = htmlToPlainText(rawHtml);
         textContent = plainBody + PLAIN_TEXT_FOOTER;
-        htmlContent = plainTextToMinimalHtml(plainBody) + HTML_FOOTER;
+        htmlContent = "";
       } else {
         htmlContent = rawHtml + HTML_FOOTER;
         textContent = (step.textContent || htmlToPlainText(rawHtml)) + PLAIN_TEXT_FOOTER;

@@ -55,10 +55,11 @@ function injectUnsubscribeForOutreach(email: ClaimedEmail): {
 
   const htmlContent = email.htmlContent.replace(/%%UNSUBSCRIBE_URL%%/g, unsubscribeUrl);
   const textContent = email.textContent?.replace(/%%UNSUBSCRIBE_URL%%/g, unsubscribeUrl);
+  // No List-Unsubscribe headers for admin outreach — these signal "marketing"
+  // to Gmail and cause Promotions tab placement. The in-body unsubscribe link
+  // is sufficient for CAN-SPAM compliance on one-to-one platform emails.
   const headers = {
     ...(email.headers || {}),
-    "List-Unsubscribe": `<${unsubscribeUrl}>`,
-    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
   };
 
   return { htmlContent, textContent, headers };
