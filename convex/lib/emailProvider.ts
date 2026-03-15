@@ -95,7 +95,7 @@ export async function sendEmailViaProvider(
     from: string;
     to: string;
     subject: string;
-    html: string;
+    html?: string;
     text?: string;
     replyTo?: string;
     headers?: Record<string, string>;
@@ -120,15 +120,21 @@ export async function sendEmailViaProvider(
   // Fallback: Resend
   console.log(`[EmailProvider][Resend] Sending to ${cleanTo}`);
   try {
+    // Resend requires at least one of html, text, or react
+    const contentFields: Record<string, string> = {};
+    if (params.html) contentFields.html = params.html;
+    if (params.text) contentFields.text = params.text;
+    // Fallback: if neither html nor text, send text as empty
+    if (!contentFields.html && !contentFields.text) contentFields.text = "";
+
     const { data, error } = await resendClient.emails.send({
       from: params.from,
       to: cleanTo,
       subject: cleanSubject,
-      html: params.html,
-      ...(params.text ? { text: params.text } : {}),
+      ...contentFields,
       ...(params.replyTo ? { reply_to: params.replyTo } : {}),
       ...(params.headers ? { headers: params.headers } : {}),
-    });
+    } as any);
 
     if (error) {
       return {
@@ -226,7 +232,7 @@ export async function sendBatchViaProvider(
     from: string;
     to: string;
     subject: string;
-    html: string;
+    html?: string;
     text?: string;
     reply_to?: string;
     headers?: Record<string, string>;
@@ -259,7 +265,7 @@ export async function sendBatchViaProvider(
   // Fallback: Resend batch API
   console.log(`[EmailProvider][Resend] Sending batch of ${sanitizedEmails.length}`);
   try {
-    const { data, error } = await resendClient.batch.send(sanitizedEmails);
+    const { data, error } = await resendClient.batch.send(sanitizedEmails as any);
 
     if (error) {
       return {

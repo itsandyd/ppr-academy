@@ -266,6 +266,7 @@ export type DataModel = {
       isActive: boolean;
       name: string;
       nodes?: string;
+      plainTextMode?: boolean;
       replyTo?: string;
       steps: Array<{
         delayDays: number;
@@ -295,6 +296,7 @@ export type DataModel = {
       | "isActive"
       | "name"
       | "nodes"
+      | "plainTextMode"
       | "replyTo"
       | "steps"
       | "stopOnProductUpload"

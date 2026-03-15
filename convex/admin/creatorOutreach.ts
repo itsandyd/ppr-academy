@@ -15,6 +15,37 @@ const { internal } = require("../_generated/api") as { internal: any };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+const PLAIN_TEXT_FOOTER = `\n---\nReply STOP to unsubscribe\nPPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709`;
+
+/**
+ * Convert HTML email content to plain text for deliverability.
+ * - Converts <a href="URL">text</a> to naked URL
+ * - Converts <br> and </p> to newlines
+ * - Strips all remaining HTML tags
+ */
+function htmlToPlainText(html: string): string {
+  let text = html;
+  // Convert <a href="URL">text</a> to just URL
+  text = text.replace(/<a\s[^>]*href=["']([^"']*)["'][^>]*>[^<]*<\/a>/gi, "$1");
+  // Convert <br>, <br/>, <br /> to newline
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  // Convert </p> and </div> to newline
+  text = text.replace(/<\/p>/gi, "\n");
+  text = text.replace(/<\/div>/gi, "\n");
+  // Strip all remaining HTML tags
+  text = text.replace(/<[^>]+>/g, "");
+  // Decode common HTML entities
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&#39;/g, "'");
+  text = text.replace(/&nbsp;/g, " ");
+  // Collapse multiple blank lines into max two newlines
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text.trim();
+}
+
 async function verifyAdmin(ctx: any, clerkId?: string) {
   if (!clerkId) throw new Error("Unauthorized: Authentication required");
   const user = await ctx.db
@@ -202,6 +233,7 @@ export const getOutreachSequences = query({
       totalStopped: v.number(),
       stopOnProductUpload: v.boolean(),
       stopOnReply: v.boolean(),
+      plainTextMode: v.optional(v.boolean()),
       createdAt: v.number(),
       updatedAt: v.number(),
     })
@@ -225,6 +257,7 @@ export const getOutreachSequences = query({
       totalStopped: seq.totalStopped,
       stopOnProductUpload: seq.stopOnProductUpload,
       stopOnReply: seq.stopOnReply,
+      plainTextMode: seq.plainTextMode,
       createdAt: seq.createdAt,
       updatedAt: seq.updatedAt,
     }));
@@ -262,6 +295,7 @@ export const getOutreachSequence = query({
       isActive: v.boolean(),
       stopOnProductUpload: v.boolean(),
       stopOnReply: v.boolean(),
+      plainTextMode: v.optional(v.boolean()),
       totalEnrolled: v.number(),
       totalCompleted: v.number(),
       totalStopped: v.number(),
@@ -286,6 +320,7 @@ export const getOutreachSequence = query({
       isActive: seq.isActive,
       stopOnProductUpload: seq.stopOnProductUpload,
       stopOnReply: seq.stopOnReply,
+      plainTextMode: seq.plainTextMode,
       totalEnrolled: seq.totalEnrolled,
       totalCompleted: seq.totalCompleted,
       totalStopped: seq.totalStopped,
@@ -401,6 +436,7 @@ export const createOutreachSequence = mutation({
     edges: v.optional(v.string()),
     stopOnProductUpload: v.optional(v.boolean()),
     stopOnReply: v.optional(v.boolean()),
+    plainTextMode: v.optional(v.boolean()),
   },
   returns: v.id("adminOutreachSequences"),
   handler: async (ctx, args) => {
@@ -421,6 +457,7 @@ export const createOutreachSequence = mutation({
       edges: args.edges,
       stopOnProductUpload: args.stopOnProductUpload ?? true,
       stopOnReply: args.stopOnReply ?? true,
+      plainTextMode: args.plainTextMode ?? true,
       isActive: true,
       totalEnrolled: 0,
       totalCompleted: 0,
@@ -458,6 +495,7 @@ export const updateOutreachSequence = mutation({
     edges: v.optional(v.string()),
     stopOnProductUpload: v.optional(v.boolean()),
     stopOnReply: v.optional(v.boolean()),
+    plainTextMode: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -479,6 +517,7 @@ export const updateOutreachSequence = mutation({
     if (args.edges !== undefined) patch.edges = args.edges;
     if (args.stopOnProductUpload !== undefined) patch.stopOnProductUpload = args.stopOnProductUpload;
     if (args.stopOnReply !== undefined) patch.stopOnReply = args.stopOnReply;
+    if (args.plainTextMode !== undefined) patch.plainTextMode = args.plainTextMode;
 
     await ctx.db.patch(args.sequenceId, patch);
     return null;
@@ -822,9 +861,22 @@ export const processOutreachEmails = internalMutation({
                 .replace(/\{\{storeSlug\}\}/g, outreach.storeSlug || "");
 
             const subject = personalizeStr(currentNode.data.subject || "");
-            let htmlContent = personalizeStr(currentNode.data.htmlContent || "");
-            if (!htmlContent.includes("<")) {
-              htmlContent = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a; line-height: 1.6;">${htmlContent.replace(/\n/g, "<br>")}</div>`;
+            const isPlainText = sequence.plainTextMode === true;
+
+            let htmlContent: string;
+            let textContent: string | undefined;
+
+            if (isPlainText) {
+              // Plain text mode: strip HTML, send text-only
+              const rawContent = personalizeStr(currentNode.data.htmlContent || "");
+              textContent = htmlToPlainText(rawContent) + PLAIN_TEXT_FOOTER;
+              htmlContent = ""; // Empty — text-only email
+            } else {
+              htmlContent = personalizeStr(currentNode.data.htmlContent || "");
+              if (!htmlContent.includes("<")) {
+                htmlContent = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a; line-height: 1.6;">${htmlContent.replace(/\n/g, "<br>")}</div>`;
+              }
+              textContent = currentNode.data.textContent;
             }
 
             const sendQueueId = await ctx.db.insert("emailSendQueue", {
@@ -835,7 +887,7 @@ export const processOutreachEmails = internalMutation({
               fromEmail: sequence.fromEmail,
               subject,
               htmlContent,
-              textContent: currentNode.data.textContent,
+              textContent,
               replyTo: sequence.replyTo || sequence.fromEmail,
               status: "queued",
               priority: 3,
@@ -984,10 +1036,16 @@ export const processOutreachEmails = internalMutation({
       }
 
       // Personalize content
-      const htmlContent = step.htmlContent
+      const rawHtml = step.htmlContent
         .replace(/\{\{name\}\}/g, outreach.creatorName)
         .replace(/\{\{firstName\}\}/g, outreach.creatorName.split(" ")[0])
         .replace(/\{\{email\}\}/g, outreach.creatorEmail);
+
+      const isPlainText = sequence.plainTextMode === true;
+      const htmlContent = isPlainText ? "" : rawHtml;
+      const textContent = isPlainText
+        ? htmlToPlainText(rawHtml) + PLAIN_TEXT_FOOTER
+        : step.textContent;
 
       // Enqueue the email
       const sendQueueId = await ctx.db.insert("emailSendQueue", {
@@ -1001,7 +1059,7 @@ export const processOutreachEmails = internalMutation({
           outreach.creatorName.split(" ")[0]
         ),
         htmlContent,
-        textContent: step.textContent,
+        textContent,
         replyTo: sequence.replyTo || sequence.fromEmail,
         status: "queued",
         priority: 3,

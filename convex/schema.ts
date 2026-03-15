@@ -7261,6 +7261,8 @@ export default defineSchema({
     // Auto-stop conditions
     stopOnProductUpload: v.boolean(),
     stopOnReply: v.boolean(),
+    // Plain text mode — send text-only emails for better deliverability
+    plainTextMode: v.optional(v.boolean()),
     // Status
     isActive: v.boolean(),
     // Stats

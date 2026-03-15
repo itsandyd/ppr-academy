@@ -75,7 +75,7 @@ export async function sesSendEmail(params: {
   from: string;
   to: string;
   subject: string;
-  html: string;
+  html?: string;
   text?: string;
   replyTo?: string;
   headers?: Record<string, string>;
@@ -87,7 +87,9 @@ export async function sesSendEmail(params: {
       Simple: {
         Subject: { Data: params.subject, Charset: "UTF-8" },
         Body: {
-          Html: { Data: params.html, Charset: "UTF-8" },
+          ...(params.html
+            ? { Html: { Data: params.html, Charset: "UTF-8" } }
+            : {}),
           ...(params.text
             ? { Text: { Data: params.text, Charset: "UTF-8" } }
             : {}),
@@ -143,7 +145,7 @@ export async function sesSendBatch(
     from: string;
     to: string;
     subject: string;
-    html: string;
+    html?: string;
     text?: string;
     reply_to?: string;
     headers?: Record<string, string>;
@@ -299,7 +301,7 @@ async function sesSendBulk(
     from: string;
     to: string;
     subject: string;
-    html: string;
+    html?: string;
     text?: string;
     reply_to?: string;
     headers?: Record<string, string>;

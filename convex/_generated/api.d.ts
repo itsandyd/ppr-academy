@@ -281,6 +281,7 @@ export declare const api: {
           fromName?: string;
           name: string;
           nodes?: string;
+          plainTextMode?: boolean;
           replyTo?: string;
           steps: Array<{
             delayDays: number;
@@ -358,6 +359,7 @@ export declare const api: {
           isActive: boolean;
           name: string;
           nodes?: string;
+          plainTextMode?: boolean;
           replyTo?: string;
           steps: Array<{
             delayDays: number;
@@ -386,6 +388,7 @@ export declare const api: {
           fromName: string;
           isActive: boolean;
           name: string;
+          plainTextMode?: boolean;
           replyTo?: string;
           stepCount: number;
           stopOnProductUpload: boolean;
@@ -470,6 +473,7 @@ export declare const api: {
           fromName?: string;
           name?: string;
           nodes?: string;
+          plainTextMode?: boolean;
           replyTo?: string;
           sequenceId: Id<"adminOutreachSequences">;
           steps?: Array<{
@@ -500,6 +504,7 @@ export declare const api: {
           existingBody?: string;
           existingSubject?: string;
           goal?: string;
+          plainTextMode?: boolean;
         },
         { body: string; subject: string }
       >;
@@ -509,6 +514,7 @@ export declare const api: {
         {
           clerkId: string;
           goal: string;
+          plainTextMode?: boolean;
           sequenceLength?: number;
           tone?: "casual" | "friendly" | "professional";
         },

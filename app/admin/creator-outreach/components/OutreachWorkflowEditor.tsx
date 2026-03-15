@@ -213,6 +213,9 @@ export default function OutreachWorkflowEditor({
   const [addNodeFn, setAddNodeFn] = useState<((type: string) => void) | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  // Plain text mode (default true for new sequences)
+  const [plainTextMode, setPlainTextMode] = useState(true);
+
   // AI Generate state
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
   const [aiGoal, setAIGoal] = useState("");
@@ -244,6 +247,7 @@ export default function OutreachWorkflowEditor({
   useEffect(() => {
     if (existingSequence && !hasInitialized) {
       setWorkflowName(existingSequence.name);
+      setPlainTextMode(existingSequence.plainTextMode ?? true);
       if (existingSequence.nodes && existingSequence.edges) {
         setNodes(JSON.parse(existingSequence.nodes));
         setEdges(JSON.parse(existingSequence.edges));
@@ -341,6 +345,7 @@ export default function OutreachWorkflowEditor({
           edges: edgesStr,
           stopOnProductUpload,
           stopOnReply,
+          plainTextMode,
         });
         toast({ title: "Sequence updated" });
       } else {
@@ -355,6 +360,7 @@ export default function OutreachWorkflowEditor({
           edges: edgesStr,
           stopOnProductUpload,
           stopOnReply,
+          plainTextMode,
         });
         toast({ title: "Sequence created" });
         router.push(`/admin/creator-outreach?edit=${newId}`);
@@ -384,6 +390,7 @@ export default function OutreachWorkflowEditor({
         goal: aiGoal,
         sequenceLength: aiSequenceLength,
         tone: aiTone,
+        plainTextMode,
       });
 
       setWorkflowName(result.name);
@@ -419,6 +426,7 @@ export default function OutreachWorkflowEditor({
         existingSubject: selectedNode.data.subject || undefined,
         existingBody: selectedNode.data.htmlContent || undefined,
         goal: "Get inactive creators to engage with the platform",
+        plainTextMode,
       });
 
       updateNodeData(selectedNode.id, {
@@ -475,6 +483,17 @@ export default function OutreachWorkflowEditor({
           placeholder="Sequence name..."
         />
         <div className="flex-1" />
+        <div className="flex items-center gap-2">
+          <Switch
+            id="plainTextMode"
+            checked={plainTextMode}
+            onCheckedChange={setPlainTextMode}
+          />
+          <Label htmlFor="plainTextMode" className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">
+            Plain text mode
+          </Label>
+        </div>
+        <div className="h-6 w-px bg-border" />
         <Button
           variant="outline"
           onClick={() => setIsAIDialogOpen(true)}
@@ -641,27 +660,50 @@ export default function OutreachWorkflowEditor({
                         {isGeneratingEmail ? "Generating..." : "Generate with AI"}
                       </Button>
                     </div>
-                    <WysiwygEditor
-                      ref={wysiwygRef}
-                      content={selectedNode.data.htmlContent || ""}
-                      onChange={(html) =>
-                        updateNodeData(selectedNode.id, { htmlContent: html })
-                      }
-                      placeholder="Write your email content here..."
-                      className="min-h-[300px]"
-                    />
+                    {plainTextMode ? (
+                      <Textarea
+                        value={selectedNode.data.htmlContent || ""}
+                        onChange={(e) =>
+                          updateNodeData(selectedNode.id, {
+                            htmlContent: e.target.value,
+                            textContent: e.target.value,
+                          })
+                        }
+                        placeholder="Write your email content here... (plain text, paste raw URLs)"
+                        className="min-h-[300px] font-mono text-sm"
+                        rows={15}
+                      />
+                    ) : (
+                      <WysiwygEditor
+                        ref={wysiwygRef}
+                        content={selectedNode.data.htmlContent || ""}
+                        onChange={(html) =>
+                          updateNodeData(selectedNode.id, { htmlContent: html })
+                        }
+                        placeholder="Write your email content here..."
+                        className="min-h-[300px]"
+                      />
+                    )}
                   </div>
 
                   {/* Merge tag buttons */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Insert merge tag</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      {plainTextMode ? "Copy merge tag" : "Insert merge tag"}
+                    </Label>
                     <div className="flex flex-wrap gap-1.5">
                       {MERGE_TAGS.map(({ label, tag }) => (
                         <Button
                           key={tag}
                           variant="outline"
                           size="sm"
-                          onClick={() => insertMergeTag(tag)}
+                          onClick={() => {
+                            if (plainTextMode) {
+                              navigator.clipboard.writeText(tag);
+                            } else {
+                              insertMergeTag(tag);
+                            }
+                          }}
                           className="h-7 text-xs"
                         >
                           {label}

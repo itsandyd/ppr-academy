@@ -163,7 +163,7 @@ async function sendBatchesWithClient(
       from: `${email.fromName} <${email.fromEmail}>`,
       to: email.toEmail,
       subject: email.subject,
-      html: email.htmlContent,
+      ...(email.htmlContent ? { html: email.htmlContent } : {}),
       ...(email.textContent ? { text: email.textContent } : {}),
       ...(email.replyTo ? { reply_to: email.replyTo } : {}),
       ...(email.headers ? { headers: email.headers } : {}),

@@ -34,6 +34,7 @@ export const generateOutreachSequence = action({
         v.literal("professional")
       )
     ),
+    plainTextMode: v.optional(v.boolean()),
   },
   returns: v.object({
     name: v.string(),
@@ -49,6 +50,11 @@ export const generateOutreachSequence = action({
 
     const numEmails = args.sequenceLength || 5;
     const tone = args.tone || "casual";
+    const isPlainText = args.plainTextMode !== false; // Default true
+
+    const plainTextInstructions = isPlainText
+      ? `\n\nFORMAT: Output plain text only. No HTML tags. No markdown. For links, paste the raw URL on its own line. Write like you're texting a friend from your phone. URLs should be naked: https://pauseplayrepeat.com/dashboard/products/new not <a href="...">click here</a>.`
+      : "";
 
     const systemPrompt = `You are an expert email copywriter for PausePlayRepeat (PPR), a music production creator platform. You write outreach emails FROM the platform admin (Andrew) TO creators who have signed up but need encouragement to take action.
 
@@ -68,7 +74,7 @@ VOICE & STYLE (Cymatics-inspired conversational):
 - Pressure release after CTAs: "no pressure tho", "totally cool if not"
 - Reference music production naturally
 - Sign off as "- Andrew" or "Andrew"
-- Keep emails SHORT - 100-200 words max per email
+- Keep emails SHORT - 100-200 words max per email${plainTextInstructions}
 
 TONE: ${tone}
 
@@ -333,6 +339,7 @@ export const generateOutreachEmail = action({
     existingSubject: v.optional(v.string()),
     existingBody: v.optional(v.string()),
     emailPosition: v.optional(v.string()),
+    plainTextMode: v.optional(v.boolean()),
   },
   returns: v.object({
     subject: v.string(),
@@ -345,6 +352,11 @@ export const generateOutreachEmail = action({
     if (!user) throw new Error("Unauthorized");
 
     const isRewrite = !!(args.existingSubject || args.existingBody);
+    const isPlainText = args.plainTextMode !== false; // Default true
+
+    const plainTextInstructions = isPlainText
+      ? `\n\nFORMAT: Output plain text only. No HTML tags. No markdown. For links, paste the raw URL on its own line. Write like you're texting a friend from your phone. URLs should be naked: https://pauseplayrepeat.com/dashboard/products/new not <a href="...">click here</a>.`
+      : "";
 
     const systemPrompt = `You are an expert email copywriter for PausePlayRepeat (PPR), a music production creator platform. Write a single outreach email FROM the platform admin (Andrew) TO a creator.
 
@@ -359,7 +371,7 @@ VOICE & STYLE (Cymatics-inspired conversational):
 - Use filler words naturally: "tbh", "lol", "ngl", "lowkey"
 - Short paragraphs, 100-200 words max
 - Sign off as "- Andrew"
-- P.S. line optional
+- P.S. line optional${plainTextInstructions}
 
 Return valid JSON: { "subject": "...", "body": "..." }
 Body should be plain text with \\n for newlines.`;
