@@ -12429,6 +12429,18 @@ export declare const api: {
       { email: string; reason?: string; storeId: string },
       { message: string; success: boolean }
     >;
+    unsubscribeFromAllLists: FunctionReference<
+      "mutation",
+      "public",
+      { email: string; reason?: string },
+      { message: string; success: boolean }
+    >;
+    unsubscribeFromList: FunctionReference<
+      "mutation",
+      "public",
+      { email: string; list: string; reason?: string },
+      { message: string; success: boolean }
+    >;
   };
   emailUserStats: {
     getUserStatsForEmail: FunctionReference<
@@ -25800,6 +25812,12 @@ export declare const internal: {
     processEmailSendQueue: FunctionReference<"action", "internal", {}, null>;
   };
   emailUnsubscribe: {
+    checkListSuppression: FunctionReference<
+      "query",
+      "internal",
+      { email: string; list: string },
+      { reason?: string; suppressed: boolean }
+    >;
     checkSuppressionBatch: FunctionReference<
       "query",
       "internal",

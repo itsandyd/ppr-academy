@@ -1,22 +1,11 @@
 "use node";
 
-// TRANSACTIONAL: All functions in this file send through the transactional Resend API.
+// TRANSACTIONAL: All functions in this file send through the transactional email provider.
 // Do not move to marketing — these are booking confirmations, session reminders, and
 // coaching-related notifications the recipient explicitly triggered.
 
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { Resend } from "resend";
-
-let resendClient: Resend | null = null;
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  if (!resendClient) {
-    resendClient = new Resend(key);
-  }
-  return resendClient;
-}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "coaching@ppracademy.com";
 const PLATFORM_NAME = "PPR Academy";
@@ -81,11 +70,6 @@ export const sendBookingConfirmationEmail = internalAction({
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     try {
       const platformHtml = (() => {
         const platform = args.sessionPlatform || "discord";
@@ -165,9 +149,9 @@ export const sendBookingConfirmationEmail = internalAction({
       };
 
       if (attachments.length > 0) {
-        await sendEmailWithAttachmentsViaProvider(resend, { ...emailParams, attachments });
+        await sendEmailWithAttachmentsViaProvider({ ...emailParams, attachments });
       } else {
-        await sendEmailViaProvider(resend, emailParams);
+        await sendEmailViaProvider(emailParams);
       }
       return { success: true };
     } catch (error: any) {
@@ -196,11 +180,6 @@ export const sendNewBookingNotificationEmail = internalAction({
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     try {
       // Build .ics attachment for coach
       const attachments: Array<{ filename: string; content: string }> = [];
@@ -270,9 +249,9 @@ export const sendNewBookingNotificationEmail = internalAction({
       };
 
       if (attachments.length > 0) {
-        await sendEmailWithAttachmentsViaProvider(resend, { ...emailParams, attachments });
+        await sendEmailWithAttachmentsViaProvider({ ...emailParams, attachments });
       } else {
-        await sendEmailViaProvider(resend, emailParams);
+        await sendEmailViaProvider(emailParams);
       }
       return { success: true };
     } catch (error: any) {
@@ -299,11 +278,6 @@ export const sendSessionReminderEmail = internalAction({
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     const timeLabel = args.hoursUntil === 1 ? "1 hour" : `${args.hoursUntil} hours`;
     const dashboardUrl = args.isCoach
       ? `${BASE_URL}/dashboard/coaching/sessions`
@@ -311,7 +285,7 @@ export const sendSessionReminderEmail = internalAction({
 
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: FROM_EMAIL,
         to: args.recipientEmail,
         subject: `Reminder: Session in ${timeLabel} - ${PLATFORM_NAME}`,
@@ -378,17 +352,12 @@ export const sendSessionConfirmationRequestEmail = internalAction({
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     const confirmUrl = `${BASE_URL}/${args.isCoach ? "dashboard/coaching/sessions" : "library/coaching"}?confirm=${args.sessionId}`;
     const noShowUrl = `${BASE_URL}/${args.isCoach ? "dashboard/coaching/sessions" : "library/coaching"}?noshow=${args.sessionId}`;
 
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: FROM_EMAIL,
         to: args.recipientEmail,
         subject: `Did your session happen? — ${PLATFORM_NAME}`,
@@ -443,12 +412,9 @@ export const sendNoShowWarningEmail = internalAction({
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) return { success: true };
-
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: FROM_EMAIL,
         to: args.coachEmail,
         subject: `Important: No-Show Warning - ${PLATFORM_NAME}`,
@@ -498,12 +464,9 @@ export const sendCoachingPausedEmail = internalAction({
   },
   returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) return { success: true };
-
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: FROM_EMAIL,
         to: args.coachEmail,
         subject: `Coaching Paused - Action Required - ${PLATFORM_NAME}`,

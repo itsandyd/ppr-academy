@@ -15,7 +15,11 @@ const { internal } = require("../_generated/api") as { internal: any };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-const PLAIN_TEXT_FOOTER = `\n---\nReply STOP to unsubscribe\nPPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709`;
+// Unsubscribe footer with placeholder — %%UNSUBSCRIBE_URL%% is replaced with
+// the actual HMAC-signed URL at send time in emailSendQueueActions.ts
+const PLAIN_TEXT_FOOTER = `\n\n---\nTo unsubscribe from creator updates: %%UNSUBSCRIBE_URL%%\nPPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709`;
+
+const HTML_FOOTER = `<br><br><hr style="border:none;border-top:1px solid #e5e5e5;margin:16px 0;"><a href="%%UNSUBSCRIBE_URL%%" style="color:#666;font-size:12px;">Unsubscribe from creator updates</a><br><span style="color:#999;font-size:11px;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</span>`;
 
 /**
  * Convert HTML email content to plain text for deliverability.
@@ -44,6 +48,28 @@ function htmlToPlainText(html: string): string {
   // Collapse multiple blank lines into max two newlines
   text = text.replace(/\n{3,}/g, "\n\n");
   return text.trim();
+}
+
+/**
+ * Convert plain text to minimal HTML for deliverability.
+ * Looks like a personal email (no styling, no divs, no CSS) but URLs are
+ * wrapped in <a> tags so they're clickable. This is the Cymatics approach:
+ * HTML that looks like it was typed on a phone.
+ */
+function plainTextToMinimalHtml(text: string): string {
+  let html = text;
+  // Escape HTML entities first
+  html = html.replace(/&/g, "&amp;");
+  html = html.replace(/</g, "&lt;");
+  html = html.replace(/>/g, "&gt;");
+  // Auto-link naked URLs (must come after entity escaping)
+  html = html.replace(
+    /(https?:\/\/[^\s<>&"]+)/g,
+    '<a href="$1">$1</a>'
+  );
+  // Convert newlines to <br>
+  html = html.replace(/\n/g, "<br>");
+  return html;
 }
 
 async function verifyAdmin(ctx: any, clerkId?: string) {
@@ -649,6 +675,17 @@ export const sendOneOffEmail = mutation({
     let queued = 0;
 
     for (const creator of args.creators) {
+      // Check if creator has unsubscribed from creator-outreach list
+      const emailLower = creator.email.toLowerCase().trim();
+      const prefs = await ctx.db
+        .query("resendPreferences")
+        .withIndex("by_user", (q: any) => q.eq("userId", emailLower))
+        .first();
+
+      if (prefs?.isUnsubscribed || prefs?.unsubscribedLists?.includes("creator-outreach")) {
+        continue; // Skip unsubscribed creators
+      }
+
       // Create outreach record
       const outreachId = await ctx.db.insert("adminCreatorOutreach", {
         creatorUserId: creator.userId,
@@ -675,6 +712,11 @@ export const sendOneOffEmail = mutation({
         sentAt: now,
       });
 
+      // Add unsubscribe footer to email content
+      // %%UNSUBSCRIBE_URL%% placeholder is replaced at send time with HMAC-signed URL
+      const htmlWithFooter = args.htmlContent + HTML_FOOTER;
+      const textWithFooter = (args.textContent || htmlToPlainText(args.htmlContent)) + PLAIN_TEXT_FOOTER;
+
       // Enqueue via the existing email send queue (uses "transactional" source
       // to bypass per-store unsubscribe checks — admin emails are platform-level)
       await ctx.db.insert("emailSendQueue", {
@@ -684,11 +726,11 @@ export const sendOneOffEmail = mutation({
         fromName,
         fromEmail,
         subject: args.subject,
-        htmlContent: args.htmlContent,
-        textContent: args.textContent,
+        htmlContent: htmlWithFooter,
+        textContent: textWithFooter,
         replyTo: fromEmail,
         status: "queued",
-        priority: 3, // Higher priority than bulk
+        priority: 3,
         attempts: 0,
         maxAttempts: 3,
         queuedAt: now,
@@ -786,6 +828,22 @@ export const processOutreachEmails = internalMutation({
       const sequence = await ctx.db.get(outreach.sequenceId);
       if (!sequence || !sequence.isActive) continue;
 
+      // Check if creator has unsubscribed from creator-outreach list
+      const emailLower = outreach.creatorEmail.toLowerCase().trim();
+      const prefs = await ctx.db
+        .query("resendPreferences")
+        .withIndex("by_user", (q: any) => q.eq("userId", emailLower))
+        .first();
+
+      if (prefs?.isUnsubscribed || prefs?.unsubscribedLists?.includes("creator-outreach")) {
+        await ctx.db.patch(outreach._id, {
+          status: "unsubscribed",
+          stoppedReason: "Unsubscribed from creator-outreach list",
+          completedAt: now,
+        });
+        continue;
+      }
+
       // Check auto-stop: did creator upload a product?
       if (sequence.stopOnProductUpload && outreach.storeId) {
         const store = await ctx.db.get(outreach.storeId);
@@ -867,16 +925,21 @@ export const processOutreachEmails = internalMutation({
             let textContent: string | undefined;
 
             if (isPlainText) {
-              // Plain text mode: strip HTML, send text-only
+              // Plain text mode: minimal HTML (no styling, just clickable links)
               const rawContent = personalizeStr(currentNode.data.htmlContent || "");
-              textContent = htmlToPlainText(rawContent) + PLAIN_TEXT_FOOTER;
-              htmlContent = ""; // Empty — text-only email
+              const plainBody = htmlToPlainText(rawContent);
+              textContent = plainBody + PLAIN_TEXT_FOOTER;
+              // Convert body to HTML, then append HTML footer separately
+              // (so the <a> tag in the footer isn't escaped)
+              htmlContent = plainTextToMinimalHtml(plainBody) + HTML_FOOTER;
             } else {
               htmlContent = personalizeStr(currentNode.data.htmlContent || "");
               if (!htmlContent.includes("<")) {
                 htmlContent = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a; line-height: 1.6;">${htmlContent.replace(/\n/g, "<br>")}</div>`;
               }
-              textContent = currentNode.data.textContent;
+              // Append HTML unsubscribe footer
+              htmlContent += HTML_FOOTER;
+              textContent = (currentNode.data.textContent || htmlToPlainText(htmlContent)) + PLAIN_TEXT_FOOTER;
             }
 
             const sendQueueId = await ctx.db.insert("emailSendQueue", {
@@ -1042,10 +1105,16 @@ export const processOutreachEmails = internalMutation({
         .replace(/\{\{email\}\}/g, outreach.creatorEmail);
 
       const isPlainText = sequence.plainTextMode === true;
-      const htmlContent = isPlainText ? "" : rawHtml;
-      const textContent = isPlainText
-        ? htmlToPlainText(rawHtml) + PLAIN_TEXT_FOOTER
-        : step.textContent;
+      let htmlContent: string;
+      let textContent: string | undefined;
+      if (isPlainText) {
+        const plainBody = htmlToPlainText(rawHtml);
+        textContent = plainBody + PLAIN_TEXT_FOOTER;
+        htmlContent = plainTextToMinimalHtml(plainBody) + HTML_FOOTER;
+      } else {
+        htmlContent = rawHtml + HTML_FOOTER;
+        textContent = (step.textContent || htmlToPlainText(rawHtml)) + PLAIN_TEXT_FOOTER;
+      }
 
       // Enqueue the email
       const sendQueueId = await ctx.db.insert("emailSendQueue", {

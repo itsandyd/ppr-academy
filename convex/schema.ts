@@ -7232,6 +7232,7 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
   })
     .index("by_creatorUserId", ["creatorUserId"])
+    .index("by_creatorEmail", ["creatorEmail"])
     .index("by_sequenceId", ["sequenceId"])
     .index("by_status", ["status"])
     .index("by_sequenceId_status", ["sequenceId", "status"])

@@ -486,10 +486,7 @@ export const sendWorkflowEmail = internalAction({
     previewText: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { Resend } = await import("resend");
     const crypto = await import("crypto");
-
-    const resend = new Resend(process.env.RESEND_API_KEY);
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
@@ -528,7 +525,7 @@ export const sendWorkflowEmail = internalAction({
     }
 
     const { sendEmailViaProvider } = await import("./lib/emailProvider");
-    await sendEmailViaProvider(resend, {
+    await sendEmailViaProvider({
       from: `${fromName} <${fromEmail}>`,
       to: args.email,
       subject: personalizedSubject,
@@ -569,15 +566,11 @@ export const sendNotificationEmail = internalAction({
     message: v.string(),
   },
   handler: async (ctx, args) => {
-    const { Resend } = await import("resend");
-
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
     const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
     const fromName = process.env.FROM_NAME || "Andrew";
 
     const { sendEmailViaProvider } = await import("./lib/emailProvider");
-    await sendEmailViaProvider(resend, {
+    await sendEmailViaProvider({
       from: `${fromName} <${fromEmail}>`,
       to: args.to,
       subject: args.subject,

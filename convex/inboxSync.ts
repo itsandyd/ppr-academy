@@ -12,8 +12,9 @@ import { Id } from "./_generated/dataModel";
  */
 
 /**
- * Fetch new replies from Resend inbox
- * Called by cron job every 15 minutes
+ * Fetch new replies from inbox (legacy - now a no-op)
+ * Previously used Resend API; email receiving is now via AWS SES webhooks.
+ * Retained for cron job compatibility.
  */
 export const fetchInboxReplies = internalAction({
   args: {},
@@ -22,30 +23,11 @@ export const fetchInboxReplies = internalAction({
     matched: v.number(),
     failed: v.number(),
   }),
-  handler: async (ctx) => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.error("[Inbox Sync] RESEND_API_KEY not configured");
-      return { fetched: 0, matched: 0, failed: 0 };
-    }
-    
-    try {
-      // NOTE: Resend doesn't have a direct "fetch inbox" API
-      // You need to set up email forwarding in Resend:
-      // inbox@pauseplayrepeat.com → forward to webhook
-      
-      // For now, we'll rely on webhooks to receive emails
-      // This function serves as a backup/manual trigger
-      
-      return {
-        fetched: 0,
-        matched: 0,
-        failed: 0,
-      };
-    } catch (error) {
-      console.error("[Inbox Sync] Error:", error);
-      return { fetched: 0, matched: 0, failed: 0 };
-    }
+  handler: async (_ctx) => {
+    // Inbox sync previously used Resend API which has been removed.
+    // Email receiving is now handled via AWS SES inbound webhooks.
+    // This function is retained as a no-op for cron compatibility.
+    return { fetched: 0, matched: 0, failed: 0 };
   },
 });
 

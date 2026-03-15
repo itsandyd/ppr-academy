@@ -141,6 +141,7 @@ export type DataModel = {
     indexes: {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
+      by_creatorEmail: ["creatorEmail", "_creationTime"];
       by_creatorUserId: ["creatorUserId", "_creationTime"];
       by_nextEmailAt: ["status", "nextEmailAt", "_creationTime"];
       by_sequenceId: ["sequenceId", "_creationTime"];
@@ -10165,6 +10166,7 @@ export type DataModel = {
       platformEmails: boolean;
       unsubscribeReason?: string;
       unsubscribedAt?: number;
+      unsubscribedLists?: Array<string>;
       updatedAt: number;
       userId: string;
       weeklyDigest: boolean;
@@ -10180,6 +10182,7 @@ export type DataModel = {
       | "marketingEmails"
       | "platformEmails"
       | "unsubscribedAt"
+      | "unsubscribedLists"
       | "unsubscribeReason"
       | "updatedAt"
       | "userId"

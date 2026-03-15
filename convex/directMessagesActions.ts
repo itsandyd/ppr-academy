@@ -3,22 +3,10 @@
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { Resend } from "resend";
 
 // ============================================================================
-// RESEND CLIENT
 // TRANSACTIONAL: Do not move to marketing API — these are DM notifications.
 // ============================================================================
-
-let resendClient: Resend | null = null;
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  if (!resendClient) {
-    resendClient = new Resend(key);
-  }
-  return resendClient;
-}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@ppracademy.com";
 const PLATFORM_NAME = "PPR Academy";
@@ -48,16 +36,11 @@ export const sendNewMessageEmail = internalAction({
       return { success: true };
     }
 
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     const messageUrl = `${BASE_URL}/dashboard/messages/${args.conversationId}`;
 
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: FROM_EMAIL,
         to: recipient.email,
         subject: `New message from ${args.senderName} - ${PLATFORM_NAME}`,

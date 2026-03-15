@@ -1,17 +1,5 @@
-import { Resend } from 'resend';
 import { generateUnsubscribeUrl, generateListUnsubscribeHeader } from './unsubscribe';
 import { sendViaProvider } from './email-provider';
-
-// TRANSACTIONAL: All functions in this file send through the transactional Resend API.
-// Do not move these to the marketing API — they are purchase confirmations, enrollment
-// notifications, payment alerts, and other emails the recipient explicitly triggered.
-// Initialize Resend only when needed
-const getResendClient = () => {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY not configured');
-  }
-  return new Resend(process.env.RESEND_API_KEY);
-};
 
 // Email configuration
 const FROM_EMAIL = 'Andrew <andrew@pauseplayrepeat.com>';
@@ -164,16 +152,9 @@ const getAdminNotificationTemplate = (data: AdminNotificationData) => `
 
 // Main email sending functions
 export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: data.adminEmail || DEFAULT_REPLY_TO,
@@ -190,15 +171,8 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
 }
 
 export async function sendAdminNotification(data: AdminNotificationData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.adminName.includes('@') ? data.adminName : `admin@yourdomain.com`, // Fallback if adminName isn't email
       replyTo: DEFAULT_REPLY_TO,
@@ -216,16 +190,10 @@ export async function sendAdminNotification(data: AdminNotificationData) {
 
 // Welcome email for general use
 export async function sendWelcomeEmail(data: WelcomeEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const recipientEmail = data.customerName.includes('@') ? data.customerName : `customer@example.com`;
     const listHeaders = generateListUnsubscribeHeader(recipientEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: recipientEmail,
       replyTo: data.adminEmail || DEFAULT_REPLY_TO,
@@ -325,16 +293,9 @@ const getPaymentFailureEmailTemplate = (data: PaymentFailureEmailData) => `
 `;
 
 export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -438,16 +399,9 @@ const getCourseEnrollmentEmailTemplate = (data: CourseEnrollmentEmailData) => `
 `;
 
 export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -535,15 +489,9 @@ const getTipConfirmationEmailTemplate = (data: TipConfirmationEmailData) => `
 `;
 
 export async function sendTipConfirmationEmail(data: TipConfirmationEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -649,15 +597,9 @@ const getMembershipConfirmationEmailTemplate = (data: MembershipConfirmationEmai
 `;
 
 export async function sendMembershipConfirmationEmail(data: MembershipConfirmationEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -755,15 +697,9 @@ const getBeatPurchaseEmailTemplate = (data: BeatPurchaseEmailData) => `
 `;
 
 export async function sendBeatPurchaseEmail(data: BeatPurchaseEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -850,15 +786,9 @@ const getDigitalProductPurchaseEmailTemplate = (data: DigitalProductPurchaseEmai
 `;
 
 export async function sendDigitalProductPurchaseEmail(data: DigitalProductPurchaseEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -949,15 +879,9 @@ const getBundlePurchaseEmailTemplate = (data: BundlePurchaseEmailData) => `
 `;
 
 export async function sendBundlePurchaseEmail(data: BundlePurchaseEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1068,15 +992,9 @@ const getCoachingConfirmationEmailTemplate = (data: CoachingConfirmationEmailDat
 `;
 
 export async function sendCoachingConfirmationEmail(data: CoachingConfirmationEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1169,15 +1087,9 @@ const getCreditsPurchaseEmailTemplate = (data: CreditsPurchaseEmailData) => `
 `;
 
 export async function sendCreditsPurchaseEmail(data: CreditsPurchaseEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1308,15 +1220,9 @@ const getMixingServiceEmailTemplate = (data: MixingServiceEmailData) => `
 `;
 
 export async function sendMixingServiceEmail(data: MixingServiceEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1424,15 +1330,9 @@ const getPlaylistSubmissionEmailTemplate = (data: PlaylistSubmissionEmailData) =
 `;
 
 export async function sendPlaylistSubmissionEmail(data: PlaylistSubmissionEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1545,16 +1445,10 @@ const getCoachingReminderEmailTemplate = (data: CoachingReminderEmailData) => `
 `;
 
 export async function sendCoachingReminderEmail(data: CoachingReminderEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const urgency = data.hoursUntilSession <= 1 ? '⚡ STARTING SOON' : `⏰ In ${data.hoursUntilSession}h`;
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1645,15 +1539,9 @@ const getPprProWelcomeEmailTemplate = (data: PprProWelcomeEmailData) => {
 };
 
 export async function sendPprProWelcomeEmail(data: PprProWelcomeEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1731,15 +1619,9 @@ const getPprProCancelledEmailTemplate = (data: PprProCancelledEmailData) => {
 };
 
 export async function sendPprProCancelledEmail(data: PprProCancelledEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1811,15 +1693,9 @@ const getPprProPaymentFailedEmailTemplate = (data: PprProPaymentFailedEmailData)
 };
 
 export async function sendPprProPaymentFailedEmail(data: PprProPaymentFailedEmailData) {
-  if (!process.env.RESEND_API_KEY) {
-    // RESEND_API_KEY not configured - simulation mode
-    return { success: true, simulation: true };
-  }
-
   try {
-    const resend = getResendClient();
     const listHeaders = generateListUnsubscribeHeader(data.customerEmail);
-    const result = await sendViaProvider(resend, {
+    const result = await sendViaProvider({
       from: FROM_EMAIL,
       to: data.customerEmail,
       replyTo: DEFAULT_REPLY_TO,
@@ -1837,16 +1713,10 @@ export async function sendPprProPaymentFailedEmail(data: PprProPaymentFailedEmai
 
 // Utility to verify email configuration
 export async function verifyEmailConfig() {
-  if (!process.env.RESEND_API_KEY) {
-    return { configured: false, message: 'RESEND_API_KEY not found in environment variables' };
+  // Email is now sent via AWS SES. Check that SES env vars are present.
+  const hasRegion = !!process.env.AWS_SES_REGION || !!process.env.AWS_REGION;
+  if (!hasRegion) {
+    return { configured: false, message: 'AWS SES region not configured (AWS_SES_REGION or AWS_REGION)' };
   }
-
-  try {
-    // Test with a simple request to verify API key
-    const resendInstance = new Resend(process.env.RESEND_API_KEY);
-    // Note: This doesn't actually send an email, just tests API connectivity
-    return { configured: true, message: 'Resend API key configured successfully' };
-  } catch (error) {
-    return { configured: false, message: `Resend configuration error: ${error}` };
-  }
+  return { configured: true, message: 'AWS SES configured successfully' };
 } 

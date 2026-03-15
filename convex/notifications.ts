@@ -1,3 +1,5 @@
+"use node";
+
 import { v } from "convex/values";
 import { query, mutation, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
@@ -323,11 +325,7 @@ export const processNotificationEmails = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
-      return null;
-    }
+    const { sendEmailViaProvider } = await import("./lib/emailProvider");
 
     // Fetch notifications
     for (const notificationId of args.notificationIds) {
@@ -365,33 +363,21 @@ export const processNotificationEmails = internalAction({
         continue;
       }
 
-      // Send email via Resend
+      // Send email via SES
       try {
-        // Use Resend's testing email if custom domain isn't verified yet
-        const fromEmail = process.env.RESEND_FROM_EMAIL || "PPR Academy <andrew@pauseplayrepeat.com>";
-        
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: user.email,
-            subject: notification.title,
-            html: generateNotificationEmailHTML(notification),
-          }),
+        const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
+        const fromName = process.env.FROM_NAME || "PPR Academy";
+
+        await sendEmailViaProvider({
+          from: `${fromName} <${fromEmail}>`,
+          to: user.email,
+          subject: notification.title,
+          html: generateNotificationEmailHTML(notification),
         });
 
-        if (response.ok) {
-          await ctx.runMutation(internal.notifications.markEmailSent, {
-            notificationId,
-          });
-        } else {
-          const error = await response.text();
-          console.error(`Failed to send email: ${error}`);
-        }
+        await ctx.runMutation(internal.notifications.markEmailSent, {
+          notificationId,
+        });
       } catch (error) {
         console.error(`Error sending email:`, error);
       }

@@ -2,12 +2,10 @@
 
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { Resend } from "resend";
 import { internal } from "./_generated/api";
 import crypto from "crypto";
 import { Id } from "./_generated/dataModel";
-import { getMarketingResendClient, ensureMarketingContact } from "./lib/resendClients";
-import { sendEmailViaProvider, getEmailProvider } from "./lib/emailProvider";
+import { sendEmailViaProvider } from "./lib/emailProvider";
 
 // ============================================================================
 // API KEY ENCRYPTION/DECRYPTION (AES-256-GCM)
@@ -110,18 +108,6 @@ export function isEncrypted(value: string): boolean {
   return value.startsWith(ENCRYPTION_PREFIX);
 }
 
-let resendClient: Resend | null = null;
-function getResendClient(apiKey?: string) {
-  const key = apiKey || process.env.RESEND_API_KEY;
-  if (!key) {
-    return null;
-  }
-  if (!resendClient || apiKey) {
-    resendClient = new Resend(key);
-  }
-  return resendClient;
-}
-
 function generateUnsubscribeToken(email: string, storeId?: string): string {
   const secret =
     process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
@@ -218,7 +204,7 @@ function personalizeContent(
     .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl)
-    // Replace Resend-specific merge tags with PPR's own unsubscribe URL
+    // Replace legacy merge tags with PPR's own unsubscribe URL
     .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl)
     // Learning stats
     .replace(/\{\{coursesEnrolled\}\}/g, String(stats.coursesEnrolled ?? 0))
@@ -264,11 +250,10 @@ function personalizeContent(
 }
 
 // ============================================================================
-// EMAIL ACTIONS (Node.js Runtime - Resend Integration)
+// EMAIL ACTIONS (Node.js Runtime)
 // ============================================================================
 
 // Rate limiting configuration
-// Resend limits: Free=2/sec, Pro=10/sec, Team=100/sec
 // We use conservative limits to avoid hitting rate limits
 const EMAILS_PER_SECOND = 5; // Safe for most paid tiers
 const BATCH_SIZE = 50; // Smaller batches for better reliability
@@ -409,8 +394,7 @@ export const processCampaign = internalAction({
 
 /**
  * Send a batch of campaign emails (INTERNAL)
- * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
- * Now with rate limiting to respect Resend API limits
+ * Now with rate limiting
  */
 export const sendCampaignBatch = internalAction({
   args: {
@@ -424,12 +408,6 @@ export const sendCampaignBatch = internalAction({
 
     if (!campaign) {
       throw new Error("Campaign not found");
-    }
-
-    // MARKETING: Use marketing Resend client for campaign sends
-    const resend = getMarketingResendClient();
-    if (!resend) {
-      throw new Error("Resend not configured");
     }
 
     // Check if this is an emailCampaign
@@ -572,7 +550,7 @@ export const sendCampaignBatch = internalAction({
           ? `${recipient.name} <${recipient.email}>`
           : recipient.email;
 
-        await sendEmailViaProvider(resend, {
+        await sendEmailViaProvider({
           from: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
           to: toHeader,
           subject: personalizedSubject,
@@ -751,16 +729,8 @@ export const testStoreEmailConfig = action({
   }),
   handler: async (ctx, args) => {
     try {
-      const resend = getResendClient();
-      if (!resend) {
-        return {
-          success: false,
-          message: "Email service not configured. Please contact support.",
-        };
-      }
-
       // Send test email
-      const result = await sendEmailViaProvider(resend, {
+      const result = await sendEmailViaProvider({
         from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
         to: args.testEmail,
         replyTo: args.replyToEmail || args.fromEmail,
@@ -818,9 +788,9 @@ export const testStoreEmailConfig = action({
 
       if (error.message?.includes("from") || error.message?.includes("sender")) {
         errorMessage +=
-          "Please verify your 'from' email address is from a verified domain in Resend.";
+          "Please verify your 'from' email address is from a verified domain.";
       } else if (error.message?.includes("domain")) {
-        errorMessage += "Please verify your domain is configured in Resend.";
+        errorMessage += "Please verify your domain is configured correctly.";
       } else {
         errorMessage += `Error: ${error.message}`;
       }
@@ -835,19 +805,7 @@ export const testStoreEmailConfig = action({
 
 /**
  * Send a broadcast email to selected contacts (one-time send, not a campaign).
- *
- * MARKETING: Uses Resend Broadcasts API (resend.broadcasts.create + send)
- * when the marketing audience is configured. Falls back to individual sends
- * via marketing Resend client when Broadcasts API is not available.
- *
- * The Broadcasts API handles unsubscribe links automatically and sends
- * to all contacts in the audience. For targeted sends (subset of contacts),
- * we ensure contacts exist in the audience, then use the Broadcasts API
- * which respects each contact's unsubscribe status.
- *
- * Note: Broadcasts API has limited personalization (contact properties only,
- * via {{{PROPERTY_NAME}}} syntax). For rich per-recipient personalization,
- * individual sends through the marketing client are still used.
+ * Sends individually via AWS SES with per-recipient personalization.
  */
 export const sendBroadcastEmail = action({
   args: {
@@ -892,18 +850,6 @@ export const sendBroadcastEmail = action({
         failed: 0,
         skipped: 0,
         message: "No recipients selected",
-      };
-    }
-
-    // MARKETING: Use marketing Resend client for broadcast sends
-    const resend = getMarketingResendClient();
-    if (!resend) {
-      return {
-        success: false,
-        sent: 0,
-        failed: 0,
-        skipped: 0,
-        message: "Email service not configured",
       };
     }
 
@@ -956,79 +902,7 @@ export const sendBroadcastEmail = action({
       };
     }
 
-    const provider = getEmailProvider();
-
-    // --- Resend Broadcasts API path ---
-    // Only used when EMAIL_PROVIDER=resend and marketing audience is configured.
-    // SES doesn't need broadcast routing — every email is the same API call.
-    if (provider === "resend") {
-      const audienceId = process.env.RESEND_MARKETING_AUDIENCE_ID;
-      if (audienceId) {
-        try {
-          // Ensure all eligible contacts exist in the marketing audience
-          for (const contact of eligibleContacts) {
-            await ensureMarketingContact(
-              contact.email,
-              contact.firstName,
-              contact.lastName,
-            );
-          }
-
-          // CAN-SPAM safety net: ensure broadcast HTML has an unsubscribe link
-          let broadcastHtml = args.htmlContent;
-          if (!broadcastHtml.includes("unsubscribe") && !broadcastHtml.includes("RESEND_UNSUBSCRIBE_URL")) {
-            broadcastHtml += `<br><br><br><br><br><br><br><br><br><br>
-<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
-<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
-          }
-
-          // Create and immediately send the broadcast via Resend Broadcasts API
-          const { data, error } = await resend.broadcasts.create({
-            audienceId,
-            from: `${fromName} <${fromEmail}>`,
-            subject: args.subject,
-            html: broadcastHtml,
-            replyTo: replyToEmail,
-            name: `PPR Broadcast ${new Date().toISOString().slice(0, 10)}`,
-          });
-
-          if (error) {
-            console.error(`[Broadcast] Failed to create broadcast:`, error);
-            // Fall through to per-recipient sends below
-          } else if (data?.id) {
-            const { error: sendError } = await resend.broadcasts.send(data.id);
-            if (sendError) {
-              console.error(`[Broadcast] Failed to send broadcast ${data.id}:`, sendError);
-            } else {
-              for (const contact of eligibleContacts) {
-                try {
-                  await ctx.runMutation(internal.emailQueries.incrementContactEmailsSent, {
-                    contactId: contact._id,
-                  });
-                } catch {
-                  // Non-critical — don't fail the broadcast for stats
-                }
-              }
-
-              return {
-                success: true,
-                sent: eligibleContacts.length,
-                failed: 0,
-                skipped,
-                message: `Broadcast sent to ${eligibleContacts.length} contact${eligibleContacts.length !== 1 ? "s" : ""} via Resend Broadcasts API${skipped > 0 ? `, ${skipped} skipped` : ""}`,
-              };
-            }
-          }
-        } catch (error) {
-          console.error(`[Broadcast] Broadcasts API failed, falling back to individual sends:`, error);
-          // Fall through to per-recipient sends
-        }
-      }
-    }
-
-    // --- Fallback: individual sends via marketing API ---
-    // Used when Broadcasts API is not configured or fails.
-    // Also supports rich per-recipient personalization.
+    // --- Individual sends via SES ---
     for (const contact of eligibleContacts) {
       try {
         const recipientName =
@@ -1055,8 +929,7 @@ export const sendBroadcastEmail = action({
           ? `${recipientName} <${contact.email}>`
           : contact.email;
 
-        // MARKETING: Send via configured provider (Resend or SES)
-        await sendEmailViaProvider(resend, {
+        await sendEmailViaProvider({
           from: `${fromName} <${fromEmail}>`,
           to: toHeader,
           subject: personalizedSubject,
@@ -1226,7 +1099,7 @@ export const migrateApiKeysToEncrypted = internalAction({
 // updateConnectionApiKey moved to emailQueries.ts
 
 // ============================================================================
-// RESEND FAILED ENROLLMENT EMAILS (One-off utility)
+// RESEND FAILED ENROLLMENT EMAILS (One-off utility - resends missed emails)
 // ============================================================================
 
 /**
@@ -1245,11 +1118,6 @@ export const resendEnrollmentEmails = action({
     const dryRun = args.dryRun ?? true;
     const cutoffTime = Date.now() - daysBack * 24 * 60 * 60 * 1000;
 
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!RESEND_API_KEY && !dryRun) {
-      throw new Error("RESEND_API_KEY not configured");
-    }
-
     // Query recent course purchases
     const purchases = await ctx.runQuery(
       internal.emailQueries.getRecentCoursePurchases,
@@ -1262,8 +1130,6 @@ export const resendEnrollmentEmails = action({
       status: string;
       messageId?: string;
     }> = [];
-
-    const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
     for (const purchase of purchases) {
       if (!purchase.userEmail) {
@@ -1321,7 +1187,7 @@ export const resendEnrollmentEmails = action({
 </body>
 </html>`;
 
-        const result = await sendEmailViaProvider(resend!, {
+        const result = await sendEmailViaProvider({
           from: "PPR Academy <no-reply@pauseplayrepeat.com>",
           to: purchase.userEmail,
           replyTo: "no-reply@pauseplayrepeat.com",

@@ -7,20 +7,7 @@ import { internal } from "./_generated/api";
 /**
  * Main workflow execution processor - called by cron.
  * Uses bulk mutation for delay/tag/action nodes (fast), only uses actions for email nodes (slow).
- *
- * BROADCAST OPTIMIZATION:
- * When multiple executions are at the same email node with broadcast-safe content
- * (no per-recipient variables like {{level}}), they are sent as a single Resend
- * Broadcast instead of thousands of individual sends. This routes through the
- * Marketing plan (unlimited broadcasts) instead of the Transactional plan (capped).
- *
- * Detection criteria for broadcast:
- * - Same workflowId + same currentNodeId (same email node)
- * - More than 1 recipient
- * - No per-recipient variables in subject or body
- * - Email node has inline content (not template-based)
- *
- * If broadcast send fails, falls back to individual sends via the transactional queue.
+ * All emails are sent via AWS SES through the email send queue.
  */
 export const processEmailWorkflowExecutions = internalAction({
   args: {},
@@ -38,92 +25,11 @@ export const processEmailWorkflowExecutions = internalAction({
 
     if (bulkResult.emailNodeIds.length === 0) return null;
 
-    // Phase 2: Broadcast detection — group email nodes by (workflowId, nodeId)
-    const execDetails = await ctx.runQuery(
-      internal.emailWorkflows.getEmailNodeExecutionDetails,
-      { executionIds: bulkResult.emailNodeIds }
-    );
-
-    // Group by workflowId:nodeId
-    const groups = new Map<string, {
-      workflowId: any;
-      nodeId: string;
-      storeId: string;
-      execIds: any[];
-      emails: string[];
-    }>();
-
-    for (const exec of execDetails) {
-      const key = `${exec.workflowId}:${exec.currentNodeId}`;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          workflowId: exec.workflowId,
-          nodeId: exec.currentNodeId,
-          storeId: exec.storeId,
-          execIds: [],
-          emails: [],
-        });
-      }
-      const group = groups.get(key)!;
-      group.execIds.push(exec._id);
-      group.emails.push(exec.customerEmail);
-    }
-
-    // Track which execution IDs were handled by broadcast
-    const broadcastHandled = new Set<string>();
-
-    // Phase 2a: Try broadcast for groups with >1 recipient
-    // SKIPPED when EMAIL_PROVIDER=ses — SES treats every email the same,
-    // so there's no cost benefit to the Resend Broadcasts API path.
-    // All emails go through the same individual send path (Phase 2b).
-    const { getEmailProvider } = await import("./lib/emailProvider");
-    const emailProvider = getEmailProvider();
-
-    if (emailProvider === "resend") {
-      for (const [key, group] of groups) {
-        if (group.execIds.length <= 1) continue; // Single recipient — use individual send
-
-        try {
-          const result = await ctx.runAction(
-            internal.emailWorkflowActions.sendWorkflowBroadcast,
-            {
-              workflowId: group.workflowId,
-              emailNodeId: group.nodeId,
-              executionIds: group.execIds,
-              recipientEmails: group.emails,
-              storeId: group.storeId,
-            }
-          );
-
-          if (result.success) {
-            console.log(
-              `[EmailWorkflows] Broadcast sent: ${result.recipientCount} recipients via ${result.method} ` +
-              `(workflow ${group.workflowId}, node ${group.nodeId})`
-            );
-            for (const id of result.handledExecutionIds) {
-              broadcastHandled.add(id);
-            }
-          } else {
-            console.log(
-              `[EmailWorkflows] Broadcast not applicable for ${key}: ${result.error}. ` +
-              `Falling back to individual sends for ${group.execIds.length} executions.`
-            );
-          }
-        } catch (error) {
-          console.error(`[EmailWorkflows] Broadcast failed for ${key}:`, error);
-          // Fall through — these will be processed individually below
-        }
-      }
-    } else {
-      console.log(`[EmailWorkflows] Provider=${emailProvider}, skipping broadcast detection for ${bulkResult.emailNodeIds.length} email nodes`);
-    }
-
-    // Phase 2b: Process remaining email nodes individually (broadcast-ineligible, failed, or SES)
+    // Phase 2: Process email nodes individually via AWS SES queue
     let emailProcessed = 0;
     let emailFailed = 0;
 
     for (const execId of bulkResult.emailNodeIds) {
-      if (broadcastHandled.has(execId)) continue; // Already sent via broadcast
 
       try {
         await ctx.runAction(internal.emailWorkflowActions.executeWorkflowNode, {
@@ -775,12 +681,7 @@ export const executeWorkflowNode = internalAction({
 
 /**
  * Resolve custom email content (personalization, variables) and enqueue for batch sending.
- * Replaces the old inline-send pattern for custom workflow emails.
- *
- * MARKETING: Enqueues with source="workflow" which routes through the marketing
- * Resend client (RESEND_MARKETING_API_KEY). These are promotional/nurture sequences
- * triggered by workflow automations, not user-initiated transactional emails.
- * Ensures contact exists in the Resend marketing audience before enqueuing.
+ * Emails are sent via AWS SES through the email send queue.
  */
 export const resolveAndEnqueueCustomEmail = internalAction({
   args: {
@@ -805,7 +706,6 @@ export const resolveAndEnqueueCustomEmail = internalAction({
       return null;
     }
 
-    const { ensureMarketingContact } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get contact info if available
@@ -821,13 +721,6 @@ export const resolveAndEnqueueCustomEmail = internalAction({
           ? `${contact.firstName} ${contact.lastName}`
           : contact.firstName || "";
       }
-    }
-
-    // MARKETING: Ensure contact exists in Resend marketing audience before sending
-    // Skip when SES — Resend audience sync is unnecessary
-    const { getEmailProvider: getProvider } = await import("./lib/emailProvider");
-    if (getProvider() === "resend") {
-      await ensureMarketingContact(args.customerEmail, firstName || undefined);
     }
 
     // Get creator's first name for {{senderName}} and store name for {{storeName}}
@@ -934,7 +827,7 @@ export const resolveAndEnqueueCustomEmail = internalAction({
         .replace(/\{\{topCourseThisWeek\}\}/g, platformStats.topCourseThisWeek)
         .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
         .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
-        // Replace Resend-specific merge tags with PPR's own unsubscribe URL
+        // Replace legacy Resend merge tags in old templates with PPR's unsubscribe URL
         .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl)
         .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
       // Clean up trailing space before punctuation when firstName was empty
@@ -999,11 +892,7 @@ ${bodyContent}
 
 /**
  * Resolve template email content and enqueue for batch sending.
- * Replaces the old inline-send pattern for template workflow emails.
- *
- * MARKETING: Enqueues with source="workflow" which routes through the marketing
- * Resend client (RESEND_MARKETING_API_KEY). Ensures contact exists in the
- * Resend marketing audience before enqueuing.
+ * Emails are sent via AWS SES through the email send queue.
  */
 export const resolveAndEnqueueTemplateEmail = internalAction({
   args: {
@@ -1024,7 +913,6 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
       return null;
     }
 
-    const { ensureMarketingContact } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get the template
@@ -1052,13 +940,6 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
       }
     }
 
-    // MARKETING: Ensure contact exists in Resend marketing audience before sending
-    // Skip when SES — Resend audience sync is unnecessary
-    const { getEmailProvider: getProviderForTemplate } = await import("./lib/emailProvider");
-    if (getProviderForTemplate() === "resend") {
-      await ensureMarketingContact(args.customerEmail, firstName || undefined);
-    }
-
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
     // Generate unsubscribe URL with per-creator storeId
@@ -1078,7 +959,7 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
       .replace(/\{\{email\}\}/g, args.customerEmail)
       .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
       .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
-      // Replace Resend-specific merge tags with PPR's own unsubscribe URL
+      // Replace legacy Resend merge tags in old templates with PPR's unsubscribe URL
       .replace(/\{\{\{RESEND_UNSUBSCRIBE_URL\}\}\}/g, unsubscribeUrl);
 
     const subject = template.subject
@@ -1124,93 +1005,10 @@ export const resolveAndEnqueueTemplateEmail = internalAction({
   },
 });
 
-// --- Per-recipient variables that disqualify an email from broadcast mode ---
-// If the template contains any of these, it needs per-recipient data lookups
-// and must fall back to individual sends via the transactional queue.
-const PER_RECIPIENT_VARIABLES = [
-  "{{level}}", "{{xp}}", "{{coursesEnrolled}}", "{{lessonsCompleted}}",
-  "{{storeName}}", "{{memberSince}}", "{{daysSinceJoined}}", "{{totalSpent}}",
-];
-
-// Variables that are safe for broadcast (either global or handled by Resend merge tags)
-// {{firstName}}, {{first_name}}, {{name}} → Resend's {{{first_name|there}}}
-// {{email}} → Resend's {{{email}}}
-// {{unsubscribeLink}}, {{unsubscribe_link}} → Resend's {{{RESEND_UNSUBSCRIBE_URL}}}
-// {{senderName}}, {{sender_name}}, {{platformUrl}} → resolved once (same for all)
-// {{newCoursesCount}}, {{latestCourseName}}, etc. → resolved once (platform-wide)
 
 /**
- * Check if an email template is broadcast-safe (no per-recipient variables).
- */
-function isBroadcastSafe(subject: string, content: string): boolean {
-  const combined = subject + content;
-  return !PER_RECIPIENT_VARIABLES.some((v) => combined.includes(v));
-}
-
-/**
- * Convert workflow template variables to Resend broadcast merge tag syntax.
- * Resolves global variables inline, converts per-contact variables to triple-curly.
- */
-function convertToBroadcastHtml(
-  html: string,
-  globals: {
-    senderName: string;
-    fromName: string;
-    platformUrl: string;
-    newCoursesCount: string;
-    latestCourseName: string;
-    newSamplePacksCount: string;
-    newCreatorsCount: string;
-    topCourseThisWeek: string;
-  }
-): string {
-  let result = html
-    // Per-contact → Resend merge tags (triple curly braces)
-    .replace(/\{\{firstName\}\}/g, "{{{first_name}}}")
-    .replace(/\{\{first_name\}\}/g, "{{{first_name}}}")
-    .replace(/\{\{name\}\}/g, "{{{first_name}}}")
-    .replace(/\{\{email\}\}/g, "{{{email}}}")
-    // Unsubscribe → Resend built-in
-    .replace(/\{\{unsubscribeLink\}\}/g, "{{{RESEND_UNSUBSCRIBE_URL}}}")
-    .replace(/\{\{unsubscribe_link\}\}/g, "{{{RESEND_UNSUBSCRIBE_URL}}}")
-    // Global variables → resolve inline (same for all recipients)
-    .replace(/\{\{senderName\}\}/g, globals.senderName || globals.fromName)
-    .replace(/\{\{sender_name\}\}/g, globals.senderName || globals.fromName)
-    .replace(/\{\{platformUrl\}\}/g, globals.platformUrl)
-    .replace(/\{\{newCoursesCount\}\}/g, globals.newCoursesCount)
-    .replace(/\{\{latestCourseName\}\}/g, globals.latestCourseName)
-    .replace(/\{\{newSamplePacksCount\}\}/g, globals.newSamplePacksCount)
-    .replace(/\{\{newCreatorsCount\}\}/g, globals.newCreatorsCount)
-    .replace(/\{\{topCourseThisWeek\}\}/g, globals.topCourseThisWeek)
-    // Clean up Handlebars conditionals
-    .replace(/\{\{#if\s+\w+\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
-
-  // CAN-SPAM safety net for broadcasts: if no unsubscribe link is present
-  // after all replacements, append one using Resend's built-in merge tag.
-  if (!result.includes("unsubscribe") && !result.includes("RESEND_UNSUBSCRIBE_URL")) {
-    result += `<br><br><br><br><br><br><br><br><br><br>
-<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
-<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>`;
-  }
-
-  return result;
-}
-
-/**
- * Send a batch of workflow emails via the Resend Broadcasts API.
- * Called when broadcast detection identifies a group of executions at the same
- * email node with broadcast-safe content (no per-recipient variables like {{level}}).
- *
- * Flow:
- * 1. Fetch the workflow to get the email node's subject + content
- * 2. Verify it's broadcast-safe (no per-recipient variables)
- * 3. Ensure all recipients exist as contacts in the Resend marketing audience
- * 4. Convert {{firstName}} → {{{first_name|there}}} etc.
- * 5. Create + send broadcast via Resend Broadcasts API
- * 6. Advance all executions to the next node via bulkAdvanceAfterEmailNode
- *
- * Returns the list of execution IDs that were handled (so the caller can skip them).
- * If broadcast fails, returns empty array — caller falls back to individual sends.
+ * LEGACY NO-OP: Resend Broadcasts API has been retired. All emails now go
+ * through individual sends via AWS SES. Kept to avoid breaking callers.
  */
 export const sendWorkflowBroadcast = internalAction({
   args: {
@@ -1228,231 +1026,15 @@ export const sendWorkflowBroadcast = internalAction({
     method: v.string(),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
-    const {
-      getMarketingResendClient,
-      getMarketingAudienceId,
-      ensureMarketingContact,
-    } = await import("./lib/resendClients");
-    const dryRun = args.dryRun ?? false;
-
-    // 1. Get the workflow and email node
-    const workflow = await ctx.runQuery(internal.emailWorkflows.getWorkflowInternal, {
-      workflowId: args.workflowId,
-    });
-    if (!workflow) {
-      return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: "Workflow not found" };
-    }
-
-    const emailNode = workflow.nodes.find((n: any) => n.id === args.emailNodeId);
-    if (!emailNode || emailNode.type !== "email") {
-      return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: "Email node not found" };
-    }
-
-    // 2. Get subject and content from the node
-    const subject = emailNode.data?.subject;
-    const content = emailNode.data?.content || emailNode.data?.body;
-
-    if (!subject || !content) {
-      // Template-based email nodes or empty nodes — fall back to individual sends
-      return { success: false, handledExecutionIds: [], recipientCount: 0, method: "individual", error: "No inline subject/content" };
-    }
-
-    // 3. Verify broadcast-safe
-    if (!isBroadcastSafe(subject, content)) {
-      console.log(`[Broadcast] Email node ${args.emailNodeId} uses per-recipient variables, falling back to individual sends`);
-      return { success: false, handledExecutionIds: [], recipientCount: 0, method: "individual", error: "Per-recipient variables detected" };
-    }
-
-    // 4. Get global variables (platform stats, creator name, store name)
-    let senderName = "";
-    try {
-      const creatorFirstName = await ctx.runQuery(internal.emailWorkflows.getCreatorFirstNameByClerkId, {
-        clerkId: args.storeId,
-      });
-      senderName = creatorFirstName || "";
-    } catch (e) {
-      // Non-critical
-    }
-
-    let platformStats = {
-      newCoursesCount: "0", latestCourseName: "", newSamplePacksCount: "0",
-      newCreatorsCount: "0", topCourseThisWeek: "Production Essentials",
-    };
-    try {
-      const pStats = await ctx.runQuery(internal.emailUserStats.getPlatformStatsForEmail, {});
-      if (pStats) {
-        platformStats = {
-          newCoursesCount: String(pStats.newCoursesCount || 0),
-          latestCourseName: pStats.latestCourseName || "",
-          newSamplePacksCount: String(pStats.newSamplePacksCount || 0),
-          newCreatorsCount: String(pStats.newCreatorsCount || 0),
-          topCourseThisWeek: pStats.topCourseThisWeek || "Production Essentials",
-        };
-      }
-    } catch (e) {
-      // Non-critical
-    }
-
-    const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
-    const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
-    const fromName = process.env.FROM_NAME || "Andrew";
-
-    // 5. Convert template to broadcast format
-    const broadcastSubject = convertToBroadcastHtml(subject, {
-      senderName, fromName, platformUrl, ...platformStats,
-    });
-
-    const bodyContent = convertToBroadcastHtml(content, {
-      senderName, fromName, platformUrl, ...platformStats,
-    });
-
-    // Wrap in HTML email structure (same as resolveAndEnqueueCustomEmail)
-    // Use Resend's built-in unsubscribe URL instead of custom one
-    const broadcastHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:200%;color:#1a1a1a;background-color:#ffffff;">
-<div style="max-width:600px;margin:0 auto;padding:20px;">
-${bodyContent}
-<br><br><br><br><br><br><br><br><br><br>
-<p style="text-align:center;font-size:12px;color:#888;margin:0;"><a href="{{{RESEND_UNSUBSCRIBE_URL}}}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
-<p style="text-align:center;font-size:12px;color:#888;margin:4px 0 0;">PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709</p>
-</div>
-</body>
-</html>`;
-
-    // 6. DRY RUN: Log what would happen without actually sending
-    if (dryRun) {
-      console.log(`[Broadcast DRY RUN] Would send broadcast to ${args.recipientEmails.length} recipients`);
-      console.log(`[Broadcast DRY RUN] Subject: ${broadcastSubject}`);
-      console.log(`[Broadcast DRY RUN] Workflow: ${workflow.name}, Node: ${args.emailNodeId}`);
-      return {
-        success: true,
-        handledExecutionIds: args.executionIds,
-        recipientCount: args.recipientEmails.length,
-        method: "broadcast-dry-run",
-      };
-    }
-
-    // 6b. Filter out suppressed recipients before sending broadcast
-    const suppressionResults = await ctx.runQuery(
-      internal.emailUnsubscribe.checkSuppressionBatch,
-      { emails: args.recipientEmails, storeId: args.storeId }
-    );
-    const suppressedEmails = new Set(
-      suppressionResults
-        .filter((r) => r.suppressed)
-        .map((r) => r.email.toLowerCase())
-    );
-
-    // Filter recipientEmails and executionIds in parallel (same indices)
-    const filteredEmails: string[] = [];
-    const filteredExecIds: typeof args.executionIds = [];
-    for (let i = 0; i < args.recipientEmails.length; i++) {
-      if (!suppressedEmails.has(args.recipientEmails[i].toLowerCase())) {
-        filteredEmails.push(args.recipientEmails[i]);
-        filteredExecIds.push(args.executionIds[i]);
-      }
-    }
-
-    if (filteredEmails.length === 0) {
-      // All recipients suppressed — mark executions as handled (no email to send)
-      try {
-        await ctx.runMutation(internal.emailWorkflows.bulkAdvanceAfterEmailNode, {
-          executionIds: args.executionIds,
-          workflowId: args.workflowId,
-          emailNodeId: args.emailNodeId,
-        });
-      } catch (error) {
-        console.error("[Broadcast] Failed to advance suppressed executions:", error);
-      }
-      return {
-        success: true,
-        handledExecutionIds: args.executionIds,
-        recipientCount: 0,
-        method: "broadcast-all-suppressed",
-      };
-    }
-
-    // 7. Ensure all contacts exist in the marketing audience
-    let audienceId: string;
-    try {
-      audienceId = getMarketingAudienceId();
-    } catch (e) {
-      console.error("[Broadcast] RESEND_MARKETING_AUDIENCE_ID not configured, falling back to individual sends");
-      return { success: false, handledExecutionIds: [], recipientCount: 0, method: "individual", error: "No audience ID configured" };
-    }
-
-    // Batch-ensure contacts (with concurrency limit to avoid rate limits)
-    const CONTACT_BATCH_SIZE = 50;
-    for (let i = 0; i < filteredEmails.length; i += CONTACT_BATCH_SIZE) {
-      const batch = filteredEmails.slice(i, i + CONTACT_BATCH_SIZE);
-      await Promise.all(
-        batch.map((email) => ensureMarketingContact(email))
-      );
-      // Small delay between batches to avoid rate limits on contacts API
-      if (i + CONTACT_BATCH_SIZE < filteredEmails.length) {
-        await new Promise((r) => setTimeout(r, 200));
-      }
-    }
-
-    // 8. Create and send the broadcast
-    try {
-      const resend = getMarketingResendClient();
-
-      const { data, error } = await resend.broadcasts.create({
-        audienceId,
-        from: `${fromName} <${fromEmail}>`,
-        subject: broadcastSubject,
-        html: broadcastHtml,
-        name: `Workflow: ${workflow.name} - ${new Date().toISOString().slice(0, 16)}`,
-      });
-
-      if (error) {
-        console.error("[Broadcast] Failed to create broadcast:", error);
-        return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: JSON.stringify(error) };
-      }
-
-      if (!data?.id) {
-        console.error("[Broadcast] No broadcast ID returned");
-        return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: "No broadcast ID returned" };
-      }
-
-      // Send the broadcast
-      const { error: sendError } = await resend.broadcasts.send(data.id);
-      if (sendError) {
-        console.error(`[Broadcast] Failed to send broadcast ${data.id}:`, sendError);
-        return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: JSON.stringify(sendError) };
-      }
-
-      console.log(`[Broadcast] Successfully sent broadcast ${data.id} to audience ${audienceId} (${filteredEmails.length} recipients, ${suppressedEmails.size} suppressed)`);
-
-    } catch (error: any) {
-      console.error("[Broadcast] Exception during broadcast create/send:", error);
-      return { success: false, handledExecutionIds: [], recipientCount: 0, method: "broadcast", error: String(error) };
-    }
-
-    // 9. Advance all executions to the next node (including suppressed ones — they're handled)
-    try {
-      await ctx.runMutation(internal.emailWorkflows.bulkAdvanceAfterEmailNode, {
-        executionIds: args.executionIds,
-        workflowId: args.workflowId,
-        emailNodeId: args.emailNodeId,
-      });
-    } catch (error) {
-      console.error("[Broadcast] Failed to advance executions after broadcast:", error);
-      // The broadcast was sent — mark executions as handled anyway to avoid double-sends
-    }
-
+  handler: async (_ctx, _args) => {
+    // No-op: Resend Broadcasts API retired. All emails go through individual sends via AWS SES.
+    console.warn("[Broadcast] No-op: Resend Broadcasts retired. Emails are sent individually via AWS SES.");
     return {
-      success: true,
-      handledExecutionIds: args.executionIds,
-      recipientCount: filteredEmails.length,
-      method: "broadcast",
+      success: false,
+      handledExecutionIds: [],
+      recipientCount: 0,
+      method: "individual",
+      error: "Resend Broadcasts retired — use individual sends via SES",
     };
   },
 });
@@ -1460,7 +1042,7 @@ ${bodyContent}
 /**
  * Send a custom email (not from template) from workflow.
  * LEGACY: Kept for backwards compatibility. New code should use resolveAndEnqueueCustomEmail.
- * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
+ * Sends via AWS SES.
  */
 export const sendCustomWorkflowEmail = internalAction({
   args: {
@@ -1481,7 +1063,6 @@ export const sendCustomWorkflowEmail = internalAction({
       return null;
     }
 
-    const { getMarketingResendClient } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get contact info if available
@@ -1574,8 +1155,6 @@ export const sendCustomWorkflowEmail = internalAction({
       console.error(`[WorkflowEmail] Could not fetch platform stats:`, e);
     }
 
-    // MARKETING: Use marketing Resend client for workflow sends
-    const resend = getMarketingResendClient();
     const platformUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
     const fromEmail = process.env.FROM_EMAIL || "andrew@pauseplayrepeat.com";
     const fromName = process.env.FROM_NAME || "Andrew";
@@ -1649,7 +1228,7 @@ ${bodyContent}
 
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: `${fromName} <${fromEmail}>`,
         to: args.customerEmail,
         subject: finalSubject,
@@ -1666,9 +1245,8 @@ ${bodyContent}
 });
 
 /**
- * Send email from a workflow using a template
- * Used by the durable workflow system
- * MARKETING: Routes through RESEND_MARKETING_API_KEY for billing separation.
+ * Send email from a workflow using a template.
+ * Used by the durable workflow system. Sends via AWS SES.
  */
 export const sendWorkflowEmail = internalAction({
   args: {
@@ -1679,7 +1257,6 @@ export const sendWorkflowEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { getMarketingResendClient } = await import("./lib/resendClients");
     const crypto = await import("crypto");
 
     // Get the template
@@ -1706,9 +1283,6 @@ export const sendWorkflowEmail = internalAction({
           : contact.firstName || "";
       }
     }
-
-    // MARKETING: Use marketing Resend client for workflow template sends
-    const resend = getMarketingResendClient();
 
     // Generate unsubscribe URL with per-creator storeId
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
@@ -1748,7 +1322,7 @@ export const sendWorkflowEmail = internalAction({
 
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: `${fromName} <${fromEmail}>`,
         to: args.customerEmail,
         subject,
@@ -1926,8 +1500,6 @@ export const sendTeamNotification = internalAction({
       }
     } else {
       // Default: email notification to store owner
-      const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
 
       // Get store owner email from store config or default
@@ -1944,7 +1516,7 @@ export const sendTeamNotification = internalAction({
       const fromName = process.env.FROM_NAME || "Andrew";
 
       try {
-        await sendEmailViaProvider(resend, {
+        await sendEmailViaProvider({
           from: `${fromName} <${fromEmail}>`,
           to: ownerEmail,
           subject: `[Workflow] ${args.message}`,

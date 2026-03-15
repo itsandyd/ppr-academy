@@ -1,20 +1,17 @@
 "use node";
 
+import crypto from "crypto";
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import {
-  getTransactionalResendClient,
-  getMarketingResendClient,
-} from "./lib/resendClients";
-import {
-  getEmailProvider,
   sendBatchViaProvider,
 } from "./lib/emailProvider";
 
 type ClaimedEmail = {
   _id: Id<"emailSendQueue">;
+  storeId: string;
   source: "workflow" | "drip" | "broadcast" | "transactional";
   toEmail: string;
   fromName: string;
@@ -26,38 +23,62 @@ type ClaimedEmail = {
   headers?: any;
 };
 
+// ─── Unsubscribe URL generation (HMAC-SHA256 signed) ─────────────────────────
+
+const UNSUBSCRIBE_SECRET =
+  process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
+
+function generateListUnsubscribeToken(email: string, list: string): string {
+  return crypto
+    .createHmac("sha256", UNSUBSCRIBE_SECRET)
+    .update(`${email}|list:${list}`)
+    .digest("base64url");
+}
+
+function generateListUnsubscribeUrl(email: string, list: string): string {
+  const token = generateListUnsubscribeToken(email, list);
+  const baseUrl = process.env.SITE_URL || "https://pauseplayrepeat.com";
+  return `${baseUrl}/unsubscribe?email=${encodeURIComponent(email)}&list=${encodeURIComponent(list)}&token=${token}`;
+}
+
 /**
- * Main send queue processor - round-robin per account, Resend batch API.
+ * Inject unsubscribe URL and headers for admin outreach emails.
+ * Replaces %%UNSUBSCRIBE_URL%% placeholder in HTML and text content,
+ * and adds List-Unsubscribe headers for RFC 8058 / Gmail compliance.
+ */
+function injectUnsubscribeForOutreach(email: ClaimedEmail): {
+  htmlContent: string;
+  textContent?: string;
+  headers: Record<string, string>;
+} {
+  const unsubscribeUrl = generateListUnsubscribeUrl(email.toEmail, "creator-outreach");
+
+  const htmlContent = email.htmlContent.replace(/%%UNSUBSCRIBE_URL%%/g, unsubscribeUrl);
+  const textContent = email.textContent?.replace(/%%UNSUBSCRIBE_URL%%/g, unsubscribeUrl);
+  const headers = {
+    ...(email.headers || {}),
+    "List-Unsubscribe": `<${unsubscribeUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+
+  return { htmlContent, textContent, headers };
+}
+
+/**
+ * Main send queue processor — AWS SES batch sends.
  * Called by cron every 30 seconds.
- *
- * EMAIL ROUTING:
- *   TRANSACTIONAL (source="transactional") → RESEND_API_KEY
- *     Purchase confirmations, coaching reminders, legal notices, DM notifications,
- *     support replies, admin alerts. Uses resend.batch.send() via transactional key.
- *
- *   MARKETING (source="workflow"|"drip"|"broadcast") → RESEND_MARKETING_API_KEY
- *     Workflow sequences, drip campaigns, campaign batch sends. Uses
- *     resend.batch.send() via marketing key. These are promotional/nurture
- *     emails that require CAN-SPAM compliance and unsubscribe handling.
- *     Note: One-to-many broadcasts now use the Broadcasts API directly
- *     (resend.broadcasts.create + send) in emails.ts:sendBroadcastEmail,
- *     bypassing this queue entirely.
  *
  * Flow:
  * 1. Get all store IDs with queued emails
  * 2. Round-robin: claim up to EMAILS_PER_STORE from each store
- * 3. Split claimed emails into transactional vs marketing groups
- * 4. Group each into Resend batch API calls (max 100 per batch)
- * 5. Send with rate limiting (max 2 req/s to Resend per client)
- * 6. Mark sent/failed accordingly
+ * 3. Group into batch API calls (max 100 per batch)
+ * 4. Send via AWS SES with rate limiting
+ * 5. Mark sent/failed accordingly
  */
 export const processEmailSendQueue = internalAction({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    const transactionalResend = getTransactionalResendClient();
-    const marketingResend = getMarketingResendClient();
-
     // Get active stores with queued emails
     const storeIds = await ctx.runQuery(internal.emailSendQueue.getActiveStoreIds, {});
 
@@ -66,9 +87,6 @@ export const processEmailSendQueue = internalAction({
     }
 
     // Round-robin: claim emails from each store fairly
-    // With Resend batch API at 2 req/s and 30s cron interval,
-    // we can do ~50 batch requests per cycle = 5,000 emails max
-    // (leaving headroom below the theoretical 60 req limit)
     // Distribute fairly across stores
     const EMAILS_PER_STORE = Math.min(
       200, // Cap per store per cycle
@@ -101,44 +119,23 @@ export const processEmailSendQueue = internalAction({
       return null;
     }
 
-    // Split claimed emails into transactional vs marketing based on source
-    const transactionalEmails = allClaimed.filter((e) => e.source === "transactional");
-    const marketingEmails = allClaimed.filter((e) => e.source !== "transactional");
-
-    let totalSent = 0;
-    let totalFailed = 0;
-
-    // Process transactional emails through transactional Resend client
-    const txResult = await sendBatchesWithClient(
+    // Send all claimed emails via SES
+    const result = await sendBatchesWithClient(
       ctx,
-      transactionalResend,
-      transactionalEmails,
-      "transactional"
+      allClaimed,
+      "ses"
     );
-    totalSent += txResult.sent;
-    totalFailed += txResult.failed;
-
-    // Process marketing emails through marketing Resend client
-    const mktResult = await sendBatchesWithClient(
-      ctx,
-      marketingResend,
-      marketingEmails,
-      "marketing"
-    );
-    totalSent += mktResult.sent;
-    totalFailed += mktResult.failed;
+    const totalSent = result.sent;
 
     return null;
   },
 });
 
 /**
- * Send a group of emails through a specific Resend client in batches of 100.
- * When EMAIL_PROVIDER=ses, routes through AWS SES instead of Resend.
+ * Send a group of emails via AWS SES in batches of 100.
  */
 async function sendBatchesWithClient(
   ctx: any,
-  resend: any,
   emails: ClaimedEmail[],
   label: string
 ): Promise<{ sent: number; failed: number }> {
@@ -146,8 +143,7 @@ async function sendBatchesWithClient(
     return { sent: 0, failed: 0 };
   }
 
-  const provider = getEmailProvider();
-  console.log(`[SendQueue][${label}] EMAIL_PROVIDER=${provider}, batch of ${emails.length}`);
+  console.log(`[SendQueue][${label}] SES batch of ${emails.length}`);
   const BATCH_SIZE = 100;
   const batches: ClaimedEmail[][] = [];
   for (let i = 0; i < emails.length; i += BATCH_SIZE) {
@@ -159,23 +155,44 @@ async function sendBatchesWithClient(
 
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     const batch = batches[batchIndex];
-    const emailPayloads = batch.map((email) => ({
-      from: `${email.fromName} <${email.fromEmail}>`,
-      to: email.toEmail,
-      subject: email.subject,
-      ...(email.htmlContent ? { html: email.htmlContent } : {}),
-      ...(email.textContent ? { text: email.textContent } : {}),
-      ...(email.replyTo ? { reply_to: email.replyTo } : {}),
-      ...(email.headers ? { headers: email.headers } : {}),
-    }));
+    const emailPayloads = batch.map((email) => {
+      // For admin outreach emails, inject signed unsubscribe URL and headers
+      const isAdminOutreach =
+        email.storeId === "admin" &&
+        (email.htmlContent?.includes("%%UNSUBSCRIBE_URL%%") ||
+          email.textContent?.includes("%%UNSUBSCRIBE_URL%%"));
+
+      if (isAdminOutreach) {
+        const { htmlContent, textContent, headers } = injectUnsubscribeForOutreach(email);
+        return {
+          from: `${email.fromName} <${email.fromEmail}>`,
+          to: email.toEmail,
+          subject: email.subject,
+          ...(htmlContent ? { html: htmlContent } : {}),
+          ...(textContent ? { text: textContent } : {}),
+          ...(email.replyTo ? { reply_to: email.replyTo } : {}),
+          headers,
+        };
+      }
+
+      return {
+        from: `${email.fromName} <${email.fromEmail}>`,
+        to: email.toEmail,
+        subject: email.subject,
+        ...(email.htmlContent ? { html: email.htmlContent } : {}),
+        ...(email.textContent ? { text: email.textContent } : {}),
+        ...(email.replyTo ? { reply_to: email.replyTo } : {}),
+        ...(email.headers ? { headers: email.headers } : {}),
+      };
+    });
 
     const batchIds = batch.map((e) => e._id);
 
     try {
-      const result = await sendBatchViaProvider(resend, emailPayloads);
+      const result = await sendBatchViaProvider(emailPayloads);
 
       if (!result.success) {
-        console.error(`[SendQueue][${label}][${result.provider}] Batch ${batchIndex + 1}/${batches.length} error:`, result.error);
+        console.error(`[SendQueue][${label}][SES] Batch ${batchIndex + 1}/${batches.length} error:`, result.error);
         await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
           emailIds: batchIds,
           error: result.error || "Unknown error",
@@ -188,45 +205,15 @@ async function sendBatchesWithClient(
         totalSent += batch.length;
       }
     } catch (error: any) {
-      console.error(`[SendQueue][${label}][${provider}] Batch ${batchIndex + 1}/${batches.length} exception:`, error);
-
-      // Check for rate limit (Resend-specific, but handle generically)
-      if (error?.statusCode === 429) {
-        const retryAfter = error?.headers?.["retry-after"] || 2;
-        await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
-
-        // Retry this batch once
-        try {
-          const retryResult = await sendBatchViaProvider(resend, emailPayloads);
-          if (!retryResult.success) {
-            await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
-              emailIds: batchIds,
-              error: retryResult.error || "Retry failed",
-            });
-            totalFailed += batch.length;
-          } else {
-            await ctx.runMutation(internal.emailSendQueue.markEmailsSent, {
-              emailIds: batchIds,
-            });
-            totalSent += batch.length;
-          }
-        } catch (retryErr: any) {
-          await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
-            emailIds: batchIds,
-            error: String(retryErr),
-          });
-          totalFailed += batch.length;
-        }
-      } else {
-        await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
-          emailIds: batchIds,
-          error: String(error),
-        });
-        totalFailed += batch.length;
-      }
+      console.error(`[SendQueue][${label}][SES] Batch ${batchIndex + 1}/${batches.length} exception:`, error);
+      await ctx.runMutation(internal.emailSendQueue.markEmailsFailed, {
+        emailIds: batchIds,
+        error: String(error),
+      });
+      totalFailed += batch.length;
     }
 
-    // Rate limit: stay under 2 req/s to Resend (or SES rate limits)
+    // Rate limit: stay under SES rate limits
     // Wait 600ms between batch requests
     if (batchIndex < batches.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 600));

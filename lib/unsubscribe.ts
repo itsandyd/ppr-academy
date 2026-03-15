@@ -133,3 +133,67 @@ export function generateListUnsubscribeHeader(
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
   };
 }
+
+// ─── List-based unsubscribe (for admin outreach, marketing, etc.) ────────────
+
+/**
+ * Generate an HMAC token for list-based unsubscribe.
+ * Signs over "email|list:listName" to bind the token to both values.
+ */
+export function generateListUnsubscribeToken(email: string, list: string): string {
+  return crypto
+    .createHmac("sha256", UNSUBSCRIBE_SECRET)
+    .update(`${email}|list:${list}`)
+    .digest("base64url");
+}
+
+/**
+ * Verify a list-based unsubscribe token.
+ * Returns true if the token is valid for the given email + list.
+ */
+export function verifyListUnsubscribeToken(
+  email: string,
+  list: string,
+  token: string
+): boolean {
+  try {
+    const expected = crypto
+      .createHmac("sha256", UNSUBSCRIBE_SECRET)
+      .update(`${email}|list:${list}`)
+      .digest("base64url");
+
+    if (token.length !== expected.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generate a full unsubscribe URL for a specific email list.
+ * Format: /unsubscribe?email=...&list=...&token=...
+ */
+export function generateListUnsubscribeUrl(
+  email: string,
+  list: string,
+  baseUrl?: string
+): string {
+  const token = generateListUnsubscribeToken(email, list);
+  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || "https://pauseplayrepeat.com";
+  return `${base}/unsubscribe?email=${encodeURIComponent(email)}&list=${encodeURIComponent(list)}&token=${token}`;
+}
+
+/**
+ * Generate List-Unsubscribe headers for a specific email list (RFC 8058).
+ */
+export function generateListUnsubscribeHeaderForList(
+  email: string,
+  list: string,
+  baseUrl?: string
+): { "List-Unsubscribe": string; "List-Unsubscribe-Post": string } {
+  const url = generateListUnsubscribeUrl(email, list, baseUrl);
+  return {
+    "List-Unsubscribe": `<${url}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}

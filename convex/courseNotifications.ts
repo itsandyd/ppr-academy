@@ -187,7 +187,7 @@ export const sendCourseUpdateEmails = internalAction({
     skipped: number;
     failed: number;
   }> => {
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const { sendEmailViaProvider } = await import("./lib/emailProvider");
     let sent = 0;
     let skipped = 0;
     let failed = 0;
@@ -219,49 +219,26 @@ export const sendCourseUpdateEmails = internalAction({
           continue;
         }
 
-        // If Resend is configured, send email
-        if (resendApiKey) {
-          // Use verified sending domain
-          const fromEmail = process.env.RESEND_FROM_EMAIL || "PPR Academy <no-reply@pauseplayrepeat.com>";
+        // Send email via SES
+        try {
+          const fromEmail = process.env.FROM_EMAIL || "no-reply@pauseplayrepeat.com";
+          const fromName = process.env.FROM_NAME || "PPR Academy";
 
-          const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${resendApiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: fromEmail,
-              to: user.email,
-              subject: args.emailSubject,
-              html: generateCourseUpdateEmailHTML(
-                args.emailSubject,
-                args.emailBody,
-                args.courseSlug
-              ),
-              // Add headers to improve deliverability
-              headers: {
-                "X-Entity-Ref-ID": `course-update-${Date.now()}`,
-              },
-              // Add tags for tracking
-              tags: [
-                {
-                  name: "category",
-                  value: "course-update"
-                }
-              ],
-            }),
+          await sendEmailViaProvider({
+            from: `${fromName} <${fromEmail}>`,
+            to: user.email,
+            subject: args.emailSubject,
+            html: generateCourseUpdateEmailHTML(
+              args.emailSubject,
+              args.emailBody,
+              args.courseSlug
+            ),
           });
 
-          if (response.ok) {
-            sent++;
-          } else {
-            const error = await response.text();
-            console.error(`❌ Failed to send email to ${user.email}:`, error);
-            failed++;
-          }
-        } else {
           sent++;
+        } catch (emailError) {
+          console.error(`Failed to send email to ${user.email}:`, emailError);
+          failed++;
         }
       } catch (error) {
         console.error(`Error processing email for ${studentId}:`, error);

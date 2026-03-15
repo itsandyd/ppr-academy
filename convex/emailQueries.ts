@@ -141,7 +141,7 @@ export const debugCampaign: any = query({
       },
       recipientCount: recipients.length,
       recipients: recipients.slice(0, 3), // First 3 recipients
-      hasResendKey: !!process.env.RESEND_API_KEY,
+      hasSesConfig: !!(process.env.AWS_SES_ACCESS_KEY_ID && process.env.AWS_SES_SECRET_ACCESS_KEY),
       fromEmail: process.env.FROM_EMAIL || "not set (will use default)",
       fromName: process.env.FROM_NAME || "not set (will use default)",
     };

@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      emailSent: !emailResult.simulation,
+      emailSent: emailResult.success,
       messageId: emailResult.messageId,
     });
   } catch (error) {

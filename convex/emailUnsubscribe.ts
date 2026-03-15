@@ -513,6 +513,218 @@ export const bulkSuppressBounced = mutation({
   },
 });
 
+// ─── List-based unsubscribe ─────────────────────────────────────────────────
+
+/**
+ * Unsubscribe an email from a specific list (e.g., "creator-outreach", "marketing").
+ * Does NOT affect global unsubscribe or per-store unsubscribes.
+ */
+export const unsubscribeFromList = mutation({
+  args: {
+    email: v.string(),
+    list: v.string(),
+    reason: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
+    const list = args.list;
+
+    const existingPref = await ctx.db
+      .query("resendPreferences")
+      .withIndex("by_user", (q) => q.eq("userId", email))
+      .first();
+
+    if (existingPref) {
+      const currentLists = existingPref.unsubscribedLists || [];
+      if (currentLists.includes(list)) {
+        return { success: true, message: `Already unsubscribed from ${list}` };
+      }
+
+      await ctx.db.patch(existingPref._id, {
+        unsubscribedLists: [...currentLists, list],
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("resendPreferences", {
+        userId: email,
+        platformEmails: true,
+        courseEmails: true,
+        marketingEmails: true,
+        weeklyDigest: true,
+        isUnsubscribed: false,
+        unsubscribedLists: [list],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+
+    // If unsubscribing from creator-outreach, cancel active outreach enrollments
+    if (list === "creator-outreach") {
+      const activeOutreach = await ctx.db
+        .query("adminCreatorOutreach")
+        .withIndex("by_creatorEmail", (q: any) => q.eq("creatorEmail", email))
+        .take(100);
+
+      for (const outreach of activeOutreach) {
+        if (outreach.status === "enrolled" || outreach.status === "active") {
+          await ctx.db.patch(outreach._id, {
+            status: "unsubscribed" as any,
+            stoppedReason: args.reason || "Unsubscribed from creator-outreach list",
+            completedAt: Date.now(),
+          });
+        }
+      }
+    }
+
+    return { success: true, message: `Successfully unsubscribed from ${list}` };
+  },
+});
+
+/**
+ * Unsubscribe an email from ALL lists at once.
+ * Sets global isUnsubscribed AND adds all known lists to unsubscribedLists.
+ */
+export const unsubscribeFromAllLists = mutation({
+  args: {
+    email: v.string(),
+    reason: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
+    const allLists = ["creator-outreach", "marketing"];
+
+    const existingPref = await ctx.db
+      .query("resendPreferences")
+      .withIndex("by_user", (q) => q.eq("userId", email))
+      .first();
+
+    if (existingPref) {
+      await ctx.db.patch(existingPref._id, {
+        isUnsubscribed: true,
+        unsubscribedAt: Date.now(),
+        unsubscribeReason: args.reason || "Unsubscribed from all lists",
+        unsubscribedLists: allLists,
+        platformEmails: false,
+        courseEmails: false,
+        marketingEmails: false,
+        weeklyDigest: false,
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("resendPreferences", {
+        userId: email,
+        platformEmails: false,
+        courseEmails: false,
+        marketingEmails: false,
+        weeklyDigest: false,
+        isUnsubscribed: true,
+        unsubscribedAt: Date.now(),
+        unsubscribeReason: args.reason || "Unsubscribed from all lists",
+        unsubscribedLists: allLists,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+
+    // Cancel active outreach enrollments
+    const activeOutreach = await ctx.db
+      .query("adminCreatorOutreach")
+      .withIndex("by_creatorEmail", (q: any) => q.eq("creatorEmail", email))
+      .take(100);
+
+    for (const outreach of activeOutreach) {
+      if (outreach.status === "enrolled" || outreach.status === "active") {
+        await ctx.db.patch(outreach._id, {
+          status: "unsubscribed" as any,
+          stoppedReason: "Unsubscribed from all lists",
+          completedAt: Date.now(),
+        });
+      }
+    }
+
+    // Cancel workflow executions and drip enrollments
+    const activeExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_customerEmail", (q) => q.eq("customerEmail", email))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("status"), "completed"),
+          q.neq(q.field("status"), "failed"),
+          q.neq(q.field("status"), "cancelled")
+        )
+      )
+      .take(100);
+
+    for (const execution of activeExecutions) {
+      await ctx.db.patch(execution._id, {
+        status: "cancelled" as const,
+        completedAt: Date.now(),
+      });
+    }
+
+    // Sync to Resend
+    await ctx.scheduler.runAfter(0, internal.resendMarketingSync.updateContactUnsubscribe, {
+      email,
+      unsubscribed: true,
+    });
+
+    return { success: true, message: "Successfully unsubscribed from all lists" };
+  },
+});
+
+/**
+ * Check if an email is unsubscribed from a specific list.
+ */
+export const checkListSuppression = internalQuery({
+  args: {
+    email: v.string(),
+    list: v.string(),
+  },
+  returns: v.object({
+    suppressed: v.boolean(),
+    reason: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
+
+    const pref = await ctx.db
+      .query("resendPreferences")
+      .withIndex("by_user", (q) => q.eq("userId", email))
+      .first();
+
+    // Global unsubscribe blocks all lists
+    if (pref?.isUnsubscribed) {
+      return { suppressed: true, reason: "globally_unsubscribed" };
+    }
+
+    // Check per-list unsubscribe
+    if (pref?.unsubscribedLists?.includes(args.list)) {
+      return { suppressed: true, reason: `unsubscribed_from_${args.list}` };
+    }
+
+    // Check bounces
+    const bouncedLog = await ctx.db
+      .query("resendLogs")
+      .withIndex("by_recipient", (q) => q.eq("recipientEmail", email))
+      .filter((q) => q.eq(q.field("status"), "bounced"))
+      .first();
+
+    if (bouncedLog) {
+      return { suppressed: true, reason: "bounced" };
+    }
+
+    return { suppressed: false };
+  },
+});
+
 export const markComplained = internalMutation({
   args: {
     email: v.string(),

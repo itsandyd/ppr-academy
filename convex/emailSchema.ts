@@ -290,6 +290,9 @@ export const resendPreferencesTable = defineTable({
   unsubscribedAt: v.optional(v.number()),
   unsubscribeReason: v.optional(v.string()),
 
+  // Per-list unsubscribe tracking (e.g., ["creator-outreach", "marketing"])
+  unsubscribedLists: v.optional(v.array(v.string())),
+
   createdAt: v.number(),
   updatedAt: v.number(),
 });

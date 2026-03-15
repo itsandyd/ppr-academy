@@ -1,9 +1,8 @@
 "use node";
 
-// MARKETING: All drip campaign emails route through RESEND_MARKETING_API_KEY.
+// All drip campaign emails are enqueued with source="drip" and sent via AWS SES
+// through the email send queue processor (emailSendQueueActions.ts).
 // These are automated nurture/promotional sequences, not user-initiated transactional emails.
-// Emails are enqueued with source="drip" and sent via the marketing Resend client in the
-// email send queue processor (emailSendQueueActions.ts).
 
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
@@ -85,12 +84,8 @@ export const processDueDripEmails = internalAction({
 
 /**
  * Resolve drip email content and enqueue for batch sending.
- * Replaces the old inline-send pattern for drip campaign emails.
- *
- * MARKETING: Enqueues with source="drip" which routes through the marketing
- * Resend client (RESEND_MARKETING_API_KEY). These are automated nurture/promo
- * sequences, not user-initiated transactional emails. Ensures contact exists
- * in the Resend marketing audience before enqueuing.
+ * Enqueues with source="drip" for automated nurture/promo sequences.
+ * Emails are sent via AWS SES through the email send queue.
  */
 export const resolveAndEnqueueDripEmail = internalAction({
   args: {
@@ -103,16 +98,9 @@ export const resolveAndEnqueueDripEmail = internalAction({
     textContent: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { ensureMarketingContact } = await import("./lib/resendClients");
-    const { getEmailProvider } = await import("./lib/emailProvider");
     const crypto = await import("crypto");
 
-    // MARKETING: Ensure contact exists in Resend marketing audience before sending
-    // Skip when SES — Resend audience sync is unnecessary
     const firstName = args.name.split(" ")[0] || "";
-    if (getEmailProvider() === "resend") {
-      await ensureMarketingContact(args.email, firstName || undefined);
-    }
 
     const secret = process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";

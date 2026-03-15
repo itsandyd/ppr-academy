@@ -2,22 +2,11 @@
 
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
-import { Resend } from "resend";
 
 /**
  * Email reply sending actions
  * TRANSACTIONAL: Do not move to marketing API — these are customer support replies.
  */
-
-let resendClient: Resend | null = null;
-function getResendClient() {
-  if (!resendClient) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) throw new Error("RESEND_API_KEY not configured");
-    resendClient = new Resend(apiKey);
-  }
-  return resendClient;
-}
 
 /**
  * Send reply to customer
@@ -51,12 +40,9 @@ export const sendReplyEmail = internalAction({
       return null;
     }
     
-    // Send reply using Resend
-    const resend = getResendClient();
-    
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: store.emailConfig.fromName
           ? `${store.emailConfig.fromName} <${store.emailConfig.fromEmail}>`
           : store.emailConfig.fromEmail,

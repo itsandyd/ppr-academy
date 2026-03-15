@@ -1,23 +1,10 @@
 "use node";
 
-// TRANSACTIONAL: All functions in this file send through the transactional Resend API.
+// TRANSACTIONAL: All functions in this file send through the transactional email provider.
 // Do not move to marketing — these are DMCA/copyright legal notifications.
 
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { Resend } from "resend";
-
-let resendClient: Resend | null = null;
-function getResendClient() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    return null;
-  }
-  if (!resendClient) {
-    resendClient = new Resend(key);
-  }
-  return resendClient;
-}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "legal@ppracademy.com";
 const PLATFORM_NAME = "PPR Academy";
@@ -35,14 +22,9 @@ export const sendClaimReceivedEmail = internalAction({
     error: v.optional(v.string()),
   }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     try {
       const { sendEmailViaProvider } = await import("./lib/emailProvider");
-      await sendEmailViaProvider(resend, {
+      await sendEmailViaProvider({
         from: FROM_EMAIL,
         to: args.claimantEmail,
         subject: `Copyright Claim Received - ${PLATFORM_NAME}`,
@@ -113,11 +95,6 @@ export const sendClaimNoticeEmail = internalAction({
     error: v.optional(v.string()),
   }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     const counterNoticeUrl = `${BASE_URL}/dashboard/copyright/counter-notice?claim=${args.claimId}`;
     const deadline = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
       year: "numeric",
@@ -127,7 +104,7 @@ export const sendClaimNoticeEmail = internalAction({
 
     try {
       const { sendEmailViaProvider: sendViaProvider } = await import("./lib/emailProvider");
-      await sendViaProvider(resend, {
+      await sendViaProvider({
         from: FROM_EMAIL,
         to: args.creatorEmail,
         subject: `DMCA Copyright Claim Notice - Action Required - ${PLATFORM_NAME}`,
@@ -208,11 +185,6 @@ export const sendStrikeEmail = internalAction({
     error: v.optional(v.string()),
   }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     const subject = args.isSuspended
       ? `Account Suspended - Copyright Policy Violation - ${PLATFORM_NAME}`
       : `Copyright Strike ${args.strikeNumber} of 3 - ${PLATFORM_NAME}`;
@@ -239,7 +211,7 @@ export const sendStrikeEmail = internalAction({
 
     try {
       const { sendEmailViaProvider: sendStrikeViaProvider } = await import("./lib/emailProvider");
-      await sendStrikeViaProvider(resend, {
+      await sendStrikeViaProvider({
         from: FROM_EMAIL,
         to: args.creatorEmail,
         subject,
@@ -322,11 +294,6 @@ export const sendClaimResolvedEmail = internalAction({
     error: v.optional(v.string()),
   }),
   handler: async (_ctx, args) => {
-    const resend = getResendClient();
-    if (!resend) {
-      return { success: true };
-    }
-
     const resolutionTitles = {
       upheld: "Copyright Claim Upheld",
       dismissed: "Copyright Claim Dismissed",
@@ -344,7 +311,7 @@ export const sendClaimResolvedEmail = internalAction({
 
     try {
       const { sendEmailViaProvider: sendResolutionViaProvider } = await import("./lib/emailProvider");
-      await sendResolutionViaProvider(resend, {
+      await sendResolutionViaProvider({
         from: FROM_EMAIL,
         to: args.recipientEmail,
         subject: `Copyright Claim Update: ${title} - ${PLATFORM_NAME}`,
