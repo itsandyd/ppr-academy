@@ -639,7 +639,27 @@ export const enrollCreatorsInSequence = mutation({
       updatedAt: now,
     });
 
+    // Trigger immediate processing so the first email sends right away
+    // instead of waiting up to 1 hour for the next cron cycle
+    if (enrolled > 0) {
+      await ctx.scheduler.runAfter(0, internal.admin.creatorOutreach.processOutreachEmails, {});
+    }
+
     return { enrolled, skipped };
+  },
+});
+
+/**
+ * Manually trigger outreach email processing (admin only).
+ * Useful for testing and for sending emails without waiting for the cron.
+ */
+export const triggerProcessOutreachEmails = mutation({
+  args: { clerkId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { clerkId }) => {
+    await verifyAdmin(ctx, clerkId);
+    await ctx.scheduler.runAfter(0, internal.admin.creatorOutreach.processOutreachEmails, {});
+    return null;
   },
 });
 
@@ -844,23 +864,29 @@ export const processOutreachEmails = internalMutation({
         continue;
       }
 
-      // Check auto-stop: did creator upload a product?
+      // Check auto-stop: did creator upload a product AFTER enrollment?
+      // Only counts products/courses created after the creator was enrolled,
+      // not pre-existing content (otherwise the sequence would immediately stop
+      // for any creator who already had content).
       if (sequence.stopOnProductUpload && outreach.storeId) {
         const store = await ctx.db.get(outreach.storeId);
         if (store) {
-          const creatorProducts = await ctx.db
+          const enrolledAt = outreach.enrolledAt;
+          const newProducts = await ctx.db
             .query("digitalProducts")
             .withIndex("by_storeId", (q: any) => q.eq("storeId", store._id))
+            .filter((q: any) => q.gt(q.field("_creationTime"), enrolledAt))
             .first();
-          const creatorCourses = await ctx.db
+          const newCourses = await ctx.db
             .query("courses")
             .withIndex("by_userId", (q: any) => q.eq("userId", store.userId))
+            .filter((q: any) => q.gt(q.field("_creationTime"), enrolledAt))
             .first();
 
-          if (creatorProducts || creatorCourses) {
+          if (newProducts || newCourses) {
             await ctx.db.patch(outreach._id, {
               status: "stopped_by_action",
-              stoppedReason: "Creator uploaded a product",
+              stoppedReason: "Creator uploaded a product after enrollment",
               completedAt: now,
             });
             await ctx.db.patch(outreach.sequenceId, {

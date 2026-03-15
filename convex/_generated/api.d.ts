@@ -462,6 +462,12 @@ export declare const api: {
         { clerkId: string; sequenceId: Id<"adminOutreachSequences"> },
         { isActive: boolean }
       >;
+      triggerProcessOutreachEmails: FunctionReference<
+        "mutation",
+        "public",
+        { clerkId: string },
+        null
+      >;
       updateOutreachSequence: FunctionReference<
         "mutation",
         "public",

@@ -62,6 +62,7 @@ import {
   MousePointer,
   Ban,
   Pencil,
+  RefreshCw,
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -122,6 +123,7 @@ function CreatorOutreachContent() {
   const enrollInSequence = useMutation(api.admin.creatorOutreach.enrollCreatorsInSequence);
   const createSequence = useMutation(api.admin.creatorOutreach.createOutreachSequence);
   const toggleSequence = useMutation(api.admin.creatorOutreach.toggleSequenceActive);
+  const triggerProcess = useMutation(api.admin.creatorOutreach.triggerProcessOutreachEmails);
 
   // Search filter
   const filteredCreators = useMemo(() => {
@@ -337,10 +339,29 @@ function CreatorOutreachContent() {
             Email creators who need a nudge — activate, re-engage, and support
           </p>
         </div>
-        <Button onClick={() => router.push("/admin/creator-outreach?new")} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Sequence
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (!clerkId) return;
+              try {
+                await triggerProcess({ clerkId });
+                toast({ title: "Processing outreach emails", description: "Queued emails will send shortly." });
+              } catch {
+                toast({ title: "Failed to trigger processing", variant: "destructive" });
+              }
+            }}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Process Now
+          </Button>
+          <Button onClick={() => router.push("/admin/creator-outreach?new")} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Sequence
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
