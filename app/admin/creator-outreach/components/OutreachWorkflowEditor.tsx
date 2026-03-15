@@ -228,6 +228,9 @@ export default function OutreachWorkflowEditor({
   // AI single email generation state
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
 
+  // Email editor dialog (second-level dialog for configuring email content)
+  const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
+
   // Editor ref for merge tag insertion
   const wysiwygRef = useRef<WysiwygEditorRef>(null);
 
@@ -601,132 +604,27 @@ export default function OutreachWorkflowEditor({
                 </div>
               )}
 
-              {/* Send Email config */}
+              {/* Send Email config — preview + "Configure Email" button (matches email workflows) */}
               {selectedNode.type === "sendEmail" && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Subject</Label>
-                    <Input
-                      placeholder="Hey {{firstName}}, quick question"
-                      value={selectedNode.data.subject || ""}
-                      onChange={(e) =>
-                        updateNodeData(selectedNode.id, { subject: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Preview Text</Label>
-                    <Input
-                      placeholder="Short preview shown in inbox..."
-                      value={selectedNode.data.previewText || ""}
-                      onChange={(e) =>
-                        updateNodeData(selectedNode.id, { previewText: e.target.value })
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Shown next to the subject line in the inbox
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Body</Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleAIGenerateEmail}
-                        disabled={isGeneratingEmail}
-                        className="h-7 gap-1.5 text-xs text-purple-600 hover:text-purple-700"
-                      >
-                        {isGeneratingEmail ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-3 w-3" />
-                        )}
-                        {isGeneratingEmail ? "Generating..." : "Generate with AI"}
-                      </Button>
-                    </div>
-                    {plainTextMode ? (
-                      <Textarea
-                        value={selectedNode.data.htmlContent || ""}
-                        onChange={(e) =>
-                          updateNodeData(selectedNode.id, {
-                            htmlContent: e.target.value,
-                            textContent: e.target.value,
-                          })
-                        }
-                        placeholder="Write your email content here... (plain text, paste raw URLs)"
-                        className="min-h-[300px] font-mono text-sm"
-                        rows={15}
-                      />
+                <>
+                  <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                    {selectedNode.data.subject ? (
+                      <>
+                        <p className="text-xs text-zinc-500">Subject:</p>
+                        <p className="text-sm font-medium">{selectedNode.data.subject}</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          From: Andrew &lt;andrew@pauseplayrepeat.com&gt;
+                        </p>
+                      </>
                     ) : (
-                      <WysiwygEditor
-                        ref={wysiwygRef}
-                        content={selectedNode.data.htmlContent || ""}
-                        onChange={(html) =>
-                          updateNodeData(selectedNode.id, { htmlContent: html })
-                        }
-                        placeholder="Write your email content here..."
-                        className="min-h-[300px]"
-                      />
+                      <p className="text-sm text-zinc-500">No email configured</p>
                     )}
                   </div>
 
-                  {/* Merge tag buttons */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      {plainTextMode ? "Copy merge tag" : "Insert merge tag"}
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {MERGE_TAGS.map(({ label, tag }) => (
-                        <Button
-                          key={tag}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (plainTextMode) {
-                              navigator.clipboard.writeText(tag);
-                            } else {
-                              insertMergeTag(tag);
-                            }
-                          }}
-                          className="h-7 text-xs"
-                        >
-                          {label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Email preview */}
-                  {(selectedNode.data.subject || selectedNode.data.htmlContent) && (
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Preview</Label>
-                      <div className="rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
-                        <div className="mb-1 text-xs text-muted-foreground">
-                          From: Andrew &lt;andrew@pauseplayrepeat.com&gt;
-                        </div>
-                        <div className="mb-3 text-sm font-medium">
-                          {(selectedNode.data.subject || "(no subject)")
-                            .replace(/\{\{firstName\}\}/g, "Sarah")
-                            .replace(/\{\{name\}\}/g, "Sarah Chen")
-                            .replace(/\{\{email\}\}/g, "sarah@example.com")
-                            .replace(/\{\{storeName\}\}/g, "Sarah's Studio")
-                            .replace(/\{\{storeSlug\}\}/g, "sarahs-studio")}
-                        </div>
-                        <div className="whitespace-pre-wrap text-sm text-muted-foreground">
-                          {(selectedNode.data.htmlContent || "")
-                            .replace(/\{\{firstName\}\}/g, "Sarah")
-                            .replace(/\{\{name\}\}/g, "Sarah Chen")
-                            .replace(/\{\{email\}\}/g, "sarah@example.com")
-                            .replace(/\{\{storeName\}\}/g, "Sarah's Studio")
-                            .replace(/\{\{storeSlug\}\}/g, "sarahs-studio")}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  <Button className="w-full" onClick={() => setIsEmailEditorOpen(true)}>
+                    {selectedNode.data.subject ? "Edit Email" : "Configure Email"}
+                  </Button>
+                </>
               )}
 
               {/* Condition config */}
@@ -762,30 +660,33 @@ export default function OutreachWorkflowEditor({
               {/* Delay config */}
               {selectedNode.type === "delay" && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Delay</Label>
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1 space-y-2">
+                      <Label>Duration</Label>
                       <Input
                         type="number"
-                        min={1}
+                        min="1"
                         value={selectedNode.data.delayValue || 1}
                         onChange={(e) =>
                           updateNodeData(selectedNode.id, {
                             delayValue: parseInt(e.target.value) || 1,
                           })
                         }
-                        className="w-20"
                       />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label>Unit</Label>
                       <Select
                         value={selectedNode.data.delayUnit || "days"}
                         onValueChange={(v) =>
                           updateNodeData(selectedNode.id, { delayUnit: v })
                         }
                       >
-                        <SelectTrigger className="flex-1 bg-white dark:bg-black">
+                        <SelectTrigger className="bg-white dark:bg-black">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-black">
+                          <SelectItem value="minutes">Minutes</SelectItem>
                           <SelectItem value="hours">Hours</SelectItem>
                           <SelectItem value="days">Days</SelectItem>
                         </SelectContent>
@@ -820,6 +721,181 @@ export default function OutreachWorkflowEditor({
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Email Editor Dialog (matches email workflows Configure Email) ── */}
+      <Dialog open={isEmailEditorOpen} onOpenChange={setIsEmailEditorOpen}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-white dark:bg-black">
+          <DialogHeader>
+            <DialogTitle>Configure Email</DialogTitle>
+            <DialogDescription>
+              Write your outreach email content
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedNode?.type === "sendEmail" && (
+            <div className="space-y-6 py-4">
+              {/* AI Email Generator */}
+              <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-4 dark:border-purple-900 dark:from-purple-950/30 dark:to-blue-950/30">
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <span className="font-semibold text-purple-800 dark:text-purple-200">AI Email Generator</span>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Tone</Label>
+                    <Select
+                      value={aiTone}
+                      onValueChange={(v) => setAITone(v as typeof aiTone)}
+                    >
+                      <SelectTrigger className="bg-white dark:bg-black">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-black">
+                        <SelectItem value="casual">Casual</SelectItem>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="professional">Professional</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleAIGenerateEmail}
+                      disabled={isGeneratingEmail}
+                      className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+                    >
+                      {isGeneratingEmail ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Generate Email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject + Preview Text (2-col grid) */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Subject Line *</Label>
+                  <Input
+                    value={selectedNode.data.subject || ""}
+                    onChange={(e) =>
+                      updateNodeData(selectedNode.id, { subject: e.target.value })
+                    }
+                    placeholder="Hey {{firstName}}, quick question"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preview Text</Label>
+                  <Input
+                    value={selectedNode.data.previewText || ""}
+                    onChange={(e) =>
+                      updateNodeData(selectedNode.id, { previewText: e.target.value })
+                    }
+                    placeholder="Shows in inbox preview"
+                  />
+                </div>
+              </div>
+
+              {/* Email Body */}
+              <div className="space-y-2">
+                <Label>Email Body</Label>
+                {plainTextMode ? (
+                  <Textarea
+                    value={selectedNode.data.htmlContent || ""}
+                    onChange={(e) =>
+                      updateNodeData(selectedNode.id, {
+                        htmlContent: e.target.value,
+                        textContent: e.target.value,
+                      })
+                    }
+                    placeholder="Write your email content here... (plain text, paste raw URLs)"
+                    className="min-h-[350px] font-mono text-sm"
+                    rows={15}
+                  />
+                ) : (
+                  <WysiwygEditor
+                    ref={wysiwygRef}
+                    content={selectedNode.data.htmlContent || ""}
+                    onChange={(html) =>
+                      updateNodeData(selectedNode.id, { htmlContent: html })
+                    }
+                    placeholder="Write your email content here..."
+                    className="min-h-[350px]"
+                  />
+                )}
+              </div>
+
+              {/* Merge tag buttons */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  {plainTextMode ? "Copy merge tag" : "Insert merge tag"}
+                </Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {MERGE_TAGS.map(({ label, tag }) => (
+                    <Button
+                      key={tag}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (plainTextMode) {
+                          navigator.clipboard.writeText(tag);
+                          toast({ title: `Copied ${tag}` });
+                        } else {
+                          insertMergeTag(tag);
+                        }
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Email preview */}
+              {(selectedNode.data.subject || selectedNode.data.htmlContent) && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Preview</Label>
+                  <div className="rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900">
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      From: Andrew &lt;andrew@pauseplayrepeat.com&gt;
+                    </div>
+                    <div className="mb-3 text-sm font-medium">
+                      {(selectedNode.data.subject || "(no subject)")
+                        .replace(/\{\{firstName\}\}/g, "Sarah")
+                        .replace(/\{\{name\}\}/g, "Sarah Chen")
+                        .replace(/\{\{email\}\}/g, "sarah@example.com")
+                        .replace(/\{\{storeName\}\}/g, "Sarah's Studio")
+                        .replace(/\{\{storeSlug\}\}/g, "sarahs-studio")}
+                    </div>
+                    <div className="whitespace-pre-wrap text-sm text-muted-foreground">
+                      {(selectedNode.data.htmlContent || "")
+                        .replace(/\{\{firstName\}\}/g, "Sarah")
+                        .replace(/\{\{name\}\}/g, "Sarah Chen")
+                        .replace(/\{\{email\}\}/g, "sarah@example.com")
+                        .replace(/\{\{storeName\}\}/g, "Sarah's Studio")
+                        .replace(/\{\{storeSlug\}\}/g, "sarahs-studio")}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setIsEmailEditorOpen(false)}>Done</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

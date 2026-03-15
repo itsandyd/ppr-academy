@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
-import { Mail } from "lucide-react";
+import { Mail, PenLine } from "lucide-react";
 
 function SendEmailNode({ data, selected }: NodeProps) {
   return (
@@ -16,24 +16,32 @@ function SendEmailNode({ data, selected }: NodeProps) {
         position={Position.Top}
         className="!h-3 !w-3 !border-2 !border-blue-500 !bg-white dark:!bg-zinc-900"
       />
+
+      {/* Main content */}
       <div className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10">
           <Mail className="h-4 w-4 text-blue-500" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
-            Send Email
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+              Send Email
+            </span>
+            <PenLine className="h-3 w-3 text-zinc-400" />
           </div>
           <div className="max-w-[160px] truncate text-sm font-medium text-zinc-900 dark:text-white">
             {data.subject || "No subject"}
           </div>
         </div>
       </div>
+
+      {/* Preview text */}
       {data.previewText && (
         <div className="mt-2 max-w-[180px] truncate text-xs text-zinc-500 dark:text-zinc-400">
           {data.previewText}
         </div>
       )}
+
       <Handle
         type="source"
         position={Position.Bottom}
